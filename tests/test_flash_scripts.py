@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 import sys
 import unittest
 from pathlib import Path
@@ -21,12 +22,15 @@ class FlashScriptTests(unittest.TestCase):
             self.assertNotIn("verify_expected_product", content)
 
     def test_shell_scripts_parse(self):
+        git_bash = Path(r"C:\Program Files\Git\bin\bash.exe")
+        bash = str(git_bash) if sys.platform == "win32" and git_bash.is_file() else shutil.which("bash")
+        self.assertIsNotNone(bash, "A Bash executable is required to validate flash scripts")
         for name in [
             "Wukong_Flashing_Tool_Linux.sh",
             "Wukong_Flashing_Tool_MacOS.sh",
         ]:
             result = subprocess.run(
-                ["bash", "-n", f"Flash_script/{name}"],
+                [bash, "-n", f"Flash_script/{name}"],
                 cwd=ROOT,
                 capture_output=True,
                 text=True,
