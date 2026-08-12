@@ -1,0 +1,37 @@
+# Wukong ROM Studio Hybrid
+
+One shared ROM orchestration module for the native Windows application,
+GitHub Actions and Telegram. All channels use `BuildRecipe v1` and the same
+pipeline implementation; only their interaction adapters differ.
+
+Core capabilities:
+
+- Local file, HTTP/HTTPS and private rclone ROM sources with SHA-256 checks.
+- Local Windows, GitHub-hosted Ubuntu 24.04 and qualified self-hosted Linux.
+- Private Google Drive content/source/checkpoint storage and public artifact links.
+- Owner-scoped job status, events, cancel and checkpoint resume.
+- Native WinUI Hybrid Cloud page, headless CLI and Telegram admin/user bot.
+
+See [HYBRID_SETUP.md](HYBRID_SETUP.md) for setup and
+[LEGACY_PROVENANCE.md](LEGACY_PROVENANCE.md) for the legacy snapshot.
+
+Local ROM build studio for Windows with a Flask backend and an HTML/CSS/JavaScript dashboard.
+
+See [STUDIO_README.md](STUDIO_README.md) for setup, CLI, dashboard, Telegram, and build instructions.
+
+The WinUI 3 desktop host, runtime packaging, content-pack tooling and Inno
+Setup installer are documented in [desktop/README.md](desktop/README.md).
+
+## Quick start
+
+```bat
+RUN_UI.bat
+```
+
+The dashboard binds to localhost. Runtime jobs, logs, generated ROMs, local credentials, and signing keys are intentionally excluded from Git.
+
+## Clone requirements
+
+This repository uses Git LFS for APK, APEX, IMG, and ZIP content assets. Install
+Git LFS before cloning, then run `git lfs pull` if the checkout contains pointer
+files instead of the required MOD or recovery assets.
