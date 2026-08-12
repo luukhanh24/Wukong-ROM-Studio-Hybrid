@@ -30,8 +30,13 @@ RUN_UI.bat
 
 The dashboard binds to localhost. Runtime jobs, logs, generated ROMs, local credentials, and signing keys are intentionally excluded from Git.
 
-## Clone requirements
+## Private content packs
 
-This repository uses Git LFS for APK, APEX, IMG, and ZIP content assets. Install
-Git LFS before cloning, then run `git lfs pull` if the checkout contains pointer
-files instead of the required MOD or recovery assets.
+The public repository intentionally contains no ROM sources, build artifacts or
+Git LFS objects. Large `MOD`, `copy-image`, `OFX` and `TWRP` assets are stored as
+private Google Drive content packs with a size and SHA-256 manifest.
+
+Configure the `wukong-gdrive:` rclone remote, then follow
+[HYBRID_SETUP.md](HYBRID_SETUP.md) to install and verify only the content packs
+needed for a build. The test workflow creates harmless placeholder files; those
+fixtures must never be used for a real ROM build.
