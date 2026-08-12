@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="studio-token" content="__STUDIO_TOKEN__">
+  <title>Wukong ROM Studio</title>
+  <link rel="stylesheet" href="/static/styles.css?v=20260713-fluent">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 7l2.3 10L12 9l4.7 8L19 7M4 4h16"/></svg>
+        </div>
+        <div>
+          <strong>Wukong</strong>
+          <span>ROM Studio</span>
+        </div>
+      </div>
+      <nav id="main-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-page="workbench"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><b data-i18n="nav.workbench">Bảng điều khiển</b></button>
+        <button class="nav-item" data-page="artifacts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12H4zM8 4h8l2 3M8 11h8"/></svg><b data-i18n="nav.artifacts">Bản build</b></button>
+        <button class="nav-item" data-page="catalog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z"/></svg><b data-i18n="nav.catalog">Danh mục</b></button>
+        <button class="nav-item" data-page="diagnostics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg><b data-i18n="nav.diagnostics">Chẩn đoán</b></button>
+        <button class="nav-item" data-page="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg><b data-i18n="nav.settings">Cài đặt</b></button>
+      </nav>
+      <div class="app-header-footer">
+        <div class="connection"><i></i><span data-i18n="status.local">LOCALHOST AN TOÀN</span></div>
+        <button id="lang-toggle" class="ghost compact">VI / EN</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">WUKONG ROM STUDIO</p>
+          <h1 id="page-title">Bảng điều khiển</h1>
+        </div>
+        <div class="top-actions">
+          <span class="chip"><i class="pulse"></i><span id="queue-summary">0 đang chờ</span></span>
+          <button id="new-build-shortcut" class="primary" data-nav="workbench" data-i18n="action.newBuild" data-loading-action="create">+ Tạo build</button>
+        </div>
+      </header>
+
+      <section class="page active" id="page-workbench">
+        <div id="workbench-error" class="alert-banner hidden" role="alert">
+          <div>
+            <strong data-i18n="error.bannerTitle">Cần xử lý trước khi build</strong>
+            <p id="workbench-error-message"></p>
+          </div>
+          <button id="dismiss-workbench-error" class="ghost compact" type="button" aria-label="Dismiss error">X</button>
+        </div>
+
+        <div class="workbench-pane active" data-workbench-pane="overview" role="tabpanel" aria-label="Overview">
+        <div class="hero panel">
+          <div>
+            <p class="eyebrow cyan">TRUNG TÂM BUILD</p>
+            <h2 data-i18n="overview.hero">Quản lý preflight, queue, build và log trong một màn hình.</h2>
+            <p data-i18n="overview.subtitle">Chọn ROM, cấu hình pipeline, theo dõi log realtime và kiểm tra artifact trước khi phát hành.</p>
+          </div>
+          <button id="start-build-hero" class="primary large" data-i18n="action.startBuild" data-loading-action="create">Bắt đầu build</button>
+        </div>
+
+        <div class="stats-grid" id="overview-stats"></div>
+
+        <div class="grid-two">
+          <section class="panel">
+            <div class="section-title">
+              <h3 data-i18n="overview.recentJobs">Build gần đây</h3>
+              <button class="ghost compact" data-workbench-tab="console" data-i18n="action.viewAll">Xem tất cả</button>
+            </div>
+            <div id="recent-jobs" class="stack"></div>
+          </section>
+          <section class="panel">
+            <div class="section-title">
+              <h3 data-i18n="overview.health">Tình trạng hệ thống</h3>
+              <button class="ghost compact" data-nav="diagnostics" data-i18n="action.details">Chi tiết</button>
+            </div>
+            <div id="health-list" class="stack"></div>
+          </section>
+        </div>
+
+        </div>
+
+        <div class="workbench-pane" data-workbench-pane="build" role="tabpanel" aria-label="Build">
+        <div class="workbench-section" id="workbench-builder">
+          <div class="builder-layout">
+            <section class="panel">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow cyan">01 / ROM ĐẦU VÀO</p>
+                  <h3 data-i18n="builder.romQueue">Danh sách ROM</h3>
+                </div>
+              </div>
+              <div class="rom-path-form">
+                <input id="rom-path-input" type="text" placeholder="D:\ROM\rom.zip" data-i18n-placeholder="builder.romPath">
+                <button id="add-rom-path" class="ghost" data-i18n="action.add" data-loading-action="browseRom">Thêm</button>
+                <button id="browse-rom" class="primary" data-i18n="builder.browse" data-loading-action="browseRom">Duyệt ROM ZIP</button>
+                <button id="browse-folder" class="ghost" data-i18n="builder.folder" data-loading-action="browseFolder">Nhập folder</button>
+              </div>
+              <p class="muted" data-i18n="builder.folderHint">Sau khi chọn ROM, Studio tự đọc metadata và xác nhận thiết bị. Nhập folder sẽ thêm các file .zip theo thứ tự tên.</p>
+              <div id="rom-queue" class="stack empty-slot"></div>
+            </section>
+
+            <section class="panel">
+              <p class="eyebrow magenta">02 / PIPELINE</p>
+              <div class="section-title">
+                <h3 data-i18n="builder.pipeline">Các bước build</h3>
+                <div class="pipeline-selectors">
+                  <label>
+                    <span data-i18n="builder.modVersion">Phiên bản MOD</span>
+                    <select id="mod-version-select" aria-label="MOD version"></select>
+                  </label>
+                  <label>
+                    <span data-i18n="builder.buildEdition">Phiên bản build</span>
+                    <select id="preset-select">
+                      <option value="lite">Lite</option>
+                      <option value="resume">Plus</option>
+                      <option value="both">Lite + Plus</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <p class="muted" data-i18n="builder.pipelineHint">Preset chỉ chọn target mặc định. Bạn có thể bật hoặc tắt bất kỳ bước nào; preflight sẽ báo lỗi nếu cấu hình chưa đủ điều kiện.</p>
+              <div id="step-selector" class="step-list"></div>
+            </section>
+
+            <section class="panel build-submit">
+              <div>
+                <p class="eyebrow amber">03 / THỰC THI</p>
+                <h3 data-i18n="builder.ready">Chạy preflight trước khi đưa vào queue</h3>
+                <label class="toggle-row">
+                  <input id="notify-toggle" type="checkbox">
+                  <span></span>
+                  <b data-i18n="builder.telegram">Gửi thông báo Telegram khi hoàn tất</b>
+                </label>
+              </div>
+              <div class="submit-actions">
+                <button id="inspect-all" class="ghost" data-i18n="action.preflight" data-loading-action="inspect">Chạy preflight</button>
+                <button id="create-jobs" class="primary large" data-i18n="action.startBuild" data-loading-action="create">Bắt đầu build</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        </div>
+
+        <div class="workbench-pane" data-workbench-pane="console" role="tabpanel" aria-label="Console">
+        <div class="workbench-section" id="workbench-console">
+          <div class="console-layout">
+            <section class="panel job-sidebar">
+              <div class="section-title">
+                <h3 data-i18n="console.jobs">Danh sách job</h3>
+                <button id="refresh-jobs" class="ghost compact" data-i18n="action.refresh" data-loading-action="refreshJobs">Làm mới</button>
+              </div>
+              <div id="job-list" class="stack"></div>
+            </section>
+
+            <section class="panel console-main">
+              <div class="section-title">
+                <div>
+                  <p class="eyebrow cyan" id="console-job-id">CHƯA CHỌN JOB</p>
+                  <h3 id="console-job-title" data-i18n="console.select">Chọn một job để xem log</h3>
+                </div>
+                <div class="actions">
+                  <button id="resume-job" class="ghost hidden" data-i18n="action.resume">Tiếp tục job</button>
+                  <button id="cancel-job" class="danger hidden" data-i18n="action.cancel">Hủy job</button>
+                </div>
+              </div>
+              <div id="console-steps" class="console-steps"></div>
+              <div id="console-build-progress" class="build-progress hidden" aria-live="polite"></div>
+              <p id="console-artifact" class="muted"></p>
+              <div class="console-toolbar" aria-label="Console toolbar">
+                <input id="log-search" type="search" data-i18n-placeholder="console.filter" placeholder="Lọc log...">
+                <label class="toggle-row mini">
+                  <input id="auto-scroll" type="checkbox" checked>
+                  <span></span>
+                  <b data-i18n="console.autoscroll">Tự cuộn</b>
+                </label>
+                <button id="copy-log" class="ghost compact" data-i18n="action.copyLog">Copy log</button>
+                <button id="download-log" class="ghost compact" data-i18n="action.downloadLog">Tải log</button>
+                <button id="fullscreen-console" class="ghost compact" data-i18n="action.fullscreen">Fullscreen</button>
+                <button id="clear-console" class="ghost compact" data-i18n="action.clear">Xóa màn hình</button>
+              </div>
+              <div id="log-output" class="terminal" role="log" aria-live="polite">Wukong ROM Studio sẵn sàng.</div>
+            </section>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-artifacts">
+        <section class="panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow cyan">KHO BẢN BUILD</p>
+              <h3 data-i18n="artifacts.title">Lịch sử ROM ZIP</h3>
+            </div>
+            <button id="refresh-artifacts" class="ghost" data-i18n="action.refresh">Làm mới</button>
+          </div>
+          <div id="artifact-list" class="table-wrap"></div>
+        </section>
+      </section>
+
+      <section class="page" id="page-catalog">
+        <div class="grid-two">
+          <section class="panel">
+            <div class="section-title">
+              <h3 data-i18n="catalog.devices">Thiết bị hỗ trợ</h3>
+              <span class="chip" id="device-count"></span>
+            </div>
+            <div id="device-list" class="stack"></div>
+          </section>
+          <section class="panel">
+            <div class="section-title">
+              <h3 data-i18n="catalog.mods">Danh mục MOD</h3>
+              <span class="chip" id="mod-count"></span>
+            </div>
+            <div id="mod-list" class="stack"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="page-diagnostics">
+        <div class="section-title page-section-title">
+          <div>
+            <p class="eyebrow cyan">KIỂM TRA HỆ THỐNG</p>
+            <h3 data-i18n="diagnostics.title">Chẩn đoán</h3>
+          </div>
+          <button id="refresh-diagnostics" class="primary" data-i18n="action.scan" data-loading-action="diagnostics">Quét lại</button>
+        </div>
+        <div id="diagnostics-grid" class="diagnostics-grid"></div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <section class="panel narrow">
+          <p class="eyebrow cyan">THIẾT LẬP LOCAL</p>
+          <h3 data-i18n="settings.title">Cài đặt Studio</h3>
+          <label class="field">
+            <span data-i18n="settings.locale">Ngôn ngữ</span>
+            <select id="settings-locale">
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label class="field">
+            <span data-i18n="settings.preset">Preset mặc định</span>
+            <select id="settings-preset">
+              <option value="lite">Lite</option>
+              <option value="resume">Plus</option>
+              <option value="both">Lite + Plus</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label class="toggle-row">
+            <input id="settings-notify" type="checkbox">
+            <span></span>
+            <b data-i18n="settings.notify">Bật Telegram mặc định</b>
+          </label>
+          <div class="field">
+            <span data-i18n="settings.roots">Root được phép duyệt</span>
+            <div id="settings-roots" class="stack"></div>
+            <div class="inline-form">
+              <input id="new-root" placeholder="D:\ROM">
+              <button id="add-root" class="ghost" data-i18n="action.add">Thêm</button>
+            </div>
+          </div>
+          <p class="warning" data-i18n="settings.secret">Thông tin Telegram được mã hóa bằng Windows DPAPI và không hiển thị trong UI.</p>
+          <button id="save-settings" class="primary" data-i18n="action.save">Lưu cài đặt</button>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="debloat-dialog" class="studio-dialog">
+    <div class="dialog-head">
+      <div>
+        <p class="eyebrow cyan">BƯỚC 04 / DEBLOAT</p>
+        <h3 data-i18n="debloat.title">Tùy chỉnh đường dẫn cần xóa</h3>
+      </div>
+      <button id="cancel-debloat" class="ghost compact" type="button" aria-label="Close debloat dialog">X</button>
+    </div>
+    <div class="dialog-body">
+      <p class="muted" data-i18n="debloat.hint">Mỗi dòng là một đường dẫn tương đối bắt đầu bằng tên partition. Ví dụ: my_stock\app\Browser</p>
+      <textarea id="debloat-paths" class="config-textarea" spellcheck="false"></textarea>
+      <div class="dialog-actions">
+        <button id="reset-debloat" class="ghost" type="button" data-i18n="action.restoreDefault">Khôi phục mặc định</button>
+        <span class="dialog-spacer"></span>
+        <button id="cancel-debloat-bottom" class="ghost" type="button" data-i18n="action.dismiss">Hủy</button>
+        <button id="save-debloat" class="primary" type="button" data-i18n="action.saveChanges">Lưu thay đổi</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="mod-dialog" class="studio-dialog">
+    <div class="dialog-head">
+      <div>
+        <p class="eyebrow magenta">BƯỚC 05 / MOD</p>
+        <h3 data-i18n="mods.title">Chọn MOD ColorOS 700</h3>
+      </div>
+      <button id="cancel-mods" class="ghost compact" type="button" aria-label="Close MOD dialog">X</button>
+    </div>
+    <div class="dialog-body">
+      <p class="muted" data-i18n="mods.hint">Mỗi thư mục con là một lựa chọn độc lập. MOD có cảnh báo vẫn hiển thị để bạn biết trạng thái preflight.</p>
+      <div id="mod-selection-summary" class="selection-summary"></div>
+      <div id="mod-options-grid" class="mod-options-grid"></div>
+      <div class="dialog-actions">
+        <button id="select-lite-mods" class="ghost" type="button" data-i18n="mods.selectLite">Chọn Lite</button>
+        <button id="select-all-mods" class="ghost" type="button" data-i18n="mods.selectAll">Chọn tất cả</button>
+        <button id="clear-mods" class="ghost" type="button" data-i18n="mods.clear">Bỏ chọn</button>
+        <span class="dialog-spacer"></span>
+        <button id="cancel-mods-bottom" class="ghost" type="button" data-i18n="action.dismiss">Hủy</button>
+        <button id="save-mods" class="primary" type="button" data-i18n="action.saveChanges">Lưu thay đổi</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast-container"></div>
+  <script src="/static/app.js?v=20260713-fluent"></script>
+</body>
+</html>

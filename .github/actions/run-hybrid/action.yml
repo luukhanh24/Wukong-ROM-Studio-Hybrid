@@ -1,0 +1,85 @@
+name: Run Wukong hybrid recipe
+description: Materialize one private recipe and run the shared Wukong orchestrator
+inputs:
+  recipe_ref:
+    required: true
+  job_id:
+    required: true
+  rclone_config_b64:
+    required: true
+  github_token:
+    required: false
+  self_hosted:
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends cpio p7zip-full brotli zstd rclone e2fsprogs lz4 zip unzip
+        python3 -m pip install --user -r requirements.txt
+    - name: Restore rclone configuration
+      shell: bash
+      env:
+        RCLONE_CONFIG_B64: ${{ inputs.rclone_config_b64 }}
+      run: |
+        set -euo pipefail
+        mkdir -p .wkstudio/secrets
+        umask 077
+        printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > .wkstudio/secrets/rclone.conf
+    - name: Fetch recipe and content-packs
+      shell: bash
+      env:
+        RECIPE_REF: ${{ inputs.recipe_ref }}
+        WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
+      run: |
+        set -euo pipefail
+        python3 tools/fetch_recipe.py "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
+        task="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['task'])")"
+        if [ "$task" = build ]; then
+          mod_version="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['build']['modVersion'])")"
+          python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "MOD/$mod_version" --rclone-config "$WUKONG_RCLONE_CONFIG"
+          for pack in copy-image/v1 OFX/v1 TWRP/v1; do
+            python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "$pack" --rclone-config "$WUKONG_RCLONE_CONFIG"
+          done
+        fi
+        if [ '${{ inputs.self_hosted }}' != true ]; then
+          python3 tools/runner_preflight.py --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
+        fi
+    - name: Bootstrap and smoke-test Linux toolchain
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 tools/bootstrap_linux.py
+        python3 tools/smoke_linux.py
+    - name: Execute shared recipe
+      id: execute
+      shell: bash
+      env:
+        WUKONG_JOB_ID: ${{ inputs.job_id }}
+        WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
+        WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
+        WUKONG_GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        set -euo pipefail
+        job_json="$(python3 wukong_cli.py submit --recipe .wkstudio/recipe.json --job-id "$WUKONG_JOB_ID" --channel actions --subject "$GITHUB_ACTOR_ID" --role user)"
+        job_id="$(printf '%s' "$job_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["job_id"])')"
+        set +e
+        python3 wukong_cli.py execute "$job_id"
+        result=$?
+        set -e
+        echo "result=$result" >> "$GITHUB_OUTPUT"
+    - name: Sync terminal job manifest to Google Drive
+      if: always()
+      shell: bash
+      env:
+        WUKONG_JOB_ID: ${{ inputs.job_id }}
+        WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
+      run: python3 tools/sync_job.py "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
+    - name: Fail workflow when recipe failed
+      if: always() && steps.execute.outputs.result != '0'
+      shell: bash
+      run: exit 1

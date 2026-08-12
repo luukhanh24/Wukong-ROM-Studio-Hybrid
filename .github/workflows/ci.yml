@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run Python contract and regression tests
+        run: python -m unittest discover -s tests -v
+
+  desktop:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: Test WinUI core
+        run: dotnet test desktop/WukongStudio.Tests/WukongStudio.Tests.csproj -c Release
+      - name: Build WinUI application
+        run: dotnet build desktop/WukongStudio.App/WukongStudio.App.csproj -c Release --no-restore
+
+  workflow-security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: Reject floating action references and tracked credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R --line-number -E 'uses: [^#[:space:]]+@(main|master|v[0-9]+)$' .github/workflows; then
+            echo 'Floating action reference detected.' >&2
+            exit 1
+          fi
+          python tools/repo_guard.py
+      - name: Validate workflow syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=1.7.12
+          archive="actionlint_${version}_linux_x86_64.tar.gz"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" \
+            --output "$archive"
+          printf '%s  %s\n' '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' "$archive" | sha256sum --check
+          tar -xzf "$archive" actionlint
+          ./actionlint

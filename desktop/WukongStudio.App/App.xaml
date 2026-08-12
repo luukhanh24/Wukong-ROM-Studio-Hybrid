@@ -1,0 +1,32 @@
+<Application
+    x:Class="WukongStudio.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="StudioBackgroundBrush" Color="#F3F3F3" />
+                    <SolidColorBrush x:Key="StudioTitleBarBrush" Color="#F3F3F3" />
+                    <SolidColorBrush x:Key="StudioMutedBrush" Color="#666666" />
+                    <SolidColorBrush x:Key="StudioPanelBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="StudioPanelBorderBrush" Color="#DDDDDD" />
+                    <SolidColorBrush x:Key="StudioSubtleBrush" Color="#F7F7F7" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="StudioBackgroundBrush" Color="#11151B" />
+                    <SolidColorBrush x:Key="StudioTitleBarBrush" Color="#171C23" />
+                    <SolidColorBrush x:Key="StudioMutedBrush" Color="#AAB4C0" />
+                    <SolidColorBrush x:Key="StudioPanelBrush" Color="#1A2029" />
+                    <SolidColorBrush x:Key="StudioPanelBorderBrush" Color="#303947" />
+                    <SolidColorBrush x:Key="StudioSubtleBrush" Color="#202833" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <SolidColorBrush x:Key="StudioCyanBrush" Color="#0067C0" />
+            <SolidColorBrush x:Key="StudioMagentaBrush" Color="#7A3E9D" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

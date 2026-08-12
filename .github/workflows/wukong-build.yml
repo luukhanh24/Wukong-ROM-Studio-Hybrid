@@ -1,0 +1,116 @@
+name: Wukong Hybrid Build
+run-name: Wukong ${{ inputs.job_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      recipe_ref:
+        description: "Repository JSON path or private rclone URI"
+        required: true
+        type: string
+      job_id:
+        description: "Stable Wukong job ID"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: wukong-${{ inputs.job_id }}
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+  WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
+  WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
+
+jobs:
+  route:
+    runs-on: ubuntu-24.04
+    outputs:
+      runner_kind: ${{ steps.route.outputs.runner_kind }}
+      recipe_digest: ${{ steps.route.outputs.recipe_digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install router dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rclone
+          python -m pip install -r requirements.txt
+      - name: Restore private rclone configuration
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RCLONE_CONFIG_B64"
+          mkdir -p "$(dirname "$WUKONG_RCLONE_CONFIG")"
+          umask 077
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$WUKONG_RCLONE_CONFIG"
+      - name: Fetch and route recipe
+        id: route
+        env:
+          RECIPE_REF: ${{ inputs.recipe_ref }}
+          WUKONG_GITHUB_TOKEN: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/fetch_recipe.py "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
+          python wukong_cli.py validate --recipe .wkstudio/recipe.json > .wkstudio/route.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open('.wkstudio/route.json', encoding='utf-8'))
+          print(f"runner_kind={data['runner']['kind']}")
+          print(f"recipe_digest={data['recipeDigest']}")
+          PY
+
+  hosted:
+    needs: route
+    if: needs.route.outputs.runner_kind == 'github-hosted'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Run hosted build
+        uses: ./.github/actions/run-hybrid
+        with:
+          recipe_ref: ${{ inputs.recipe_ref }}
+          job_id: ${{ inputs.job_id }}
+          rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
+          github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          self_hosted: "false"
+
+  self-hosted:
+    needs: route
+    if: needs.route.outputs.runner_kind == 'self-hosted'
+    runs-on: [self-hosted, linux, x64, wukong-rom]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          clean: true
+      - name: Verify self-hosted resources
+        run: python3 tools/runner_preflight.py
+      - name: Run self-hosted build
+        uses: ./.github/actions/run-hybrid
+        with:
+          recipe_ref: ${{ inputs.recipe_ref }}
+          job_id: ${{ inputs.job_id }}
+          rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
+          github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          self_hosted: "true"
