@@ -58,10 +58,16 @@ jobs:
           set -euo pipefail
           version=1.7.12
           archive="actionlint_${version}_linux_amd64.tar.gz"
-          curl --fail --location --proto '=https' --tlsv1.2 \
-            --retry 5 --retry-delay 2 --retry-all-errors \
-            "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}" \
-            --output "$archive"
+          for attempt in 1 2 3 4 5; do
+            gh release download "v${version}" \
+              --repo rhysd/actionlint \
+              --pattern "$archive" \
+              --output "$archive" && break
+            test "$attempt" -lt 5
+            sleep 2
+          done
           printf '%s  %s\n' '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' "$archive" | sha256sum --check
           tar -xzf "$archive" actionlint
           ./actionlint
+        env:
+          GH_TOKEN: ${{ github.token }}
