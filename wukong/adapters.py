@@ -801,9 +801,11 @@ class RcloneStorageAdapter:
             for name in [*directory_names, *file_names]:
                 path = current / name
                 if path.is_symlink():
-                    raise SourceIntegrityError(
-                        f"Checkpoint workspace contains a symbolic link: {path.relative_to(source)}"
-                    )
+                    link_name = os.readlink(path)
+                    if not link_name or "\x00" in link_name:
+                        raise SourceIntegrityError(
+                            f"Checkpoint workspace contains an invalid symbolic link: {path.relative_to(source)}"
+                        )
 
     def restore_tree(self, uri: str, destination: Path) -> Path:
         destination = destination.resolve()
@@ -889,22 +891,11 @@ class RcloneStorageAdapter:
         ):
             raise SourceIntegrityError("Checkpoint archive metadata is invalid")
 
-        staging = destination.with_name(destination.name + ".restore-partial")
-        if staging.exists():
-            shutil.rmtree(staging)
-        staging.mkdir(parents=True)
-
-        def extract_archive(input_stream: Any) -> Path:
+        def download_archive(input_stream: Any, archive_path: Path) -> Path:
             reader = _HashingReader(input_stream)
-            try:
-                with tarfile.open(fileobj=reader, mode="r|*") as archive:
-                    for member in archive:
-                        self._validate_checkpoint_member(member)
-                        archive.extract(member, staging, filter="data")
+            with archive_path.open("wb") as output:
                 for chunk in iter(lambda: reader.read(CHUNK_SIZE), b""):
-                    pass
-            except (tarfile.TarError, OSError, ValueError) as exc:
-                raise SourceIntegrityError(f"Invalid checkpoint archive: {exc}") from exc
+                    output.write(chunk)
             if reader.size_bytes != expected_size:
                 raise SourceIntegrityError(
                     f"Checkpoint archive size mismatch: expected {expected_size}, got {reader.size_bytes}"
@@ -914,33 +905,128 @@ class RcloneStorageAdapter:
                 raise SourceIntegrityError(
                     f"Checkpoint archive checksum mismatch: expected {expected_sha256}, got {actual_sha256}"
                 )
-            return staging
+            return archive_path
 
-        try:
-            self._download_stream(self._args("cat", uri), extract_archive)
-            if destination.exists():
-                shutil.rmtree(destination)
-            os.replace(staging, destination)
-        except Exception:
-            if staging.exists():
-                shutil.rmtree(staging)
-            raise
+        staging = destination.with_name(destination.name + ".restore-partial")
+        with tempfile.TemporaryDirectory(prefix="wukong-checkpoint-") as temporary:
+            archive_path = Path(temporary, "checkpoint.tar")
+            self._download_stream(
+                self._args("cat", uri),
+                lambda input_stream: download_archive(input_stream, archive_path),
+            )
+            try:
+                with tarfile.open(archive_path, mode="r:*") as archive:
+                    members = archive.getmembers()
+                    symbolic_links = self._validate_checkpoint_members(members)
+                    if staging.exists():
+                        shutil.rmtree(staging)
+                    staging.mkdir(parents=True)
+                    for member in members:
+                        if not member.issym():
+                            archive.extract(member, staging, filter="data")
+                    self._restore_checkpoint_symlinks(staging, symbolic_links)
+                if destination.exists():
+                    shutil.rmtree(destination)
+                os.replace(staging, destination)
+            except (tarfile.TarError, OSError, ValueError) as exc:
+                if staging.exists():
+                    shutil.rmtree(staging)
+                if isinstance(exc, SourceIntegrityError):
+                    raise
+                raise SourceIntegrityError(f"Invalid checkpoint archive: {exc}") from exc
+            except Exception:
+                if staging.exists():
+                    shutil.rmtree(staging)
+                raise
         return destination
+
+    @classmethod
+    def _validate_checkpoint_members(
+        cls, members: list[tarfile.TarInfo]
+    ) -> list[tuple[str, str]]:
+        symbolic_paths: set[PurePosixPath] = set()
+        members_by_path: dict[PurePosixPath, tarfile.TarInfo] = {}
+        symbolic_links: list[tuple[str, str]] = []
+        for member in members:
+            cls._validate_checkpoint_member(member)
+            path = PurePosixPath(member.name.replace("\\", "/"))
+            if path in members_by_path:
+                raise SourceIntegrityError(
+                    f"Checkpoint archive contains a duplicate member: {member.name!r}"
+                )
+            members_by_path[path] = member
+            if member.issym():
+                symbolic_paths.add(path)
+                symbolic_links.append((member.name, member.linkname))
+        for member in members:
+            path = PurePosixPath(member.name.replace("\\", "/"))
+            if any(parent in symbolic_paths for parent in path.parents):
+                raise SourceIntegrityError(
+                    f"Checkpoint archive member has a symbolic-link parent: {member.name!r}"
+                )
+            if member.islnk():
+                target_path = PurePosixPath(member.linkname.replace("\\", "/"))
+                target = members_by_path.get(target_path)
+                if target is None or not target.isfile():
+                    raise SourceIntegrityError(
+                        f"Checkpoint hardlink target is not a regular archive member: {member.name!r}"
+                    )
+                if any(parent in symbolic_paths for parent in target_path.parents):
+                    raise SourceIntegrityError(
+                        f"Checkpoint hardlink target has a symbolic-link parent: {member.name!r}"
+                    )
+        return symbolic_links
+
+    @staticmethod
+    def _restore_checkpoint_symlinks(staging: Path, links: list[tuple[str, str]]) -> None:
+        # Create links only after every ordinary member and the archive digest
+        # have been validated. A TAR cannot then use an earlier symlink as a
+        # path-traversal pivot for a later file member.
+        for member_name, link_name in links:
+            relative = PurePosixPath(member_name.replace("\\", "/"))
+            destination = staging.joinpath(*relative.parts)
+            current = staging
+            for part in relative.parts[:-1]:
+                current = current / part
+                if current.is_symlink():
+                    raise SourceIntegrityError(
+                        f"Checkpoint symbolic link has a symbolic-link parent: {member_name!r}"
+                    )
+                if current.exists() and not current.is_dir():
+                    raise SourceIntegrityError(
+                        f"Checkpoint symbolic link has a non-directory parent: {member_name!r}"
+                    )
+                current.mkdir(exist_ok=True)
+            if destination.exists() or destination.is_symlink():
+                raise SourceIntegrityError(
+                    f"Checkpoint symbolic link conflicts with an extracted member: {member_name!r}"
+                )
+            try:
+                os.symlink(link_name, destination)
+            except OSError as exc:
+                raise SourceIntegrityError(
+                    f"Could not restore checkpoint symbolic link: {member_name!r}"
+                ) from exc
 
     @staticmethod
     def _validate_checkpoint_member(member: tarfile.TarInfo) -> None:
         normalized = member.name.replace("\\", "/")
         path = PurePosixPath(normalized)
-        hardlink_is_unsafe = False
-        if member.islnk():
+        link_is_unsafe = False
+        if member.islnk() or member.issym():
             link_name = member.linkname.replace("\\", "/")
             link_path = PurePosixPath(link_name)
-            hardlink_is_unsafe = (
+            link_is_unsafe = (
                 not link_name
                 or "\x00" in link_name
-                or link_path.is_absolute()
-                or ".." in link_path.parts
-                or (link_path.parts and link_path.parts[0].endswith(":"))
+                or (
+                    member.islnk()
+                    and (
+                        link_path.is_absolute()
+                        or ".." in link_path.parts
+                        or (link_path.parts and link_path.parts[0].endswith(":"))
+                    )
+                )
             )
         if (
             not normalized
@@ -948,9 +1034,8 @@ class RcloneStorageAdapter:
             or path.is_absolute()
             or ".." in path.parts
             or (path.parts and path.parts[0].endswith(":"))
-            or member.issym()
-            or hardlink_is_unsafe
-            or not (member.isdir() or member.isfile() or member.islnk())
+            or link_is_unsafe
+            or not (member.isdir() or member.isfile() or member.islnk() or member.issym())
         ):
             raise SourceIntegrityError(
                 f"unsafe checkpoint archive member: {member.name!r}"

@@ -819,20 +819,145 @@ class SourceAndStorageContractTests(unittest.TestCase):
             self.assertFalse(destination.exists())
             self.assertFalse(destination.with_name(destination.name + ".restore-partial").exists())
 
-    def test_checkpoint_upload_rejects_workspace_symlink(self) -> None:
+    def test_checkpoint_archive_preserves_android_absolute_symlink_without_dereferencing(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             source = Path(root, "workspace")
             source.mkdir()
-            link = source / "outside-link"
-            link.write_text("test seam", encoding="utf-8")
+            link = source / "system" / "d"
+            link.parent.mkdir()
+            try:
+                os.symlink("/sys/kernel/debug", link)
+            except OSError:
+                self.skipTest("Symbolic links are unavailable on this Windows host")
+            remote_files: dict[str, bytes] = {}
 
-            with patch.object(Path, "is_symlink", autospec=True) as is_symlink:
-                is_symlink.side_effect = lambda path: path.name == link.name
-                with self.assertRaisesRegex(SourceIntegrityError, "symbolic link"):
-                    RcloneStorageAdapter(
-                        run_command=lambda *_args, **_kwargs: "",
-                        stream_command=lambda *_args, **_kwargs: b"",
-                    ).sync_tree(source, "checkpoints/job/stage")
+            def fake_run(args: list[str], **_: object) -> str:
+                operation = args[1]
+                if operation == "copyto":
+                    remote_files[args[3]] = Path(args[2]).read_bytes()
+                elif operation == "moveto":
+                    remote_files[args[3]] = remote_files.pop(args[2])
+                elif operation == "cat":
+                    return remote_files[args[2]].decode("utf-8")
+                return ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                if args[1] == "rcat":
+                    remote_files[args[2]] = payload or b""
+                    return b""
+                return remote_files[args[2]]
+
+            storage = RcloneStorageAdapter(run_command=fake_run, stream_command=fake_stream)
+            uri = storage.sync_tree(source, "checkpoints/job/stage")
+            restored = Path(root, "restored")
+            storage.restore_tree(uri, restored)
+
+            self.assertTrue((restored / "system" / "d").is_symlink())
+            self.assertEqual(os.readlink(restored / "system" / "d"), "/sys/kernel/debug")
+
+    def test_checkpoint_restore_delays_symlink_creation_until_after_regular_members(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            outside = Path(root, "outside")
+            outside.mkdir()
+            archive = io.BytesIO()
+            with tarfile.open(fileobj=archive, mode="w") as handle:
+                link = tarfile.TarInfo("pivot")
+                link.type = tarfile.SYMTYPE
+                link.linkname = str(outside.resolve())
+                handle.addfile(link)
+                member = tarfile.TarInfo("pivot/escape.txt")
+                member.size = 6
+                handle.addfile(member, io.BytesIO(b"escape"))
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/stage.tar"
+            payload = archive.getvalue()
+            metadata = json.dumps(
+                {"sha256": hashlib.sha256(payload).hexdigest(), "sizeBytes": len(payload)}
+            )
+
+            def fake_run(args: list[str], **_: object) -> str:
+                return metadata if args[1] == "cat" else ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                return archive.getvalue()
+
+            with self.assertRaisesRegex(SourceIntegrityError, "symbolic-link parent"):
+                RcloneStorageAdapter(
+                    run_command=fake_run,
+                    stream_command=fake_stream,
+                ).restore_tree(uri, Path(root, "restore"))
+
+            self.assertFalse((outside / "escape.txt").exists())
+
+    def test_checkpoint_restore_rejects_a_symlink_parent_for_a_later_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            outside = Path(root, "outside")
+            outside.mkdir()
+            archive = io.BytesIO()
+            with tarfile.open(fileobj=archive, mode="w") as handle:
+                pivot = tarfile.TarInfo("pivot")
+                pivot.type = tarfile.SYMTYPE
+                pivot.linkname = str(outside.resolve())
+                handle.addfile(pivot)
+                escaped = tarfile.TarInfo("pivot/escaped")
+                escaped.type = tarfile.SYMTYPE
+                escaped.linkname = "/target"
+                handle.addfile(escaped)
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/stage.tar"
+            payload = archive.getvalue()
+            metadata = json.dumps(
+                {"sha256": hashlib.sha256(payload).hexdigest(), "sizeBytes": len(payload)}
+            )
+
+            def fake_run(args: list[str], **_: object) -> str:
+                return metadata if args[1] == "cat" else ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                return archive.getvalue()
+
+            with self.assertRaisesRegex(SourceIntegrityError, "symbolic-link parent"):
+                RcloneStorageAdapter(
+                    run_command=fake_run,
+                    stream_command=fake_stream,
+                ).restore_tree(uri, Path(root, "restore"))
+
+            self.assertFalse((outside / "escaped").exists())
+
+    def test_checkpoint_restore_rejects_hardlink_to_a_symlink_member(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            outside = Path(root, "outside")
+            outside.mkdir()
+            archive = io.BytesIO()
+            with tarfile.open(fileobj=archive, mode="w") as handle:
+                pivot = tarfile.TarInfo("pivot")
+                pivot.type = tarfile.SYMTYPE
+                pivot.linkname = str(outside.resolve())
+                handle.addfile(pivot)
+                alias = tarfile.TarInfo("alias")
+                alias.type = tarfile.LNKTYPE
+                alias.linkname = "pivot"
+                handle.addfile(alias)
+                escaped = tarfile.TarInfo("alias/escape.txt")
+                escaped.size = 6
+                handle.addfile(escaped, io.BytesIO(b"escape"))
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/stage.tar"
+            payload = archive.getvalue()
+            metadata = json.dumps(
+                {"sha256": hashlib.sha256(payload).hexdigest(), "sizeBytes": len(payload)}
+            )
+
+            def fake_run(args: list[str], **_: object) -> str:
+                return metadata if args[1] == "cat" else ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                return archive.getvalue()
+
+            with self.assertRaisesRegex(SourceIntegrityError, "hardlink target is not a regular"):
+                RcloneStorageAdapter(
+                    run_command=fake_run,
+                    stream_command=fake_stream,
+                ).restore_tree(uri, Path(root, "restore"))
+
+            self.assertFalse((outside / "escape.txt").exists())
 
     def test_checkpoint_metadata_failure_does_not_replace_previous_checkpoint(self) -> None:
         with tempfile.TemporaryDirectory() as root:
