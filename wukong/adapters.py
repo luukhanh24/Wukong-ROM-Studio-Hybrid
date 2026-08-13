@@ -908,7 +908,14 @@ class RcloneStorageAdapter:
             return archive_path
 
         staging = destination.with_name(destination.name + ".restore-partial")
-        with tempfile.TemporaryDirectory(prefix="wukong-checkpoint-") as temporary:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # Hosted Actions may mount the workspace on a large build volume while
+        # the system /tmp remains on a nearly-full root filesystem. Keep the
+        # verified TAR beside its restore destination so both use that volume.
+        with tempfile.TemporaryDirectory(
+            prefix=".wukong-checkpoint-",
+            dir=destination.parent,
+        ) as temporary:
             archive_path = Path(temporary, "checkpoint.tar")
             self._download_stream(
                 self._args("cat", uri),

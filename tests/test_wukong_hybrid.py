@@ -819,6 +819,42 @@ class SourceAndStorageContractTests(unittest.TestCase):
             self.assertFalse(destination.exists())
             self.assertFalse(destination.with_name(destination.name + ".restore-partial").exists())
 
+    def test_checkpoint_restore_places_verified_tar_on_destination_volume(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            archive = io.BytesIO()
+            with tarfile.open(fileobj=archive, mode="w") as handle:
+                member = tarfile.TarInfo("marker.txt")
+                member.size = 2
+                handle.addfile(member, io.BytesIO(b"ok"))
+            payload = archive.getvalue()
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/stage.tar"
+            metadata = json.dumps(
+                {"sha256": hashlib.sha256(payload).hexdigest(), "sizeBytes": len(payload)}
+            )
+
+            def fake_run(args: list[str], **_: object) -> str:
+                return metadata if args[1] == "cat" else ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                return archive.getvalue()
+
+            destination = Path(root, "large-volume", "restore")
+            real_temporary_directory = tempfile.TemporaryDirectory
+            temporary_parents: list[Path] = []
+
+            def recording_temporary_directory(*args: object, **kwargs: object) -> object:
+                temporary_parents.append(Path(str(kwargs.get("dir"))).resolve())
+                return real_temporary_directory(*args, **kwargs)
+
+            with patch("wukong.adapters.tempfile.TemporaryDirectory", recording_temporary_directory):
+                RcloneStorageAdapter(
+                    run_command=fake_run,
+                    stream_command=fake_stream,
+                ).restore_tree(uri, destination)
+
+            self.assertEqual(temporary_parents, [destination.parent.resolve()])
+            self.assertEqual((destination / "marker.txt").read_bytes(), b"ok")
+
     def test_checkpoint_archive_preserves_android_absolute_symlink_without_dereferencing(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             source = Path(root, "workspace")
