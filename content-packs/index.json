@@ -1381,6 +1381,12 @@
       "target": "MOD/ColorOS_16.0.7"
     },
     {
+      "archive": {
+        "md5": "5ae1dd7e9133026ade726432ea08551f",
+        "sha256": "3eb055a0c2368ba95b88f94d00f0c53b47b703bcc30d60738e85665b95eab1fd",
+        "sizeBytes": 1420179415,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.8.tar.zst"
+      },
       "files": [
         {
           "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
@@ -2377,6 +2383,12 @@
       "target": "MOD/RealmeUI_16.0.7"
     },
     {
+      "archive": {
+        "md5": "32d5ff82de83ee9a24cd050d87a4812c",
+        "sha256": "f4210660e44cf47a57278578b0e73bfc02b8e083b0c1ea3bd8cd844ad36a0fdd",
+        "sizeBytes": 120455292,
+        "uri": "wukong-gdrive:WukongROM/content-packs/copy-image/v1.tar.zst"
+      },
       "files": [
         {
           "path": "PKX110/system_dlkm_gki.img",
@@ -2430,6 +2442,12 @@
       "target": "copy-image"
     },
     {
+      "archive": {
+        "md5": "289190c73998ed4d30e6922b9121dc0d",
+        "sha256": "ec74766ad2fbff682ae5f5aa697b785784cc2cd3dbdadbcfefbee87b063b4bd1",
+        "sizeBytes": 180944653,
+        "uri": "wukong-gdrive:WukongROM/content-packs/OFX/v1.tar.zst"
+      },
       "files": [
         {
           "path": "OrangeFox-8845.img",
@@ -2453,6 +2471,12 @@
       "target": "OFX"
     },
     {
+      "archive": {
+        "md5": "96bc2a0259b34a53acb7161803e69948",
+        "sha256": "ff9e108748736a41f654fd2c4fcc6e0865205a77633a13e5ffc201db7ff2a80d",
+        "sizeBytes": 165520159,
+        "uri": "wukong-gdrive:WukongROM/content-packs/TWRP/v1.tar.zst"
+      },
       "files": [
         {
           "path": "TWRP-85xx.img",
