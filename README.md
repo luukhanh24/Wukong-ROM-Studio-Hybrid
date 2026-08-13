@@ -11,6 +11,8 @@ Core capabilities:
 - Local Windows, GitHub-hosted Ubuntu 24.04 and qualified self-hosted Linux.
 - Private Google Drive content/source/checkpoint storage and public artifact links.
 - Owner-scoped job status, events, cancel and checkpoint resume.
+- GitHub checkpoints are streamed as one TAR plus SHA-256 metadata, avoiding
+  Google Drive's per-file throttling while preserving safe resume validation.
 - Native WinUI Hybrid Cloud page, headless CLI and Telegram admin/user bot.
 
 See [HYBRID_SETUP.md](HYBRID_SETUP.md) for setup and

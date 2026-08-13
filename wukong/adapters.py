@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import time
+import uuid
 import zlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -597,6 +600,47 @@ class _SafeRedirectHandler(HTTPRedirectHandler):
 
 
 RunCommand = Callable[..., str]
+StreamCommand = Callable[[list[str], bytes | None], bytes]
+
+
+class _HashingWriter:
+    def __init__(self, destination: Any) -> None:
+        self.destination = destination
+        self.digest = hashlib.sha256()
+        self.size_bytes = 0
+
+    def write(self, payload: bytes) -> int:
+        written = self.destination.write(payload)
+        if written is None:
+            written = len(payload)
+        if written != len(payload):
+            raise OSError("Checkpoint archive stream was only partially written")
+        self.digest.update(payload)
+        self.size_bytes += len(payload)
+        return written
+
+
+class _CountingWriter:
+    def __init__(self) -> None:
+        self.size_bytes = 0
+
+    def write(self, payload: bytes) -> int:
+        self.size_bytes += len(payload)
+        return len(payload)
+
+
+class _HashingReader:
+    def __init__(self, source: Any) -> None:
+        self.source = source
+        self.digest = hashlib.sha256()
+        self.size_bytes = 0
+
+    def read(self, size: int = -1) -> bytes:
+        payload = self.source.read(size)
+        if payload:
+            self.digest.update(payload)
+            self.size_bytes += len(payload)
+        return payload
 
 
 def _run_text(args: list[str], **kwargs: object) -> str:
@@ -639,11 +683,13 @@ class RcloneStorageAdapter:
         remote: str = "wukong-gdrive",
         root: str = "WukongROM",
         run_command: RunCommand = _run_text,
+        stream_command: StreamCommand | None = None,
         config_path: Path | None = None,
     ) -> None:
         self.remote = remote.rstrip(":")
         self.root = root.strip("/\\")
         self.run_command = run_command
+        self.stream_command = stream_command
         self.config_path = config_path
 
     def _args(self, *values: str) -> list[str]:
@@ -675,15 +721,240 @@ class RcloneStorageAdapter:
         source = source.resolve()
         if not source.is_dir():
             raise FileNotFoundError(source)
-        uri = self.remote_uri(relative_path)
-        self.run_command(self._args("sync", str(source), uri, "--retries", "3"))
-        return uri
+        self._validate_checkpoint_source(source)
+        uri = self.remote_uri(f"{relative_path}/{uuid.uuid4().hex}.tar")
+        staging_uri = uri + ".partial"
+        metadata_uri = uri + ".metadata.json"
+        staging_metadata_uri = metadata_uri + ".partial"
+
+        def write_archive(output: Any) -> tuple[str, int]:
+            writer = _HashingWriter(output)
+            self._write_checkpoint_archive(source, writer)
+            return writer.digest.hexdigest(), writer.size_bytes
+
+        counter = _CountingWriter()
+        self._write_checkpoint_archive(source, counter)
+        archive_size = counter.size_bytes
+        try:
+            digest, size_bytes = self._upload_stream(
+                self._args("rcat", staging_uri, "--size", str(archive_size)),
+                write_archive,
+            )
+            if size_bytes != archive_size:
+                raise SourceError(
+                    f"Checkpoint changed while archiving: expected {archive_size} bytes, got {size_bytes}"
+                )
+            metadata = {
+                "schemaVersion": 1,
+                "format": "tar",
+                "sha256": digest,
+                "sizeBytes": size_bytes,
+            }
+            with tempfile.TemporaryDirectory(prefix="wukong-checkpoint-metadata-") as root:
+                metadata_path = Path(root) / "checkpoint.metadata.json"
+                metadata_path.write_text(
+                    json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                self.run_command(
+                    self._args(
+                        "copyto",
+                        str(metadata_path),
+                        staging_metadata_uri,
+                        "--retries",
+                        "3",
+                    )
+                )
+            self.run_command(self._args("moveto", staging_uri, uri))
+            self.run_command(self._args("moveto", staging_metadata_uri, metadata_uri))
+            return uri
+        except Exception:
+            for candidate in (staging_uri, staging_metadata_uri, uri, metadata_uri):
+                try:
+                    self.run_command(self._args("deletefile", candidate))
+                except Exception:
+                    pass
+            raise
+
+    @staticmethod
+    def _write_checkpoint_archive(source: Path, output: Any) -> None:
+        # A size hint makes rclone stream reliably to Drive. Counting the TAR
+        # first costs one extra disk pass but avoids a same-sized local copy.
+        with tarfile.open(fileobj=output, mode="w|", dereference=False) as archive:
+            for child in sorted(source.iterdir(), key=lambda item: item.name.casefold()):
+                archive.add(
+                    child,
+                    arcname=child.name,
+                    recursive=True,
+                    filter=RcloneStorageAdapter._checkpoint_tar_filter,
+                )
+
+    @staticmethod
+    def _checkpoint_tar_filter(member: tarfile.TarInfo) -> tarfile.TarInfo:
+        RcloneStorageAdapter._validate_checkpoint_member(member)
+        return member
+
+    @staticmethod
+    def _validate_checkpoint_source(source: Path) -> None:
+        for directory, directory_names, file_names in os.walk(source, followlinks=False):
+            current = Path(directory)
+            for name in [*directory_names, *file_names]:
+                path = current / name
+                if path.is_symlink():
+                    raise SourceIntegrityError(
+                        f"Checkpoint workspace contains a symbolic link: {path.relative_to(source)}"
+                    )
 
     def restore_tree(self, uri: str, destination: Path) -> Path:
         destination = destination.resolve()
+        if uri.casefold().endswith(".tar"):
+            return self._restore_checkpoint_archive(uri, destination)
         destination.mkdir(parents=True, exist_ok=True)
         self.run_command(self._args("copy", uri, str(destination), "--retries", "3"))
         return destination
+
+    def _upload_stream(
+        self,
+        args: list[str],
+        write_payload: Callable[[Any], tuple[str, int]],
+    ) -> tuple[str, int]:
+        if self.stream_command is not None:
+            buffer = io.BytesIO()
+            result = write_payload(buffer)
+            self.stream_command(args, buffer.getvalue())
+            return result
+
+        with tempfile.TemporaryFile() as error_log:
+            process = subprocess.Popen(
+                args,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=error_log,
+            )
+            assert process.stdin is not None
+            try:
+                result = write_payload(process.stdin)
+                process.stdin.close()
+                return_code = process.wait()
+            except Exception:
+                process.kill()
+                process.wait()
+                raise
+            error_log.seek(0)
+            stderr = error_log.read()
+        if return_code != 0:
+            details = stderr.decode("utf-8", errors="replace").strip()
+            raise SourceError(f"Checkpoint upload failed: {details or f'rclone exited {return_code}'}")
+        return result
+
+    def _download_stream(self, args: list[str], read_payload: Callable[[Any], Path]) -> Path:
+        if self.stream_command is not None:
+            return read_payload(io.BytesIO(self.stream_command(args, None)))
+
+        with tempfile.TemporaryFile() as error_log:
+            process = subprocess.Popen(
+                args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=error_log,
+            )
+            assert process.stdout is not None
+            try:
+                result = read_payload(process.stdout)
+                return_code = process.wait()
+            except Exception:
+                process.kill()
+                process.wait()
+                raise
+            error_log.seek(0)
+            stderr = error_log.read()
+        if return_code != 0:
+            details = stderr.decode("utf-8", errors="replace").strip()
+            raise SourceError(f"Checkpoint download failed: {details or f'rclone exited {return_code}'}")
+        return result
+
+    def _restore_checkpoint_archive(self, uri: str, destination: Path) -> Path:
+        try:
+            metadata = json.loads(
+                self.run_command(self._args("cat", uri + ".metadata.json"))
+            )
+            expected_sha256 = str(metadata["sha256"]).casefold()
+            expected_size = int(metadata["sizeBytes"])
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise SourceIntegrityError("Checkpoint archive metadata is invalid") from exc
+        if (
+            len(expected_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in expected_sha256)
+            or expected_size < 0
+        ):
+            raise SourceIntegrityError("Checkpoint archive metadata is invalid")
+
+        staging = destination.with_name(destination.name + ".restore-partial")
+        if staging.exists():
+            shutil.rmtree(staging)
+        staging.mkdir(parents=True)
+
+        def extract_archive(input_stream: Any) -> Path:
+            reader = _HashingReader(input_stream)
+            try:
+                with tarfile.open(fileobj=reader, mode="r|*") as archive:
+                    for member in archive:
+                        self._validate_checkpoint_member(member)
+                        archive.extract(member, staging, filter="data")
+                for chunk in iter(lambda: reader.read(CHUNK_SIZE), b""):
+                    pass
+            except (tarfile.TarError, OSError, ValueError) as exc:
+                raise SourceIntegrityError(f"Invalid checkpoint archive: {exc}") from exc
+            if reader.size_bytes != expected_size:
+                raise SourceIntegrityError(
+                    f"Checkpoint archive size mismatch: expected {expected_size}, got {reader.size_bytes}"
+                )
+            actual_sha256 = reader.digest.hexdigest()
+            if actual_sha256 != expected_sha256:
+                raise SourceIntegrityError(
+                    f"Checkpoint archive checksum mismatch: expected {expected_sha256}, got {actual_sha256}"
+                )
+            return staging
+
+        try:
+            self._download_stream(self._args("cat", uri), extract_archive)
+            if destination.exists():
+                shutil.rmtree(destination)
+            os.replace(staging, destination)
+        except Exception:
+            if staging.exists():
+                shutil.rmtree(staging)
+            raise
+        return destination
+
+    @staticmethod
+    def _validate_checkpoint_member(member: tarfile.TarInfo) -> None:
+        normalized = member.name.replace("\\", "/")
+        path = PurePosixPath(normalized)
+        hardlink_is_unsafe = False
+        if member.islnk():
+            link_name = member.linkname.replace("\\", "/")
+            link_path = PurePosixPath(link_name)
+            hardlink_is_unsafe = (
+                not link_name
+                or "\x00" in link_name
+                or link_path.is_absolute()
+                or ".." in link_path.parts
+                or (link_path.parts and link_path.parts[0].endswith(":"))
+            )
+        if (
+            not normalized
+            or "\x00" in normalized
+            or path.is_absolute()
+            or ".." in path.parts
+            or (path.parts and path.parts[0].endswith(":"))
+            or member.issym()
+            or hardlink_is_unsafe
+            or not (member.isdir() or member.isfile() or member.islnk())
+        ):
+            raise SourceIntegrityError(
+                f"unsafe checkpoint archive member: {member.name!r}"
+            )
 
     def publish_artifact(self, artifact: Path, *, device: str, build: str) -> ArtifactRecord:
         artifact = artifact.resolve()

@@ -7,7 +7,9 @@ import json
 import os
 import subprocess
 import tempfile
+import tarfile
 import unittest
+import uuid
 import zlib
 from datetime import datetime, timedelta, timezone
 from contextlib import redirect_stdout
@@ -699,6 +701,217 @@ class SourceAndStorageContractTests(unittest.TestCase):
             metadata = json.loads(copied[metadata_uri])
             self.assertEqual(metadata["sha256"], record.sha256)
             self.assertEqual(metadata["sizeBytes"], len(b"rom-source"))
+
+    def test_checkpoint_archive_round_trip_uses_one_remote_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root, "workspace")
+            source.mkdir()
+            (source / "marker.json").write_text("{}", encoding="utf-8")
+            nested = source / "rom-unpack" / "system"
+            nested.mkdir(parents=True)
+            (nested / "build.prop").write_text("version=1", encoding="utf-8")
+            remote_files: dict[str, bytes] = {}
+
+            def fake_run(args: list[str], **_: object) -> str:
+                operation = args[1]
+                if operation == "copyto":
+                    remote_files[args[3]] = Path(args[2]).read_bytes()
+                elif operation == "moveto":
+                    remote_files[args[3]] = remote_files.pop(args[2])
+                elif operation == "cat":
+                    return remote_files[args[2]].decode("utf-8")
+                return ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                operation = args[1]
+                if operation == "rcat":
+                    self.assertEqual(int(args[args.index("--size") + 1]), len(payload or b""))
+                    remote_files[args[2]] = payload or b""
+                    return b""
+                if operation == "cat":
+                    return remote_files[args[2]]
+                raise AssertionError(args)
+
+            storage = RcloneStorageAdapter(
+                run_command=fake_run,
+                stream_command=fake_stream,
+            )
+            uri = storage.sync_tree(source, "checkpoints/job/extract_payload")
+            restored = Path(root, "restored")
+            storage.restore_tree(uri, restored)
+
+            self.assertTrue(uri.endswith(".tar"))
+            self.assertEqual((restored / "marker.json").read_text(encoding="utf-8"), "{}")
+            self.assertEqual(
+                (restored / "rom-unpack" / "system" / "build.prop").read_text(encoding="utf-8"),
+                "version=1",
+            )
+            self.assertIn(uri + ".metadata.json", remote_files)
+            metadata = json.loads(remote_files[uri + ".metadata.json"])
+            self.assertEqual(hashlib.sha256(remote_files[uri]).hexdigest(), metadata["sha256"])
+
+    def test_checkpoint_restore_rejects_path_traversal_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            archive = io.BytesIO()
+            with tarfile.open(fileobj=archive, mode="w") as handle:
+                member = tarfile.TarInfo("../escape.txt")
+                member.size = 6
+                handle.addfile(member, io.BytesIO(b"escape"))
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/stage.tar"
+            metadata_uri = uri + ".metadata.json"
+            remote_files = {
+                uri: archive.getvalue(),
+                metadata_uri: json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "sha256": hashlib.sha256(archive.getvalue()).hexdigest(),
+                        "sizeBytes": len(archive.getvalue()),
+                    }
+                ).encode(),
+            }
+
+            def fake_run(args: list[str], **_: object) -> str:
+                if args[1] == "cat":
+                    return remote_files[args[2]].decode("utf-8")
+                return ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                return remote_files[args[2]]
+
+            destination = Path(root, "restore")
+            with self.assertRaisesRegex(SourceIntegrityError, "unsafe checkpoint archive"):
+                RcloneStorageAdapter(
+                    run_command=fake_run,
+                    stream_command=fake_stream,
+                ).restore_tree(uri, destination)
+
+            self.assertFalse(Path(root, "escape.txt").exists())
+
+    def test_checkpoint_restore_removes_partial_output_on_checksum_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            archive = io.BytesIO()
+            with tarfile.open(fileobj=archive, mode="w") as handle:
+                member = tarfile.TarInfo("marker.txt")
+                member.size = 5
+                handle.addfile(member, io.BytesIO(b"valid"))
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/stage.tar"
+            metadata = json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "sha256": "0" * 64,
+                    "sizeBytes": len(archive.getvalue()),
+                }
+            )
+
+            def fake_run(args: list[str], **_: object) -> str:
+                return metadata if args[1] == "cat" else ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                return archive.getvalue()
+
+            destination = Path(root, "restore")
+            with self.assertRaisesRegex(SourceIntegrityError, "checksum mismatch"):
+                RcloneStorageAdapter(
+                    run_command=fake_run,
+                    stream_command=fake_stream,
+                ).restore_tree(uri, destination)
+
+            self.assertFalse(destination.exists())
+            self.assertFalse(destination.with_name(destination.name + ".restore-partial").exists())
+
+    def test_checkpoint_upload_rejects_workspace_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root, "workspace")
+            source.mkdir()
+            link = source / "outside-link"
+            link.write_text("test seam", encoding="utf-8")
+
+            with patch.object(Path, "is_symlink", autospec=True) as is_symlink:
+                is_symlink.side_effect = lambda path: path.name == link.name
+                with self.assertRaisesRegex(SourceIntegrityError, "symbolic link"):
+                    RcloneStorageAdapter(
+                        run_command=lambda *_args, **_kwargs: "",
+                        stream_command=lambda *_args, **_kwargs: b"",
+                    ).sync_tree(source, "checkpoints/job/stage")
+
+    def test_checkpoint_metadata_failure_does_not_replace_previous_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root, "workspace")
+            source.mkdir()
+            (source / "marker.txt").write_text("new", encoding="utf-8")
+            previous_uri = "wukong-gdrive:WukongROM/checkpoints/job/stage/previous.tar"
+            remote_files = {previous_uri: b"previous", previous_uri + ".metadata.json": b"{}"}
+
+            def fake_run(args: list[str], **_: object) -> str:
+                operation = args[1]
+                if operation == "copyto":
+                    raise OSError("metadata upload failed")
+                if operation == "deletefile":
+                    remote_files.pop(args[2], None)
+                return ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                remote_files[args[2]] = payload or b""
+                return b""
+
+            with patch.object(uuid, "uuid4", return_value=uuid.UUID(int=1)):
+                with self.assertRaisesRegex(OSError, "metadata upload failed"):
+                    RcloneStorageAdapter(
+                        run_command=fake_run,
+                        stream_command=fake_stream,
+                    ).sync_tree(source, "checkpoints/job/stage")
+
+            self.assertEqual(remote_files, {
+                previous_uri: b"previous",
+                previous_uri + ".metadata.json": b"{}",
+            })
+
+    def test_restore_legacy_directory_checkpoint_uses_rclone_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            calls: list[list[str]] = []
+
+            def fake_run(args: list[str], **_: object) -> str:
+                calls.append(args)
+                return ""
+
+            uri = "wukong-gdrive:WukongROM/checkpoints/job/legacy-stage"
+            destination = Path(root, "restore")
+            result = RcloneStorageAdapter(run_command=fake_run).restore_tree(uri, destination)
+
+            self.assertEqual(result, destination.resolve())
+            self.assertEqual(calls[0][1:4], ["copy", uri, str(destination.resolve())])
+
+    def test_checkpoint_archive_round_trip_preserves_safe_hardlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root, "workspace")
+            source.mkdir()
+            original = source / "cached.img"
+            original.write_bytes(b"partition-cache")
+            os.link(original, source / "system.img")
+            remote_files: dict[str, bytes] = {}
+
+            def fake_run(args: list[str], **_: object) -> str:
+                if args[1] == "copyto":
+                    remote_files[args[3]] = Path(args[2]).read_bytes()
+                elif args[1] == "moveto":
+                    remote_files[args[3]] = remote_files.pop(args[2])
+                elif args[1] == "cat":
+                    return remote_files[args[2]].decode("utf-8")
+                return ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                if args[1] == "rcat":
+                    remote_files[args[2]] = payload or b""
+                    return b""
+                return remote_files[args[2]]
+
+            storage = RcloneStorageAdapter(run_command=fake_run, stream_command=fake_stream)
+            uri = storage.sync_tree(source, "checkpoints/job/hardlinks")
+            restored = Path(root, "restored")
+            storage.restore_tree(uri, restored)
+
+            self.assertEqual((restored / "cached.img").read_bytes(), b"partition-cache")
+            self.assertEqual((restored / "system.img").read_bytes(), b"partition-cache")
 
 
 class OrchestratorContractTests(unittest.TestCase):
