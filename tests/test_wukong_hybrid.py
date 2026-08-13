@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
+from urllib.request import Request
 
 from wukong.adapters import (
     HttpSourceAdapter,
@@ -186,10 +187,11 @@ class SourceAndStorageContractTests(unittest.TestCase):
             url: str,
             content_type: str,
             status: int = 200,
+            headers: dict[str, str] | None = None,
         ) -> None:
             super().__init__(payload)
             self._url = url
-            self.headers = {"Content-Type": content_type}
+            self.headers = {"Content-Type": content_type, **(headers or {})}
             self.status = status
 
         def geturl(self) -> str:
@@ -206,6 +208,318 @@ class SourceAndStorageContractTests(unittest.TestCase):
         def open(self, request: object, *, timeout: int) -> io.BytesIO:
             self.requests.append(request)
             return self.responses.pop(0)
+
+    class _RangeOpener:
+        def __init__(self, payload: bytes, *, url: str, requests: list[Request]) -> None:
+            self.payload = payload
+            self.url = url
+            self.requests = requests
+
+        def open(self, request: Request, *, timeout: int) -> io.BytesIO:
+            self.requests.append(request)
+            range_header = request.get_header("Range")
+            if not range_header or not range_header.startswith("bytes="):
+                raise AssertionError("parallel request is missing byte range")
+            start_text, end_text = range_header.removeprefix("bytes=").split("-", 1)
+            start = int(start_text)
+            end = int(end_text)
+            return SourceAndStorageContractTests._HttpResponse(
+                self.payload[start : end + 1],
+                url=self.url,
+                content_type="application/octet-stream",
+                status=206,
+                headers={
+                    "Content-Range": f"bytes {start}-{end}/{len(self.payload)}",
+                    "Content-Length": str(end - start + 1),
+                },
+            )
+
+    class _IgnoringRangeOpener:
+        def __init__(self, payload: bytes, *, url: str, requests: list[Request]) -> None:
+            self.payload = payload
+            self.url = url
+            self.requests = requests
+
+        def open(self, request: Request, *, timeout: int) -> io.BytesIO:
+            self.requests.append(request)
+            return SourceAndStorageContractTests._HttpResponse(
+                self.payload,
+                url=self.url,
+                content_type="application/zip",
+                status=200,
+                headers={"Content-Length": str(len(self.payload))},
+            )
+
+    class _ProbeThenIgnoreRangeOpener:
+        def __init__(self, payload: bytes, *, url: str, requests: list[Request]) -> None:
+            self.payload = payload
+            self.url = url
+            self.requests = requests
+
+        def open(self, request: Request, *, timeout: int) -> io.BytesIO:
+            self.requests.append(request)
+            if request.get_header("Range") == "bytes=0-0":
+                return SourceAndStorageContractTests._HttpResponse(
+                    self.payload[:1],
+                    url=self.url,
+                    content_type="application/octet-stream",
+                    status=206,
+                    headers={"Content-Range": f"bytes 0-0/{len(self.payload)}"},
+                )
+            return SourceAndStorageContractTests._HttpResponse(
+                self.payload,
+                url=self.url,
+                content_type="application/zip",
+                status=200,
+                headers={"Content-Length": str(len(self.payload))},
+            )
+
+    def test_http_source_parallel_download_assembles_ranges_in_order(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04" + bytes(range(60))
+        initial = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": str(len(payload)),
+                        "ETag": '"resume-etag"',
+                    },
+                )
+            ]
+        )
+        range_requests: list[Request] = []
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            result = HttpSourceAdapter(
+                attempts=1,
+                opener=initial,
+                opener_factory=lambda: self._RangeOpener(
+                    payload,
+                    url=download_url,
+                    requests=range_requests,
+                ),
+                max_connections=3,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            self.assertEqual(result.path.read_bytes(), payload)
+            self.assertEqual(len(range_requests), 4)
+            self.assertFalse(list(target.parent.glob("*.range-*")))
+
+    def test_http_source_parallel_download_resumes_prefix_and_range_checkpoint(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04" + bytes(range(16))
+        initial = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": str(len(payload)),
+                        "ETag": '"resume-etag"',
+                    },
+                )
+            ]
+        )
+        range_requests: list[Request] = []
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            partial = target.with_suffix(".zip.partial")
+            partial.write_bytes(payload[:4])
+            partial.with_name(partial.name + ".range-4-11").write_bytes(payload[4:7])
+            partial.with_name(partial.name + ".http.json").write_text(
+                json.dumps(
+                    {
+                        "url": download_url,
+                        "sizeBytes": len(payload),
+                        "etag": '"resume-etag"',
+                        "lastModified": None,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = HttpSourceAdapter(
+                attempts=1,
+                opener=initial,
+                opener_factory=lambda: self._RangeOpener(
+                    payload,
+                    url=download_url,
+                    requests=range_requests,
+                ),
+                max_connections=2,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            self.assertEqual(result.path.read_bytes(), payload)
+            requested_ranges = {request.get_header("Range") for request in range_requests}
+            self.assertEqual(requested_ranges, {"bytes=0-0", "bytes=7-11", "bytes=12-19"})
+
+    def test_http_source_falls_back_when_server_ignores_range_probe(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04sequential-fallback"
+        initial = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": str(len(payload)),
+                        "ETag": '"fallback-etag"',
+                    },
+                )
+            ]
+        )
+        requests: list[Request] = []
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            result = HttpSourceAdapter(
+                attempts=1,
+                opener=initial,
+                opener_factory=lambda: self._IgnoringRangeOpener(
+                    payload,
+                    url=download_url,
+                    requests=requests,
+                ),
+                max_connections=3,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            self.assertEqual(result.path.read_bytes(), payload)
+            self.assertEqual([request.get_header("Range") for request in requests], ["bytes=0-0"])
+
+    def test_http_source_falls_back_when_worker_stops_honoring_ranges(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04worker-fallback"
+        initial = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": str(len(payload)),
+                        "ETag": '"worker-fallback-etag"',
+                    },
+                )
+            ]
+        )
+        requests: list[Request] = []
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            result = HttpSourceAdapter(
+                attempts=1,
+                opener=initial,
+                opener_factory=lambda: self._ProbeThenIgnoreRangeOpener(
+                    payload,
+                    url=download_url,
+                    requests=requests,
+                ),
+                max_connections=2,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            self.assertEqual(result.path.read_bytes(), payload)
+            self.assertTrue(any(request.get_header("Range") not in {None, "bytes=0-0"} for request in requests))
+            self.assertIsNone(requests[-1].get_header("Range"))
+
+    def test_parallel_worker_uses_strong_etag_as_if_range_validator(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04" + bytes(range(16))
+        initial = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": str(len(payload)),
+                        "ETag": '"strong-etag"',
+                    },
+                )
+            ]
+        )
+        range_requests: list[Request] = []
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            HttpSourceAdapter(
+                attempts=1,
+                opener=initial,
+                opener_factory=lambda: self._RangeOpener(
+                    payload,
+                    url=download_url,
+                    requests=range_requests,
+                ),
+                max_connections=2,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            workers = [request for request in range_requests if request.get_header("Range") != "bytes=0-0"]
+            self.assertTrue(workers)
+            self.assertTrue(all(request.get_header("If-range") == '"strong-etag"' for request in workers))
+
+    def test_http_source_discards_stale_parallel_checkpoint_identity(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04" + bytes(range(16))
+        initial = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": str(len(payload)),
+                        "ETag": '"new-etag"',
+                    },
+                )
+            ]
+        )
+        range_requests: list[Request] = []
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            partial = target.with_suffix(".zip.partial")
+            partial.write_bytes(b"stale")
+            partial.with_name(partial.name + ".http.json").write_text(
+                json.dumps({"url": download_url, "sizeBytes": len(payload), "etag": '"old-etag"'}),
+                encoding="utf-8",
+            )
+            result = HttpSourceAdapter(
+                attempts=1,
+                opener=initial,
+                opener_factory=lambda: self._RangeOpener(
+                    payload,
+                    url=download_url,
+                    requests=range_requests,
+                ),
+                max_connections=2,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            self.assertEqual(result.path.read_bytes(), payload)
+            self.assertIn("bytes=0-9", {request.get_header("Range") for request in range_requests})
+            self.assertFalse(partial.with_name(partial.name + ".http.json").exists())
 
     def test_http_source_uses_oplus_headers_and_downloads_redirected_rom(self) -> None:
         resolver_url = "https://93.184.216.34/downloadCheck"

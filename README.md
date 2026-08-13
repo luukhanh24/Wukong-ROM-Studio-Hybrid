@@ -7,6 +7,7 @@ pipeline implementation; only their interaction adapters differ.
 Core capabilities:
 
 - Local file, HTTP/HTTPS and private rclone ROM sources with SHA-256 checks.
+- OPlus OTA resolver support with safe redirects and resumable 16-range downloads.
 - Local Windows, GitHub-hosted Ubuntu 24.04 and qualified self-hosted Linux.
 - Private Google Drive content/source/checkpoint storage and public artifact links.
 - Owner-scoped job status, events, cancel and checkpoint resume.
