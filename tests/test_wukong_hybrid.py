@@ -5,6 +5,7 @@ import gzip
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import tarfile
@@ -26,7 +27,12 @@ from wukong.adapters import (
 )
 from wukong.cloud_sync import CloudJobSync
 from wukong.cli import main as cli_main
-from wukong.content_packs import ContentPackManager, build_content_index, upload_content_packs
+from wukong.content_packs import (
+    ContentPackManager,
+    build_content_index,
+    create_content_pack_archive,
+    upload_content_packs,
+)
 from wukong.github import GitHubActionsAdapter, GitHubApiError
 from wukong.models import BuildRecipe, Identity, JobStatus, RecipeValidationError
 from wukong.orchestrator import HybridOrchestrator, InMemoryJobStore, OrchestrationError
@@ -1543,21 +1549,212 @@ class ContentPackContractTests(unittest.TestCase):
                 manager.install(index, "TWRP/v1")
             self.assertFalse((target / "TWRP" / "recovery.img").exists())
 
-    def test_upload_downloads_each_pack_and_verifies_checksum(self) -> None:
+    def test_archive_round_trip_uses_one_remote_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "content")
+            (content / "TWRP").mkdir(parents=True)
+            (content / "TWRP" / "recovery.img").write_bytes(b"img")
+            index = build_content_index(content, remote="drive:content-packs")
+            archive_path = Path(root, "TWRP-v1.tar")
+            archive = create_content_pack_archive(content, index["packs"][0], archive_path)
+            index["packs"][0]["archive"] = archive
+            uploaded: dict[str, bytes] = {str(archive["uri"]): archive_path.read_bytes()}
+            commands: list[list[str]] = []
+
+            def fake_run(args: list[str], **_: object) -> str:
+                commands.append(args)
+                if args[1] == "copyto" and not args[2].startswith("drive:"):
+                    uploaded[args[3]] = Path(args[2]).read_bytes()
+                elif args[1] == "copyto" and args[2].startswith("drive:"):
+                    Path(args[3]).write_bytes(uploaded[args[2]])
+                return ""
+
+            installed = ContentPackManager(Path(root, "installed"), run_command=fake_run).install(
+                index, "TWRP/v1"
+            )
+
+            self.assertEqual((installed / "recovery.img").read_bytes(), b"img")
+            downloads = [args for args in commands if args[1] == "copyto" and args[2].startswith("drive:")]
+            self.assertEqual(len(downloads), 1)
+
+    def test_archive_install_rejects_checksum_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "content")
+            (content / "TWRP").mkdir(parents=True)
+            (content / "TWRP" / "recovery.img").write_bytes(b"img")
+            index = build_content_index(content, remote="drive:content-packs")
+            archive_path = Path(root, "TWRP-v1.tar")
+            archive = create_content_pack_archive(content, index["packs"][0], archive_path)
+            archive["sha256"] = "0" * 64
+            index["packs"][0]["archive"] = archive
+
+            def fake_run(args: list[str], **_: object) -> str:
+                if args[1] == "copyto":
+                    shutil.copyfile(archive_path, args[3])
+                return ""
+
+            with self.assertRaisesRegex(SourceIntegrityError, "archive checksum"):
+                ContentPackManager(Path(root, "installed"), run_command=fake_run).install(
+                    index, "TWRP/v1"
+                )
+
+    def test_archive_install_rejects_traversal_and_links(self) -> None:
+        for unsafe_member in ("../escape.img", "pivot"):
+            with self.subTest(member=unsafe_member), tempfile.TemporaryDirectory() as root:
+                archive_path = Path(root, "unsafe.tar")
+                with tarfile.open(archive_path, "w") as archive:
+                    member = tarfile.TarInfo(unsafe_member)
+                    if unsafe_member == "pivot":
+                        member.type = tarfile.SYMTYPE
+                        member.linkname = "../outside"
+                    else:
+                        member.size = 3
+                    archive.addfile(member, None if member.issym() else io.BytesIO(b"img"))
+                payload = archive_path.read_bytes()
+                index = {
+                    "schemaVersion": 1,
+                    "packs": [{
+                        "id": "TWRP/v1",
+                        "target": "TWRP",
+                        "remote": "drive:content-packs/TWRP/v1",
+                        "sizeBytes": 3,
+                        "files": [{
+                            "path": "recovery.img", "sizeBytes": 3,
+                            "sha256": hashlib.sha256(b"img").hexdigest(),
+                        }],
+                        "archive": {
+                            "uri": "drive:content-packs/TWRP/v1.tar",
+                            "sizeBytes": len(payload),
+                            "sha256": hashlib.sha256(payload).hexdigest(),
+                            "md5": hashlib.md5(payload, usedforsecurity=False).hexdigest(),
+                        },
+                    }],
+                }
+
+                def fake_run(args: list[str], **_: object) -> str:
+                    Path(args[3]).write_bytes(payload)
+                    return ""
+
+                with self.assertRaisesRegex(SourceIntegrityError, "unsafe content-pack archive"):
+                    ContentPackManager(Path(root, "installed"), run_command=fake_run).install(
+                        index, "TWRP/v1"
+                    )
+                self.assertFalse(Path(root, "escape.img").exists())
+
+    def test_index_rejects_absolute_drive_and_backslash_traversal_paths(self) -> None:
+        base_pack = {
+            "id": "TWRP/v1", "target": "TWRP", "remote": "drive:TWRP/v1",
+            "sizeBytes": 3,
+            "files": [{"path": "recovery.img", "sizeBytes": 3,
+                       "sha256": hashlib.sha256(b"img").hexdigest()}],
+        }
+        for field, value in (
+            ("target", "C:/outside"),
+            ("target", "/outside"),
+            ("id", "../TWRP"),
+            ("file", "folder\\..\\escape.img"),
+        ):
+            with self.subTest(field=field, value=value):
+                pack = json.loads(json.dumps(base_pack))
+                if field == "file":
+                    pack["files"][0]["path"] = value
+                else:
+                    pack[field] = value
+                with self.assertRaisesRegex(ValueError, "content-pack"):
+                    ContentPackManager(Path(".")).install(
+                        {"schemaVersion": 1, "packs": [pack]}, "TWRP/v1"
+                    )
+
+    def test_archive_install_rejects_file_parent_collision(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            archive_path = Path(root, "unsafe.tar")
+            with tarfile.open(archive_path, "w") as archive:
+                parent = tarfile.TarInfo("pivot")
+                parent.size = 3
+                archive.addfile(parent, io.BytesIO(b"img"))
+                child = tarfile.TarInfo("pivot/child")
+                child.size = 3
+                archive.addfile(child, io.BytesIO(b"img"))
+            payload = archive_path.read_bytes()
+            index = {
+                "schemaVersion": 1,
+                "packs": [{
+                    "id": "TWRP/v1", "target": "TWRP", "remote": "drive:TWRP/v1",
+                    "sizeBytes": 6,
+                    "files": [
+                        {"path": "pivot", "sizeBytes": 3, "sha256": hashlib.sha256(b"img").hexdigest()},
+                        {"path": "pivot/child", "sizeBytes": 3, "sha256": hashlib.sha256(b"img").hexdigest()},
+                    ],
+                    "archive": {
+                        "uri": "drive:TWRP/v1.tar", "sizeBytes": len(payload),
+                        "sha256": hashlib.sha256(payload).hexdigest(),
+                        "md5": hashlib.md5(payload, usedforsecurity=False).hexdigest(),
+                    },
+                }],
+            }
+
+            def fake_run(args: list[str], **_: object) -> str:
+                Path(args[3]).write_bytes(payload)
+                return ""
+
+            with self.assertRaisesRegex(SourceIntegrityError, "file parent"):
+                ContentPackManager(Path(root, "installed"), run_command=fake_run).install(
+                    index, "TWRP/v1"
+                )
+
+    def test_upload_sends_one_archive_object_and_records_integrity(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             content = Path(root, "content")
             (content / "TWRP").mkdir(parents=True)
             (content / "TWRP" / "recovery.img").write_bytes(b"img")
             index = build_content_index(content, remote="wukong-gdrive:WukongROM/content-packs")
 
+            commands: list[list[str]] = []
+
             def fake_run(args: list[str], **_: object) -> str:
-                if args[1] == "copy" and args[2].startswith("wukong-gdrive:"):
-                    destination = Path(args[3])
-                    destination.mkdir(parents=True, exist_ok=True)
-                    (destination / "recovery.img").write_bytes(b"img")
+                commands.append(args)
+                if args[1] == "size":
+                    archive = next(Path(root, "archives").glob("*.tar.zst"))
+                    return json.dumps({"count": 1, "bytes": archive.stat().st_size})
+                if args[1] == "md5sum":
+                    archive = next(Path(root, "archives").glob("*.tar.zst"))
+                    return hashlib.md5(archive.read_bytes(), usedforsecurity=False).hexdigest() + "  pack.tar.zst\n"
                 return ""
 
-            upload_content_packs(content, index, run_command=fake_run)
+            upload_content_packs(
+                content,
+                index,
+                run_command=fake_run,
+                verify_download=False,
+                archive_root=Path(root, "archives"),
+            )
+
+            self.assertRegex(index["packs"][0]["archive"]["sha256"], r"^[0-9a-f]{64}$")
+            uploads = [args for args in commands if args[1] == "copyto"]
+            self.assertEqual(len(uploads), 1)
+            self.assertEqual(uploads[0][3], "wukong-gdrive:WukongROM/content-packs/TWRP/v1.tar.zst")
+
+    def test_legacy_directory_pack_still_installs(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "installed")
+            index = {
+                "schemaVersion": 1,
+                "packs": [{
+                    "id": "TWRP/v1", "target": "TWRP", "remote": "drive:TWRP/v1",
+                    "sizeBytes": 3,
+                    "files": [{"path": "recovery.img", "sizeBytes": 3,
+                               "sha256": hashlib.sha256(b"img").hexdigest()}],
+                }],
+            }
+
+            def fake_run(args: list[str], **_: object) -> str:
+                destination = Path(args[3])
+                destination.mkdir(parents=True, exist_ok=True)
+                (destination / "recovery.img").write_bytes(b"img")
+                return ""
+
+            installed = ContentPackManager(content, run_command=fake_run).install(index, "TWRP/v1")
+            self.assertEqual((installed / "recovery.img").read_bytes(), b"img")
 
 
 if __name__ == "__main__":

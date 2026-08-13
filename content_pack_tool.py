@@ -16,7 +16,8 @@ def main() -> int:
     parser.add_argument("--remote", default="wukong-gdrive:WukongROM/content-packs")
     parser.add_argument("--pack")
     parser.add_argument("--rclone-config", default=os.environ.get("WUKONG_RCLONE_CONFIG"))
-    parser.add_argument("--skip-download-verify", action="store_true")
+    parser.add_argument("--verify-download", action="store_true")
+    parser.add_argument("--skip-download-verify", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     content_root = Path(args.content_root).resolve()
     index_path = Path(args.index).resolve()
@@ -31,8 +32,10 @@ def main() -> int:
             content_root,
             index,
             rclone_config=config,
-            verify_download=not args.skip_download_verify,
+            verify_download=args.verify_download and not args.skip_download_verify,
+            pack_id=args.pack,
         )
+        index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     elif args.command == "install":
         if not args.pack:
             parser.error("--pack is required for install")

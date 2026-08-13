@@ -24,13 +24,15 @@ Generate, upload and verify content-packs:
 
 ```text
 python content_pack_tool.py index --content-root . --index content-packs/index.json
-python content_pack_tool.py upload --content-root . --index content-packs/index.json
+python content_pack_tool.py upload --content-root . --index content-packs/index.json --pack MOD/ColorOS_16.0.8
 python content_pack_tool.py install --content-root verification-content --index content-packs/index.json --pack MOD/ColorOS_16.0.8
 python content_pack_tool.py verify --content-root verification-content --index content-packs/index.json --pack MOD/ColorOS_16.0.8
 ```
 
-`upload` downloads every uploaded pack into a temporary directory and verifies
-the complete file set, sizes and SHA-256 values before returning success.
+`upload` creates one deterministic `.tar.zst` object per pack, uploads it
+sequentially, then compares its size and Google Drive MD5 before returning
+success. Omit `--pack` only to upload every pack. Add `--verify-download` when
+you also want a complete download, safe extraction, and per-file SHA-256 check.
 
 Do not delete local content or publish the clean Git history until every pack
 has been downloaded and verified from Drive.

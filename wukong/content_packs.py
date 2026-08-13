@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
 import subprocess
+import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -15,6 +17,7 @@ from .adapters import SourceIntegrityError, sha256_file
 
 CONTENT_GROUPS = ("MOD", "copy-image", "OFX", "TWRP")
 RunCommand = Callable[..., str]
+ARCHIVE_CHUNK_SIZE = 1024 * 1024
 
 
 def _run_text(args: list[str], **kwargs: object) -> str:
@@ -41,6 +44,21 @@ def _file_records(root: Path) -> list[dict[str, object]]:
             }
         )
     return records
+
+
+def _relative_parts(value: object, *, label: str) -> tuple[str, ...]:
+    raw = str(value or "").replace("\\", "/")
+    path = PurePosixPath(raw)
+    if (
+        not raw
+        or "\x00" in raw
+        or path.is_absolute()
+        or raw != path.as_posix()
+        or any(part in ("", ".", "..") for part in raw.split("/"))
+        or any(":" in part for part in path.parts)
+    ):
+        raise ValueError(f"Invalid {label}: {value}")
+    return path.parts
 
 
 def build_content_index(content_root: Path, *, remote: str) -> dict[str, object]:
@@ -99,21 +117,251 @@ def validate_content_index(index: Mapping[str, Any]) -> None:
             raise ValueError("Invalid content-pack entry")
         pack_id = str(pack.get("id") or "")
         target = str(pack.get("target") or "")
-        if not pack_id or pack_id in ids or ".." in PurePosixPath(pack_id).parts:
+        try:
+            _relative_parts(pack_id, label="content-pack ID")
+        except ValueError as exc:
+            raise ValueError(f"Invalid or duplicate content-pack ID: {pack_id}") from exc
+        if pack_id in ids:
             raise ValueError(f"Invalid or duplicate content-pack ID: {pack_id}")
-        if not target or ".." in PurePosixPath(target).parts:
-            raise ValueError(f"Invalid content-pack target: {target}")
+        _relative_parts(target, label="content-pack target")
         ids.add(pack_id)
         seen: set[str] = set()
         total = 0
         for item in pack.get("files", []):
             path = str(item.get("path") or "")
-            if not path or path in seen or ".." in PurePosixPath(path).parts:
+            try:
+                _relative_parts(path, label="content-pack file path")
+            except ValueError as exc:
+                raise ValueError(f"Invalid content-pack file path: {path}") from exc
+            if path in seen:
                 raise ValueError(f"Invalid content-pack file path: {path}")
             seen.add(path)
             total += int(item.get("sizeBytes") or 0)
         if total != int(pack.get("sizeBytes") or 0):
             raise ValueError(f"Content-pack size total does not match: {pack_id}")
+        archive = pack.get("archive")
+        if archive is not None:
+            if not isinstance(archive, Mapping):
+                raise ValueError(f"Invalid content-pack archive: {pack_id}")
+            uri = str(archive.get("uri") or "")
+            digest = str(archive.get("sha256") or "").casefold()
+            md5 = str(archive.get("md5") or "").casefold()
+            size = int(archive.get("sizeBytes") or -1)
+            if (
+                not uri
+                or len(digest) != 64
+                or any(character not in "0123456789abcdef" for character in digest)
+                or len(md5) != 32
+                or any(character not in "0123456789abcdef" for character in md5)
+                or size < 0
+            ):
+                raise ValueError(f"Invalid content-pack archive: {pack_id}")
+
+
+def _archive_tar_filter(member: tarfile.TarInfo) -> tarfile.TarInfo:
+    member.uid = 0
+    member.gid = 0
+    member.uname = ""
+    member.gname = ""
+    member.mtime = 0
+    member.mode = 0o755 if member.isdir() else 0o644
+    member.pax_headers = {}
+    return member
+
+
+def _md5_file(path: Path) -> str:
+    digest = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(ARCHIVE_CHUNK_SIZE), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validate_archive_members(
+    archive: tarfile.TarFile,
+    pack: Mapping[str, Any] | None = None,
+) -> list[tarfile.TarInfo]:
+    expected = None if pack is None else {str(item["path"]): item for item in pack.get("files", [])}
+    members: list[tarfile.TarInfo] = []
+    seen: set[str] = set()
+    for member in archive.getmembers():
+        normalized = member.name.replace("\\", "/")
+        try:
+            _relative_parts(normalized, label="content-pack archive member")
+        except ValueError as exc:
+            raise SourceIntegrityError(
+                f"unsafe content-pack archive member: {member.name!r}"
+            ) from exc
+        if normalized in seen or not (member.isdir() or member.isfile()):
+            raise SourceIntegrityError(f"unsafe content-pack archive member: {member.name!r}")
+        seen.add(normalized)
+        members.append(member)
+    if expected is not None:
+        files = {member.name.replace("\\", "/"): member for member in members if member.isfile()}
+        if set(files) != set(expected):
+            raise SourceIntegrityError(f"Invalid content-pack archive file set: {pack.get('id')}")
+        for relative, item in expected.items():
+            member = files[relative]
+            if member.size != int(item["sizeBytes"]):
+                raise SourceIntegrityError(
+                    f"Invalid content-pack archive checksum: {pack.get('id')}/{relative}"
+                )
+            source = archive.extractfile(member)
+            if source is None:
+                raise SourceIntegrityError(f"Invalid content-pack archive member: {relative!r}")
+            digest = hashlib.sha256()
+            with source:
+                for chunk in iter(lambda: source.read(ARCHIVE_CHUNK_SIZE), b""):
+                    digest.update(chunk)
+            if digest.hexdigest() != item["sha256"]:
+                raise SourceIntegrityError(
+                    f"Invalid content-pack archive checksum: {pack.get('id')}/{relative}"
+                )
+    file_paths = {
+        PurePosixPath(member.name.replace("\\", "/"))
+        for member in members
+        if member.isfile()
+    }
+    for member in members:
+        path = PurePosixPath(member.name.replace("\\", "/"))
+        if any(parent in file_paths for parent in path.parents):
+            raise SourceIntegrityError(
+                f"unsafe content-pack archive member has a file parent: {member.name!r}"
+            )
+    return members
+
+
+def _zstd_binary() -> str:
+    bundled = Path(__file__).resolve().parents[1] / "bin" / "Windows" / "AMD64" / "zstd.exe"
+    if os.name == "nt" and bundled.is_file():
+        return str(bundled)
+    executable = shutil.which("zstd")
+    if not executable:
+        raise RuntimeError("zstd is required to create or install compressed content-packs")
+    return executable
+
+
+def create_content_pack_archive(
+    content_root: Path,
+    pack: Mapping[str, Any],
+    output: Path,
+) -> dict[str, object]:
+    """Create a deterministic, regular-file-only TAR payload for one pack."""
+    content_root = content_root.resolve()
+    target_parts = _relative_parts(pack["target"], label="content-pack target")
+    source = content_root.joinpath(*target_parts).resolve()
+    if content_root not in source.parents:
+        raise ValueError("Content-pack source escapes the content root")
+    if not source.is_dir():
+        raise FileNotFoundError(source)
+    output = output.resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    compressed = output.name.casefold().endswith((".tar.zst", ".tzst"))
+    tar_path = output.with_suffix("") if compressed else output
+    if compressed and tar_path.suffix.casefold() != ".tar":
+        tar_path = output.with_name(output.name + ".tar")
+    temporary_tar = tar_path.with_name(tar_path.name + ".partial")
+    temporary_output = output.with_name(output.name + ".partial")
+    try:
+        with tarfile.open(temporary_tar, mode="w", format=tarfile.PAX_FORMAT) as archive:
+            for item in pack.get("files", []):
+                relative = PurePosixPath(
+                    *_relative_parts(item["path"], label="content-pack file path")
+                )
+                path = source.joinpath(*relative.parts)
+                resolved_path = path.resolve()
+                if (
+                    source not in resolved_path.parents
+                    or path.is_symlink()
+                    or not resolved_path.is_file()
+                ):
+                    raise SourceIntegrityError(
+                        f"Content-pack contains a missing or symbolic file: {pack.get('id')}/{relative}"
+                    )
+                archive.add(
+                    resolved_path,
+                    arcname=relative.as_posix(),
+                    recursive=False,
+                    filter=_archive_tar_filter,
+                )
+        with tarfile.open(temporary_tar, mode="r:") as archive:
+            _validate_archive_members(archive, pack)
+        if compressed:
+            subprocess.run(
+                [_zstd_binary(), "-q", "-f", "-T1", "-3", str(temporary_tar), "-o", str(temporary_output)],
+                check=True,
+            )
+            os.replace(temporary_output, output)
+        else:
+            os.replace(temporary_tar, output)
+        return {
+            "uri": str(pack["remote"]).rstrip("/") + (".tar.zst" if compressed else ".tar"),
+            "sizeBytes": output.stat().st_size,
+            "sha256": sha256_file(output),
+            "md5": _md5_file(output),
+        }
+    finally:
+        temporary_tar.unlink(missing_ok=True)
+        temporary_output.unlink(missing_ok=True)
+
+
+def _extract_content_pack_archive(
+    archive_path: Path,
+    destination: Path,
+    *,
+    maximum_tar_bytes: int,
+) -> None:
+    tar_path = archive_path
+    temporary_tar: Path | None = None
+    if archive_path.name.casefold().endswith((".tar.zst", ".tzst")):
+        temporary_tar = archive_path.with_name(archive_path.name + ".expanded.tar")
+        with temporary_tar.open("wb") as output:
+            process = subprocess.Popen(
+                [_zstd_binary(), "-q", "-d", "-c", str(archive_path)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            assert process.stdout is not None
+            expanded = 0
+            try:
+                for chunk in iter(lambda: process.stdout.read(ARCHIVE_CHUNK_SIZE), b""):
+                    expanded += len(chunk)
+                    if expanded > maximum_tar_bytes:
+                        raise SourceIntegrityError("Content-pack archive exceeds its safe expanded size")
+                    output.write(chunk)
+                stderr = process.communicate()[1]
+                if process.returncode != 0:
+                    raise subprocess.CalledProcessError(process.returncode, process.args, stderr=stderr)
+            except Exception:
+                process.kill()
+                process.wait()
+                raise
+        tar_path = temporary_tar
+    try:
+        with tarfile.open(tar_path, mode="r:") as archive:
+            members = _validate_archive_members(archive)
+            destination.mkdir(parents=True, exist_ok=True)
+            for member in members:
+                relative = PurePosixPath(member.name.replace("\\", "/"))
+                target = destination.joinpath(*relative.parts)
+                if member.isdir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                source = archive.extractfile(member)
+                if source is None:
+                    raise SourceIntegrityError(
+                        f"Invalid content-pack archive member: {member.name!r}"
+                    )
+                with source, target.open("xb") as output:
+                    shutil.copyfileobj(source, output, ARCHIVE_CHUNK_SIZE)
+    except (tarfile.TarError, OSError, subprocess.CalledProcessError) as exc:
+        if isinstance(exc, SourceIntegrityError):
+            raise
+        raise SourceIntegrityError(f"Invalid content-pack archive: {exc}") from exc
+    finally:
+        if temporary_tar is not None:
+            temporary_tar.unlink(missing_ok=True)
 
 
 class ContentPackManager:
@@ -141,12 +389,42 @@ class ContentPackManager:
             raise KeyError(f"Unknown content-pack: {pack_id}")
         self.content_root.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix="wukong-pack-", dir=self.content_root))
+        archive_path: Path | None = None
         target = (self.content_root / str(pack["target"])).resolve()
         if self.content_root not in target.parents:
             shutil.rmtree(staging, ignore_errors=True)
             raise ValueError("Content-pack target escapes the content root")
         try:
-            self.run_command(self._rclone("copy", str(pack["remote"]), str(staging), "--retries", "3"))
+            archive = pack.get("archive")
+            if archive:
+                archive_uri = str(archive["uri"])
+                suffix = ".tar.zst" if archive_uri.casefold().endswith((".tar.zst", ".tzst")) else ".tar"
+                archive_path = staging.with_name(staging.name + suffix)
+                self.run_command(
+                    self._rclone("copyto", archive_uri, str(archive_path), "--retries", "3")
+                )
+                expected_size = int(archive["sizeBytes"])
+                actual_size = archive_path.stat().st_size
+                if actual_size != expected_size:
+                    raise SourceIntegrityError(
+                        f"Content-pack archive size mismatch: expected {expected_size}, got {actual_size}"
+                    )
+                expected_digest = str(archive["sha256"]).casefold()
+                actual_digest = sha256_file(archive_path)
+                if actual_digest != expected_digest:
+                    raise SourceIntegrityError(
+                        f"Content-pack archive checksum mismatch: expected {expected_digest}, got {actual_digest}"
+                    )
+                file_count = len(pack.get("files", []))
+                maximum_tar_bytes = int(pack["sizeBytes"]) + file_count * 4096 + 16 * 1024 * 1024
+                _extract_content_pack_archive(
+                    archive_path,
+                    staging,
+                    maximum_tar_bytes=maximum_tar_bytes,
+                )
+                archive_path.unlink(missing_ok=True)
+            else:
+                self.run_command(self._rclone("copy", str(pack["remote"]), str(staging), "--retries", "3"))
             self.verify(staging, pack)
             backup = target.with_name(target.name + ".previous")
             if backup.exists():
@@ -164,6 +442,8 @@ class ContentPackManager:
             return target
         except Exception:
             shutil.rmtree(staging, ignore_errors=True)
+            if archive_path is not None:
+                archive_path.unlink(missing_ok=True)
             backup = target.with_name(target.name + ".previous")
             if backup.exists() and not target.exists():
                 backup.rename(target)
@@ -191,21 +471,53 @@ def upload_content_packs(
     *,
     run_command: RunCommand = _run_text,
     rclone_config: Path | None = None,
-    verify_download: bool = True,
+    verify_download: bool = False,
+    archive_root: Path | None = None,
+    pack_id: str | None = None,
 ) -> None:
     validate_content_index(index)
-    for pack in index["packs"]:
-        source = content_root / str(pack["target"])
-        args = ["rclone", "copy", str(source), str(pack["remote"]), "--checksum", "--retries", "3"]
+    archive_root = (archive_root or content_root / ".wkstudio" / "content-pack-archives").resolve()
+    selected = [pack for pack in index["packs"] if pack_id is None or pack["id"] == pack_id]
+    if pack_id is not None and not selected:
+        raise KeyError(f"Unknown content-pack: {pack_id}")
+    for pack in selected:
+        ContentPackManager.verify(content_root / str(pack["target"]), pack)
+        archive_name = str(pack["id"]).replace("/", "-") + ".tar.zst"
+        archive_path = archive_root / archive_name
+        archive_record = create_content_pack_archive(content_root, pack, archive_path)
+        args = [
+            "rclone", "copyto", str(archive_path), str(archive_record["uri"]),
+            "--retries", "3", "--transfers", "1", "--checkers", "1", "--tpslimit", "2",
+        ]
         if rclone_config:
             args.extend(["--config", str(rclone_config)])
         run_command(args)
+        size_args = ["rclone", "size", str(archive_record["uri"]), "--json"]
+        if rclone_config:
+            size_args.extend(["--config", str(rclone_config)])
+        remote_size = json.loads(run_command(size_args))
+        if int(remote_size.get("count", 0)) != 1 or int(remote_size.get("bytes", -1)) != int(
+            archive_record["sizeBytes"]
+        ):
+            raise SourceIntegrityError(f"Remote content-pack size mismatch: {pack['id']}")
+        md5_args = ["rclone", "md5sum", str(archive_record["uri"])]
+        if rclone_config:
+            md5_args.extend(["--config", str(rclone_config)])
+        remote_md5 = run_command(md5_args).strip().split(maxsplit=1)[0].casefold()
+        if remote_md5 != archive_record["md5"]:
+            raise SourceIntegrityError(f"Remote content-pack checksum mismatch: {pack['id']}")
         if verify_download:
             with tempfile.TemporaryDirectory(prefix="wukong-pack-download-verify-") as root:
+                verification_index = dict(index)
+                verification_index["packs"] = [
+                    ({**candidate, "archive": archive_record} if candidate is pack else candidate)
+                    for candidate in index["packs"]
+                ]
                 manager = ContentPackManager(
                     Path(root),
                     run_command=run_command,
                     rclone_config=rclone_config,
                 )
-                installed = manager.install(index, str(pack["id"]))
+                installed = manager.install(verification_index, str(pack["id"]))
                 manager.verify(installed, pack)
+        pack["archive"] = archive_record
