@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Materialize private content test fixtures
+        run: python tools/materialize_test_content.py
+      - name: Run Python contract and regression tests
+        run: python -m unittest discover -s tests -v
+
+  desktop:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: Test WinUI core
+        run: dotnet test desktop/WukongStudio.Tests/WukongStudio.Tests.csproj -c Release
+      - name: Build WinUI application
+        run: dotnet build desktop/WukongStudio.App/WukongStudio.App.csproj -c Release
+
+  linux-rom-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install fixture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cpio e2fsprogs lz4 p7zip-full zstd
+          python -m pip install -r requirements.txt
+      - name: Bootstrap pinned Linux toolchain
+        run: python -m tools.bootstrap_linux
+      - name: Smoke-test Linux binaries
+        run: |
+          java -version
+          python -m tools.smoke_linux
+      - name: Run generated ROM fixture
+        run: python -m tools.smoke_rom_fixture_linux
+
+  workflow-security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: Reject floating action references and tracked credentials
+        shell: bash
+        run: python tools/repo_guard.py
+      - name: Validate workflow syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=1.7.12
+          archive="actionlint_${version}_linux_amd64.tar.gz"
+          for attempt in 1 2 3 4 5; do
+            gh release download "v${version}" \
+              --repo rhysd/actionlint \
+              --pattern "$archive" \
+              --output "$archive" && break
+            test "$attempt" -lt 5
+            sleep 2
+          done
+          printf '%s  %s\n' '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' "$archive" | sha256sum --check
+          tar -xzf "$archive" actionlint
+          ./actionlint
+        env:
+          GH_TOKEN: ${{ github.token }}

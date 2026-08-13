@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "python": {
+    "version": "3.13.5",
+    "url": "https://www.python.org/ftp/python/3.13.5/python-3.13.5-embed-amd64.zip",
+    "sha256": "7d2650fd9d1b9d002d4a315d5f354247fd6a44f30517c7ef577b08f57a0fb6d9"
+  },
+  "java": {
+    "version": "17.0.19+10",
+    "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.19%2B10/OpenJDK17U-jre_x64_windows_hotspot_17.0.19_10.zip",
+    "sha256": "79a598e1fbb4e16582d92c4ee22280a3c4d72fd52606e1e46b1223c0fe53b0da"
+  },
+  "rclone": {
+    "version": "1.75.0",
+    "url": "https://github.com/rclone/rclone/releases/download/v1.75.0/rclone-v1.75.0-windows-amd64.zip",
+    "sha256": "203581f0a7baeae873f2347483a798c79e2eaf5c384a4e9d866aa374f1c89ac0"
+  }
+}

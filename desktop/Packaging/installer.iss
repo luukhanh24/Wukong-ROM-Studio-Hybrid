@@ -1,0 +1,130 @@
+#define AppName "Wukong ROM Studio"
+#define AppVersion "1.0.0"
+#ifndef SourceRoot
+  #define SourceRoot "..\artifacts\staging\WukongROMStudio"
+#endif
+#ifndef InstallerOutputDir
+  #define InstallerOutputDir "..\artifacts\installer"
+#endif
+#ifndef InstallerOutputBaseFilename
+  #define InstallerOutputBaseFilename "WukongStudio-Setup-x64-1.0.0-unsigned"
+#endif
+
+[Setup]
+AppId={{B16B5D54-5A03-48FD-9E61-B87CF985E9A7}
+AppName={#AppName}
+AppVersion={#AppVersion}
+AppPublisher=Wukong ROM Studio
+DefaultDirName=C:\WukongROMStudio
+DisableDirPage=yes
+DisableProgramGroupPage=yes
+PrivilegesRequired=admin
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+OutputDir={#InstallerOutputDir}
+OutputBaseFilename={#InstallerOutputBaseFilename}
+Compression=lzma2/fast
+SolidCompression=yes
+WizardStyle=modern
+UninstallDisplayIcon={app}\App\WukongStudio.exe
+SetupIconFile={#SourceRoot}\App\Assets\WukongStudio.ico
+SetupLogging=yes
+CloseApplications=yes
+RestartApplications=no
+
+[Dirs]
+Name: "{app}"; Permissions: users-readexec
+Name: "{app}\Content"; Permissions: users-modify
+Name: "{app}\Content\MOD"; Permissions: users-modify
+Name: "{app}\Content\TWRP"; Permissions: users-modify
+Name: "{app}\Content\OFX"; Permissions: users-modify
+Name: "{app}\Content\copy-image"; Permissions: users-modify
+Name: "{app}\Data"; Permissions: users-modify
+Name: "{app}\Data\Jobs"; Permissions: users-modify
+Name: "{app}\Data\Recipes"; Permissions: users-modify
+Name: "{app}\Data\Secrets"; Permissions: users-modify
+Name: "{app}\Workspace"; Permissions: users-modify
+Name: "{app}\ROM_BUILD_DONE"; Permissions: users-modify
+Name: "{app}\Temp"; Permissions: users-modify
+Name: "{app}\Temp\Packages"; Permissions: users-modify
+Name: "{app}\Temp\Downloads"; Permissions: users-modify
+Name: "{app}\Temp\Extraction"; Permissions: users-modify
+Name: "{app}\Logs"; Permissions: users-modify
+Name: "{app}\Logs\crash"; Permissions: users-modify
+Name: "{app}\Updates"; Permissions: users-modify
+Name: "{app}\Backups"; Permissions: users-modify
+
+[Files]
+Source: "{#SourceRoot}\App\*"; DestDir: "{app}\App"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: not IsUpdateOnly
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\App\WebView2"
+
+[Icons]
+Name: "{autoprograms}\Wukong ROM Studio"; Filename: "{app}\App\WukongStudio.exe"; WorkingDir: "{app}\App"; AppUserModelID: "WukongROMStudio.Desktop"
+Name: "{autodesktop}\Wukong ROM Studio"; Filename: "{app}\App\WukongStudio.exe"; WorkingDir: "{app}\App"; AppUserModelID: "WukongROMStudio.Desktop"
+
+[Registry]
+Root: HKA; Subkey: "Software\Classes\wukongstudio"; ValueType: string; ValueName: ""; ValueData: "URL:Wukong ROM Studio Protocol"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\wukongstudio"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\wukongstudio\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\App\WukongStudio.exe,0"
+Root: HKA; Subkey: "Software\Classes\wukongstudio\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\App\WukongStudio.exe"" ""%1"""
+
+[Run]
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\App"" /reset /T /C"; Flags: runhidden waituntilterminated
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\App"" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX"; Flags: runhidden waituntilterminated
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime"" /reset /T /C"; Flags: runhidden waituntilterminated
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime"" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX"; Flags: runhidden waituntilterminated
+Filename: "{app}\App\WukongStudio.exe"; Description: "Khởi động Wukong ROM Studio"; Flags: postinstall nowait skipifsilent runasoriginaluser
+
+[Code]
+var
+  RemoveAllDataCheckBox: TNewCheckBox;
+
+function IsUpdateOnly(): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+  begin
+    if CompareText(ParamStr(I), '/UPDATEONLY') = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+end;
+
+procedure InitializeUninstallProgressForm();
+begin
+  RemoveAllDataCheckBox := TNewCheckBox.Create(UninstallProgressForm);
+  RemoveAllDataCheckBox.Parent := UninstallProgressForm.InnerPage;
+  RemoveAllDataCheckBox.Left := UninstallProgressForm.StatusLabel.Left;
+  RemoveAllDataCheckBox.Top := UninstallProgressForm.StatusLabel.Top + ScaleY(42);
+  RemoveAllDataCheckBox.Width := UninstallProgressForm.InnerPage.ClientWidth - ScaleX(32);
+  RemoveAllDataCheckBox.Height := ScaleY(34);
+  RemoveAllDataCheckBox.Caption := 'Xóa toàn bộ C:\WukongROMStudio (Content, Data, Workspace, ROM và Logs)';
+  RemoveAllDataCheckBox.Checked := False;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usPostUninstall) and RemoveAllDataCheckBox.Checked then
+  begin
+    if MsgBox(
+      'Xác nhận xóa vĩnh viễn toàn bộ dữ liệu trong C:\WukongROMStudio?',
+      mbConfirmation,
+      MB_YESNO) = IDYES then
+    begin
+      DelTree(ExpandConstant('{app}'), True, True, True);
+    end;
+  end;
+end;

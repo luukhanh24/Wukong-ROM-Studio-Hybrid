@@ -1,0 +1,1082 @@
+<UserControl
+    x:Class="WukongStudio.App.NativeStudioView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    FontFamily="Segoe UI Variable Text">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+        <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F3F5F8" />
+                <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF" />
+                <SolidColorBrush x:Key="CardBorderBrush" Color="#DDE3EA" />
+                <SolidColorBrush x:Key="PrimaryBrush" Color="#0B6BCB" />
+                <SolidColorBrush x:Key="MutedBrush" Color="#5F6B7A" />
+                <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="#F8FAFC" />
+                <SolidColorBrush x:Key="SubtleBorderBrush" Color="#E2E7ED" />
+                <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#F0F3F7" />
+                <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#101722" />
+                <SolidColorBrush x:Key="ConsoleBorderBrush" Color="#263447" />
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Dark">
+                <SolidColorBrush x:Key="PageBackgroundBrush" Color="#11161D" />
+                <SolidColorBrush x:Key="CardBackgroundBrush" Color="#19212B" />
+                <SolidColorBrush x:Key="CardBorderBrush" Color="#303B49" />
+                <SolidColorBrush x:Key="PrimaryBrush" Color="#67B8FF" />
+                <SolidColorBrush x:Key="MutedBrush" Color="#A8B4C3" />
+                <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="#202A36" />
+                <SolidColorBrush x:Key="SubtleBorderBrush" Color="#354253" />
+                <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#273240" />
+                <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#090E14" />
+                <SolidColorBrush x:Key="ConsoleBorderBrush" Color="#344255" />
+            </ResourceDictionary>
+        </ResourceDictionary.ThemeDictionaries>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <Style x:Key="KpiCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+            <Setter Property="Padding" Value="16,14" />
+        </Style>
+        <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontFamily" Value="Segoe UI Variable Display" />
+        </Style>
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style x:Key="MutedTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{ThemeResource MutedBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="SubtlePanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SubtleBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource SubtleBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid x:Name="RootLayout" Background="{ThemeResource PageBackgroundBrush}">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="ResponsiveLayoutStates">
+                <VisualState x:Name="NarrowLayout">
+                    <VisualState.Setters>
+                        <Setter Target="SystemHealthColumn.Width" Value="*" />
+                        <Setter Target="EnvironmentColumn.Width" Value="0" />
+                        <Setter Target="EnvironmentCard.(Grid.Row)" Value="1" />
+                        <Setter Target="EnvironmentCard.(Grid.Column)" Value="0" />
+                        <Setter Target="SystemOverviewGrid.RowSpacing" Value="10" />
+                        <Setter Target="JobsColumn.Width" Value="*" />
+                        <Setter Target="ConsoleColumn.Width" Value="0" />
+                        <Setter Target="ConsoleCard.(Grid.Row)" Value="1" />
+                        <Setter Target="ConsoleCard.(Grid.Column)" Value="0" />
+                        <Setter Target="JobsConsoleGrid.RowSpacing" Value="10" />
+                        <Setter Target="KpiThirdColumn.Width" Value="0" />
+                        <Setter Target="KpiFourthColumn.Width" Value="0" />
+                        <Setter Target="KpiArtifactCard.(Grid.Row)" Value="1" />
+                        <Setter Target="KpiArtifactCard.(Grid.Column)" Value="0" />
+                        <Setter Target="KpiDeviceCard.(Grid.Row)" Value="1" />
+                        <Setter Target="KpiDeviceCard.(Grid.Column)" Value="1" />
+                        <Setter Target="BuildVersionColumn.Width" Value="0" />
+                        <Setter Target="PresetCombo.(Grid.Row)" Value="1" />
+                        <Setter Target="PresetCombo.(Grid.Column)" Value="0" />
+                        <Setter Target="StudioVersionPanel.(Grid.Row)" Value="1" />
+                        <Setter Target="StudioVersionPanel.(Grid.Column)" Value="1" />
+                        <Setter Target="NotifyTelegramPanel.(Grid.Row)" Value="2" />
+                        <Setter Target="NotifyTelegramPanel.(Grid.Column)" Value="0" />
+                        <Setter Target="NotifyTelegramPanel.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="BuildIdentityGrid.RowSpacing" Value="10" />
+                        <Setter Target="DeviceCatalogListColumn.Width" Value="*" />
+                        <Setter Target="DeviceCatalogEditorColumn.Width" Value="0" />
+                        <Setter Target="DeviceEditorCard.(Grid.Row)" Value="1" />
+                        <Setter Target="DeviceEditorCard.(Grid.Column)" Value="0" />
+                        <Setter Target="DeviceCatalogGrid.RowSpacing" Value="12" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="MediumLayout">
+                    <VisualState.Setters>
+                        <Setter Target="SystemHealthColumn.Width" Value="1.1*" />
+                        <Setter Target="EnvironmentColumn.Width" Value="0.9*" />
+                        <Setter Target="EnvironmentCard.(Grid.Row)" Value="0" />
+                        <Setter Target="EnvironmentCard.(Grid.Column)" Value="1" />
+                        <Setter Target="SystemOverviewGrid.RowSpacing" Value="0" />
+                        <Setter Target="DeviceCatalogListColumn.Width" Value="340" />
+                        <Setter Target="DeviceCatalogEditorColumn.Width" Value="*" />
+                        <Setter Target="DeviceEditorCard.(Grid.Row)" Value="0" />
+                        <Setter Target="DeviceEditorCard.(Grid.Column)" Value="1" />
+                        <Setter Target="DeviceCatalogGrid.RowSpacing" Value="0" />
+                        <Setter Target="BuildVersionColumn.Width" Value="*" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="WideLayout">
+                    <VisualState.Setters>
+                        <Setter Target="SystemHealthColumn.Width" Value="1.1*" />
+                        <Setter Target="EnvironmentColumn.Width" Value="0.9*" />
+                        <Setter Target="EnvironmentCard.(Grid.Row)" Value="0" />
+                        <Setter Target="EnvironmentCard.(Grid.Column)" Value="1" />
+                        <Setter Target="SystemOverviewGrid.RowSpacing" Value="0" />
+                        <Setter Target="JobsColumn.Width" Value="300" />
+                        <Setter Target="ConsoleColumn.Width" Value="*" />
+                        <Setter Target="ConsoleCard.(Grid.Row)" Value="0" />
+                        <Setter Target="ConsoleCard.(Grid.Column)" Value="1" />
+                        <Setter Target="JobsConsoleGrid.RowSpacing" Value="0" />
+                        <Setter Target="KpiThirdColumn.Width" Value="*" />
+                        <Setter Target="KpiFourthColumn.Width" Value="*" />
+                        <Setter Target="KpiArtifactCard.(Grid.Row)" Value="0" />
+                        <Setter Target="KpiArtifactCard.(Grid.Column)" Value="2" />
+                        <Setter Target="KpiDeviceCard.(Grid.Row)" Value="0" />
+                        <Setter Target="KpiDeviceCard.(Grid.Column)" Value="3" />
+                        <Setter Target="BuildVersionColumn.Width" Value="*" />
+                        <Setter Target="NotifyTelegramPanel.(Grid.Row)" Value="1" />
+                        <Setter Target="NotifyTelegramPanel.(Grid.Column)" Value="0" />
+                        <Setter Target="NotifyTelegramPanel.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="BuildIdentityGrid.RowSpacing" Value="0" />
+                        <Setter Target="DeviceCatalogListColumn.Width" Value="360" />
+                        <Setter Target="DeviceCatalogEditorColumn.Width" Value="*" />
+                        <Setter Target="DeviceEditorCard.(Grid.Row)" Value="0" />
+                        <Setter Target="DeviceEditorCard.(Grid.Column)" Value="1" />
+                        <Setter Target="DeviceCatalogGrid.RowSpacing" Value="0" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <NavigationView
+            x:Name="StudioNavigation"
+            IsPaneOpen="True"
+            IsPaneToggleButtonVisible="True"
+            OpenPaneLength="224"
+            CompactPaneLength="52"
+            PaneDisplayMode="Auto"
+            CompactModeThresholdWidth="0"
+            ExpandedModeThresholdWidth="1100"
+            AlwaysShowHeader="False"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            SelectionChanged="NavigationSelectionChanged">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="StudioNavItem" Content="Bảng điều khiển" Tag="studio">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Home" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="ArtifactsNavItem" Content="Bản build" Tag="artifacts">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Document" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="HybridNavItem" Content="Hybrid Cloud" Tag="hybrid">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Sync" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="RomRenamerNavItem" Content="Đổi tên ROM" Tag="rom-renamer">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Edit" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="CatalogNavItem" Content="Danh mục" Tag="catalog">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Library" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="DiagnosticsNavItem" Content="Chẩn đoán" Tag="diagnostics">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Repair" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="SettingsNavItem" Content="Cài đặt" Tag="settings">
+                    <NavigationViewItem.Icon><SymbolIcon Symbol="Setting" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Grid>
+                <ScrollViewer x:Name="StudioPage" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="StudioPageSizeChanged" ViewChanged="StudioPageViewChanged">
+                    <StackPanel x:Name="StudioContent" MaxWidth="1560" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Trung tâm điều khiển" Style="{StaticResource PageTitleStyle}" />
+                                <TextBlock Text="Theo dõi hệ thống, cấu hình pipeline, quản lý queue và console trong một màn hình." Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                            <CommandBar Grid.Column="1" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" Background="Transparent" VerticalAlignment="Center">
+                                <AppBarButton Label="Làm mới tất cả" Click="RefreshDashboardClick" />
+                                <AppBarButton Label="Mở ROM hoàn tất" Click="OpenOutputClick" />
+                            </CommandBar>
+                        </Grid>
+
+                        <InfoBar x:Name="NativeMessageBar" IsOpen="False" IsClosable="True" />
+
+                        <Grid x:Name="KpiGrid" ColumnSpacing="12" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition x:Name="KpiThirdColumn" Width="0" />
+                                <ColumnDefinition x:Name="KpiFourthColumn" Width="0" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Border Style="{StaticResource KpiCardStyle}">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="JOB ĐANG CHẠY" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" FontSize="11" CharacterSpacing="55" />
+                                    <TextBlock x:Name="ActiveJobsText" Text="0" FontFamily="Segoe UI Variable Display" FontSize="28" FontWeight="SemiBold" />
+                                    <TextBlock Text="Running hoặc packaging" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource KpiCardStyle}">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="ROM ĐANG CHỜ" Foreground="#B05A00" FontWeight="SemiBold" FontSize="11" CharacterSpacing="55" />
+                                    <TextBlock x:Name="QueuedJobsText" Text="0" FontFamily="Segoe UI Variable Display" FontSize="28" FontWeight="SemiBold" />
+                                    <TextBlock Text="Xử lý tuần tự trong queue" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                            <Border x:Name="KpiArtifactCard" Grid.Row="1" Style="{StaticResource KpiCardStyle}">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="ARTIFACT HỢP LỆ" Foreground="#107C10" FontWeight="SemiBold" FontSize="11" CharacterSpacing="55" />
+                                    <TextBlock x:Name="ValidArtifactsText" Text="0" FontFamily="Segoe UI Variable Display" FontSize="28" FontWeight="SemiBold" />
+                                    <TextBlock Text="ROM ZIP còn tồn tại" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                            <Border x:Name="KpiDeviceCard" Grid.Row="1" Grid.Column="1" Style="{StaticResource KpiCardStyle}">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="THIẾT BỊ HỖ TRỢ" Foreground="#7A3E9D" FontWeight="SemiBold" FontSize="11" CharacterSpacing="55" />
+                                    <TextBlock x:Name="SupportedDevicesText" Text="0" FontFamily="Segoe UI Variable Display" FontSize="28" FontWeight="SemiBold" />
+                                    <TextBlock Text="Theo devices_sizes.json" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid x:Name="SystemOverviewGrid" RowDefinitions="Auto,Auto" RowSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="SystemHealthColumn" Width="*" />
+                                <ColumnDefinition x:Name="EnvironmentColumn" Width="0" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Tình trạng hệ thống" Style="{StaticResource SectionTitleStyle}" />
+                                            <TextBlock x:Name="BackendVersionText" Text="-" Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                        </StackPanel>
+                                    <Border x:Name="BackendStateBadge" Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="12" Padding="10,5" VerticalAlignment="Center">
+                                            <TextBlock x:Name="BackendStateText" Text="Đang kết nối" Foreground="#107C10" FontWeight="SemiBold" FontSize="12" />
+                                        </Border>
+                                    </Grid>
+                                    <StackPanel x:Name="OverviewHealthPanel" Spacing="7" />
+                                </StackPanel>
+                            </Border>
+                            <Border x:Name="EnvironmentCard" Grid.Row="1" Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="11">
+                                    <TextBlock Text="Môi trường và thao tác nhanh" Style="{StaticResource SectionTitleStyle}" />
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+                                        <TextBlock Text="Dung lượng" Foreground="{ThemeResource MutedBrush}" />
+                                        <TextBlock x:Name="DiskFreeText" Grid.Column="1" Text="-" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Row="1" Text="Workspace" Foreground="{ThemeResource MutedBrush}" />
+                                        <TextBlock x:Name="WorkspacePathText" Grid.Row="1" Grid.Column="1" Text="-" FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Row="2" Text="Output" Foreground="{ThemeResource MutedBrush}" />
+                                        <TextBlock x:Name="OutputPathText" Grid.Row="2" Grid.Column="1" Text="-" FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Row="3" Text="Nội dung" Foreground="{ThemeResource MutedBrush}" />
+                                        <TextBlock x:Name="ContentSummaryText" Grid.Row="3" Grid.Column="1" Text="-" FontSize="12" TextWrapping="Wrap" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                                        <Button Content="Mở workspace" Click="OpenWorkspaceClick" HorizontalAlignment="Stretch" />
+                                        <Button Grid.Column="1" Content="Mở output" Click="OpenOutputClick" HorizontalAlignment="Stretch" />
+                                        <Button Grid.Row="1" Content="Mở log" Click="OpenLogsClick" HorizontalAlignment="Stretch" />
+                                        <Button Grid.Row="1" Grid.Column="1" Content="Restart backend" Click="RestartBackendClick" HorizontalAlignment="Stretch" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel x:Name="RomCardContent" Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="ROM đầu vào" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="Có thể chọn từng file ZIP hoặc nhập toàn bộ folder theo thứ tự tên." Style="{StaticResource MutedTextStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="BrowseRomButton" Content="Duyệt ROM ZIP" Style="{StaticResource AccentButtonStyle}" Click="BrowseRomClick" />
+                                        <Button x:Name="BrowseFolderButton" Content="Nhập folder" Click="BrowseFolderClick" />
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBox x:Name="RomPathBox" PlaceholderText="D:\ROM\rom.zip" />
+                                    <Button x:Name="AddRomPathButton" Grid.Column="1" Content="Thêm đường dẫn" Click="AddRomPathClick" />
+                                </Grid>
+                                <StackPanel x:Name="RomQueuePanel" Spacing="8">
+                                    <TextBlock Text="Chưa có ROM trong hàng đợi." Style="{StaticResource MutedTextStyle}" HorizontalAlignment="Center" Margin="0,12" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel x:Name="BuildCardContent" Spacing="16">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Cấu hình bản build" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="Chọn nền MOD, biến thể ROM và các tác vụ cần chạy. Mọi thay đổi thủ công sẽ chuyển sang Custom." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                    </StackPanel>
+                                    <CommandBar Grid.Column="1" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" Background="Transparent" Padding="0">
+                                        <AppBarButton Label="Nhập profile" Icon="OpenFile" Click="ImportBuildProfileClick" />
+                                        <AppBarButton Label="Xuất profile" Icon="Save" Click="ExportBuildProfileClick" />
+                                    </CommandBar>
+                                </Grid>
+
+                                <Grid x:Name="BuildIdentityGrid" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition x:Name="BuildVersionColumn" Width="0" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="ModVersionCombo" Header="Nền MOD" SelectionChanged="ModVersionChanged" HorizontalAlignment="Stretch" />
+                                    <ComboBox x:Name="PresetCombo" Grid.Column="1" Header="Biến thể build" SelectionChanged="PresetChanged" HorizontalAlignment="Stretch">
+                                        <ComboBoxItem Content="Lite" Tag="lite" />
+                                        <ComboBoxItem Content="Plus" Tag="resume" />
+                                        <ComboBoxItem Content="Lite + Plus" Tag="both" />
+                                        <ComboBoxItem Content="Custom" Tag="custom" />
+                                    </ComboBox>
+                                    <Grid x:Name="StudioVersionPanel" Grid.Column="2" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                        <TextBox x:Name="StudioVersionBox" Header="Phiên bản Studio" PlaceholderText="V3.4" LostFocus="StudioVersionLostFocus" />
+                                        <Button Grid.Column="1" Content="Lưu" Click="SaveStudioVersionClick" VerticalAlignment="Bottom" />
+                                    </Grid>
+                                    <Border x:Name="NotifyTelegramPanel" Grid.Row="1" Grid.ColumnSpan="3" Style="{StaticResource SubtlePanelStyle}" Padding="12,9" VerticalAlignment="Bottom">
+                                        <CheckBox x:Name="NotifyTelegramCheckBox" Content="Thông báo Telegram khi hoàn thành từng bản" IsChecked="True" VerticalAlignment="Center" Checked="NotifyTelegramChanged" Unchecked="NotifyTelegramChanged" />
+                                    </Border>
+                                </Grid>
+
+                                <Border Style="{StaticResource SubtlePanelStyle}">
+                                    <StackPanel Spacing="10">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Build Recipe" FontWeight="SemiBold" FontSize="14" />
+                                                <TextBlock Text="Lưu toàn bộ MOD, pipeline, debloat và Telegram để áp dụng lại nhanh." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                            </StackPanel>
+                                            <TextBlock x:Name="RecipeStateText" Grid.Column="1" Text="Chưa chọn recipe" Foreground="{ThemeResource MutedBrush}" FontSize="11" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="1.2*,1.2*,Auto" ColumnSpacing="8">
+                                            <ComboBox x:Name="RecipeCombo" Header="Recipe đã lưu" SelectionChanged="RecipeSelectionChanged" />
+                                            <TextBox x:Name="RecipeNameBox" Grid.Column="1" Header="Tên recipe" PlaceholderText="Daily Plus" />
+                                            <CommandBar Grid.Column="2" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" Background="Transparent" Padding="0" VerticalAlignment="Bottom">
+                                                <AppBarButton Label="Mới" Icon="Add" Click="NewRecipeClick" />
+                                                <AppBarButton Label="Áp dụng" Click="ApplyRecipeClick" />
+                                                <AppBarButton Label="Lưu" Icon="Save" Click="SaveRecipeClick" />
+                                                <AppBarButton Label="So sánh" Click="CompareRecipeClick" />
+                                                <AppBarButton x:Name="LockRecipeButton" Label="Khóa" Click="ToggleRecipeLockClick" />
+                                                <AppBarButton Label="Xóa" Icon="Delete" Click="DeleteRecipeClick" />
+                                            </CommandBar>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Grid x:Name="BuildSectionsGrid" RowDefinitions="Auto,Auto" RowSpacing="12" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition x:Name="BuildPipelineColumn" Width="0" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border x:Name="ModOptionsCard" Style="{StaticResource SubtlePanelStyle}" MinWidth="0" VerticalAlignment="Top">
+                                        <Expander x:Name="ModOptionsExpander" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinWidth="0">
+                                            <Expander.Header>
+                                                <Grid ColumnDefinitions="*,Auto" MinWidth="0">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Tùy chọn MOD" FontWeight="SemiBold" FontSize="15" />
+                                                        <TextBlock Text="Chỉ hiển thị MOD tương thích với nền đã chọn" Foreground="{ThemeResource MutedBrush}" FontSize="11" />
+                                                    </StackPanel>
+                                                    <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="10" Padding="9,4" VerticalAlignment="Center">
+                                                        <TextBlock x:Name="ModSelectionSummaryText" Text="0 đã chọn" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" FontSize="11" />
+                                                    </Border>
+                                                </Grid>
+                                            </Expander.Header>
+                                            <StackPanel Spacing="10" Margin="0,12,0,0">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <TextBox x:Name="ModSearchBox" PlaceholderText="Tìm MOD..." TextChanged="ModSearchChanged" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                                        <Button Content="Chọn tất cả" Click="SelectAllModsClick" />
+                                                        <Button Content="Bỏ chọn" Click="ClearModsClick" />
+                                                    </StackPanel>
+                                                </Grid>
+                                                <Grid x:Name="ModsPanel" ColumnSpacing="8" RowSpacing="8" SizeChanged="ModsPanelSizeChanged" />
+                                            </StackPanel>
+                                        </Expander>
+                                    </Border>
+
+                                    <Border x:Name="BuildPipelineCard" Grid.Row="1" Style="{StaticResource SubtlePanelStyle}" MinWidth="0" VerticalAlignment="Top">
+                                        <Expander x:Name="PipelineStepsExpander" IsExpanded="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" MinWidth="0">
+                                            <Expander.Header>
+                                                <Grid ColumnDefinitions="*,Auto" MinWidth="0">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="Pipeline build" FontWeight="SemiBold" FontSize="15" />
+                                                        <TextBlock Text="Chọn bước cần chạy và chỉnh cấu hình riêng" Foreground="{ThemeResource MutedBrush}" FontSize="11" />
+                                                    </StackPanel>
+                                                    <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="10" Padding="9,4" VerticalAlignment="Center">
+                                                        <TextBlock x:Name="StepSelectionSummaryText" Text="0 bước" Foreground="#107C10" FontWeight="SemiBold" FontSize="11" />
+                                                    </Border>
+                                                </Grid>
+                                            </Expander.Header>
+                                            <StackPanel Spacing="10" Margin="0,12,0,0">
+                                                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                                                    <Button Content="Theo preset" Click="ResetStepsToPresetClick" />
+                                                    <Button Content="Chọn tất cả" Click="SelectAllStepsClick" />
+                                                    <Button Content="Bỏ chọn" Click="ClearStepsClick" />
+                                                </StackPanel>
+                                                <StackPanel x:Name="StepsPanel" Spacing="7" />
+                                            </StackPanel>
+                                        </Expander>
+                                    </Border>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <TextBlock Text="Preflight sẽ kiểm tra ROM, MOD, dung lượng và danh sách xóa trước khi tạo job." Style="{StaticResource MutedTextStyle}" FontSize="11" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <ProgressRing x:Name="BuildBusyRing" Width="20" Height="20" IsActive="False" Visibility="Collapsed" />
+                                        <Button x:Name="PreflightButton" Content="Kiểm tra trước" Click="PreflightClick" />
+                                        <Button x:Name="StartBuildButton" Content="Bắt đầu build" Style="{StaticResource AccentButtonStyle}" Click="StartBuildClick">
+                                            <Button.KeyboardAccelerators>
+                                                <KeyboardAccelerator Key="Enter" Modifiers="Control" />
+                                            </Button.KeyboardAccelerators>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid x:Name="JobsConsoleGrid" RowDefinitions="Auto,Auto" RowSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="JobsColumn" Width="*" />
+                                <ColumnDefinition x:Name="ConsoleColumn" Width="0" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel x:Name="JobsCardContent" Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Job gần đây" Style="{StaticResource SectionTitleStyle}" />
+                                        <Button Grid.Column="1" Content="Làm mới" Click="RefreshJobsClick" />
+                                    </Grid>
+                                    <ListView x:Name="JobsList" SelectionChanged="JobSelectionChanged" MinHeight="360" MaxHeight="520">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="2,6" Spacing="3">
+                                                    <TextBlock Text="{Binding VersionName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding StatusLine}" Foreground="{ThemeResource MutedBrush}" FontSize="12" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding DetailLine}" Foreground="{ThemeResource MutedBrush}" FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="ConsoleCard" Grid.Row="1" Style="{StaticResource CardStyle}">
+                                <StackPanel x:Name="ConsoleCardContent" Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="SelectedJobTitle" Text="Build Console" Style="{StaticResource SectionTitleStyle}" />
+                                            <TextBlock x:Name="SelectedJobStatus" Text="Chọn một job để xem log." Style="{StaticResource MutedTextStyle}" />
+                                            <TextBlock x:Name="SelectedJobMeta" Text="-" Foreground="{ThemeResource MutedBrush}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button x:Name="CancelJobButton" Grid.Column="1" Content="Hủy job" Click="CancelJobClick" IsEnabled="False" VerticalAlignment="Top" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
+                                        <ProgressBar x:Name="SelectedJobProgress" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="SelectedJobElapsedText" Grid.Column="1" Text="00:00:00" FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="SelectedJobProgressText" Grid.Column="2" Text="0%" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="7">
+                                        <Border Style="{StaticResource SubtlePanelStyle}" Padding="9,7">
+                                            <StackPanel Spacing="1"><TextBlock Text="RAM" FontSize="10" Foreground="{ThemeResource MutedBrush}" /><TextBlock x:Name="MetricMemoryText" Text="-" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" /></StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="1" Style="{StaticResource SubtlePanelStyle}" Padding="9,7">
+                                            <StackPanel Spacing="1"><TextBlock Text="CPU time" FontSize="10" Foreground="{ThemeResource MutedBrush}" /><TextBlock x:Name="MetricCpuText" Text="-" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" /></StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="2" Style="{StaticResource SubtlePanelStyle}" Padding="9,7">
+                                            <StackPanel Spacing="1"><TextBlock Text="LOG" FontSize="10" Foreground="{ThemeResource MutedBrush}" /><TextBlock x:Name="MetricLogText" Text="-" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" /></StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="3" Style="{StaticResource SubtlePanelStyle}" Padding="9,7">
+                                            <StackPanel Spacing="1"><TextBlock Text="DISK trống" FontSize="10" Foreground="{ThemeResource MutedBrush}" /><TextBlock x:Name="MetricDiskText" Text="-" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" /></StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="4" Style="{StaticResource SubtlePanelStyle}" Padding="9,7">
+                                            <StackPanel Spacing="1"><TextBlock Text="CACHE" FontSize="10" Foreground="{ThemeResource MutedBrush}" /><TextBlock x:Name="MetricCacheText" Text="-" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" /></StackPanel>
+                                        </Border>
+                                    </Grid>
+                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled" ZoomMode="Disabled">
+                                        <StackPanel x:Name="JobStepsPanel" Orientation="Horizontal" Spacing="7" Padding="0,2,0,5" />
+                                    </ScrollViewer>
+                                    <InfoBar x:Name="SelectedJobErrorBar" IsOpen="False" IsClosable="False" Severity="Error" />
+                                    <Border Background="{ThemeResource SubtleBackgroundBrush}" BorderBrush="{ThemeResource SubtleBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="11">
+                                        <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Artifact / workspace" FontSize="11" Foreground="{ThemeResource MutedBrush}" />
+                                                <TextBlock x:Name="SelectedJobArtifact" Text="Chưa có artifact." FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                                                <Button x:Name="CopyArtifactButton" Content="Sao chép" Click="CopyArtifactClick" IsEnabled="False" />
+                                                <Button x:Name="OpenArtifactButton" Content="Mở" Click="OpenSelectedArtifactClick" IsEnabled="False" />
+                                                <Button x:Name="OpenJobWorkspaceButton" Content="Workspace" Click="OpenSelectedWorkspaceClick" IsEnabled="False" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBox x:Name="LogSearchBox" PlaceholderText="Tìm trong log đang hiển thị..." TextChanged="LogSearchChanged" />
+                                        <ComboBox x:Name="LogLevelCombo" Grid.Column="1" Width="180" SelectedIndex="0" SelectionChanged="LogLevelChanged">
+                                            <ComboBoxItem Content="Tất cả mức độ" Tag="all" />
+                                            <ComboBoxItem Content="Dòng quan trọng" Tag="important" />
+                                            <ComboBoxItem Content="Cảnh báo + lỗi" Tag="warnings" />
+                                            <ComboBoxItem Content="Chỉ lỗi" Tag="errors" />
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <Border Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="10" Padding="9,4">
+                                                <TextBlock x:Name="LogSummaryText" Text="0 dòng" Foreground="{ThemeResource PrimaryBrush}" FontSize="11" FontWeight="SemiBold" />
+                                            </Border>
+                                            <TextBlock Text="Sự kiện JSON và tiến độ ZIP lặp được ẩn mặc định" Style="{StaticResource MutedTextStyle}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <CommandBar Grid.Column="1" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" Background="Transparent" Padding="0">
+                                            <AppBarToggleButton x:Name="FollowLogButton" Label="Tự cuộn" IsChecked="True" />
+                                            <AppBarToggleButton x:Name="PauseLogButton" Label="Tạm dừng" Checked="PauseLogChanged" Unchecked="PauseLogChanged" />
+                                            <AppBarToggleButton x:Name="WrapLogButton" Label="Xuống dòng" Checked="WrapLogChanged" Unchecked="WrapLogChanged" />
+                                            <AppBarToggleButton x:Name="TechnicalLogButton" Label="Log kỹ thuật" Checked="TechnicalLogChanged" Unchecked="TechnicalLogChanged" />
+                                            <AppBarButton Label="Sao chép" Icon="Copy" Click="CopyLogClick" />
+                                            <AppBarButton Label="Tải log gốc" Icon="Download" Click="DownloadLogClick" />
+                                            <AppBarButton Label="Gói chẩn đoán" Click="DownloadDiagnosticsBundleClick" />
+                                            <AppBarButton Label="Xóa hiển thị" Icon="Clear" Click="ClearLogClick" />
+                                        </CommandBar>
+                                    </Grid>
+                                    <Border Background="{ThemeResource ConsoleBackgroundBrush}" BorderBrush="{ThemeResource ConsoleBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8">
+                                        <RichEditBox
+                                            x:Name="JobLogBox"
+                                            Height="400"
+                                            IsReadOnly="True"
+                                            AcceptsReturn="True"
+                                            IsSpellCheckEnabled="False"
+                                            IsTextPredictionEnabled="False"
+                                            TextWrapping="NoWrap"
+                                            FontFamily="Consolas"
+                                            FontSize="12"
+                                            Background="Transparent"
+                                            Foreground="#D8E2F0"
+                                            BorderThickness="0"
+                                            SelectionHighlightColor="#355D8C"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                            ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                            <RichEditBox.Resources>
+                                                <SolidColorBrush x:Key="TextControlForeground" Color="#D8E2F0" />
+                                                <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#D8E2F0" />
+                                                <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#D8E2F0" />
+                                                <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+                                                <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                                                <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                                                <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                                                <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                                                <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                                                <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                                            </RichEditBox.Resources>
+                                        </RichEditBox>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="ArtifactsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="SecondaryPageSizeChanged">
+                    <StackPanel x:Name="ArtifactsContent" MaxWidth="1560" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Bản build" Style="{StaticResource PageTitleStyle}" />
+                                <TextBlock Text="Lịch sử ZIP đã đóng gói và trạng thái artifact." Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                            <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="12" Padding="10,5" VerticalAlignment="Center">
+                                <TextBlock x:Name="ArtifactCountText" Text="0 artifact" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" FontSize="12" />
+                            </Border>
+                            <Button Grid.Column="2" Content="Làm mới" Click="RefreshArtifactsClick" />
+                        </Grid>
+                        <StackPanel x:Name="ArtifactsPanel" Spacing="8" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="HybridPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="SecondaryPageSizeChanged">
+                    <StackPanel x:Name="HybridContent" MaxWidth="1180" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Hybrid Cloud" Style="{StaticResource PageTitleStyle}" />
+                            <TextBlock Text="Một recipe dùng chung cho Windows, GitHub Actions và Telegram; ROM nguồn và artifact lưu qua Google Drive/rclone." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="14">
+                                <TextBlock Text="Nguồn ROM và tác vụ" Style="{StaticResource SectionTitleStyle}" />
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                                    <ComboBox x:Name="HybridTaskCombo" Header="Tác vụ" SelectedIndex="1">
+                                        <ComboBoxItem Content="Chỉ tải ROM gốc lên cloud" Tag="source_mirror" />
+                                        <ComboBoxItem Content="Build ROM" Tag="build" />
+                                        <ComboBoxItem Content="Upload artifact" Tag="artifact_publish" />
+                                    </ComboBox>
+                                    <ComboBox x:Name="HybridSourceKindCombo" Grid.Column="1" Header="Loại nguồn" SelectedIndex="0">
+                                        <ComboBoxItem Content="File local" Tag="local" />
+                                        <ComboBoxItem Content="HTTP / HTTPS" Tag="https" />
+                                        <ComboBoxItem Content="Google Drive (rclone)" Tag="rclone" />
+                                    </ComboBox>
+                                    <TextBox x:Name="HybridDeviceBox" Grid.Column="2" Header="Mã thiết bị" PlaceholderText="CPH2725" />
+                                </Grid>
+                                <TextBox x:Name="HybridSourceBox" Header="Đường dẫn / URL / rclone URI" PlaceholderText="C:\ROM\source.zip hoặc https://... hoặc wukong-gdrive:WukongROM/sources/..." />
+                                <TextBox x:Name="HybridChecksumBox" Header="SHA-256 (khuyến nghị)" PlaceholderText="64 ký tự hex" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="14">
+                                <TextBlock Text="Build và nơi thực thi" Style="{StaticResource SectionTitleStyle}" />
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                                    <ComboBox x:Name="HybridPresetCombo" Header="Preset" SelectedIndex="0">
+                                        <ComboBoxItem Content="Lite" Tag="lite" />
+                                        <ComboBoxItem Content="Plus" Tag="plus" />
+                                        <ComboBoxItem Content="Lite + Plus" Tag="both" />
+                                        <ComboBoxItem Content="Custom" Tag="custom" />
+                                    </ComboBox>
+                                    <TextBox x:Name="HybridModVersionBox" Grid.Column="1" Header="Phiên bản MOD" Text="ColorOS_16.0.7" />
+                                    <ComboBox x:Name="HybridExecutionCombo" Grid.Column="2" Header="Chạy ở đâu" SelectedIndex="0">
+                                        <ComboBoxItem Content="Local Windows" Tag="local-windows" />
+                                        <ComboBoxItem Content="GitHub tự chọn runner" Tag="github-auto" />
+                                        <ComboBoxItem Content="GitHub hosted" Tag="github-hosted" />
+                                        <ComboBoxItem Content="Linux self-hosted" Tag="self-hosted-linux" />
+                                    </ComboBox>
+                                </Grid>
+                                <TextBox x:Name="HybridModsBox" Header="Danh sách MOD (phân cách bằng dấu phẩy)" PlaceholderText="Gallery_mod, Gapps" />
+                                <CheckBox x:Name="HybridPublishCheckBox" Content="Upload artifact lên Google Drive và tạo link chia sẻ" IsChecked="True" />
+                                 <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Chọn ROM local" Click="ChooseHybridSourceClick" />
+                                     <Button Content="Kiểm tra recipe" Click="ValidateHybridRecipeClick" />
+                                     <Button Content="Tạo job hybrid" Style="{StaticResource AccentButtonStyle}" Click="CreateHybridJobClick" />
+                                 </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                    <TextBox x:Name="HybridJobIdBox" Header="Job ID" PlaceholderText="Chọn từ lịch sử hoặc dán ID" />
+                                    <Button Grid.Column="1" Content="Làm mới" Click="RefreshHybridJobsClick" VerticalAlignment="Bottom" />
+                                    <Button Grid.Column="2" Content="Xem" Click="InspectHybridJobClick" VerticalAlignment="Bottom" />
+                                    <Button Grid.Column="3" Content="Hủy" Click="CancelHybridJobClick" VerticalAlignment="Bottom" />
+                                    <Button Grid.Column="4" Content="Resume" Click="ResumeHybridJobClick" VerticalAlignment="Bottom" />
+                                </Grid>
+                                <ListView x:Name="HybridJobsList" SelectionChanged="HybridJobSelectionChanged" MaxHeight="220" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Cloud source" Click="ShowHybridSourcesClick" />
+                                    <Button Content="Cloud artifact" Click="ShowHybridArtifactsClick" />
+                                    <Button Content="Diagnostics" Click="ShowHybridDiagnosticsClick" />
+                                </StackPanel>
+                                <TextBox x:Name="HybridResultBox" Header="Kết quả / log / link artifact" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" FontFamily="Consolas" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="RomRenamerPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="SecondaryPageSizeChanged">
+                    <StackPanel x:Name="RomRenamerContent" MaxWidth="1180" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Đổi tên ROM" Style="{StaticResource PageTitleStyle}" />
+                            <TextBlock Text="Đọc version_name trong metadata, xem trước và xác nhận trước khi đổi tên ZIP." Style="{StaticResource MutedTextStyle}" />
+                        </StackPanel>
+
+                        <InfoBar x:Name="RomRenamerInfoBar" IsOpen="False" IsClosable="True" />
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Chọn nguồn" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="Chọn một ROM ZIP hoặc một folder. Tool chỉ xử lý các file .zip nằm trực tiếp trong folder." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                    </StackPanel>
+                                    <ProgressRing x:Name="RomRenamerBusyRing" Grid.Column="1" Width="24" Height="24" IsActive="False" Visibility="Collapsed" VerticalAlignment="Center" />
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="RenameRomFileButton" Content="Chọn ROM ZIP" Style="{StaticResource AccentButtonStyle}" Click="RenameRomFileClick" />
+                                    <Button x:Name="RenameRomFolderButton" Content="Chọn folder" Click="RenameRomFolderClick" />
+                                    <Button x:Name="ClearRomRenameButton" Content="Xóa danh sách" Click="ClearRomRenameClick" IsEnabled="False" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Xem trước thay đổi" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock x:Name="RomRenamerSummaryText" Text="Chưa chọn ROM để kiểm tra." Style="{StaticResource MutedTextStyle}" FontSize="12" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="12" Padding="10,5" VerticalAlignment="Center">
+                                        <TextBlock x:Name="RomRenamerCountText" Text="0 file" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" FontSize="12" />
+                                    </Border>
+                                </Grid>
+
+                                <Border x:Name="RomRenamerEmptyState" Style="{StaticResource SubtlePanelStyle}" Padding="24">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="6">
+                                        <FontIcon Glyph="&#xE8AC;" FontSize="28" Foreground="{ThemeResource MutedBrush}" />
+                                        <TextBlock Text="Chưa có bản xem trước" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        <TextBlock Text="Chọn ROM ZIP hoặc folder để đọc version_name." Style="{StaticResource MutedTextStyle}" HorizontalAlignment="Center" TextAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+
+                                <ListView
+                                    x:Name="RomRenamerList"
+                                    Visibility="Collapsed"
+                                    MinHeight="220"
+                                    MaxHeight="520"
+                                    SelectionMode="None"
+                                    ScrollViewer.HorizontalScrollMode="Disabled"
+                                    AutomationProperties.Name="Danh sách xem trước đổi tên ROM">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Padding="8,9" ColumnDefinitions="*,Auto,*" ColumnSpacing="12">
+                                                <StackPanel Spacing="3">
+                                                    <TextBlock Text="TÊN HIỆN TẠI" Foreground="{ThemeResource MutedBrush}" FontSize="10" CharacterSpacing="50" />
+                                                    <TextBlock Text="{Binding SourceName}" FontFamily="Consolas" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="→" Foreground="{ThemeResource PrimaryBrush}" FontSize="20" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="2" Spacing="3">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                        <TextBlock Text="TÊN MỚI" Foreground="{ThemeResource MutedBrush}" FontSize="10" CharacterSpacing="50" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding StatusText}" Foreground="{ThemeResource PrimaryBrush}" FontSize="11" FontWeight="SemiBold" />
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding TargetName}" FontFamily="Consolas" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Detail}" Foreground="{ThemeResource MutedBrush}" FontSize="11" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <TextBlock Text="Không ghi đè file đã tồn tại. Mọi file phải hợp lệ trước khi batch được đổi tên." Style="{StaticResource MutedTextStyle}" FontSize="11" VerticalAlignment="Center" />
+                                    <Button x:Name="ApplyRomRenameButton" Grid.Column="1" Content="Xác nhận đổi tên" Style="{StaticResource AccentButtonStyle}" Click="ApplyRomRenameClick" IsEnabled="False" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="CatalogPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="SecondaryPageSizeChanged">
+                    <StackPanel x:Name="CatalogContent" MaxWidth="1560" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Danh mục thiết bị" Style="{StaticResource PageTitleStyle}" />
+                                <TextBlock Text="Quản lý cấu hình dung lượng super, group và logical partition dùng trong preflight/build." Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Thêm thiết bị" Click="AddDeviceClick" VerticalAlignment="Center" />
+                            <Button x:Name="DuplicateDeviceButton" Grid.Column="2" Content="Sao chép" Click="DuplicateDeviceClick" VerticalAlignment="Center" IsEnabled="False" />
+                            <Button Grid.Column="3" Content="Làm mới" Click="RefreshDevicesClick" VerticalAlignment="Center" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <TextBox
+                                x:Name="DeviceSearchBox"
+                                PlaceholderText="Tìm theo tên, product_name hoặc SoC"
+                                TextChanged="DeviceSearchChanged"
+                                AutomationProperties.Name="Tìm thiết bị" />
+                            <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="12" Padding="10,5" VerticalAlignment="Center">
+                                <TextBlock x:Name="DeviceCountText" Text="0 thiết bị" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" FontSize="12" />
+                            </Border>
+                        </Grid>
+                        <Grid x:Name="DeviceCatalogGrid" ColumnSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="DeviceCatalogListColumn" Width="360" />
+                                <ColumnDefinition x:Name="DeviceCatalogEditorColumn" Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border x:Name="DeviceListCard" Style="{StaticResource CardStyle}" Padding="0">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Grid Padding="16,14,16,10" ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Thiết bị đã cấu hình" FontWeight="SemiBold" />
+                                            <TextBlock Text="Chọn một thiết bị để xem hoặc chỉnh sửa." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="DeviceFilteredCountText" Grid.Column="1" Text="0 mục" Foreground="{ThemeResource MutedBrush}" FontSize="11" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <ListView
+                                        x:Name="DevicesList"
+                                        Grid.Row="1"
+                                        MinHeight="430"
+                                        MaxHeight="620"
+                                        SelectionMode="Single"
+                                        SelectionChanged="DeviceSelectionChanged"
+                                        ScrollViewer.HorizontalScrollMode="Disabled"
+                                        AutomationProperties.Name="Danh sách thiết bị">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Padding="8,7" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding ProductName}" Foreground="{ThemeResource PrimaryBrush}" FontFamily="Consolas" FontSize="11" />
+                                                    </StackPanel>
+                                                    <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="9" Padding="8,4" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Soc}" Foreground="{ThemeResource MutedBrush}" FontSize="11" FontWeight="SemiBold" />
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </Grid>
+                            </Border>
+
+                            <Border x:Name="DeviceEditorCard" Grid.Column="1" Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="Thông số thiết bị" Style="{StaticResource SectionTitleStyle}" />
+                                            <TextBlock Text="Các giá trị này quyết định layout super và được kiểm tra trước khi build." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="10" Padding="9,4" VerticalAlignment="Center">
+                                            <TextBlock x:Name="DeviceEditorModeText" Text="Chưa chọn" Foreground="{ThemeResource MutedBrush}" FontSize="11" FontWeight="SemiBold" />
+                                        </Border>
+                                    </Grid>
+                                    <InfoBar
+                                        x:Name="DeviceEditorInfoBar"
+                                        IsOpen="False"
+                                        IsClosable="True"
+                                        Severity="Informational" />
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                        <TextBox x:Name="DeviceProductNameBox" Header="Product name" PlaceholderText="PKG110" TextChanged="DeviceEditorChanged" />
+                                        <TextBox x:Name="DeviceDisplayNameBox" Grid.Column="1" Header="Tên hiển thị" PlaceholderText="OnePlus Ace 5" TextChanged="DeviceEditorChanged" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="0.7*,1.15*,1.15*" ColumnSpacing="12">
+                                        <TextBox x:Name="DeviceSocBox" Header="SoC" PlaceholderText="87xx" TextChanged="DeviceEditorChanged" />
+                                        <TextBox x:Name="DeviceSuperSizeBox" Grid.Column="1" Header="SuperSize (byte)" PlaceholderText="15354134528" InputScope="Number" TextChanged="DeviceEditorChanged" />
+                                        <TextBox x:Name="DeviceGroupSizeBox" Grid.Column="2" Header="GroupSize (byte)" PlaceholderText="15349940224" InputScope="Number" TextChanged="DeviceEditorChanged" />
+                                    </Grid>
+                                    <Border Style="{StaticResource SubtlePanelStyle}">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Kiểm tra dung lượng" FontWeight="SemiBold" FontSize="12" />
+                                                <TextBlock x:Name="DeviceSizeSummaryText" Text="Nhập SuperSize và GroupSize để kiểm tra." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="Căn chỉnh 4 KiB" Foreground="{ThemeResource PrimaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                    <TextBox
+                                        x:Name="DevicePartitionsBox"
+                                        Header="Logical partition bổ sung"
+                                        PlaceholderText="Mỗi dòng một tên, ví dụ: my_company"
+                                        AcceptsReturn="True"
+                                        TextWrapping="NoWrap"
+                                        Height="150"
+                                        FontFamily="Consolas"
+                                        FontSize="12"
+                                        TextChanged="DeviceEditorChanged"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="File lưu cấu hình" FontWeight="SemiBold" FontSize="11" />
+                                            <TextBlock x:Name="DeviceCatalogPathText" Text="devices_sizes.json" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                            <Button Content="Hủy thay đổi" Click="CancelDeviceEditClick" />
+                                            <Button x:Name="DeleteDeviceButton" Content="Xóa" Click="DeleteDeviceClick" IsEnabled="False" />
+                                            <Button x:Name="SaveDeviceButton" Content="Lưu thiết bị" Click="SaveDeviceClick" Style="{StaticResource AccentButtonStyle}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Partition Layout Analyzer" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="Đối chiếu SuperSize, GroupSize và logical partition của thiết bị đang chọn với super.img hoặc kết quả lpdump." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="10" Padding="10,5" VerticalAlignment="Center">
+                                        <TextBlock x:Name="LayoutAnalyzerStatusText" Text="Chưa phân tích" Foreground="{ThemeResource MutedBrush}" FontWeight="SemiBold" FontSize="11" />
+                                    </Border>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBox x:Name="LayoutSourceBox" IsReadOnly="True" PlaceholderText="Chưa chọn super.img, metadata JSON hoặc lpdump TXT" />
+                                    <Button Grid.Column="1" Content="Chỉ kiểm tra catalog" Click="AnalyzeCatalogLayoutClick" />
+                                    <Button Grid.Column="2" Content="Chọn nguồn và phân tích" Style="{StaticResource AccentButtonStyle}" Click="BrowseLayoutSourceClick" />
+                                </Grid>
+                                <InfoBar x:Name="LayoutAnalyzerInfoBar" IsOpen="False" IsClosable="True" />
+                                <Grid ColumnDefinitions="0.7*,1.3*" ColumnSpacing="10">
+                                    <Border Style="{StaticResource SubtlePanelStyle}">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="ĐIỂM AN TOÀN" FontSize="10" Foreground="{ThemeResource MutedBrush}" CharacterSpacing="60" />
+                                            <TextBlock x:Name="LayoutScoreText" Text="--" FontSize="32" FontWeight="SemiBold" FontFamily="Segoe UI Variable Display" />
+                                            <TextBlock x:Name="LayoutSizeSummaryText" Text="Chọn thiết bị để bắt đầu." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Style="{StaticResource SubtlePanelStyle}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="Group usage và khuyến nghị" FontWeight="SemiBold" FontSize="12" />
+                                            <StackPanel x:Name="LayoutGroupsPanel" Spacing="5" />
+                                            <TextBlock x:Name="LayoutRecommendationText" Text="Chưa có dữ liệu." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                            <TextBlock Text="MOD" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock x:Name="ModCountText" Grid.Column="1" Text="0 MOD" Foreground="{ThemeResource PrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </Grid>
+                        <StackPanel x:Name="ModsCatalogPanel" Spacing="8" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="DiagnosticsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="SecondaryPageSizeChanged">
+                    <StackPanel x:Name="DiagnosticsContent" MaxWidth="1560" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Chẩn đoán" Style="{StaticResource PageTitleStyle}" />
+                                <TextBlock Text="Kiểm tra runtime, binary, dependency và dung lượng." Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Chạy lại" Click="RefreshDiagnosticsClick" />
+                        </Grid>
+                        <StackPanel x:Name="DiagnosticsPanel" Spacing="8" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled" HorizontalContentAlignment="Stretch" SizeChanged="SecondaryPageSizeChanged">
+                    <StackPanel x:Name="SettingsContent" MaxWidth="1180" Padding="24,20,24,40" Spacing="16" HorizontalAlignment="Center">
+                        <TextBlock Text="Cài đặt" Style="{StaticResource PageTitleStyle}" />
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <TextBox x:Name="RootsBox" Header="Root được phép (mỗi dòng một đường dẫn tuyệt đối)" AcceptsReturn="True" Height="120" />
+                                <Button Content="Thêm root bằng FolderPicker" HorizontalAlignment="Left" Click="AddRootFolderClick" />
+                                <ComboBox x:Name="DefaultPresetCombo" Header="Preset mặc định">
+                                    <ComboBoxItem Content="Lite" Tag="lite" />
+                                    <ComboBoxItem Content="Plus" Tag="resume" />
+                                    <ComboBoxItem Content="Lite + Plus" Tag="both" />
+                                    <ComboBoxItem Content="Custom" Tag="custom" />
+                                </ComboBox>
+                                <ComboBox x:Name="ZipValidationModeCombo" Header="Hậu kiểm ZIP">
+                                    <ComboBoxItem Content="Nhanh (khuyến nghị)" Tag="fast" />
+                                    <ComboBoxItem Content="CRC toàn phần" Tag="deep" />
+                                </ComboBox>
+                                <TextBlock Text="Chế độ nhanh vẫn kiểm tra image bắt buộc, manifest và cấu trúc super.img; CRC toàn phần đọc lại toàn bộ ZIP." Style="{StaticResource MutedTextStyle}" FontSize="11" TextWrapping="Wrap" />
+                                <CheckBox x:Name="DefaultTelegramCheckBox" Content="Bật thông báo Telegram mặc định" />
+                                <Button Content="Lưu cài đặt" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Right" Click="SaveSettingsClick" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Giao diện và Build Console" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="Các tùy chọn này chỉ ảnh hưởng ứng dụng Windows và được lưu trong desktop-settings.json." Style="{StaticResource MutedTextStyle}" />
+                                </StackPanel>
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                        <ComboBox x:Name="LanguageCombo" Header="Ngôn ngữ" SelectionChanged="LanguageChanged">
+                                            <ComboBoxItem Content="Tiếng Việt" Tag="vi" />
+                                            <ComboBoxItem Content="English" Tag="en" />
+                                        </ComboBox>
+                                        <ComboBox x:Name="ThemeCombo" Grid.Column="1" Header="Chế độ giao diện" SelectionChanged="ThemeChanged">
+                                            <ComboBoxItem Content="Theo hệ thống" Tag="system" />
+                                            <ComboBoxItem Content="Sáng" Tag="light" />
+                                            <ComboBoxItem Content="Tối" Tag="dark" />
+                                        </ComboBox>
+                                    </Grid>
+                                    <ComboBox x:Name="LogRefreshCombo" Header="Tốc độ cập nhật log">
+                                        <ComboBoxItem Content="Nhanh · 750 ms" Tag="750" />
+                                        <ComboBoxItem Content="Cân bằng · 1000 ms" Tag="1000" />
+                                        <ComboBoxItem Content="Tiết kiệm · 1500 ms" Tag="1500" />
+                                        <ComboBoxItem Content="Chậm · 2000 ms" Tag="2000" />
+                                    </ComboBox>
+                                    <NumberBox x:Name="ConsoleBufferBox" Header="Bộ đệm console (nghìn ký tự)" Minimum="50" Maximum="500" SmallChange="25" SpinButtonPlacementMode="Compact" />
+                                    <CheckBox x:Name="DefaultAutoScrollCheckBox" Content="Tự cuộn log mặc định" />
+                                    <CheckBox x:Name="NavigationExpandedCheckBox" Content="Mở rộng menu bên trái khi khởi động" />
+                                    <CheckBox x:Name="ExpandModsCheckBox" Content="Mở sẵn danh sách MOD" />
+                                    <CheckBox x:Name="ExpandPipelineCheckBox" Content="Mở sẵn pipeline" />
+                                    <Button Content="Lưu tùy chọn Windows" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Right" Click="SaveDesktopSettingsClick" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="Stage cache" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="Tái sử dụng payload đã extract bằng SHA-256; cache không thay đổi nội dung ROM nguồn." Style="{StaticResource MutedTextStyle}" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="CacheUsageText" Grid.Column="1" Text="0 B / 0 B" Foreground="{ThemeResource PrimaryBrush}" FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="10">
+                                    <ToggleSwitch x:Name="StageCacheToggle" Header="Bật cache extract payload" OnContent="Bật" OffContent="Tắt" />
+                                    <NumberBox x:Name="StageCacheMaxBox" Grid.Column="1" Header="Dung lượng tối đa (GiB)" Minimum="5" Maximum="500" SmallChange="5" SpinButtonPlacementMode="Compact" />
+                                    <Button Grid.Column="2" Content="Lưu cache" Click="SaveCacheSettingsClick" VerticalAlignment="Bottom" />
+                                    <Button Grid.Column="3" Content="Xóa cache" Click="ClearCacheClick" VerticalAlignment="Bottom" />
+                                </Grid>
+                                <TextBlock x:Name="CacheDetailText" Text="Chưa tải trạng thái cache." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Phiên bản Wukong theo nền MOD" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="Giá trị này được dùng đồng thời cho tên ZIP, info.txt và ro.build.version.oplusrom.display." Style="{StaticResource MutedTextStyle}" />
+                                <StackPanel x:Name="StudioVersionsPanel" Spacing="7" />
+                                <Button Content="Lưu số phiên bản" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Right" Click="SaveStudioVersionsClick" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Telegram" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="Token được mã hóa bằng Windows DPAPI và không được hiển thị lại." Style="{StaticResource MutedTextStyle}" />
+                                <PasswordBox x:Name="TelegramTokenBox" Header="Bot token mới" PlaceholderText="Nhập token để thay đổi cấu hình" />
+                                <TextBox x:Name="TelegramChatIdBox" Header="Chat ID" />
+                                <Button Content="Lưu Telegram và khởi động lại backend" HorizontalAlignment="Right" Click="ConfigureTelegramClick" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="GitHub Actions và Google Drive" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="Token GitHub và rclone.conf được mã hóa bằng Windows DPAPI và không hiển thị lại." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                <TextBox x:Name="HybridRepositoryBox" Header="GitHub repository" Text="luukhanh24/Wukong-ROM-Studio-Hybrid" />
+                                <PasswordBox x:Name="HybridGitHubTokenBox" Header="Fine-grained GitHub token" PlaceholderText="Actions write, Metadata read, Administration read" />
+                                <TextBox x:Name="HybridRcloneConfigBox" Header="Nội dung rclone.conf" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="120" FontFamily="Consolas" />
+                                <Button Content="Mã hóa cấu hình hybrid và khởi động lại backend" HorizontalAlignment="Right" Click="ConfigureHybridSecretsClick" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Thư mục ứng dụng" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock x:Name="InstallRootText" FontFamily="Consolas" />
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                                    <Button Content="Mở output" Click="OpenOutputClick" HorizontalAlignment="Stretch" />
+                                    <Button Grid.Column="1" Content="Mở workspace" Click="OpenWorkspaceClick" HorizontalAlignment="Stretch" />
+                                    <Button Grid.Row="1" Content="Mở log" Click="OpenLogsClick" HorizontalAlignment="Stretch" />
+                                    <Button Grid.Row="1" Grid.Column="1" Content="Khởi động lại backend" Click="RestartBackendClick" HorizontalAlignment="Stretch" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </NavigationView>
+
+        <ContentDialog
+            x:Name="DebloatDialog"
+            Title="Bước 04 · Xóa ứng dụng không cần thiết"
+            PrimaryButtonText="Áp dụng và lưu"
+            SecondaryButtonText="Khôi phục mặc định"
+            CloseButtonText="Hủy"
+            DefaultButton="Primary">
+            <StackPanel Width="640" Spacing="12">
+                <InfoBar
+                    IsOpen="True"
+                    IsClosable="False"
+                    Severity="Informational"
+                    Title="Danh sách dùng chung cho CLI và Windows app"
+                    Message="Mỗi dòng là một đường dẫn tương đối bắt đầu bằng tên phân vùng. Backend sẽ chặn đường dẫn tuyệt đối, traversal và phân vùng không được phép chỉnh sửa." />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Đường dẫn cần xóa" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Background="{ThemeResource BadgeBackgroundBrush}" CornerRadius="10" Padding="9,4">
+                        <TextBlock x:Name="DebloatEditorCountText" Text="0 đường dẫn" Foreground="{ThemeResource PrimaryBrush}" FontSize="11" FontWeight="SemiBold" />
+                    </Border>
+                </Grid>
+                <TextBox
+                    x:Name="DebloatPathsBox"
+                    Height="260"
+                    AcceptsReturn="True"
+                    TextWrapping="NoWrap"
+                    FontFamily="Consolas"
+                    FontSize="12"
+                    PlaceholderText="my_stock\app\Browser"
+                    TextChanged="DebloatPathsChanged"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                <TextBlock Text="Mẹo: để danh sách trống nếu muốn giữ toàn bộ ứng dụng ở bước này." Style="{StaticResource MutedTextStyle}" FontSize="11" />
+            </StackPanel>
+        </ContentDialog>
+    </Grid>
+</UserControl>

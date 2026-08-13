@@ -1,0 +1,142 @@
+#!/sbin/sh
+# Functions needed early
+ui_print() { $BOOTMODE && echo "$1" || echo -e "ui_print $1\nui_print" >> $OUTFD; }
+abort() { ui_print "$1"; ui_print " "; exit 1; }
+
+# Set vars
+OUTFD=/proc/self/fd/$2
+ZIPFILE="$3"
+tmp=/data/tmp
+
+# detect Magisk Manager/booted flashing
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true || BOOTMODE=false
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+$BOOTMODE && abort "You need to flash this Rom from recovery!"
+
+ui_print " "
+set -x
+rm -rf $tmp
+mkdir -p $tmp
+unzip -o "$ZIPFILE" "info.txt" -d "$tmp" > /dev/null 2>&1
+
+INFO_PATH="/data/tmp/info.txt"
+if [ -f "$INFO_PATH" ]; then
+    LINE1=$(sed -n '1p' "$INFO_PATH" | tr -d '\r')
+    LINE2=$(sed -n '2p' "$INFO_PATH" | tr -d '\r')
+    LINE3=$(sed -n '3p' "$INFO_PATH" | tr -d '\r')
+    LINE4=$(sed -n '4p' "$INFO_PATH" | tr -d '\r')
+    LINE5=$(sed -n '5p' "$INFO_PATH" | tr -d '\r')
+else
+  ui_print "Error: File not found!"
+fi
+
+ui_print " "
+ui_print "#################################################"
+ui_print "#            $LINE1                      #"
+ui_print "#            $LINE2            #"
+ui_print "#            $LINE3 | $LINE4 | $LINE5            #"
+ui_print "#=================== Wukong ====================#"
+ui_print "# Author: https://t.me/Kswukong                 #"
+ui_print "# Support group: https://t.me/OnePlus_Ace5_Port #"
+ui_print "#################################################"
+ui_print " "
+
+ui_print "Image extracting..."
+unzip -o "$ZIPFILE" -d $tmp || abort "Failed to extract zip!"
+chmod -R 777 $tmp
+sleep 1
+
+ui_print " "
+ui_print "Starting flash...";
+ui_print " "
+
+for img_path in /data/tmp/firmware-update/*.img; do
+    filename=${img_path##*/}
+    part_name=${filename%.*}
+
+    ui_print "Flashing $part_name..."
+
+    if [ -e "/dev/block/by-name/${part_name}_a" ]; then
+        cat "$img_path" > "/dev/block/by-name/${part_name}_a"
+    else
+        ui_print "  ! ${part_name}_a not found, skipping."
+    fi
+
+    if [ -e "/dev/block/by-name/${part_name}_b" ]; then
+        cat "$img_path" > "/dev/block/by-name/${part_name}_b"
+    else
+        ui_print "  ! ${part_name}_b not found, skipping."
+    fi
+done
+
+ui_print "Flashing vbmeta..."
+cat /data/tmp/images/vbmeta.img > /dev/block/by-name/vbmeta_a
+cat /data/tmp/images/vbmeta.img > /dev/block/by-name/vbmeta_b
+ui_print "Flashing vbmeta_system..."
+cat /data/tmp/images/vbmeta_system.img > /dev/block/by-name/vbmeta_system_a
+cat /data/tmp/images/vbmeta_system.img > /dev/block/by-name/vbmeta_system_b
+ui_print "Flashing vbmeta_vendor..."
+cat /data/tmp/images/vbmeta_vendor.img > /dev/block/by-name/vbmeta_vendor_a
+cat /data/tmp/images/vbmeta_vendor.img > /dev/block/by-name/vbmeta_vendor_b
+ui_print "Flashing dtbo..."
+cat /data/tmp/images/dtbo.img > /dev/block/by-name/dtbo_a
+cat /data/tmp/images/dtbo.img > /dev/block/by-name/dtbo_b
+ui_print "Flashing boot..."
+cat /data/tmp/images/boot.img > /dev/block/by-name/boot_a
+cat /data/tmp/images/boot.img > /dev/block/by-name/boot_b
+ui_print "Flashing init_boot..."
+cat /data/tmp/images/init_boot.img > /dev/block/by-name/init_boot_a
+cat /data/tmp/images/init_boot.img > /dev/block/by-name/init_boot_b
+ui_print "Flashing vendor_boot..."
+cat /data/tmp/images/vendor_boot.img > /dev/block/by-name/vendor_boot_a
+cat /data/tmp/images/vendor_boot.img > /dev/block/by-name/vendor_boot_b
+
+OF_FILE="/data/tmp/images/OrangeFox.img"
+TWRP_FILE="/data/tmp/images/TWRP.img"
+if [ -f "$OF_FILE" ]; then
+    ui_print "Flashing OrangeFox..."
+    cat /data/tmp/images/OrangeFox.img > /dev/block/by-name/OrangeFox_a
+    cat /data/tmp/images/OrangeFox.img > /dev/block/by-name/OrangeFox_b
+elif [ -f "$TWRP_FILE" ]; then
+    ui_print "Flashing TWRP..."
+    cat /data/tmp/images/TWRP.img > /dev/block/by-name/TWRP_a
+    cat /data/tmp/images/TWRP.img > /dev/block/by-name/TWRP_b
+else
+    ui_print "Neither OrangeFox.img nor TWRP.img was found in the images folder."
+    ui_print "Flashing recovery..."
+    cat /data/tmp/images/recovery.img > /dev/block/by-name/recovery_a
+    cat /data/tmp/images/recovery.img > /dev/block/by-name/recovery_b
+fi
+
+ui_print "Flashing modem..."
+cat /data/tmp/images/modem.img > /dev/block/by-name/modem_a 
+cat /data/tmp/images/modem.img > /dev/block/by-name/modem_b 
+
+ui_print "Flashing super..."
+simg2img '/data/tmp/images/super.img' '/dev/block/by-name/super'
+
+ui_print "Active slot a"
+cat /data/tmp/META-INF/com/arkt/bootctl > /system/bin/bootctl
+chmod 777 /system/bin/bootctl
+bootctl set-active-boot-slot 0
+resetprop ro.boot.slot_suffix _a
+rm -rf /data/tmp/*
+
+ui_print " "
+ui_print "Wiping all cache..."
+before=$(df -k /data 2>/dev/null | awk 'END{print $4}')
+rm -rf /data/cache/* /data/resource-cache/* /data/system/package_cache/* /data/dalvik-cache/arm/* /data/dalvik-cache/arm64/* /data/data/*/app_track_sslcache/* /data/data/*/app_pccache/* /data/data/*/app_tmpcache/* /data/data/*/cache/* /data/data/*/app_cache/* /data/data/*/code_cache/* /data/user_de/*/*/cache/* /data/user_de/*/*/code_cache/* /data/system/dropbox/* 2>/dev/null
+sync
+after=$(df -k /data 2>/dev/null | awk 'END{print $4}')
+freed=$((after-before))
+before_mb=$(awk -v val="$before" 'BEGIN {printf "%.2f", val/1024}')
+after_mb=$(awk -v val="$after" 'BEGIN {printf "%.2f", val/1024}')
+freed_mb=$(awk -v val="$freed" 'BEGIN {printf "%.2f", val/1024}')
+
+ui_print "=== data free space ==="
+ui_print "Before: $before_mb MB"
+ui_print "After : $after_mb MB"
+ui_print "Freed : $freed_mb MB"
+ui_print " "
+ui_print "FLASHING DONE !!!"
+exit 0
