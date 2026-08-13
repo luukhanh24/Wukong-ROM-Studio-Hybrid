@@ -48,6 +48,81 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_local_build_without_cloud_publish_records_artifact_checksum(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            rom = root / "source.zip"
+            with zipfile.ZipFile(rom, "w") as archive:
+                archive.writestr(
+                    "META-INF/com/android/metadata",
+                    "oplus_product_name=PKG110\noplus_version_name=local-fixture\n",
+                )
+                archive.writestr("payload.bin", b"fixture")
+            content_root = root / "content"
+            packs = []
+            for pack_id, target in (
+                ("MOD/ColorOS_16.0.8", "MOD/ColorOS_16.0.8"),
+                ("copy-image/v1", "copy-image"),
+                ("OFX/v1", "OFX"),
+                ("TWRP/v1", "TWRP"),
+            ):
+                directory = content_root / target
+                directory.mkdir(parents=True)
+                fixture = directory / "fixture.txt"
+                fixture.write_text("fixture\n", encoding="utf-8")
+                packs.append(
+                    {
+                        "id": pack_id,
+                        "target": target,
+                        "remote": f"wukong-gdrive:WukongROM/content-packs/{pack_id}",
+                        "fileCount": 1,
+                        "sizeBytes": fixture.stat().st_size,
+                        "files": [
+                            {
+                                "path": fixture.name,
+                                "sha256": sha256_file(fixture),
+                                "sizeBytes": fixture.stat().st_size,
+                            }
+                        ],
+                    }
+                )
+            content_index = root / "content-index.json"
+            content_index.write_text(
+                json.dumps({"schemaVersion": 1, "packs": packs}),
+                encoding="utf-8",
+            )
+            recipe = BuildRecipe.from_dict(
+                {
+                    "task": "build",
+                    "device": "PKG110",
+                    "source": {"kind": "local", "uri": str(rom), "sha256": sha256_file(rom)},
+                    "build": {"preset": "custom", "modVersion": "ColorOS_16.0.8"},
+                    "execution": {"target": "local-windows"},
+                    "storage": {"publishArtifact": False},
+                }
+            )
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=root / "jobs")
+            manifest = orchestrator.submit(recipe, Identity("windows", "local", "admin"), job_id="local-no-cloud")
+
+            def legacy_build(_job_id, _spec, workspace, _callback):
+                workspace.mkdir(parents=True, exist_ok=True)
+                output = workspace / "local-artifact.zip"
+                output.write_bytes(b"artifact")
+                return {"outputZip": str(output)}
+
+            completed = LocalJobExecutor(
+                store=store,
+                workspace_root=root / "jobs",
+                build_workspace_root=root / "build",
+                content_root=content_root,
+                content_index=content_index,
+                legacy_build=legacy_build,
+            ).execute(manifest.job_id)
+
+            self.assertEqual(completed.status, JobStatus.SUCCEEDED, completed.error)
+            self.assertEqual(completed.artifacts[0].sha256, sha256_file(Path(completed.artifacts[0].uri)))
+
     @staticmethod
     def _cli_json(arguments: list[str]) -> dict[str, object]:
         output = io.StringIO()

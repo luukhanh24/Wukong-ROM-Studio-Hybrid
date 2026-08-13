@@ -5,7 +5,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
-from .adapters import RcloneStorageAdapter, SourceIntegrityError, source_adapter_for
+from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
 from .cloud_sync import CloudJobSync
 from .content_packs import ContentPackManager, validate_content_index
 from .models import ArtifactRecord, BuildRecipe, JobManifest, JobStatus
