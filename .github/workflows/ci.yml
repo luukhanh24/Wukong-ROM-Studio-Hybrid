@@ -37,6 +37,27 @@ jobs:
       - name: Build WinUI application
         run: dotnet build desktop/WukongStudio.App/WukongStudio.App.csproj -c Release
 
+  linux-rom-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install fixture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cpio e2fsprogs lz4 p7zip-full zstd
+          python -m pip install -r requirements.txt
+      - name: Bootstrap pinned Linux toolchain
+        run: python -m tools.bootstrap_linux
+      - name: Smoke-test Linux binaries
+        run: python -m tools.smoke_linux
+      - name: Run generated ROM fixture
+        run: python -m tools.smoke_rom_fixture_linux
+
   workflow-security:
     runs-on: ubuntu-24.04
     steps:

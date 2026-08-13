@@ -46,6 +46,7 @@ Thumbs.db
 Desktop.ini
 
 # WinUI build, runtime downloads and installer output
+/bin/Linux/
 desktop/**/bin/
 desktop/**/obj/
 desktop/**/.codexbin/
