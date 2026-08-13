@@ -7,11 +7,13 @@ import shutil
 import subprocess
 import tempfile
 import time
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Callable, Protocol
+from typing import Any, Callable, Protocol
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .models import ArtifactRecord
@@ -19,6 +21,10 @@ from .security import validate_http_url
 
 
 CHUNK_SIZE = 4 * 1024 * 1024
+RESOLVER_SNIFF_SIZE = 64 * 1024
+MAX_RESOLVER_BYTES = 1024 * 1024
+OPLUS_RESOLVER_USER_AGENT = "okhttp/3.12.12"
+OPLUS_RESOLVER_USER_ID = "oplus-ota|16002018"
 
 
 class SourceError(RuntimeError):
@@ -26,6 +32,10 @@ class SourceError(RuntimeError):
 
 
 class SourceIntegrityError(SourceError):
+    pass
+
+
+class SourceResolutionError(SourceError):
     pass
 
 
@@ -38,6 +48,10 @@ class MaterializedSource:
 
 class SourceAdapter(Protocol):
     def materialize(self, uri: str, target: Path, expected_sha256: str | None) -> MaterializedSource: ...
+
+
+class HttpOpener(Protocol):
+    def open(self, request: Request, *, timeout: int) -> Any: ...
 
 
 def sha256_file(path: Path) -> str:
@@ -76,29 +90,28 @@ class LocalSourceAdapter:
 
 
 class HttpSourceAdapter:
-    def __init__(self, *, attempts: int = 3, timeout: int = 60) -> None:
+    def __init__(
+        self,
+        *,
+        attempts: int = 3,
+        timeout: int = 60,
+        opener: HttpOpener | None = None,
+    ) -> None:
         self.attempts = max(1, attempts)
         self.timeout = timeout
+        self.opener = opener or build_opener(_SafeRedirectHandler())
 
     def materialize(self, uri: str, target: Path, expected_sha256: str | None = None) -> MaterializedSource:
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_suffix(target.suffix + ".partial")
-        opener = build_opener(_SafeRedirectHandler())
         for attempt in range(1, self.attempts + 1):
             try:
-                validate_http_url(uri, resolve_dns=True)
-                offset = temporary.stat().st_size if temporary.is_file() else 0
-                headers = {"User-Agent": "Wukong-ROM-Studio/1"}
-                if offset:
-                    headers["Range"] = f"bytes={offset}-"
-                request = Request(uri, headers=headers)
-                with opener.open(request, timeout=self.timeout) as response:
-                    validate_http_url(response.geturl(), resolve_dns=True)
-                    append = offset > 0 and getattr(response, "status", response.getcode()) == 206
-                    with temporary.open("ab" if append else "wb") as handle:
-                        shutil.copyfileobj(response, handle, CHUNK_SIZE)
+                self._download(uri, temporary)
                 os.replace(temporary, target)
                 return _finalize_materialized(target, expected_sha256)
+            except SourceResolutionError:
+                temporary.unlink(missing_ok=True)
+                raise
             except (HTTPError, URLError, TimeoutError, OSError, SourceError) as exc:
                 if attempt >= self.attempts:
                     temporary.unlink(missing_ok=True)
@@ -106,6 +119,114 @@ class HttpSourceAdapter:
                 time.sleep(min(2**attempt, 8))
         raise AssertionError("unreachable")
 
+    def _download(self, uri: str, temporary: Path) -> None:
+        validate_http_url(uri, resolve_dns=True)
+
+        offset = temporary.stat().st_size if temporary.is_file() else 0
+        headers = self._request_headers(uri)
+        if offset:
+            headers["Range"] = f"bytes={offset}-"
+        request = Request(uri, headers=headers)
+        with self.opener.open(request, timeout=self.timeout) as response:
+            final_url = response.geturl()
+            validate_http_url(final_url, resolve_dns=True)
+            prefix = response.read(RESOLVER_SNIFF_SIZE)
+            content_type = str(response.headers.get("Content-Type", "")).casefold()
+            if self._looks_like_json(content_type, prefix):
+                raw_payload = prefix + response.read(MAX_RESOLVER_BYTES - len(prefix) + 1)
+                if len(raw_payload) > MAX_RESOLVER_BYTES:
+                    raise SourceResolutionError(
+                        f"OTA resolver response exceeds {MAX_RESOLVER_BYTES} bytes"
+                    )
+                encoding = str(response.headers.get("Content-Encoding", "")).casefold()
+                payload = self._decode_resolver_payload(raw_payload, encoding)
+                self._raise_resolver_error(payload)
+            if self._is_oplus_resolver_url(uri) and final_url == uri:
+                raise SourceResolutionError(
+                    "OPlus OTA resolver did not redirect to a ROM download"
+                )
+
+            status = getattr(response, "status", response.getcode())
+            append = offset > 0 and status == 206
+            with temporary.open("ab" if append else "wb") as handle:
+                handle.write(prefix)
+                shutil.copyfileobj(response, handle, CHUNK_SIZE)
+
+    @staticmethod
+    def _looks_like_json(content_type: str, prefix: bytes) -> bool:
+        media_type = content_type.split(";", 1)[0].strip()
+        return (
+            media_type in {"application/json", "text/json"}
+            or media_type.endswith("+json")
+            or prefix.lstrip().startswith((b"{", b"["))
+        )
+
+    @staticmethod
+    def _request_headers(uri: str) -> dict[str, str]:
+        if HttpSourceAdapter._is_oplus_resolver_url(uri):
+            return {
+                "User-Agent": OPLUS_RESOLVER_USER_AGENT,
+                "Accept": "*/*",
+                "Accept-Encoding": "gzip, deflate",
+                "Connection": "Keep-Alive",
+                "Cache-Control": "no-cache",
+                "userId": OPLUS_RESOLVER_USER_ID,
+            }
+        return {"User-Agent": "Wukong-ROM-Studio/1"}
+
+    @staticmethod
+    def _is_oplus_resolver_url(uri: str) -> bool:
+        return urlparse(uri).path.rstrip("/").casefold().endswith("/downloadcheck")
+
+    @staticmethod
+    def _decode_resolver_payload(payload: bytes, encoding: str) -> bytes:
+        if encoding in {"gzip", "x-gzip"}:
+            decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        elif encoding == "deflate":
+            decoder = zlib.decompressobj()
+        else:
+            return payload
+        try:
+            decoded = decoder.decompress(payload, MAX_RESOLVER_BYTES + 1)
+        except zlib.error as exc:
+            raise SourceResolutionError(f"OTA resolver returned invalid {encoding} data") from exc
+        if len(decoded) > MAX_RESOLVER_BYTES or decoder.unconsumed_tail:
+            raise SourceResolutionError(
+                f"OTA resolver response exceeds {MAX_RESOLVER_BYTES} bytes after decompression"
+            )
+        return decoded
+
+    @staticmethod
+    def _raise_resolver_error(payload: bytes) -> None:
+        try:
+            data = json.loads(payload.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SourceResolutionError(f"OTA resolver returned invalid JSON: {exc}") from exc
+
+        if isinstance(data, dict):
+            diagnostics = HttpSourceAdapter._resolver_diagnostics(data)
+            if data.get("body") is None and diagnostics:
+                raise SourceResolutionError(
+                    f"OTA resolver rejected request: {diagnostics}"
+                )
+        details = HttpSourceAdapter._resolver_diagnostics(data)
+        suffix = f" ({details})" if details else ""
+        raise SourceResolutionError(
+            "OTA resolver returned JSON instead of redirecting to a ROM download" + suffix
+        )
+
+    @staticmethod
+    def _resolver_diagnostics(value: object) -> str:
+        if not isinstance(value, dict):
+            return ""
+        code = value.get("responseCode")
+        message = value.get("errMsg")
+        if code is None and message is None:
+            return ""
+        return (
+            f"responseCode={code if code is not None else 'unknown'}, "
+            f"errMsg={message if message is not None else 'unknown'}"
+        )
 
 class _SafeRedirectHandler(HTTPRedirectHandler):
     def redirect_request(

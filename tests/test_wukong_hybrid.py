@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
 import io
 import json
 import os
 import subprocess
 import tempfile
 import unittest
+import zlib
 from datetime import datetime, timedelta, timezone
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from wukong.adapters import LocalSourceAdapter, RcloneStorageAdapter, SourceIntegrityError
+from wukong.adapters import (
+    HttpSourceAdapter,
+    LocalSourceAdapter,
+    RcloneStorageAdapter,
+    SourceIntegrityError,
+    SourceResolutionError,
+)
 from wukong.cloud_sync import CloudJobSync
 from wukong.cli import main as cli_main
 from wukong.content_packs import ContentPackManager, build_content_index, upload_content_packs
@@ -170,6 +178,152 @@ class RunnerRoutingContractTests(unittest.TestCase):
 
 
 class SourceAndStorageContractTests(unittest.TestCase):
+    class _HttpResponse(io.BytesIO):
+        def __init__(
+            self,
+            payload: bytes,
+            *,
+            url: str,
+            content_type: str,
+            status: int = 200,
+        ) -> None:
+            super().__init__(payload)
+            self._url = url
+            self.headers = {"Content-Type": content_type}
+            self.status = status
+
+        def geturl(self) -> str:
+            return self._url
+
+        def getcode(self) -> int:
+            return self.status
+
+    class _SequenceOpener:
+        def __init__(self, responses: list[io.BytesIO]) -> None:
+            self.responses = responses
+            self.requests: list[object] = []
+
+        def open(self, request: object, *, timeout: int) -> io.BytesIO:
+            self.requests.append(request)
+            return self.responses.pop(0)
+
+    def test_http_source_uses_oplus_headers_and_downloads_redirected_rom(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        opener = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    b"PK\x03\x04rom-content",
+                    url=download_url,
+                    content_type="application/zip",
+                ),
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            result = HttpSourceAdapter(attempts=1, opener=opener).materialize(
+                resolver_url,
+                target,
+            )
+
+            self.assertEqual(result.path.read_bytes(), b"PK\x03\x04rom-content")
+            self.assertEqual(len(opener.requests), 1)
+            request_headers = dict(opener.requests[0].header_items())
+            self.assertEqual(request_headers["User-agent"], "okhttp/3.12.12")
+            self.assertEqual(request_headers["Userid"], "oplus-ota|16002018")
+
+    def test_http_source_reports_ota_error_instead_of_saving_json_as_rom(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        opener = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    b'{"body":null,"errMsg":"2306","responseCode":2306}',
+                    url=resolver_url,
+                    content_type="application/json;charset=UTF-8",
+                )
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            with self.assertRaisesRegex(SourceResolutionError, "responseCode=2306.*errMsg=2306"):
+                HttpSourceAdapter(attempts=1, opener=opener).materialize(resolver_url, target)
+
+            self.assertFalse(target.exists())
+            self.assertFalse(target.with_suffix(".zip.partial").exists())
+
+    def test_http_source_reports_gzip_compressed_ota_error(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        payload = gzip.compress(b'{"body":null,"errMsg":"2306","responseCode":2306}')
+        response = self._HttpResponse(
+            payload,
+            url=resolver_url,
+            content_type="application/json",
+        )
+        response.headers["Content-Encoding"] = "gzip"
+        opener = self._SequenceOpener(
+            [response]
+        )
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            with self.assertRaisesRegex(SourceResolutionError, "responseCode=2306.*errMsg=2306"):
+                HttpSourceAdapter(attempts=1, opener=opener).materialize(resolver_url, target)
+
+            self.assertFalse(target.exists())
+
+    def test_http_source_reports_deflate_compressed_ota_error(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        payload = zlib.compress(b'{"body":null,"errMsg":"2306","responseCode":2306}')
+        response = self._HttpResponse(
+            payload,
+            url=resolver_url,
+            content_type="application/json",
+        )
+        response.headers["Content-Encoding"] = "deflate"
+        opener = self._SequenceOpener([response])
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            with self.assertRaisesRegex(SourceResolutionError, "responseCode=2306.*errMsg=2306"):
+                HttpSourceAdapter(attempts=1, opener=opener).materialize(resolver_url, target)
+
+            self.assertFalse(target.exists())
+
+    def test_http_source_requires_oplus_endpoint_to_redirect(self) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        opener = self._SequenceOpener(
+            [
+                self._HttpResponse(
+                    b"<html>request rejected</html>",
+                    url=resolver_url,
+                    content_type="text/html",
+                )
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            with self.assertRaisesRegex(SourceResolutionError, "did not redirect"):
+                HttpSourceAdapter(attempts=1, opener=opener).materialize(resolver_url, target)
+
+            self.assertFalse(target.exists())
+
+    def test_safe_redirect_handler_rejects_private_target(self) -> None:
+        from wukong.adapters import _SafeRedirectHandler
+
+        request = object()
+        with self.assertRaisesRegex(ValueError, "private network"):
+            _SafeRedirectHandler().redirect_request(
+                request,
+                object(),
+                302,
+                "Found",
+                {},
+                "http://127.0.0.1/rom.zip",
+            )
+
     def test_local_source_is_copied_and_checksum_verified(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             source = Path(root, "rom.zip")
