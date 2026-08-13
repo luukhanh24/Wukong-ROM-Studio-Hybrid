@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from pathlib import PurePosixPath
 
 from .adapters import RcloneStorageAdapter
 from .models import JobManifest, JobStatus
@@ -76,6 +78,67 @@ class CloudJobSync:
             )
             self._merge_events(job_id)
             return updated
+
+    def pull_checkpoint(self, job_id: str) -> JobManifest | None:
+        local = self.store.get(job_id)
+        if not local:
+            return None
+        with tempfile.TemporaryDirectory(prefix="wukong-checkpoint-pull-") as root:
+            destination = Path(root) / "manifest.json"
+            try:
+                self.storage.run_command(
+                    self.storage._args(
+                        "copyto",
+                        self.storage.remote_uri(f"jobs/{job_id}/manifest.json"),
+                        str(destination),
+                        "--retries",
+                        "1",
+                    )
+                )
+            except Exception:
+                return local
+            if not destination.is_file():
+                return local
+            try:
+                remote = JobManifest.from_dict(json.loads(destination.read_text(encoding="utf-8")))
+            except (OSError, ValueError, json.JSONDecodeError):
+                return local
+            if (
+                remote.job_id != local.job_id
+                or remote.recipe_digest != local.recipe_digest
+                or remote.owner != local.owner
+            ):
+                return local
+            if not remote.checkpoint:
+                return local
+            try:
+                checkpoint_time = datetime.fromisoformat(
+                    str(remote.checkpoint_at or "").replace("Z", "+00:00")
+                )
+            except ValueError:
+                return local
+            if (
+                checkpoint_time.tzinfo is None
+                or datetime.now(timezone.utc) - checkpoint_time > timedelta(days=7)
+                or checkpoint_time - datetime.now(timezone.utc) > timedelta(minutes=5)
+            ):
+                return local
+            prefix = f"{self.storage.remote}:WukongROM/checkpoints/"
+            if not remote.checkpoint.startswith(prefix):
+                return local
+            checkpoint_path = PurePosixPath(remote.checkpoint[len(prefix) :].replace("\\", "/"))
+            if (
+                not checkpoint_path.parts
+                or checkpoint_path.is_absolute()
+                or ".." in checkpoint_path.parts
+                or not remote.checkpoint.casefold().endswith(".tar")
+            ):
+                return local
+            return self.store.update(
+                job_id,
+                checkpoint=remote.checkpoint,
+                checkpoint_at=remote.checkpoint_at,
+            )
 
     def _merge_events(self, job_id: str) -> None:
         with tempfile.TemporaryDirectory(prefix="wukong-events-pull-") as root:

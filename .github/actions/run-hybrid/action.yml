@@ -67,6 +67,7 @@ runs:
         set -euo pipefail
         job_json="$(python3 wukong_cli.py submit --recipe .wkstudio/recipe.json --job-id "$WUKONG_JOB_ID" --channel actions --subject "$GITHUB_ACTOR_ID" --role user)"
         job_id="$(printf '%s' "$job_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["job_id"])')"
+        python3 -m tools.sync_job "$job_id" --config "$WUKONG_RCLONE_CONFIG" --pull-checkpoint
         set +e
         python3 wukong_cli.py execute "$job_id"
         result=$?

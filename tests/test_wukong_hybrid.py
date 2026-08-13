@@ -1155,6 +1155,104 @@ class CloudSyncContractTests(unittest.TestCase):
             imported = [event for event in store.events(job.job_id) if event.payload.get("remoteSequence") == 5]
             self.assertEqual(len(imported), 1)
 
+    def test_pull_imports_resume_checkpoint_before_actions_execute(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "build",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("actions", "100", "user"))
+            remote_manifest = job.to_dict() | {
+                "checkpoint": "wukong-gdrive:WukongROM/checkpoints/old/extract.tar",
+                "checkpoint_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            }
+
+            def fake_run(args: list[str], **_: object) -> str:
+                destination = Path(args[3])
+                if args[2].endswith("manifest.json"):
+                    destination.write_text(json.dumps(remote_manifest), encoding="utf-8")
+                else:
+                    destination.write_text("", encoding="utf-8")
+                return ""
+
+            pulled = CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).pull_checkpoint(job.job_id)
+
+            self.assertIsNotNone(pulled)
+            self.assertEqual(pulled.checkpoint, remote_manifest["checkpoint"])
+            self.assertEqual(store.get(job.job_id).checkpoint_at, remote_manifest["checkpoint_at"])
+            self.assertEqual(pulled.status, JobStatus.QUEUED)
+            self.assertIsNone(pulled.finished_at)
+
+    def test_pull_checkpoint_rejects_a_manifest_for_another_recipe(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("actions", "100", "user"))
+            remote_manifest = job.to_dict() | {
+                "recipe_digest": "0" * 64,
+                "checkpoint": "wukong-gdrive:WukongROM/checkpoints/other/extract.tar",
+            }
+
+            def fake_run(args: list[str], **_: object) -> str:
+                destination = Path(args[3])
+                destination.write_text(json.dumps(remote_manifest), encoding="utf-8")
+                return ""
+
+            pulled = CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).pull_checkpoint(job.job_id)
+
+            self.assertIsNotNone(pulled)
+            self.assertIsNone(pulled.checkpoint)
+
+    def test_pull_checkpoint_rejects_expired_or_non_cloud_references(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("actions", "100", "user"))
+            remote_manifest = job.to_dict() | {
+                "checkpoint": "local:C:/outside/workspace",
+                "checkpoint_at": (datetime.now(timezone.utc) - timedelta(days=8)).isoformat(),
+            }
+
+            def fake_run(args: list[str], **_: object) -> str:
+                Path(args[3]).write_text(json.dumps(remote_manifest), encoding="utf-8")
+                return ""
+
+            pulled = CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).pull_checkpoint(job.job_id)
+
+            self.assertIsNotNone(pulled)
+            self.assertIsNone(pulled.checkpoint)
+
 
 class ControlAdapterContractTests(unittest.TestCase):
     def test_cli_validate_returns_same_recipe_digest_and_runner(self) -> None:
