@@ -18,6 +18,15 @@ from .runtime import HybridRuntime
 from .security import validate_recipe_access
 
 
+def configure_utf8_stdio() -> None:
+    os.environ.setdefault("PYTHONUTF8", "1")
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+
+
 def _json(value: object) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
 
@@ -82,6 +91,7 @@ def _identity_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    configure_utf8_stdio()
     args = build_parser().parse_args(argv)
     try:
         jobs_root = Path(args.jobs_root)

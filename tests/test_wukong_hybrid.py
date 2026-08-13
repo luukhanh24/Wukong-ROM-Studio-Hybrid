@@ -27,6 +27,7 @@ from wukong.adapters import (
 )
 from wukong.cloud_sync import CloudJobSync
 from wukong.cli import main as cli_main
+from wukong.cli import configure_utf8_stdio
 from wukong.content_packs import (
     ContentPackManager,
     build_content_index,
@@ -1313,6 +1314,16 @@ class CloudSyncContractTests(unittest.TestCase):
 
 
 class ControlAdapterContractTests(unittest.TestCase):
+    def test_cli_configures_utf8_stdio_for_redirected_windows_output(self) -> None:
+        stream = unittest.mock.Mock()
+        with patch("wukong.cli.sys.stdout", stream), patch("wukong.cli.sys.stderr", stream), patch.dict(
+            os.environ, {}, clear=True
+        ):
+            configure_utf8_stdio()
+            self.assertEqual(os.environ["PYTHONUTF8"], "1")
+            self.assertEqual(os.environ["PYTHONIOENCODING"], "utf-8")
+        stream.reconfigure.assert_any_call(encoding="utf-8", errors="backslashreplace")
+
     def test_cli_validate_returns_same_recipe_digest_and_runner(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             recipe_path = Path(root, "recipe.json")
