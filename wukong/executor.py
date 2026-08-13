@@ -155,7 +155,10 @@ class LocalJobExecutor:
             else:
                 legacy_spec["specFingerprint"] = build_spec_fingerprint(BuildSpec.from_dict(legacy_spec))
 
+            checkpoint_upload_enabled = True
+
             def on_event(event: dict[str, Any]) -> None:
+                nonlocal checkpoint_upload_enabled
                 current = self.store.get(job_id)
                 if current and current.status == JobStatus.CANCELLED:
                     raise OrchestrationError("Job was cancelled")
@@ -168,7 +171,11 @@ class LocalJobExecutor:
                 self.store.update(job_id, **changes)
                 self.store.append_event(job_id, event_type, **event)
                 self._push_cloud_progress(job_id, storage)
-                if event.get("status") == "success" and stage in CHECKPOINT_STAGES:
+                if (
+                    event.get("status") == "success"
+                    and stage in CHECKPOINT_STAGES
+                    and checkpoint_upload_enabled
+                ):
                     try:
                         if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
                             checkpoint = storage.sync_tree(
@@ -183,10 +190,15 @@ class LocalJobExecutor:
                         self.store.append_event(job_id, "checkpoint", checkpoint=checkpoint, stage=stage)
                         self._push_cloud_progress(job_id, storage)
                     except Exception as exc:
+                        if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
+                            checkpoint_upload_enabled = False
                         self.store.append_event(
                             job_id,
                             "warning",
-                            warning=f"Checkpoint upload failed after {stage}: {exc}",
+                            warning=(
+                                f"Checkpoint upload failed after {stage}; "
+                                f"remaining checkpoints are disabled for this run: {exc}"
+                            ),
                         )
                         self._push_cloud_progress(job_id, storage)
 
