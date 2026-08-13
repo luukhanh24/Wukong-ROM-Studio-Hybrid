@@ -219,7 +219,10 @@ class HybridChannelParityContractTests(unittest.TestCase):
                     storage_factory=lambda _remote: _FixtureStorage(),
                     legacy_build=legacy_build,
                 )
-                with patch("wukong.executor.source_adapter_for", return_value=_FixtureSourceAdapter(rom)):
+                with patch.dict("os.environ", {"GITHUB_ACTIONS": "false"}), patch(
+                    "wukong.executor.source_adapter_for",
+                    return_value=_FixtureSourceAdapter(rom),
+                ):
                     executor.execute(job_id)
                 completed_payload = inspect_channel(job_id)
                 build_events = [
