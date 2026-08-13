@@ -149,6 +149,10 @@ class LocalSourceAdapter:
         if not source.is_file():
             raise SourceError(f"Local ROM source does not exist: {source}")
         target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_file() and expected_sha256:
+            cached_sha256 = sha256_file(target)
+            if cached_sha256 == expected_sha256.casefold():
+                return MaterializedSource(target, cached_sha256, target.stat().st_size)
         if source != target.resolve():
             temporary = target.with_suffix(target.suffix + ".partial")
             temporary.unlink(missing_ok=True)

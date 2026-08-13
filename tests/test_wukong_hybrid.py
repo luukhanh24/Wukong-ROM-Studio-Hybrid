@@ -667,6 +667,22 @@ class SourceAndStorageContractTests(unittest.TestCase):
                 LocalSourceAdapter().materialize(source.as_posix(), target, "0" * 64)
             self.assertFalse(target.exists())
 
+    def test_local_source_reuses_matching_cached_target(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root, "source.zip")
+            source.write_bytes(b"known-rom")
+            target = Path(root, "workspace", "rom.zip")
+            target.parent.mkdir()
+            target.write_bytes(b"known-rom")
+            expected = hashlib.sha256(b"known-rom").hexdigest()
+
+            with patch("wukong.adapters.shutil.copyfile") as copy_file:
+                result = LocalSourceAdapter().materialize(str(source), target, expected)
+
+            copy_file.assert_not_called()
+            self.assertEqual(result.sha256, expected)
+            self.assertEqual(target.read_bytes(), b"known-rom")
+
     def test_rclone_publish_writes_metadata_and_returns_public_link(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             artifact = Path(root, "artifact.zip")
