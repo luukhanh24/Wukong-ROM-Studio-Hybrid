@@ -1,6 +1,7 @@
 # Wukong Studio runtime and generated artifacts
 .wkstudio/
 ROM_BUILD_DONE/
+/PKG110_*/
 analysis/
 Auto_Build_WK_*.zip
 *.log
@@ -54,6 +55,7 @@ desktop/**/.codexobj/
 desktop/artifacts/
 desktop/.buildhome/
 desktop/Runtime/downloads/
+/NuGet/
 
 # Local test scratch directories
 /one/

@@ -17,27 +17,41 @@ class StudioPathsTests(unittest.TestCase):
             scripts = runtime / "Scripts"
             scripts.mkdir(parents=True)
             env = os.environ.copy()
+            dependency_paths = [
+                entry
+                for entry in sys.path
+                if entry and Path(entry).name.casefold() == "site-packages"
+            ]
             env.update(
                 {
-                    "PYTHONPATH": str(project_root),
+                    "PYTHONPATH": os.pathsep.join(
+                        [str(project_root), *dependency_paths]
+                    ),
+                    "PYTHONSAFEPATH": "1",
                     "WUKONG_STUDIO_DESKTOP_MODE": "1",
                     "WUKONG_STUDIO_INSTALL_ROOT": str(install),
                     "WUKONG_STUDIO_APP_ROOT": str(runtime),
                 }
             )
+            bootstrap = (
+                "import sys; "
+                f"sys.path[:0] = {[str(project_root), *dependency_paths]!r}; "
+            )
 
             result = subprocess.run(
                 [
                     sys.executable,
+                    "-P",
                     "-c",
-                    "from img_tool import ImageTool; print(ImageTool().bin_path)",
+                    bootstrap + "from img_tool import ImageTool; print(ImageTool().bin_path)",
                 ],
                 cwd=scripts,
                 env=env,
                 capture_output=True,
                 text=True,
-                check=True,
+                check=False,
             )
+            self.assertEqual(result.returncode, 0, result.stderr)
 
             actual = Path(result.stdout.strip().splitlines()[-1])
             self.assertEqual(

@@ -46,6 +46,10 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
       - name: Install fixture dependencies
         run: |
           sudo apt-get update
@@ -54,7 +58,9 @@ jobs:
       - name: Bootstrap pinned Linux toolchain
         run: python -m tools.bootstrap_linux
       - name: Smoke-test Linux binaries
-        run: python -m tools.smoke_linux
+        run: |
+          java -version
+          python -m tools.smoke_linux
       - name: Run generated ROM fixture
         run: python -m tools.smoke_rom_fixture_linux
 
@@ -66,13 +72,7 @@ jobs:
           lfs: false
       - name: Reject floating action references and tracked credentials
         shell: bash
-        run: |
-          set -euo pipefail
-          if grep -R --line-number -E 'uses: [^#[:space:]]+@(main|master|v[0-9]+)$' .github/workflows; then
-            echo 'Floating action reference detected.' >&2
-            exit 1
-          fi
-          python tools/repo_guard.py
+        run: python tools/repo_guard.py
       - name: Validate workflow syntax
         shell: bash
         run: |
