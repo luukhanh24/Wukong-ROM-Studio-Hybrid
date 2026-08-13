@@ -62,8 +62,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python tools/fetch_recipe.py "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
-          python wukong_cli.py validate --recipe .wkstudio/recipe.json > .wkstudio/route.json
+          python -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
+          if ! python wukong_cli.py validate --recipe .wkstudio/recipe.json > .wkstudio/route.json; then
+            cat .wkstudio/route.json
+            exit 2
+          fi
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           data = json.load(open('.wkstudio/route.json', encoding='utf-8'))
@@ -105,7 +108,7 @@ jobs:
           lfs: false
           clean: true
       - name: Verify self-hosted resources
-        run: python3 tools/runner_preflight.py
+        run: python3 -m tools.runner_preflight
       - name: Run self-hosted build
         uses: ./.github/actions/run-hybrid
         with:

@@ -37,7 +37,7 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
       run: |
         set -euo pipefail
-        python3 tools/fetch_recipe.py "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
+        python3 -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
         task="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['task'])")"
         if [ "$task" = build ]; then
           mod_version="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['build']['modVersion'])")"
@@ -47,14 +47,14 @@ runs:
           done
         fi
         if [ '${{ inputs.self_hosted }}' != true ]; then
-          python3 tools/runner_preflight.py --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
+          python3 -m tools.runner_preflight --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
         fi
     - name: Bootstrap and smoke-test Linux toolchain
       shell: bash
       run: |
         set -euo pipefail
-        python3 tools/bootstrap_linux.py
-        python3 tools/smoke_linux.py
+        python3 -m tools.bootstrap_linux
+        python3 -m tools.smoke_linux
     - name: Execute shared recipe
       id: execute
       shell: bash
@@ -78,7 +78,7 @@ runs:
       env:
         WUKONG_JOB_ID: ${{ inputs.job_id }}
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
-      run: python3 tools/sync_job.py "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
+      run: python3 -m tools.sync_job "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
     - name: Fail workflow when recipe failed
       if: always() && steps.execute.outputs.result != '0'
       shell: bash

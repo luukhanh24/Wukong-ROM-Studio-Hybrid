@@ -470,6 +470,26 @@ class ControlAdapterContractTests(unittest.TestCase):
             )
             self.assertEqual(json.loads(output.read_text())["execution"]["target"], "github-auto")
 
+    def test_workflow_surfaces_router_validation_errors(self) -> None:
+        repository = Path(__file__).resolve().parent.parent
+        workflow = (repository / ".github" / "workflows" / "wukong-build.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("if ! python wukong_cli.py validate", workflow)
+        self.assertIn("cat .wkstudio/route.json", workflow)
+
+    def test_hybrid_workflow_runs_tools_as_importable_modules(self) -> None:
+        repository = Path(__file__).resolve().parent.parent
+        sources = [
+            repository / ".github" / "workflows" / "wukong-build.yml",
+            repository / ".github" / "actions" / "run-hybrid" / "action.yml",
+        ]
+
+        for source in sources:
+            workflow = source.read_text(encoding="utf-8")
+            self.assertNotRegex(workflow, r"python3? tools/[A-Za-z0-9_]+\.py")
+
 
 class TelegramAccessContractTests(unittest.TestCase):
     def test_admin_approval_and_revocation_persist_without_secrets(self) -> None:
