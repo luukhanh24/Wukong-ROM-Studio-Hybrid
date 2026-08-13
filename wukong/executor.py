@@ -15,6 +15,19 @@ from studio_paths import CONTENT_ROOT, SCRIPT_ROOT, WORKSPACE_ROOT
 
 LegacyBuild = Callable[[str, dict[str, Any], Path, Callable[[dict[str, Any]], None]], dict[str, Any]]
 
+# Checkpoint only after stages that materially advance the reusable workspace.
+# Read-only/preflight stages such as inspect_rom would upload the same multi-GB
+# tree again and can exhaust cloud API quotas without improving resumability.
+CHECKPOINT_STAGES = {
+    "extract_payload",
+    "unpack_partitions",
+    "sync_configs",
+    "repack_partitions",
+    "repack_super",
+    "patch_vbmeta",
+    "patch_vendor_boot",
+}
+
 
 def run_legacy_build(
     job_id: str,
@@ -155,19 +168,27 @@ class LocalJobExecutor:
                 self.store.update(job_id, **changes)
                 self.store.append_event(job_id, event_type, **event)
                 self._push_cloud_progress(job_id, storage)
-                if event.get("status") == "success" and stage not in {"package_zip", "notify_telegram"}:
-                    if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
-                        checkpoint = storage.sync_tree(
-                            build_workspace,
-                            f"checkpoints/{job_id}/{stage}",
-                        )
-                    else:
-                        checkpoint = f"local:{build_workspace}"
-                    from .models import utc_now
+                if event.get("status") == "success" and stage in CHECKPOINT_STAGES:
+                    try:
+                        if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
+                            checkpoint = storage.sync_tree(
+                                build_workspace,
+                                f"checkpoints/{job_id}/{stage}",
+                            )
+                        else:
+                            checkpoint = f"local:{build_workspace}"
+                        from .models import utc_now
 
-                    self.store.update(job_id, checkpoint=checkpoint, checkpoint_at=utc_now())
-                    self.store.append_event(job_id, "checkpoint", checkpoint=checkpoint, stage=stage)
-                    self._push_cloud_progress(job_id, storage)
+                        self.store.update(job_id, checkpoint=checkpoint, checkpoint_at=utc_now())
+                        self.store.append_event(job_id, "checkpoint", checkpoint=checkpoint, stage=stage)
+                        self._push_cloud_progress(job_id, storage)
+                    except Exception as exc:
+                        self.store.append_event(
+                            job_id,
+                            "warning",
+                            warning=f"Checkpoint upload failed after {stage}: {exc}",
+                        )
+                        self._push_cloud_progress(job_id, storage)
 
             result = self.legacy_build(
                 job_id,

@@ -14,7 +14,7 @@ import studio_server
 from wukong.adapters import MaterializedSource, sha256_file
 from wukong.cli import main as cli_main
 from wukong.content_packs import build_content_index
-from wukong.executor import LocalJobExecutor
+from wukong.executor import CHECKPOINT_STAGES, LocalJobExecutor
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
 from wukong.orchestrator import FileJobStore, HybridOrchestrator, InMemoryJobStore, JobStore
 from wukong.routing import RunnerInventory
@@ -48,6 +48,15 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_checkpoint_policy_skips_read_only_and_terminal_stages(self) -> None:
+        self.assertNotIn("inspect_rom", CHECKPOINT_STAGES)
+        self.assertNotIn("package_zip", CHECKPOINT_STAGES)
+        self.assertNotIn("notify_telegram", CHECKPOINT_STAGES)
+        self.assertIn("extract_payload", CHECKPOINT_STAGES)
+        self.assertIn("unpack_partitions", CHECKPOINT_STAGES)
+        self.assertIn("repack_partitions", CHECKPOINT_STAGES)
+        self.assertIn("patch_vendor_boot", CHECKPOINT_STAGES)
+
     def test_local_build_without_cloud_publish_records_artifact_checksum(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
