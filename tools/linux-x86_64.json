@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "platform": "Linux/x86_64",
+  "sourceCommit": "a14828fdee37c402b32662ab48c4ea96f8a68ce9",
+  "tools": [
+    {
+      "name": "e2fsdroid",
+      "url": "https://raw.githubusercontent.com/ColdWindScholar/MIO-KITCHEN-SOURCE/a14828fdee37c402b32662ab48c4ea96f8a68ce9/bin/Linux/x86_64/e2fsdroid",
+      "sha256": "2dfb4fa5fb8e0a0c7e80436529c95eccf8fb029e34b7c408a75c16d569669a06",
+      "sizeBytes": 3232792,
+      "license": "AGPL-3.0-only",
+      "source": "https://github.com/ColdWindScholar/MIO-KITCHEN-SOURCE/tree/a14828fdee37c402b32662ab48c4ea96f8a68ce9"
+    },
+    {
+      "name": "extract.erofs",
+      "url": "https://raw.githubusercontent.com/ColdWindScholar/MIO-KITCHEN-SOURCE/a14828fdee37c402b32662ab48c4ea96f8a68ce9/bin/Linux/x86_64/extract.erofs",
+      "sha256": "655b697287c3b5c523d86e7c6a5190e28d104bd641269011d205cda625b9a502",
+      "sizeBytes": 1874336,
+      "license": "AGPL-3.0-only",
+      "source": "https://github.com/ColdWindScholar/MIO-KITCHEN-SOURCE/tree/a14828fdee37c402b32662ab48c4ea96f8a68ce9"
+    },
+    {
+      "name": "lpmake",
+      "url": "https://raw.githubusercontent.com/ColdWindScholar/MIO-KITCHEN-SOURCE/a14828fdee37c402b32662ab48c4ea96f8a68ce9/bin/Linux/x86_64/lpmake",
+      "sha256": "4b7e806742d34f764ade5b86d34df505e830619f4a96c64f135767c25b02970b",
+      "sizeBytes": 3673672,
+      "license": "AGPL-3.0-only",
+      "source": "https://github.com/ColdWindScholar/MIO-KITCHEN-SOURCE/tree/a14828fdee37c402b32662ab48c4ea96f8a68ce9"
+    },
+    {
+      "name": "magiskboot",
+      "url": "https://raw.githubusercontent.com/ColdWindScholar/MIO-KITCHEN-SOURCE/a14828fdee37c402b32662ab48c4ea96f8a68ce9/bin/Linux/x86_64/magiskboot",
+      "sha256": "6586c406b2a0fadf67ca24df17d2ce10c8b3f62952367a3ee10d7fa6973b0c60",
+      "sizeBytes": 896544,
+      "license": "AGPL-3.0-only",
+      "source": "https://github.com/ColdWindScholar/MIO-KITCHEN-SOURCE/tree/a14828fdee37c402b32662ab48c4ea96f8a68ce9"
+    },
+    {
+      "name": "mkfs.erofs",
+      "url": "https://raw.githubusercontent.com/ColdWindScholar/MIO-KITCHEN-SOURCE/a14828fdee37c402b32662ab48c4ea96f8a68ce9/bin/Linux/x86_64/mkfs.erofs",
+      "sha256": "6bbacae2bf23b4fd1d3c867f60c94a42a72a1ed93299423772aa1a359c57acda",
+      "sizeBytes": 2493824,
+      "license": "AGPL-3.0-only",
+      "source": "https://github.com/ColdWindScholar/MIO-KITCHEN-SOURCE/tree/a14828fdee37c402b32662ab48c4ea96f8a68ce9"
+    },
+    {
+      "name": "apktool_3.0.2.jar",
+      "url": "https://github.com/iBotPeaches/Apktool/releases/download/v3.0.2/apktool_3.0.2.jar",
+      "sha256": "eee4669a704a14e0623407e6701b0b91887e61e1e4049cb7a82833e14ae8b5fd",
+      "sizeBytes": 15476804,
+      "license": "Apache-2.0",
+      "source": "https://github.com/iBotPeaches/Apktool/tree/v3.0.2"
+    }
+  ],
+  "systemTools": {
+    "cpio": "/usr/bin/cpio",
+    "mke2fs": "/usr/sbin/mke2fs"
+  }
+}
+

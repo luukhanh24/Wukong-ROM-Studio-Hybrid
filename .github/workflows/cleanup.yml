@@ -1,0 +1,31 @@
+name: Cloud retention cleanup
+
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: Install rclone
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends rclone
+      - name: Remove expired checkpoints, job manifests and logs
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .wkstudio/secrets
+          umask 077
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > .wkstudio/secrets/rclone.conf
+          rclone delete wukong-gdrive:WukongROM/checkpoints --min-age 7d --config .wkstudio/secrets/rclone.conf
+          rclone delete wukong-gdrive:WukongROM/jobs --min-age 30d --config .wkstudio/secrets/rclone.conf
+

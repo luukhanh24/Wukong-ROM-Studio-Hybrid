@@ -1,0 +1,2504 @@
+{
+  "generatedAt": "2026-08-12T13:47:29.735753Z",
+  "packs": [
+    {
+      "files": [
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/NotificationCenter.apk",
+          "sha256": "9f2c5a5c63bdbc836ad350d2a09bae5c13c002d3354673b333c1adcbdfe6948f",
+          "sizeBytes": 25209041
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/oat/arm64/NotificationCenter.vdex",
+          "sha256": "b315d9cf9f282d9ef56e8be3f3a9ac56c640273530662094cb3eea2d0c6f81a0",
+          "sizeBytes": 250772
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk",
+          "sha256": "18552ed1ef11378923dad72ebb181b7c51cfa56410fda0f9ff1c69ef1010c199",
+          "sizeBytes": 90316171
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk.prof",
+          "sha256": "129463753fe8ab89526cdbaec175c4763fc97d9bcebcf89a5d447efb8cc9077c",
+          "sizeBytes": 66317
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.art",
+          "sha256": "8ed5b194381ef65e80568fa16e5215be34901fb2e77212929c77319214469d30",
+          "sizeBytes": 4323616
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.odex",
+          "sha256": "5458d160ccb5c4fe0e0d3ce17c05da84932967037e06cf330ffc1522b9e88eae",
+          "sizeBytes": 16908448
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.vdex",
+          "sha256": "24f4c41588d32fa42f18234c54d000d2e7670f830adbf249154809a78af2568c",
+          "sizeBytes": 1104564
+        },
+        {
+          "path": "Fix_noti/my_region/etc/battery/sys_deviceidle_whitelist.xml",
+          "sha256": "b525c6e06e39993549a7af36272773a71a7d8e7db27496d8488c3fe81e4fbbbb",
+          "sizeBytes": 2936
+        },
+        {
+          "path": "Fix_noti/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "05b342b79c3147913bf08a16cd360fd40ade83e5837e26f84a42a86b35080462",
+          "sizeBytes": 243
+        },
+        {
+          "path": "Fix_noti/my_region/etc/startup/safe_boot_whitelist.xml",
+          "sha256": "2f5e1d32c3e60001775d5a5b99b3a06909074b6be296824b2a1a4bd158a5c30c",
+          "sizeBytes": 15055
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/Athena.apk",
+          "sha256": "799eb12796a56c4517f343c33bc82c2f6a87cc40bb142153f3f5f07f68100b6a",
+          "sizeBytes": 3316559
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/oat/arm64/Athena.vdex",
+          "sha256": "a45af8c46b7d726a639707fa6f51447aa8bca2c942a527338165a28853e07b79",
+          "sizeBytes": 55944
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleGemini/GoogleGemini.apk",
+          "sha256": "3855358284f39bf745e5469754ab246011566cccb8e47c205c331087aae536fa",
+          "sizeBytes": 5358924
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleLocationHistory/GoogleLocationHistory.apk",
+          "sha256": "bca584aeeb3d1be4eacc8812c189bbb9ed0ba354bfa27ccfdae5695d4ccf1259",
+          "sizeBytes": 2720602
+        },
+        {
+          "path": "Gapps/my_product/app/LatinImeGoogle/LatinImeGoogle.apk",
+          "sha256": "7ab89099546d051b831620b8e05a28aaeac6e4e871ba52d22e5f6741d1c27c5b",
+          "sizeBytes": 76475707
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/SpeechServicesByGoogle.apk",
+          "sha256": "da255cc829117c5e029400df097436f354be569309965eed20b1718035de995d",
+          "sizeBytes": 77140139
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/oat/arm64/SpeechServicesByGoogle.vdex",
+          "sha256": "4157c5b0d2fa97a4ca8ce6e74dbd5e2b0ffafda5cf7b593a708229fb63fb4aab",
+          "sizeBytes": 291412
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_contextualsearch.xml",
+          "sha256": "6fe8d76026342373f02f0edcae44971a52b5117ff49b27e9a28cf1c8438e534f",
+          "sizeBytes": 135
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_gemini.xml",
+          "sha256": "84ec03f7a39bb99e4e78abb01aa2ecf077f48024b1f069e15c512b71497b31da",
+          "sizeBytes": 132
+        },
+        {
+          "path": "Gapps/my_product/overlay/GmsConfigOverlayGSA/GmsConfigOverlayGSA.apk",
+          "sha256": "c3d5a02fb082141b0f55ba0b73c0ad850f7177326719350ddeb345f9075482b8",
+          "sizeBytes": 8542
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCircleToSearch/OplusAiConfigOverlayCircleToSearch.apk",
+          "sha256": "05d0273dbd582f14c97e8e5457f9c99545fdecb6752b90799794436037d67947",
+          "sizeBytes": 12646
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCommon/OplusAiConfigOverlayCommon.apk",
+          "sha256": "e5b6aabd1f5b54835b1d605eb4f3ac5215eab40116d7a137cac7cbff08abcf04",
+          "sizeBytes": 8550
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/GoogleVelvet_CTS.apk",
+          "sha256": "5dd695ade3abd9cf05dd636759e658239bab04b70b24ec3d1e3ce064e2e176e2",
+          "sizeBytes": 310336077
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/oat/arm64/GoogleVelvet_CTS.vdex",
+          "sha256": "40b188462bbe803dcd30859531d0cac17741f3f2d9f77137218669d5f20431d0",
+          "sizeBytes": 3129448
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/Phonesky.apk",
+          "sha256": "e1625729a36c7f0f5b042ccf739be810480b21b76ba44be8b386b3e84b8e6f9b",
+          "sizeBytes": 101349603
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/oat/arm64/Phonesky.vdex",
+          "sha256": "b2575ea2079d814a5d8dcf2412e0acc7678b59bc253a7785a7b8091279d7ac69",
+          "sizeBytes": 1543788
+        },
+        {
+          "path": "Global_props/my_product/etc/extension/US/appfeature.country.dynamic_features.xml",
+          "sha256": "4dcc55e8dc44239a9c36c58530512b240475dc10ad182bf72d78d64e3119f287",
+          "sizeBytes": 852
+        },
+        {
+          "path": "Global_props/my_product/stark_build.prop",
+          "sha256": "eb5c53063376efdadb40b57f4fb91a3f0fbf763b5d2c28bf8c226d63615d584c",
+          "sizeBytes": 92
+        },
+        {
+          "path": "WK_Installer/system_ext/priv-app/OppoPackageInstaller/OppoPackageInstaller.apk",
+          "sha256": "a46163d14b75133d9f0211330a1bfe7f13da962add7fffd35933be9dde2a8f5d",
+          "sizeBytes": 5148923
+        }
+      ],
+      "id": "MOD/ColorOS_15.0.1",
+      "remote": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_15.0.1",
+      "sizeBytes": 725095238,
+      "target": "MOD/ColorOS_15.0.1"
+    },
+    {
+      "files": [
+        {
+          "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
+          "sha256": "1bd762cefca0a13679fd467c444e94286b13971f8877798a092d48b6acf7a1ef",
+          "sizeBytes": 4786
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/AIMemory.apk",
+          "sha256": "1853fe89f0a8474d131985b4e53ce62c3f00dba836af3ddb26250111e12b3578",
+          "sizeBytes": 101623106
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libnoise.so",
+          "sha256": "4c06c36cdbe4bf7f818b336a3da60eb38a652c1bf8894f76acee9fe244aed78f",
+          "sizeBytes": 14176
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libopluslog.so",
+          "sha256": "b67bd5c5ebe854a0a6bb0650a404e8c4bd1815fcf12ea1c97dd4a06c20cc2518",
+          "sizeBytes": 63408
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_decode.so",
+          "sha256": "076a9568df5de0d640fccabc7fc9eded4c866fab32a61839f47c2daa168d084f",
+          "sizeBytes": 3977360
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_detect.so",
+          "sha256": "57560fdf7aff4d1333f8b95d534b002fadd283a1eeaa09969bd65e519b0ad112",
+          "sizeBytes": 3037632
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libtensorflowlite.so",
+          "sha256": "492fe763d2118bd21b291bbc018dae52eab2b242561f2522b0c5ce3f5f68eb50",
+          "sizeBytes": 3139672
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwb_tables_549543368749780587_1.so",
+          "sha256": "7b712723f31823a1dcefa098e0a1b4fa202f70c70f2c1148558f1b6f3880c3bd",
+          "sizeBytes": 223056
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwbkit-seckit3.so",
+          "sha256": "75514d570b92f06b27c01e49bd9b05fd8fb7fee5483623c7e2d2be18d63ee56a",
+          "sizeBytes": 146016
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/AIWriter.apk",
+          "sha256": "daf87a9ff34e8b4d3b0182e4ea9780789ce46bc29fb47a4449af1ae334b251c4",
+          "sizeBytes": 29369425
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/oat/arm64/AIWriter.vdex",
+          "sha256": "954f854fd59462262d2246025ab9bf25c7df6049039359b78cbe09dfc22b4e5d",
+          "sizeBytes": 377736
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/ColorAccessibilityAssistant.apk",
+          "sha256": "10d11e217df83ab9c82e453543ff3e6d73771440638f088222a0ad32fc3ab510",
+          "sizeBytes": 55107284
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/oat/arm64/ColorAccessibilityAssistant.vdex",
+          "sha256": "b7b1b6d843cb6dacbb2bb7645b6f3f6c4027f6633de5b452e9e40e6a27ffa1f5",
+          "sizeBytes": 464820
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/ColorDirectService.apk",
+          "sha256": "71aecb265a641daae730b0c9b66b13dbebbb8ae2f8e7674bd7dd59195b731410",
+          "sizeBytes": 66498603
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/oat/arm64/ColorDirectService.vdex",
+          "sha256": "4e19c5779efe63d4a7fafadb585f8f1555c9b46a0165018350ee730a74771398",
+          "sizeBytes": 613484
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/AIUnit.apk",
+          "sha256": "b57a9e2980eb1f134c41022986543b33df1ec17bb48e8a26a84270f75af0c4bb",
+          "sizeBytes": 90812122
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework.so",
+          "sha256": "7d9ed9b3f901e18ca2b28e668fa35e7114daf624ad3411f8057b67e1c17002ed",
+          "sizeBytes": 1241256
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework_jni.so",
+          "sha256": "e34379eb860ef136426e17479e7d08f2d0c749265c64224948dce45ac73f8260",
+          "sizeBytes": 226592
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "99075cbf137fed45bd555468bd3c36af1bc66346a43fe40bacdbfd162ad611de",
+          "sizeBytes": 12816
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libc++_shared.so",
+          "sha256": "56f6d8405cb996826c1e06d38ca81830206a056d2ef22a0e3df6fac2be6d14ec",
+          "sizeBytes": 6934032
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libcore_tokenizers.so",
+          "sha256": "b5371c7163e0f5d31f6e6d20439973f08c9b4e5849fa159fbda91d8bce7712db",
+          "sizeBytes": 7662464
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdatastore_shared_counter.so",
+          "sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+          "sizeBytes": 7112
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdmabufheap.so",
+          "sha256": "ed208e1306fb901a873eae2b819b0bb828c3eb1ee9c43dfd40171f6f4217cc7b",
+          "sizeBytes": 139447
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libopencv_java4.so",
+          "sha256": "3f4cef5615b0d2896876b619c6d1bba7ccaf3599f41e99715961895761b53258",
+          "sizeBytes": 17822832
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/oat/arm64/AIUnit.vdex",
+          "sha256": "7c5bde5bb4519ced58431dc34b0c1add6296e04c0916c91376eb9498af9fb0bc",
+          "sizeBytes": 457576
+        },
+        {
+          "path": "Calendar_global/my_stock/del-app/Calendar/Calendar.apk",
+          "sha256": "4c8bf320e641eb76b6d112854f183521192ecb3b901d2fbfdaf89b842ada85cf",
+          "sizeBytes": 101150617
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk",
+          "sha256": "ea5bed5e3f1fd6997ab64e74a6883bea1534cdc0a0e65d0e8fec258628020ab8",
+          "sizeBytes": 59765402
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk.prof",
+          "sha256": "7f39de124de3c1097e23b753e56f83f16d6cd17445dc1f31460f10276de2a89f",
+          "sizeBytes": 16590
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.art",
+          "sha256": "986594e6ce2de9e1f50aeb9f57692e3cb520856b01671fe178d962658050f5ac",
+          "sizeBytes": 1168304
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.odex",
+          "sha256": "a8e648b91b6bc1272a7eb4f8eea3e91f3ab389f95eb52bc1c8638eb1bce9341b",
+          "sizeBytes": 5502112
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.vdex",
+          "sha256": "fcbd7b0c47cc5582d7f1b9f39331c61783dd18be6d293d79bf702101034397b6",
+          "sizeBytes": 477492
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/InCallUI.apk",
+          "sha256": "2653b22f718feefc73bc8cd03b4669fc166111a7b86becb228117e1a4e2c5f49",
+          "sizeBytes": 22718434
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/oat/arm64/InCallUI.vdex",
+          "sha256": "6476f292fed53328125519706ed4ebcd9a93f1b2576a99d92c491509392896b4",
+          "sizeBytes": 242732
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk",
+          "sha256": "05d2e9c4fba418d348d26540d2b96521062f35b741df1f73ab60e0463f014a9c",
+          "sizeBytes": 79683195
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk.prof",
+          "sha256": "47642c14e1090b1311550c0cbeb17f8c7c03ff55014896449a38792cc4979e33",
+          "sizeBytes": 17336
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.art",
+          "sha256": "54a6a6cfc341944d2c3c1f6f998f39631e3cdfd541ab986244cbc2868b132c3f",
+          "sizeBytes": 451536
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.odex",
+          "sha256": "1ef13032116952187b6dfd71d9f5c3225e937a5f33814424960ef0614b0949d8",
+          "sizeBytes": 4370328
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.vdex",
+          "sha256": "8dd9b26ce3c171286dc273667151283cce60de580a409d542bfadf85ddb5895c",
+          "sizeBytes": 704384
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/NotificationCenter.apk",
+          "sha256": "609319ce5315c0e81b66b2dcbfe93506dac4acadf8160045a90969200d97bd18",
+          "sizeBytes": 29365589
+        },
+        {
+          "path": "Cts_Gemini/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk",
+          "sha256": "96fde8e9e8b781835eb004a640eb9036ee6bd9cc5d6066d2d35b9d0de5ef17d0",
+          "sizeBytes": 107607037
+        },
+        {
+          "path": "Fake_lock/system/system/bin/wk",
+          "sha256": "779eb01c1227adbeff9d0713e0fba5191e939c83833e0c422723fb5b46cf0f94",
+          "sizeBytes": 74720
+        },
+        {
+          "path": "Fake_lock/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "b6e17da8c39f24d303b92852dc9c24c5932bf1f3b39da13b570e6551e392003a",
+          "sizeBytes": 2581
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_file_contexts",
+          "sha256": "622598cf3902a0263d516dcf358ecfe5151151ad685ed904cb851f444db9b5e6",
+          "sizeBytes": 83
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "5303ed7adf10ad85f8ba6aabf3586eb9abc3189face020247be7bbb0cd1e7572",
+          "sizeBytes": 261
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/Metis.apk",
+          "sha256": "5ca4fde41243279b0dca6e9e7f845aaf0bd10546ed7a39a257ee201752482b97",
+          "sizeBytes": 20901586
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/oat/arm64/Metis.vdex",
+          "sha256": "94f228e0f5e35b8a4192c4ec1615970fe53fadbd44768f1797b0ab515b919791",
+          "sizeBytes": 390744
+        },
+        {
+          "path": "Fix_noti/my_region/etc/battery/sys_deviceidle_whitelist.xml",
+          "sha256": "b525c6e06e39993549a7af36272773a71a7d8e7db27496d8488c3fe81e4fbbbb",
+          "sizeBytes": 2936
+        },
+        {
+          "path": "Fix_noti/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "05b342b79c3147913bf08a16cd360fd40ade83e5837e26f84a42a86b35080462",
+          "sizeBytes": 243
+        },
+        {
+          "path": "Fix_noti/my_region/etc/startup/safe_boot_whitelist.xml",
+          "sha256": "2f5e1d32c3e60001775d5a5b99b3a06909074b6be296824b2a1a4bd158a5c30c",
+          "sizeBytes": 15055
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/Athena.apk",
+          "sha256": "1dcb7545aaf37962c2185c944e63befe872fa94b1e803df8d34b9961c59140f0",
+          "sizeBytes": 3337120
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/oat/arm64/Athena.vdex",
+          "sha256": "0c1354f99c58ad9d492048cf438fe5e5718e5515f267088b0ef0c7fb4d52d8ed",
+          "sizeBytes": 56760
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "d4ffdaf958bc4d9ab2fe85fd3cbe0accf1e99a7b0e18c1cba5eac0614e26f4e4",
+          "sizeBytes": 343991213
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "64ebde6ae05fb011d549499199667246294eb532e2ef944cfb8a4e0261363c6d",
+          "sizeBytes": 339736691
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleGemini/GoogleGemini.apk",
+          "sha256": "3855358284f39bf745e5469754ab246011566cccb8e47c205c331087aae536fa",
+          "sizeBytes": 5358924
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleLocationHistory/GoogleLocationHistory.apk",
+          "sha256": "bca584aeeb3d1be4eacc8812c189bbb9ed0ba354bfa27ccfdae5695d4ccf1259",
+          "sizeBytes": 2720602
+        },
+        {
+          "path": "Gapps/my_product/app/LatinImeGoogle/LatinImeGoogle.apk",
+          "sha256": "7ab89099546d051b831620b8e05a28aaeac6e4e871ba52d22e5f6741d1c27c5b",
+          "sizeBytes": 76475707
+        },
+        {
+          "path": "Gapps/my_product/etc/extension/feature_contextualsearch_navbarhidden.xml",
+          "sha256": "96315ab1befdcc8c1dc22491d7ea0aef53b2831278de7c072e3964160264a33f",
+          "sizeBytes": 145
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_contextualsearch.xml",
+          "sha256": "7a9cf003162c273c040873ea18ac2dc265917f532e4e146c11a21418f0ea83ec",
+          "sizeBytes": 212
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_gemini_power_menu.xml",
+          "sha256": "3fa60edc6d6ee9eedc3855e27c74063dd0736aa55a0b89b8cb2c99b19c9da502",
+          "sizeBytes": 134
+        },
+        {
+          "path": "Gapps/my_product/overlay/GmsConfigOverlayGSA/GmsConfigOverlayGSA.apk",
+          "sha256": "6c5add710bc20263505756a97e5a0cdbd68b90240af95bf13c848d2dcec13292",
+          "sizeBytes": 8542
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCircleToSearch/OplusAiConfigOverlayCircleToSearch.apk",
+          "sha256": "05d0273dbd582f14c97e8e5457f9c99545fdecb6752b90799794436037d67947",
+          "sizeBytes": 12646
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCommon/OplusAiConfigOverlayCommon.apk",
+          "sha256": "e5b6aabd1f5b54835b1d605eb4f3ac5215eab40116d7a137cac7cbff08abcf04",
+          "sizeBytes": 8550
+        },
+        {
+          "path": "Gapps/my_product/overlay/WukongOTACard.apk",
+          "sha256": "1f7e3cc6c73f005c86309ec728ea28fcb339b9fa61f81aa3a4dd2e0c614a0d1b",
+          "sizeBytes": 20972298
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/GoogleVelvet_CTS.apk",
+          "sha256": "5dd695ade3abd9cf05dd636759e658239bab04b70b24ec3d1e3ce064e2e176e2",
+          "sizeBytes": 310336077
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/oat/arm64/GoogleVelvet_CTS.vdex",
+          "sha256": "40b188462bbe803dcd30859531d0cac17741f3f2d9f77137218669d5f20431d0",
+          "sizeBytes": 3129448
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/Phonesky.apk",
+          "sha256": "e1625729a36c7f0f5b042ccf739be810480b21b76ba44be8b386b3e84b8e6f9b",
+          "sizeBytes": 101349603
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/oat/arm64/Phonesky.vdex",
+          "sha256": "b2575ea2079d814a5d8dcf2412e0acc7678b59bc253a7785a7b8091279d7ac69",
+          "sizeBytes": 1543788
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/GlobalSearch.apk",
+          "sha256": "124cf9b799b532c4b44e5ba07a4f6f364777320917ecdbd4c94312df858d113b",
+          "sizeBytes": 83371462
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/oat/arm64/GlobalSearch.vdex",
+          "sha256": "a92bb7599a275f934908426ab814872ea50d6e245b45cf336e6ec33b557e1576",
+          "sizeBytes": 1151404
+        },
+        {
+          "path": "Global_props/my_product/etc/extension/US/appfeature.country.dynamic_features.xml",
+          "sha256": "4dcc55e8dc44239a9c36c58530512b240475dc10ad182bf72d78d64e3119f287",
+          "sizeBytes": 852
+        },
+        {
+          "path": "Global_props/my_product/stark_build.prop",
+          "sha256": "eb5c53063376efdadb40b57f4fb91a3f0fbf763b5d2c28bf8c226d63615d584c",
+          "sizeBytes": 92
+        },
+        {
+          "path": "Launcher_mod/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk",
+          "sha256": "2704048fd7d1abca90a10e3008bfd2740cd6f401364c0c2de8b26d110ea5a984",
+          "sizeBytes": 90938951
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/KeKeThemeSpace.apk",
+          "sha256": "5bc4d3e2586039ec909003cd41aef5e9851455f575a6eadda6575bb8c94edf38",
+          "sizeBytes": 120576228
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libPlatformJNI.so",
+          "sha256": "3073eba2f0d73cf21eb475b460fb27fae57e4cca4e4ccccbb6b6c6fa6865f150",
+          "sizeBytes": 3880
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-ac.so",
+          "sha256": "4ada48cdf529787f0c16a6ced4a361f048fc96345907925ee034d8e9406c49a0",
+          "sizeBytes": 10080
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-c.so",
+          "sha256": "018bdd3fb69ff1d430e902212ecf4a2a4b21da18e0d08f29efb74a17236e99df",
+          "sizeBytes": 14680
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libastcenc.so",
+          "sha256": "94e2548d0614216f40a865c1800759736b8eec1355acd967a36a6a45821a86b1",
+          "sizeBytes": 1350032
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libavif_android.so",
+          "sha256": "266aa7ace35971c883aebd7f7f0bd18aea8cced97b72203893145c0a04efa9a7",
+          "sizeBytes": 846840
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libbsdiffutils.so",
+          "sha256": "0a7f2d924a3115b9ca526afa4e52a2bc339c5a90abfd5cbab7696c02e63ea03d",
+          "sizeBytes": 287864
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libcomm-sign-lib.so",
+          "sha256": "cf653b19a2542a9c03310ff3f0c2e9aca5da6f9e3ddba372dc02db83c08f1b58",
+          "sizeBytes": 125096
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libconceal.so",
+          "sha256": "9bc3cc06192654d1377df0061e85b9c3abb993dcb85ae972edfec4ec9c296f59",
+          "sizeBytes": 267928
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpeg.so",
+          "sha256": "33b4540dbb53e851b164568bd7aa3a0c1b6b61b80b21f65c8ee7fae40830cb19",
+          "sizeBytes": 2853432
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpegJNI.so",
+          "sha256": "5b44896e8c0aa6bd781b3863bc898d3c447bb5feaeef7fee054f67b558c984dd",
+          "sizeBytes": 991120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libgdx.so",
+          "sha256": "c273343772d2e8d365d106cb08278c9f649082d06f4dba7a5163222cdf2036eb",
+          "sizeBytes": 186280
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libheytaplog.so",
+          "sha256": "78aa65754011fb85730306ae060c9131ecbf1d680ef864bda2c0ca26e3a25c69",
+          "sizeBytes": 63416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libmmkv.so",
+          "sha256": "676e9c0530bea8f60aa04f0cd37ccceced732b16a6effca152bd9b21a1349f85",
+          "sizeBytes": 483120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libocstool.so",
+          "sha256": "24c01b6789e5dc9fad043a4edd444b28d32ef2df7bf68ac4e98cfd80893aad40",
+          "sizeBytes": 18312
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_conscrypt_jni.so",
+          "sha256": "15e7dc0783d3fa70077480f02a76be19a700a11189063885ac2ab4eb2d48b2e0",
+          "sizeBytes": 2152832
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_image_process.so",
+          "sha256": "4c13f304b83ef8a14ce20ba8873b93c0238af8ac535ad18617f0e12a6798f624",
+          "sizeBytes": 14064
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libopluslog.so",
+          "sha256": "0011664442dce59f78b532d892b69b5b420339a4c0136ec238cf73d5d691e5a4",
+          "sizeBytes": 63264
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libqcloud-avif.so",
+          "sha256": "99d2fa644db9fd3aa8df8cd38e1176f49976b67b4670e910bdb832195bdf680b",
+          "sizeBytes": 1282448
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/librtmp-jni.so",
+          "sha256": "0adc21a21aa9fb2477e63ec3843bc20f4e06ef95c21447539f9204f00c62a4ec",
+          "sizeBytes": 87912
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libscorpion.so",
+          "sha256": "54268e5c0f6ba16cbec6a6cb7891d13f31af429db530a2ddd512dc68b65335cf",
+          "sizeBytes": 502248
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libtbljniutils.so",
+          "sha256": "d1133e70d5a5fee7dce6e8cf70c468f3f9754b973c713e2d8661be600f405196",
+          "sizeBytes": 67416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libvipfont.so",
+          "sha256": "8a12484848b1f9a59d2f1c8421511a15015ae4f3b46d3347bfd0cb0fb6a48f78",
+          "sizeBytes": 1200544
+        },
+        {
+          "path": "WK_Installer/system_ext/priv-app/OppoPackageInstaller/OppoPackageInstaller.apk",
+          "sha256": "a46163d14b75133d9f0211330a1bfe7f13da962add7fffd35933be9dde2a8f5d",
+          "sizeBytes": 5148923
+        },
+        {
+          "path": "WK_Manager/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "baf2053bc6361ed3ce6c35bf1dd39a81fadc9a0af5832a571e40c2a2015cea16",
+          "sizeBytes": 66
+        },
+        {
+          "path": "WK_Manager/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "ca6ef56067a406c22e0f1475d9800570c90889c326e1b3b74e09078106b2e66b",
+          "sizeBytes": 1881
+        },
+        {
+          "path": "WK_Manager/system/system/etc/permissions/privapp-permissions-wukong-manager.xml",
+          "sha256": "a533c7fc48d2ade5d11b4912813390fe255eefac765f3a943770eb9ae9f40b70",
+          "sizeBytes": 8386
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_seapp_contexts",
+          "sha256": "a75ad8e86601dff36b8035a357d321f8e5741ed4c85007db68bd10c8d8cb3650",
+          "sizeBytes": 113
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "3a76318a61158345edee1b527e34733f3cf8c699a4855331a84a9ca3ef12cae5",
+          "sizeBytes": 6412
+        },
+        {
+          "path": "WK_Manager/system/system/priv-app/WukongManager/WukongManager.apk",
+          "sha256": "7b56f029e0858b10658b2c9c538430decd94d2481857d7c723eea0e3892ed5ae",
+          "sizeBytes": 9426791
+        },
+        {
+          "path": "WK_Manager/system/system/stark_build.prop",
+          "sha256": "ab821871c0a1e152b84caf5d96e6a8e24db5588e823e265f0fb6d4ce47667711",
+          "sizeBytes": 25
+        }
+      ],
+      "id": "MOD/ColorOS_16.0.5",
+      "remote": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.5",
+      "sizeBytes": 2360566776,
+      "target": "MOD/ColorOS_16.0.5"
+    },
+    {
+      "files": [
+        {
+          "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
+          "sha256": "1bd762cefca0a13679fd467c444e94286b13971f8877798a092d48b6acf7a1ef",
+          "sizeBytes": 4786
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/AIMemory.apk",
+          "sha256": "1853fe89f0a8474d131985b4e53ce62c3f00dba836af3ddb26250111e12b3578",
+          "sizeBytes": 101623106
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libnoise.so",
+          "sha256": "4c06c36cdbe4bf7f818b336a3da60eb38a652c1bf8894f76acee9fe244aed78f",
+          "sizeBytes": 14176
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libopluslog.so",
+          "sha256": "b67bd5c5ebe854a0a6bb0650a404e8c4bd1815fcf12ea1c97dd4a06c20cc2518",
+          "sizeBytes": 63408
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_decode.so",
+          "sha256": "076a9568df5de0d640fccabc7fc9eded4c866fab32a61839f47c2daa168d084f",
+          "sizeBytes": 3977360
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_detect.so",
+          "sha256": "57560fdf7aff4d1333f8b95d534b002fadd283a1eeaa09969bd65e519b0ad112",
+          "sizeBytes": 3037632
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libtensorflowlite.so",
+          "sha256": "492fe763d2118bd21b291bbc018dae52eab2b242561f2522b0c5ce3f5f68eb50",
+          "sizeBytes": 3139672
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwb_tables_549543368749780587_1.so",
+          "sha256": "7b712723f31823a1dcefa098e0a1b4fa202f70c70f2c1148558f1b6f3880c3bd",
+          "sizeBytes": 223056
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwbkit-seckit3.so",
+          "sha256": "75514d570b92f06b27c01e49bd9b05fd8fb7fee5483623c7e2d2be18d63ee56a",
+          "sizeBytes": 146016
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/AIWriter.apk",
+          "sha256": "daf87a9ff34e8b4d3b0182e4ea9780789ce46bc29fb47a4449af1ae334b251c4",
+          "sizeBytes": 29369425
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/oat/arm64/AIWriter.vdex",
+          "sha256": "954f854fd59462262d2246025ab9bf25c7df6049039359b78cbe09dfc22b4e5d",
+          "sizeBytes": 377736
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/ColorAccessibilityAssistant.apk",
+          "sha256": "10d11e217df83ab9c82e453543ff3e6d73771440638f088222a0ad32fc3ab510",
+          "sizeBytes": 55107284
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/oat/arm64/ColorAccessibilityAssistant.vdex",
+          "sha256": "b7b1b6d843cb6dacbb2bb7645b6f3f6c4027f6633de5b452e9e40e6a27ffa1f5",
+          "sizeBytes": 464820
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/ColorDirectService.apk",
+          "sha256": "71aecb265a641daae730b0c9b66b13dbebbb8ae2f8e7674bd7dd59195b731410",
+          "sizeBytes": 66498603
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/oat/arm64/ColorDirectService.vdex",
+          "sha256": "4e19c5779efe63d4a7fafadb585f8f1555c9b46a0165018350ee730a74771398",
+          "sizeBytes": 613484
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/AIUnit.apk",
+          "sha256": "b57a9e2980eb1f134c41022986543b33df1ec17bb48e8a26a84270f75af0c4bb",
+          "sizeBytes": 90812122
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework.so",
+          "sha256": "7d9ed9b3f901e18ca2b28e668fa35e7114daf624ad3411f8057b67e1c17002ed",
+          "sizeBytes": 1241256
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework_jni.so",
+          "sha256": "e34379eb860ef136426e17479e7d08f2d0c749265c64224948dce45ac73f8260",
+          "sizeBytes": 226592
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "99075cbf137fed45bd555468bd3c36af1bc66346a43fe40bacdbfd162ad611de",
+          "sizeBytes": 12816
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libc++_shared.so",
+          "sha256": "56f6d8405cb996826c1e06d38ca81830206a056d2ef22a0e3df6fac2be6d14ec",
+          "sizeBytes": 6934032
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libcore_tokenizers.so",
+          "sha256": "b5371c7163e0f5d31f6e6d20439973f08c9b4e5849fa159fbda91d8bce7712db",
+          "sizeBytes": 7662464
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdatastore_shared_counter.so",
+          "sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+          "sizeBytes": 7112
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdmabufheap.so",
+          "sha256": "ed208e1306fb901a873eae2b819b0bb828c3eb1ee9c43dfd40171f6f4217cc7b",
+          "sizeBytes": 139447
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libopencv_java4.so",
+          "sha256": "3f4cef5615b0d2896876b619c6d1bba7ccaf3599f41e99715961895761b53258",
+          "sizeBytes": 17822832
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/oat/arm64/AIUnit.vdex",
+          "sha256": "7c5bde5bb4519ced58431dc34b0c1add6296e04c0916c91376eb9498af9fb0bc",
+          "sizeBytes": 457576
+        },
+        {
+          "path": "Calendar_global/my_stock/del-app/Calendar/Calendar.apk",
+          "sha256": "4c8bf320e641eb76b6d112854f183521192ecb3b901d2fbfdaf89b842ada85cf",
+          "sizeBytes": 101150617
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk",
+          "sha256": "ea5bed5e3f1fd6997ab64e74a6883bea1534cdc0a0e65d0e8fec258628020ab8",
+          "sizeBytes": 59765402
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk.prof",
+          "sha256": "7f39de124de3c1097e23b753e56f83f16d6cd17445dc1f31460f10276de2a89f",
+          "sizeBytes": 16590
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.art",
+          "sha256": "986594e6ce2de9e1f50aeb9f57692e3cb520856b01671fe178d962658050f5ac",
+          "sizeBytes": 1168304
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.odex",
+          "sha256": "a8e648b91b6bc1272a7eb4f8eea3e91f3ab389f95eb52bc1c8638eb1bce9341b",
+          "sizeBytes": 5502112
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.vdex",
+          "sha256": "fcbd7b0c47cc5582d7f1b9f39331c61783dd18be6d293d79bf702101034397b6",
+          "sizeBytes": 477492
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/InCallUI.apk",
+          "sha256": "2653b22f718feefc73bc8cd03b4669fc166111a7b86becb228117e1a4e2c5f49",
+          "sizeBytes": 22718434
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/oat/arm64/InCallUI.vdex",
+          "sha256": "6476f292fed53328125519706ed4ebcd9a93f1b2576a99d92c491509392896b4",
+          "sizeBytes": 242732
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk",
+          "sha256": "05d2e9c4fba418d348d26540d2b96521062f35b741df1f73ab60e0463f014a9c",
+          "sizeBytes": 79683195
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk.prof",
+          "sha256": "47642c14e1090b1311550c0cbeb17f8c7c03ff55014896449a38792cc4979e33",
+          "sizeBytes": 17336
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.art",
+          "sha256": "54a6a6cfc341944d2c3c1f6f998f39631e3cdfd541ab986244cbc2868b132c3f",
+          "sizeBytes": 451536
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.odex",
+          "sha256": "1ef13032116952187b6dfd71d9f5c3225e937a5f33814424960ef0614b0949d8",
+          "sizeBytes": 4370328
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.vdex",
+          "sha256": "8dd9b26ce3c171286dc273667151283cce60de580a409d542bfadf85ddb5895c",
+          "sizeBytes": 704384
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/OplusCamera.apk",
+          "sha256": "a4d4927a24c40287cc267dd3c2c1ae4b6a41bcb76f732dd6c76e0ef507a7d480",
+          "sizeBytes": 171193226
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/OplusCamera.apk.prof",
+          "sha256": "d3392e6cdc89516d9c5635d17d88a383e37cd7a39d097fe17828a8bfb7e88c9f",
+          "sizeBytes": 16761
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.art",
+          "sha256": "78de6d8b0f0df52a5001b3e287d7cf337551d302aaeec9bda175364cb1a23c47",
+          "sizeBytes": 2728448
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.odex",
+          "sha256": "830cadc130a97d72690a240b849fa05c3d80c5e3df0e44f296fd041377733ba3",
+          "sizeBytes": 4265880
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.vdex",
+          "sha256": "caf0745a4259c258be0e24c2731675089461738d1f7999e6a212a9de52c2c5a6",
+          "sizeBytes": 568048
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/etc/permissions/com.oplus.camera.unit.sdk_product.xml",
+          "sha256": "fcde0d8a1595591d6dc679d2c3681b550e9e4609e9a65ab45733bd52ea694072",
+          "sizeBytes": 576
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/etc/permissions/oplus_camera_default_grant_permissions_list.xml",
+          "sha256": "2ac7990bc1ffe4e6e3d297fee772faa6365027c7dbe8df8ece466d51824fcc76",
+          "sizeBytes": 905
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.adapter.jar",
+          "sha256": "402363fd3c98905067793c69bbd8c9eedd86bc1d9315f57cbef5819684a8a6ba",
+          "sizeBytes": 2992483
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.jar",
+          "sha256": "82a1a2a4d7b5c16a13eff098525309e1549032015536d17245da0a66ece7096c",
+          "sizeBytes": 5149867
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.odex",
+          "sha256": "c987c82f5c6a07776db505946c0bb969405d6e336f0cd88cf474bd397b8256a4",
+          "sizeBytes": 33712
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.vdex",
+          "sha256": "3e4a52e7fa2b7d639ce54ac746a1cc41e9505e83cd90ad1be11877987fd92291",
+          "sizeBytes": 33624
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.odex",
+          "sha256": "c2ecb4dd411f2ff31fce0635ec6c49672f41806e8edbbf057603619058d25670",
+          "sizeBytes": 50096
+        },
+        {
+          "path": "Camera_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.vdex",
+          "sha256": "8d6821fd9b849c2d345f11103965c308cbe3bd205f17d07c6193f4103129ae71",
+          "sizeBytes": 60620
+        },
+        {
+          "path": "Camera_mod/my_product/stark_build.prop",
+          "sha256": "f9c383ce1fc954358b21543bb4ba0c6eb0fa3d76840c563cf669254311e55236",
+          "sizeBytes": 32
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/NotificationCenter.apk",
+          "sha256": "dc49562ab252012f780bde1d17713776784517853a6a79bfd4b6e232098364f1",
+          "sizeBytes": 30474276
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/oat/arm64/NotificationCenter.vdex",
+          "sha256": "c0492ae12d3a243647a9ee9e1e05e7d46d8fc5fdcdad88e2d3351c71fbecc065",
+          "sizeBytes": 390932
+        },
+        {
+          "path": "Cts_Gemini/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk",
+          "sha256": "7631060cff39cd799959372828663589ee89eda2afd4039357b5956c6aab7750",
+          "sizeBytes": 107097147
+        },
+        {
+          "path": "Fake_lock/system/system/bin/wk",
+          "sha256": "779eb01c1227adbeff9d0713e0fba5191e939c83833e0c422723fb5b46cf0f94",
+          "sizeBytes": 74720
+        },
+        {
+          "path": "Fake_lock/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "b6e17da8c39f24d303b92852dc9c24c5932bf1f3b39da13b570e6551e392003a",
+          "sizeBytes": 2581
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_file_contexts",
+          "sha256": "622598cf3902a0263d516dcf358ecfe5151151ad685ed904cb851f444db9b5e6",
+          "sizeBytes": 83
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "5303ed7adf10ad85f8ba6aabf3586eb9abc3189face020247be7bbb0cd1e7572",
+          "sizeBytes": 261
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/Metis.apk",
+          "sha256": "71eccf81dffe5250c27256c720a439c1da31e76504c0bec5e7b36e1b2f52fc20",
+          "sizeBytes": 20129961
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/oat/arm64/Metis.vdex",
+          "sha256": "0a2d63fa34e2566dec20b98770b40d2565f4018d5947373a0e607a6f2c52758d",
+          "sizeBytes": 380700
+        },
+        {
+          "path": "Fix_noti/my_region/etc/battery/sys_deviceidle_whitelist.xml",
+          "sha256": "b525c6e06e39993549a7af36272773a71a7d8e7db27496d8488c3fe81e4fbbbb",
+          "sizeBytes": 2936
+        },
+        {
+          "path": "Fix_noti/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "05b342b79c3147913bf08a16cd360fd40ade83e5837e26f84a42a86b35080462",
+          "sizeBytes": 243
+        },
+        {
+          "path": "Fix_noti/my_region/etc/startup/safe_boot_whitelist.xml",
+          "sha256": "2f5e1d32c3e60001775d5a5b99b3a06909074b6be296824b2a1a4bd158a5c30c",
+          "sizeBytes": 15055
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/Athena.apk",
+          "sha256": "0480371f2c5e4170b7e3ba928b592e7619be0fa8e57c542c526462a2e787ca96",
+          "sizeBytes": 6296330
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/oat/arm64/Athena.vdex",
+          "sha256": "68a587ec73fe7cac4b192cc7ebd595099135551be844dad13293e699a665266e",
+          "sizeBytes": 106736
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "d4ffdaf958bc4d9ab2fe85fd3cbe0accf1e99a7b0e18c1cba5eac0614e26f4e4",
+          "sizeBytes": 343991213
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "64ebde6ae05fb011d549499199667246294eb532e2ef944cfb8a4e0261363c6d",
+          "sizeBytes": 339736691
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleGemini/GoogleGemini.apk",
+          "sha256": "3855358284f39bf745e5469754ab246011566cccb8e47c205c331087aae536fa",
+          "sizeBytes": 5358924
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleLocationHistory/GoogleLocationHistory.apk",
+          "sha256": "bca584aeeb3d1be4eacc8812c189bbb9ed0ba354bfa27ccfdae5695d4ccf1259",
+          "sizeBytes": 2720602
+        },
+        {
+          "path": "Gapps/my_product/app/LatinImeGoogle/LatinImeGoogle.apk",
+          "sha256": "7ab89099546d051b831620b8e05a28aaeac6e4e871ba52d22e5f6741d1c27c5b",
+          "sizeBytes": 76475707
+        },
+        {
+          "path": "Gapps/my_product/etc/extension/feature_contextualsearch_navbarhidden.xml",
+          "sha256": "96315ab1befdcc8c1dc22491d7ea0aef53b2831278de7c072e3964160264a33f",
+          "sizeBytes": 145
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_contextualsearch.xml",
+          "sha256": "7a9cf003162c273c040873ea18ac2dc265917f532e4e146c11a21418f0ea83ec",
+          "sizeBytes": 212
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_gemini_power_menu.xml",
+          "sha256": "3fa60edc6d6ee9eedc3855e27c74063dd0736aa55a0b89b8cb2c99b19c9da502",
+          "sizeBytes": 134
+        },
+        {
+          "path": "Gapps/my_product/overlay/GmsConfigOverlayGSA/GmsConfigOverlayGSA.apk",
+          "sha256": "6c5add710bc20263505756a97e5a0cdbd68b90240af95bf13c848d2dcec13292",
+          "sizeBytes": 8542
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCircleToSearch/OplusAiConfigOverlayCircleToSearch.apk",
+          "sha256": "05d0273dbd582f14c97e8e5457f9c99545fdecb6752b90799794436037d67947",
+          "sizeBytes": 12646
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCommon/OplusAiConfigOverlayCommon.apk",
+          "sha256": "e5b6aabd1f5b54835b1d605eb4f3ac5215eab40116d7a137cac7cbff08abcf04",
+          "sizeBytes": 8550
+        },
+        {
+          "path": "Gapps/my_product/overlay/WukongOTACard.apk",
+          "sha256": "1f7e3cc6c73f005c86309ec728ea28fcb339b9fa61f81aa3a4dd2e0c614a0d1b",
+          "sizeBytes": 20972298
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/GoogleVelvet_CTS.apk",
+          "sha256": "5dd695ade3abd9cf05dd636759e658239bab04b70b24ec3d1e3ce064e2e176e2",
+          "sizeBytes": 310336077
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/oat/arm64/GoogleVelvet_CTS.vdex",
+          "sha256": "40b188462bbe803dcd30859531d0cac17741f3f2d9f77137218669d5f20431d0",
+          "sizeBytes": 3129448
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/Phonesky.apk",
+          "sha256": "e1625729a36c7f0f5b042ccf739be810480b21b76ba44be8b386b3e84b8e6f9b",
+          "sizeBytes": 101349603
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/oat/arm64/Phonesky.vdex",
+          "sha256": "b2575ea2079d814a5d8dcf2412e0acc7678b59bc253a7785a7b8091279d7ac69",
+          "sizeBytes": 1543788
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/GlobalSearch.apk",
+          "sha256": "124cf9b799b532c4b44e5ba07a4f6f364777320917ecdbd4c94312df858d113b",
+          "sizeBytes": 83371462
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/oat/arm64/GlobalSearch.vdex",
+          "sha256": "a92bb7599a275f934908426ab814872ea50d6e245b45cf336e6ec33b557e1576",
+          "sizeBytes": 1151404
+        },
+        {
+          "path": "Global_props/my_product/etc/extension/US/appfeature.country.dynamic_features.xml",
+          "sha256": "4dcc55e8dc44239a9c36c58530512b240475dc10ad182bf72d78d64e3119f287",
+          "sizeBytes": 852
+        },
+        {
+          "path": "Global_props/my_product/stark_build.prop",
+          "sha256": "eb5c53063376efdadb40b57f4fb91a3f0fbf763b5d2c28bf8c226d63615d584c",
+          "sizeBytes": 92
+        },
+        {
+          "path": "Launcher_mod/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk",
+          "sha256": "7361863fbe3b44e070abd4b765f97c066d80d5d4ef802e420ed9b436e6900da0",
+          "sizeBytes": 77599992
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk.prof",
+          "sha256": "81f3778fc96eed2b50c427ed47b76d17646cc6fd7d248406dae198256bc15a80",
+          "sizeBytes": 25493
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.art",
+          "sha256": "a83efd1a8e7ad7a7bfab21065d8d44b22d8ef566d3973ecec6f1e71f6280c623",
+          "sizeBytes": 484512
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.odex",
+          "sha256": "c9fa2f8f8bb3de47dcd596b391c2b4b459e2e252c5e229e6e8c2d550ac70cf28",
+          "sizeBytes": 10460248
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.vdex",
+          "sha256": "c4eda6f561ec528ed96c4a724b26e52d36e7226416dd736c2c60d0f9a457ef1f",
+          "sizeBytes": 920488
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/Settings.apk",
+          "sha256": "985f8e1f8f763af21d246477e50dd30a887a083eb9ea79ada85e9e19c6866811",
+          "sizeBytes": 186564734
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/Settings.apk.prof",
+          "sha256": "f692f1728d7abc69d7921f2edc4d20433e65927f679a37c4be9f9e8d5066ed7e",
+          "sizeBytes": 28253
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/oat/arm64/Settings.art",
+          "sha256": "3a2bc5481360a12db6b12520967c6cd4829e242ab8f00ba42c974ad96b2e06af",
+          "sizeBytes": 2037760
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/oat/arm64/Settings.odex",
+          "sha256": "e7063c2f7a64f1344486233cb7f846c0dce5259e3e35ce96b010b6bb227de275",
+          "sizeBytes": 9207616
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/oat/arm64/Settings.vdex",
+          "sha256": "795c145644fc95ddaa64970395665e86490acc5988ed6feb8b0c12efac75847d",
+          "sizeBytes": 1615228
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/KeKeThemeSpace.apk",
+          "sha256": "5bc4d3e2586039ec909003cd41aef5e9851455f575a6eadda6575bb8c94edf38",
+          "sizeBytes": 120576228
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libPlatformJNI.so",
+          "sha256": "3073eba2f0d73cf21eb475b460fb27fae57e4cca4e4ccccbb6b6c6fa6865f150",
+          "sizeBytes": 3880
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-ac.so",
+          "sha256": "4ada48cdf529787f0c16a6ced4a361f048fc96345907925ee034d8e9406c49a0",
+          "sizeBytes": 10080
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-c.so",
+          "sha256": "018bdd3fb69ff1d430e902212ecf4a2a4b21da18e0d08f29efb74a17236e99df",
+          "sizeBytes": 14680
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libastcenc.so",
+          "sha256": "94e2548d0614216f40a865c1800759736b8eec1355acd967a36a6a45821a86b1",
+          "sizeBytes": 1350032
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libavif_android.so",
+          "sha256": "266aa7ace35971c883aebd7f7f0bd18aea8cced97b72203893145c0a04efa9a7",
+          "sizeBytes": 846840
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libbsdiffutils.so",
+          "sha256": "0a7f2d924a3115b9ca526afa4e52a2bc339c5a90abfd5cbab7696c02e63ea03d",
+          "sizeBytes": 287864
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libcomm-sign-lib.so",
+          "sha256": "cf653b19a2542a9c03310ff3f0c2e9aca5da6f9e3ddba372dc02db83c08f1b58",
+          "sizeBytes": 125096
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libconceal.so",
+          "sha256": "9bc3cc06192654d1377df0061e85b9c3abb993dcb85ae972edfec4ec9c296f59",
+          "sizeBytes": 267928
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpeg.so",
+          "sha256": "33b4540dbb53e851b164568bd7aa3a0c1b6b61b80b21f65c8ee7fae40830cb19",
+          "sizeBytes": 2853432
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpegJNI.so",
+          "sha256": "5b44896e8c0aa6bd781b3863bc898d3c447bb5feaeef7fee054f67b558c984dd",
+          "sizeBytes": 991120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libgdx.so",
+          "sha256": "c273343772d2e8d365d106cb08278c9f649082d06f4dba7a5163222cdf2036eb",
+          "sizeBytes": 186280
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libheytaplog.so",
+          "sha256": "78aa65754011fb85730306ae060c9131ecbf1d680ef864bda2c0ca26e3a25c69",
+          "sizeBytes": 63416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libmmkv.so",
+          "sha256": "676e9c0530bea8f60aa04f0cd37ccceced732b16a6effca152bd9b21a1349f85",
+          "sizeBytes": 483120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libocstool.so",
+          "sha256": "24c01b6789e5dc9fad043a4edd444b28d32ef2df7bf68ac4e98cfd80893aad40",
+          "sizeBytes": 18312
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_conscrypt_jni.so",
+          "sha256": "15e7dc0783d3fa70077480f02a76be19a700a11189063885ac2ab4eb2d48b2e0",
+          "sizeBytes": 2152832
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_image_process.so",
+          "sha256": "4c13f304b83ef8a14ce20ba8873b93c0238af8ac535ad18617f0e12a6798f624",
+          "sizeBytes": 14064
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libopluslog.so",
+          "sha256": "0011664442dce59f78b532d892b69b5b420339a4c0136ec238cf73d5d691e5a4",
+          "sizeBytes": 63264
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libqcloud-avif.so",
+          "sha256": "99d2fa644db9fd3aa8df8cd38e1176f49976b67b4670e910bdb832195bdf680b",
+          "sizeBytes": 1282448
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/librtmp-jni.so",
+          "sha256": "0adc21a21aa9fb2477e63ec3843bc20f4e06ef95c21447539f9204f00c62a4ec",
+          "sizeBytes": 87912
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libscorpion.so",
+          "sha256": "54268e5c0f6ba16cbec6a6cb7891d13f31af429db530a2ddd512dc68b65335cf",
+          "sizeBytes": 502248
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libtbljniutils.so",
+          "sha256": "d1133e70d5a5fee7dce6e8cf70c468f3f9754b973c713e2d8661be600f405196",
+          "sizeBytes": 67416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libvipfont.so",
+          "sha256": "8a12484848b1f9a59d2f1c8421511a15015ae4f3b46d3347bfd0cb0fb6a48f78",
+          "sizeBytes": 1200544
+        },
+        {
+          "path": "WK_Installer/system_ext/priv-app/OppoPackageInstaller/OppoPackageInstaller.apk",
+          "sha256": "a46163d14b75133d9f0211330a1bfe7f13da962add7fffd35933be9dde2a8f5d",
+          "sizeBytes": 5148923
+        },
+        {
+          "path": "WK_Manager/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "baf2053bc6361ed3ce6c35bf1dd39a81fadc9a0af5832a571e40c2a2015cea16",
+          "sizeBytes": 66
+        },
+        {
+          "path": "WK_Manager/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "ca6ef56067a406c22e0f1475d9800570c90889c326e1b3b74e09078106b2e66b",
+          "sizeBytes": 1881
+        },
+        {
+          "path": "WK_Manager/system/system/etc/permissions/privapp-permissions-wukong-manager.xml",
+          "sha256": "a533c7fc48d2ade5d11b4912813390fe255eefac765f3a943770eb9ae9f40b70",
+          "sizeBytes": 8386
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_seapp_contexts",
+          "sha256": "a75ad8e86601dff36b8035a357d321f8e5741ed4c85007db68bd10c8d8cb3650",
+          "sizeBytes": 113
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "3a76318a61158345edee1b527e34733f3cf8c699a4855331a84a9ca3ef12cae5",
+          "sizeBytes": 6412
+        },
+        {
+          "path": "WK_Manager/system/system/priv-app/WukongManager/WukongManager.apk",
+          "sha256": "d0d248713a3f5c9efac62c6295062493fa4e4ba064acd4741c23664b05201121",
+          "sizeBytes": 9410413
+        },
+        {
+          "path": "WK_Manager/system/system/stark_build.prop",
+          "sha256": "ab821871c0a1e152b84caf5d96e6a8e24db5588e823e265f0fb6d4ce47667711",
+          "sizeBytes": 25
+        }
+      ],
+      "id": "MOD/ColorOS_16.0.7",
+      "remote": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.7",
+      "sizeBytes": 2748867295,
+      "target": "MOD/ColorOS_16.0.7"
+    },
+    {
+      "archive": {
+        "md5": "5ae1dd7e9133026ade726432ea08551f",
+        "sha256": "3eb055a0c2368ba95b88f94d00f0c53b47b703bcc30d60738e85665b95eab1fd",
+        "sizeBytes": 1420179415,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.8.tar.zst"
+      },
+      "files": [
+        {
+          "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
+          "sha256": "1bd762cefca0a13679fd467c444e94286b13971f8877798a092d48b6acf7a1ef",
+          "sizeBytes": 4786
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/AIMemory.apk",
+          "sha256": "1853fe89f0a8474d131985b4e53ce62c3f00dba836af3ddb26250111e12b3578",
+          "sizeBytes": 101623106
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libnoise.so",
+          "sha256": "4c06c36cdbe4bf7f818b336a3da60eb38a652c1bf8894f76acee9fe244aed78f",
+          "sizeBytes": 14176
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libopluslog.so",
+          "sha256": "b67bd5c5ebe854a0a6bb0650a404e8c4bd1815fcf12ea1c97dd4a06c20cc2518",
+          "sizeBytes": 63408
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_decode.so",
+          "sha256": "076a9568df5de0d640fccabc7fc9eded4c866fab32a61839f47c2daa168d084f",
+          "sizeBytes": 3977360
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_detect.so",
+          "sha256": "57560fdf7aff4d1333f8b95d534b002fadd283a1eeaa09969bd65e519b0ad112",
+          "sizeBytes": 3037632
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libtensorflowlite.so",
+          "sha256": "492fe763d2118bd21b291bbc018dae52eab2b242561f2522b0c5ce3f5f68eb50",
+          "sizeBytes": 3139672
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwb_tables_549543368749780587_1.so",
+          "sha256": "7b712723f31823a1dcefa098e0a1b4fa202f70c70f2c1148558f1b6f3880c3bd",
+          "sizeBytes": 223056
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwbkit-seckit3.so",
+          "sha256": "75514d570b92f06b27c01e49bd9b05fd8fb7fee5483623c7e2d2be18d63ee56a",
+          "sizeBytes": 146016
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/AIWriter.apk",
+          "sha256": "daf87a9ff34e8b4d3b0182e4ea9780789ce46bc29fb47a4449af1ae334b251c4",
+          "sizeBytes": 29369425
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/oat/arm64/AIWriter.vdex",
+          "sha256": "954f854fd59462262d2246025ab9bf25c7df6049039359b78cbe09dfc22b4e5d",
+          "sizeBytes": 377736
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/ColorAccessibilityAssistant.apk",
+          "sha256": "10d11e217df83ab9c82e453543ff3e6d73771440638f088222a0ad32fc3ab510",
+          "sizeBytes": 55107284
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/oat/arm64/ColorAccessibilityAssistant.vdex",
+          "sha256": "b7b1b6d843cb6dacbb2bb7645b6f3f6c4027f6633de5b452e9e40e6a27ffa1f5",
+          "sizeBytes": 464820
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/ColorDirectService.apk",
+          "sha256": "71aecb265a641daae730b0c9b66b13dbebbb8ae2f8e7674bd7dd59195b731410",
+          "sizeBytes": 66498603
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/oat/arm64/ColorDirectService.vdex",
+          "sha256": "4e19c5779efe63d4a7fafadb585f8f1555c9b46a0165018350ee730a74771398",
+          "sizeBytes": 613484
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/AIUnit.apk",
+          "sha256": "b57a9e2980eb1f134c41022986543b33df1ec17bb48e8a26a84270f75af0c4bb",
+          "sizeBytes": 90812122
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework.so",
+          "sha256": "7d9ed9b3f901e18ca2b28e668fa35e7114daf624ad3411f8057b67e1c17002ed",
+          "sizeBytes": 1241256
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework_jni.so",
+          "sha256": "e34379eb860ef136426e17479e7d08f2d0c749265c64224948dce45ac73f8260",
+          "sizeBytes": 226592
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "99075cbf137fed45bd555468bd3c36af1bc66346a43fe40bacdbfd162ad611de",
+          "sizeBytes": 12816
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libc++_shared.so",
+          "sha256": "56f6d8405cb996826c1e06d38ca81830206a056d2ef22a0e3df6fac2be6d14ec",
+          "sizeBytes": 6934032
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libcore_tokenizers.so",
+          "sha256": "b5371c7163e0f5d31f6e6d20439973f08c9b4e5849fa159fbda91d8bce7712db",
+          "sizeBytes": 7662464
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdatastore_shared_counter.so",
+          "sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+          "sizeBytes": 7112
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdmabufheap.so",
+          "sha256": "ed208e1306fb901a873eae2b819b0bb828c3eb1ee9c43dfd40171f6f4217cc7b",
+          "sizeBytes": 139447
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libopencv_java4.so",
+          "sha256": "3f4cef5615b0d2896876b619c6d1bba7ccaf3599f41e99715961895761b53258",
+          "sizeBytes": 17822832
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/oat/arm64/AIUnit.vdex",
+          "sha256": "7c5bde5bb4519ced58431dc34b0c1add6296e04c0916c91376eb9498af9fb0bc",
+          "sizeBytes": 457576
+        },
+        {
+          "path": "Calendar_global/my_stock/del-app/Calendar/Calendar.apk",
+          "sha256": "4c8bf320e641eb76b6d112854f183521192ecb3b901d2fbfdaf89b842ada85cf",
+          "sizeBytes": 101150617
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk",
+          "sha256": "ea5bed5e3f1fd6997ab64e74a6883bea1534cdc0a0e65d0e8fec258628020ab8",
+          "sizeBytes": 59765402
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk.prof",
+          "sha256": "7f39de124de3c1097e23b753e56f83f16d6cd17445dc1f31460f10276de2a89f",
+          "sizeBytes": 16590
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.art",
+          "sha256": "986594e6ce2de9e1f50aeb9f57692e3cb520856b01671fe178d962658050f5ac",
+          "sizeBytes": 1168304
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.odex",
+          "sha256": "a8e648b91b6bc1272a7eb4f8eea3e91f3ab389f95eb52bc1c8638eb1bce9341b",
+          "sizeBytes": 5502112
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.vdex",
+          "sha256": "fcbd7b0c47cc5582d7f1b9f39331c61783dd18be6d293d79bf702101034397b6",
+          "sizeBytes": 477492
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/InCallUI.apk",
+          "sha256": "2653b22f718feefc73bc8cd03b4669fc166111a7b86becb228117e1a4e2c5f49",
+          "sizeBytes": 22718434
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/oat/arm64/InCallUI.vdex",
+          "sha256": "6476f292fed53328125519706ed4ebcd9a93f1b2576a99d92c491509392896b4",
+          "sizeBytes": 242732
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk",
+          "sha256": "05d2e9c4fba418d348d26540d2b96521062f35b741df1f73ab60e0463f014a9c",
+          "sizeBytes": 79683195
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk.prof",
+          "sha256": "47642c14e1090b1311550c0cbeb17f8c7c03ff55014896449a38792cc4979e33",
+          "sizeBytes": 17336
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.art",
+          "sha256": "54a6a6cfc341944d2c3c1f6f998f39631e3cdfd541ab986244cbc2868b132c3f",
+          "sizeBytes": 451536
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.odex",
+          "sha256": "1ef13032116952187b6dfd71d9f5c3225e937a5f33814424960ef0614b0949d8",
+          "sizeBytes": 4370328
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.vdex",
+          "sha256": "8dd9b26ce3c171286dc273667151283cce60de580a409d542bfadf85ddb5895c",
+          "sizeBytes": 704384
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/OplusCamera.apk",
+          "sha256": "a4d4927a24c40287cc267dd3c2c1ae4b6a41bcb76f732dd6c76e0ef507a7d480",
+          "sizeBytes": 171193226
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/OplusCamera.apk.prof",
+          "sha256": "d3392e6cdc89516d9c5635d17d88a383e37cd7a39d097fe17828a8bfb7e88c9f",
+          "sizeBytes": 16761
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.art",
+          "sha256": "78de6d8b0f0df52a5001b3e287d7cf337551d302aaeec9bda175364cb1a23c47",
+          "sizeBytes": 2728448
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.odex",
+          "sha256": "830cadc130a97d72690a240b849fa05c3d80c5e3df0e44f296fd041377733ba3",
+          "sizeBytes": 4265880
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.vdex",
+          "sha256": "caf0745a4259c258be0e24c2731675089461738d1f7999e6a212a9de52c2c5a6",
+          "sizeBytes": 568048
+        },
+        {
+          "path": "Camera_mod/my_product/stark_build.prop",
+          "sha256": "f9c383ce1fc954358b21543bb4ba0c6eb0fa3d76840c563cf669254311e55236",
+          "sizeBytes": 32
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/NotificationCenter.apk",
+          "sha256": "7df8c324df12a2862cb2662db5580e8e76ef69d8380dd71b0af3e21c335f5128",
+          "sizeBytes": 30478371
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/oat/arm64/NotificationCenter.vdex",
+          "sha256": "c0492ae12d3a243647a9ee9e1e05e7d46d8fc5fdcdad88e2d3351c71fbecc065",
+          "sizeBytes": 390932
+        },
+        {
+          "path": "Cts_Gemini/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk",
+          "sha256": "b3792743102516e99a0590132cd4e1c30d37132693d88a0ce8a81b0792d15bc0",
+          "sizeBytes": 109604167
+        },
+        {
+          "path": "Fake_lock/system/system/bin/wk",
+          "sha256": "779eb01c1227adbeff9d0713e0fba5191e939c83833e0c422723fb5b46cf0f94",
+          "sizeBytes": 74720
+        },
+        {
+          "path": "Fake_lock/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "b6e17da8c39f24d303b92852dc9c24c5932bf1f3b39da13b570e6551e392003a",
+          "sizeBytes": 2581
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_file_contexts",
+          "sha256": "622598cf3902a0263d516dcf358ecfe5151151ad685ed904cb851f444db9b5e6",
+          "sizeBytes": 83
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "5303ed7adf10ad85f8ba6aabf3586eb9abc3189face020247be7bbb0cd1e7572",
+          "sizeBytes": 261
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/Metis.apk",
+          "sha256": "8aa2c5e564970b8a06212b37ca26ffe0d66b1e49733da9ebc2c851cab2f47c73",
+          "sizeBytes": 32658848
+        },
+        {
+          "path": "Fix_noti/my_region/etc/battery/sys_deviceidle_whitelist.xml",
+          "sha256": "b525c6e06e39993549a7af36272773a71a7d8e7db27496d8488c3fe81e4fbbbb",
+          "sizeBytes": 2936
+        },
+        {
+          "path": "Fix_noti/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "05b342b79c3147913bf08a16cd360fd40ade83e5837e26f84a42a86b35080462",
+          "sizeBytes": 243
+        },
+        {
+          "path": "Fix_noti/my_region/etc/startup/safe_boot_whitelist.xml",
+          "sha256": "2f5e1d32c3e60001775d5a5b99b3a06909074b6be296824b2a1a4bd158a5c30c",
+          "sizeBytes": 15055
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/Athena.apk",
+          "sha256": "2dd4301e118c759c9138ce615ff0da552100c91544c1b45bfbe593f364bc48a6",
+          "sizeBytes": 6304523
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/oat/arm64/Athena.vdex",
+          "sha256": "78618a61dbe6be5a3bc8cfd0b9bf7361a59a673695ac2eef9b10c86cc968fc4e",
+          "sizeBytes": 106744
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/etc/permissions/com.oplus.camera.unit.sdk_product.xml",
+          "sha256": "fcde0d8a1595591d6dc679d2c3681b550e9e4609e9a65ab45733bd52ea694072",
+          "sizeBytes": 576
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/etc/permissions/oplus_camera_default_grant_permissions_list.xml",
+          "sha256": "2ac7990bc1ffe4e6e3d297fee772faa6365027c7dbe8df8ece466d51824fcc76",
+          "sizeBytes": 905
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.adapter.jar",
+          "sha256": "402363fd3c98905067793c69bbd8c9eedd86bc1d9315f57cbef5819684a8a6ba",
+          "sizeBytes": 2992483
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.jar",
+          "sha256": "82a1a2a4d7b5c16a13eff098525309e1549032015536d17245da0a66ece7096c",
+          "sizeBytes": 5149867
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.odex",
+          "sha256": "c987c82f5c6a07776db505946c0bb969405d6e336f0cd88cf474bd397b8256a4",
+          "sizeBytes": 33712
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.vdex",
+          "sha256": "3e4a52e7fa2b7d639ce54ac746a1cc41e9505e83cd90ad1be11877987fd92291",
+          "sizeBytes": 33624
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.odex",
+          "sha256": "c2ecb4dd411f2ff31fce0635ec6c49672f41806e8edbbf057603619058d25670",
+          "sizeBytes": 50096
+        },
+        {
+          "path": "Gallery_mod/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.vdex",
+          "sha256": "8d6821fd9b849c2d345f11103965c308cbe3bd205f17d07c6193f4103129ae71",
+          "sizeBytes": 60620
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "d4ffdaf958bc4d9ab2fe85fd3cbe0accf1e99a7b0e18c1cba5eac0614e26f4e4",
+          "sizeBytes": 343991213
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/etc/permissions/com.oplus.camera.unit.sdk_product.xml",
+          "sha256": "fcde0d8a1595591d6dc679d2c3681b550e9e4609e9a65ab45733bd52ea694072",
+          "sizeBytes": 576
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/etc/permissions/oplus_camera_default_grant_permissions_list.xml",
+          "sha256": "2ac7990bc1ffe4e6e3d297fee772faa6365027c7dbe8df8ece466d51824fcc76",
+          "sizeBytes": 905
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.adapter.jar",
+          "sha256": "402363fd3c98905067793c69bbd8c9eedd86bc1d9315f57cbef5819684a8a6ba",
+          "sizeBytes": 2992483
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.jar",
+          "sha256": "82a1a2a4d7b5c16a13eff098525309e1549032015536d17245da0a66ece7096c",
+          "sizeBytes": 5149867
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.odex",
+          "sha256": "c987c82f5c6a07776db505946c0bb969405d6e336f0cd88cf474bd397b8256a4",
+          "sizeBytes": 33712
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.vdex",
+          "sha256": "3e4a52e7fa2b7d639ce54ac746a1cc41e9505e83cd90ad1be11877987fd92291",
+          "sizeBytes": 33624
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.odex",
+          "sha256": "c2ecb4dd411f2ff31fce0635ec6c49672f41806e8edbbf057603619058d25670",
+          "sizeBytes": 50096
+        },
+        {
+          "path": "Gallery_mod_CN/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.vdex",
+          "sha256": "8d6821fd9b849c2d345f11103965c308cbe3bd205f17d07c6193f4103129ae71",
+          "sizeBytes": 60620
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "64ebde6ae05fb011d549499199667246294eb532e2ef944cfb8a4e0261363c6d",
+          "sizeBytes": 339736691
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleGemini/GoogleGemini.apk",
+          "sha256": "3855358284f39bf745e5469754ab246011566cccb8e47c205c331087aae536fa",
+          "sizeBytes": 5358924
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleLocationHistory/GoogleLocationHistory.apk",
+          "sha256": "bca584aeeb3d1be4eacc8812c189bbb9ed0ba354bfa27ccfdae5695d4ccf1259",
+          "sizeBytes": 2720602
+        },
+        {
+          "path": "Gapps/my_product/app/LatinImeGoogle/LatinImeGoogle.apk",
+          "sha256": "7ab89099546d051b831620b8e05a28aaeac6e4e871ba52d22e5f6741d1c27c5b",
+          "sizeBytes": 76475707
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/SpeechServicesByGoogle.apk",
+          "sha256": "da255cc829117c5e029400df097436f354be569309965eed20b1718035de995d",
+          "sizeBytes": 77140139
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/oat/arm64/SpeechServicesByGoogle.vdex",
+          "sha256": "4157c5b0d2fa97a4ca8ce6e74dbd5e2b0ffafda5cf7b593a708229fb63fb4aab",
+          "sizeBytes": 291412
+        },
+        {
+          "path": "Gapps/my_product/etc/extension/feature_contextualsearch_navbarhidden.xml",
+          "sha256": "96315ab1befdcc8c1dc22491d7ea0aef53b2831278de7c072e3964160264a33f",
+          "sizeBytes": 145
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_contextualsearch.xml",
+          "sha256": "7a9cf003162c273c040873ea18ac2dc265917f532e4e146c11a21418f0ea83ec",
+          "sizeBytes": 212
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_gemini_power_menu.xml",
+          "sha256": "3fa60edc6d6ee9eedc3855e27c74063dd0736aa55a0b89b8cb2c99b19c9da502",
+          "sizeBytes": 134
+        },
+        {
+          "path": "Gapps/my_product/overlay/GmsConfigOverlayGSA/GmsConfigOverlayGSA.apk",
+          "sha256": "6c5add710bc20263505756a97e5a0cdbd68b90240af95bf13c848d2dcec13292",
+          "sizeBytes": 8542
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCircleToSearch/OplusAiConfigOverlayCircleToSearch.apk",
+          "sha256": "05d0273dbd582f14c97e8e5457f9c99545fdecb6752b90799794436037d67947",
+          "sizeBytes": 12646
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCommon/OplusAiConfigOverlayCommon.apk",
+          "sha256": "e5b6aabd1f5b54835b1d605eb4f3ac5215eab40116d7a137cac7cbff08abcf04",
+          "sizeBytes": 8550
+        },
+        {
+          "path": "Gapps/my_product/overlay/WukongOTACard.apk",
+          "sha256": "1f7e3cc6c73f005c86309ec728ea28fcb339b9fa61f81aa3a4dd2e0c614a0d1b",
+          "sizeBytes": 20972298
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/GoogleVelvet_CTS.apk",
+          "sha256": "5dd695ade3abd9cf05dd636759e658239bab04b70b24ec3d1e3ce064e2e176e2",
+          "sizeBytes": 310336077
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/oat/arm64/GoogleVelvet_CTS.vdex",
+          "sha256": "40b188462bbe803dcd30859531d0cac17741f3f2d9f77137218669d5f20431d0",
+          "sizeBytes": 3129448
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/Phonesky.apk",
+          "sha256": "e1625729a36c7f0f5b042ccf739be810480b21b76ba44be8b386b3e84b8e6f9b",
+          "sizeBytes": 101349603
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/oat/arm64/Phonesky.vdex",
+          "sha256": "b2575ea2079d814a5d8dcf2412e0acc7678b59bc253a7785a7b8091279d7ac69",
+          "sizeBytes": 1543788
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/GlobalSearch.apk",
+          "sha256": "124cf9b799b532c4b44e5ba07a4f6f364777320917ecdbd4c94312df858d113b",
+          "sizeBytes": 83371462
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/oat/arm64/GlobalSearch.vdex",
+          "sha256": "a92bb7599a275f934908426ab814872ea50d6e245b45cf336e6ec33b557e1576",
+          "sizeBytes": 1151404
+        },
+        {
+          "path": "Global_props/my_product/etc/extension/US/appfeature.country.dynamic_features.xml",
+          "sha256": "4dcc55e8dc44239a9c36c58530512b240475dc10ad182bf72d78d64e3119f287",
+          "sizeBytes": 852
+        },
+        {
+          "path": "Global_props/my_product/stark_build.prop",
+          "sha256": "eb5c53063376efdadb40b57f4fb91a3f0fbf763b5d2c28bf8c226d63615d584c",
+          "sizeBytes": 92
+        },
+        {
+          "path": "Launcher_mod/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk",
+          "sha256": "fed83ae9653025ebcace427181362750b17b8d10c164433f5e0bcf8e33ffcd80",
+          "sizeBytes": 77599987
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk.prof",
+          "sha256": "81f3778fc96eed2b50c427ed47b76d17646cc6fd7d248406dae198256bc15a80",
+          "sizeBytes": 25493
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.art",
+          "sha256": "a83efd1a8e7ad7a7bfab21065d8d44b22d8ef566d3973ecec6f1e71f6280c623",
+          "sizeBytes": 484512
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.odex",
+          "sha256": "c9fa2f8f8bb3de47dcd596b391c2b4b459e2e252c5e229e6e8c2d550ac70cf28",
+          "sizeBytes": 10460248
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.vdex",
+          "sha256": "c4eda6f561ec528ed96c4a724b26e52d36e7226416dd736c2c60d0f9a457ef1f",
+          "sizeBytes": 920488
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/Settings.apk",
+          "sha256": "985f8e1f8f763af21d246477e50dd30a887a083eb9ea79ada85e9e19c6866811",
+          "sizeBytes": 186564734
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/Settings.apk.prof",
+          "sha256": "f692f1728d7abc69d7921f2edc4d20433e65927f679a37c4be9f9e8d5066ed7e",
+          "sizeBytes": 28253
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/oat/arm64/Settings.art",
+          "sha256": "3a2bc5481360a12db6b12520967c6cd4829e242ab8f00ba42c974ad96b2e06af",
+          "sizeBytes": 2037760
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/oat/arm64/Settings.odex",
+          "sha256": "e7063c2f7a64f1344486233cb7f846c0dce5259e3e35ce96b010b6bb227de275",
+          "sizeBytes": 9207616
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/oat/arm64/Settings.vdex",
+          "sha256": "795c145644fc95ddaa64970395665e86490acc5988ed6feb8b0c12efac75847d",
+          "sizeBytes": 1615228
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/KeKeThemeSpace.apk",
+          "sha256": "5bc4d3e2586039ec909003cd41aef5e9851455f575a6eadda6575bb8c94edf38",
+          "sizeBytes": 120576228
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libPlatformJNI.so",
+          "sha256": "3073eba2f0d73cf21eb475b460fb27fae57e4cca4e4ccccbb6b6c6fa6865f150",
+          "sizeBytes": 3880
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-ac.so",
+          "sha256": "4ada48cdf529787f0c16a6ced4a361f048fc96345907925ee034d8e9406c49a0",
+          "sizeBytes": 10080
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-c.so",
+          "sha256": "018bdd3fb69ff1d430e902212ecf4a2a4b21da18e0d08f29efb74a17236e99df",
+          "sizeBytes": 14680
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libastcenc.so",
+          "sha256": "94e2548d0614216f40a865c1800759736b8eec1355acd967a36a6a45821a86b1",
+          "sizeBytes": 1350032
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libavif_android.so",
+          "sha256": "266aa7ace35971c883aebd7f7f0bd18aea8cced97b72203893145c0a04efa9a7",
+          "sizeBytes": 846840
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libbsdiffutils.so",
+          "sha256": "0a7f2d924a3115b9ca526afa4e52a2bc339c5a90abfd5cbab7696c02e63ea03d",
+          "sizeBytes": 287864
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libcomm-sign-lib.so",
+          "sha256": "cf653b19a2542a9c03310ff3f0c2e9aca5da6f9e3ddba372dc02db83c08f1b58",
+          "sizeBytes": 125096
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libconceal.so",
+          "sha256": "9bc3cc06192654d1377df0061e85b9c3abb993dcb85ae972edfec4ec9c296f59",
+          "sizeBytes": 267928
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpeg.so",
+          "sha256": "33b4540dbb53e851b164568bd7aa3a0c1b6b61b80b21f65c8ee7fae40830cb19",
+          "sizeBytes": 2853432
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpegJNI.so",
+          "sha256": "5b44896e8c0aa6bd781b3863bc898d3c447bb5feaeef7fee054f67b558c984dd",
+          "sizeBytes": 991120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libgdx.so",
+          "sha256": "c273343772d2e8d365d106cb08278c9f649082d06f4dba7a5163222cdf2036eb",
+          "sizeBytes": 186280
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libheytaplog.so",
+          "sha256": "78aa65754011fb85730306ae060c9131ecbf1d680ef864bda2c0ca26e3a25c69",
+          "sizeBytes": 63416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libmmkv.so",
+          "sha256": "676e9c0530bea8f60aa04f0cd37ccceced732b16a6effca152bd9b21a1349f85",
+          "sizeBytes": 483120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libocstool.so",
+          "sha256": "24c01b6789e5dc9fad043a4edd444b28d32ef2df7bf68ac4e98cfd80893aad40",
+          "sizeBytes": 18312
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_conscrypt_jni.so",
+          "sha256": "15e7dc0783d3fa70077480f02a76be19a700a11189063885ac2ab4eb2d48b2e0",
+          "sizeBytes": 2152832
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_image_process.so",
+          "sha256": "4c13f304b83ef8a14ce20ba8873b93c0238af8ac535ad18617f0e12a6798f624",
+          "sizeBytes": 14064
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libopluslog.so",
+          "sha256": "0011664442dce59f78b532d892b69b5b420339a4c0136ec238cf73d5d691e5a4",
+          "sizeBytes": 63264
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libqcloud-avif.so",
+          "sha256": "99d2fa644db9fd3aa8df8cd38e1176f49976b67b4670e910bdb832195bdf680b",
+          "sizeBytes": 1282448
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/librtmp-jni.so",
+          "sha256": "0adc21a21aa9fb2477e63ec3843bc20f4e06ef95c21447539f9204f00c62a4ec",
+          "sizeBytes": 87912
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libscorpion.so",
+          "sha256": "54268e5c0f6ba16cbec6a6cb7891d13f31af429db530a2ddd512dc68b65335cf",
+          "sizeBytes": 502248
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libtbljniutils.so",
+          "sha256": "d1133e70d5a5fee7dce6e8cf70c468f3f9754b973c713e2d8661be600f405196",
+          "sizeBytes": 67416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libvipfont.so",
+          "sha256": "8a12484848b1f9a59d2f1c8421511a15015ae4f3b46d3347bfd0cb0fb6a48f78",
+          "sizeBytes": 1200544
+        },
+        {
+          "path": "WK_Installer/system_ext/priv-app/OppoPackageInstaller/OppoPackageInstaller.apk",
+          "sha256": "a46163d14b75133d9f0211330a1bfe7f13da962add7fffd35933be9dde2a8f5d",
+          "sizeBytes": 5148923
+        },
+        {
+          "path": "WK_Manager/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "baf2053bc6361ed3ce6c35bf1dd39a81fadc9a0af5832a571e40c2a2015cea16",
+          "sizeBytes": 66
+        },
+        {
+          "path": "WK_Manager/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "ca6ef56067a406c22e0f1475d9800570c90889c326e1b3b74e09078106b2e66b",
+          "sizeBytes": 1881
+        },
+        {
+          "path": "WK_Manager/system/system/etc/permissions/privapp-permissions-wukong-manager.xml",
+          "sha256": "a533c7fc48d2ade5d11b4912813390fe255eefac765f3a943770eb9ae9f40b70",
+          "sizeBytes": 8386
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_seapp_contexts",
+          "sha256": "a75ad8e86601dff36b8035a357d321f8e5741ed4c85007db68bd10c8d8cb3650",
+          "sizeBytes": 113
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "3a76318a61158345edee1b527e34733f3cf8c699a4855331a84a9ca3ef12cae5",
+          "sizeBytes": 6412
+        },
+        {
+          "path": "WK_Manager/system/system/priv-app/WukongManager/WukongManager.apk",
+          "sha256": "224bf463ad6594cda806284bbb75acbac10046f71c709d059cb2a00813e737ee",
+          "sizeBytes": 9477574
+        },
+        {
+          "path": "WK_Manager/system/system/stark_build.prop",
+          "sha256": "ab821871c0a1e152b84caf5d96e6a8e24db5588e823e265f0fb6d4ce47667711",
+          "sizeBytes": 25
+        }
+      ],
+      "id": "MOD/ColorOS_16.0.8",
+      "remote": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.8",
+      "sizeBytes": 2849355388,
+      "target": "MOD/ColorOS_16.0.8"
+    },
+    {
+      "files": [
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk",
+          "sha256": "ea5bed5e3f1fd6997ab64e74a6883bea1534cdc0a0e65d0e8fec258628020ab8",
+          "sizeBytes": 59765402
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk.prof",
+          "sha256": "7f39de124de3c1097e23b753e56f83f16d6cd17445dc1f31460f10276de2a89f",
+          "sizeBytes": 16590
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.art",
+          "sha256": "986594e6ce2de9e1f50aeb9f57692e3cb520856b01671fe178d962658050f5ac",
+          "sizeBytes": 1168304
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.odex",
+          "sha256": "a8e648b91b6bc1272a7eb4f8eea3e91f3ab389f95eb52bc1c8638eb1bce9341b",
+          "sizeBytes": 5502112
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.vdex",
+          "sha256": "fcbd7b0c47cc5582d7f1b9f39331c61783dd18be6d293d79bf702101034397b6",
+          "sizeBytes": 477492
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/InCallUI.apk",
+          "sha256": "2653b22f718feefc73bc8cd03b4669fc166111a7b86becb228117e1a4e2c5f49",
+          "sizeBytes": 22718434
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/oat/arm64/InCallUI.vdex",
+          "sha256": "6476f292fed53328125519706ed4ebcd9a93f1b2576a99d92c491509392896b4",
+          "sizeBytes": 242732
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk",
+          "sha256": "05d2e9c4fba418d348d26540d2b96521062f35b741df1f73ab60e0463f014a9c",
+          "sizeBytes": 79683195
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk.prof",
+          "sha256": "47642c14e1090b1311550c0cbeb17f8c7c03ff55014896449a38792cc4979e33",
+          "sizeBytes": 17336
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.art",
+          "sha256": "54a6a6cfc341944d2c3c1f6f998f39631e3cdfd541ab986244cbc2868b132c3f",
+          "sizeBytes": 451536
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.odex",
+          "sha256": "1ef13032116952187b6dfd71d9f5c3225e937a5f33814424960ef0614b0949d8",
+          "sizeBytes": 4370328
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.vdex",
+          "sha256": "8dd9b26ce3c171286dc273667151283cce60de580a409d542bfadf85ddb5895c",
+          "sizeBytes": 704384
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk",
+          "sha256": "dd5723ff88899c91e1d3a800c44d5c28e74a3fc03f1ce2e34f2275b1c5bc30c7",
+          "sizeBytes": 107625459
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk.prof",
+          "sha256": "ac716ddb716458116fa5926bb1adf1e61d0d67ae3fb86f83700f931d0d265236",
+          "sizeBytes": 24953
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.art",
+          "sha256": "8b6ae26bcf393eedd4ef41eaa121b75a08945eca453166811efcf3f62a7f7902",
+          "sizeBytes": 5752256
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.odex",
+          "sha256": "dc53881cc7994f36df57a78943018f605099d8c16b8ae0d4756488afb2ccf807",
+          "sizeBytes": 3489824
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.vdex",
+          "sha256": "33e4db9548a6558a73aba315f5964aca4b3e60024bd81809b47edc3f11bcc5dc",
+          "sizeBytes": 1426936
+        },
+        {
+          "path": "Fake_lock/system/system/bin/wk",
+          "sha256": "779eb01c1227adbeff9d0713e0fba5191e939c83833e0c422723fb5b46cf0f94",
+          "sizeBytes": 74720
+        },
+        {
+          "path": "Fake_lock/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "b6e17da8c39f24d303b92852dc9c24c5932bf1f3b39da13b570e6551e392003a",
+          "sizeBytes": 2581
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_file_contexts",
+          "sha256": "622598cf3902a0263d516dcf358ecfe5151151ad685ed904cb851f444db9b5e6",
+          "sizeBytes": 83
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "5303ed7adf10ad85f8ba6aabf3586eb9abc3189face020247be7bbb0cd1e7572",
+          "sizeBytes": 261
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/Metis.apk",
+          "sha256": "d8208f3668ad55ea9c2136c0eafefd4a7fccdd1115941c9e12263999a59394a4",
+          "sizeBytes": 20162723
+        },
+        {
+          "path": "Fix_Metis/my_stock/priv-app/Metis/oat/arm64/Metis.vdex",
+          "sha256": "0a2d63fa34e2566dec20b98770b40d2565f4018d5947373a0e607a6f2c52758d",
+          "sizeBytes": 380700
+        },
+        {
+          "path": "Fix_noti/my_region/etc/battery/sys_deviceidle_whitelist.xml",
+          "sha256": "b525c6e06e39993549a7af36272773a71a7d8e7db27496d8488c3fe81e4fbbbb",
+          "sizeBytes": 2936
+        },
+        {
+          "path": "Fix_noti/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "05b342b79c3147913bf08a16cd360fd40ade83e5837e26f84a42a86b35080462",
+          "sizeBytes": 243
+        },
+        {
+          "path": "Fix_noti/my_region/etc/startup/safe_boot_whitelist.xml",
+          "sha256": "2f5e1d32c3e60001775d5a5b99b3a06909074b6be296824b2a1a4bd158a5c30c",
+          "sizeBytes": 15055
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/Athena.apk",
+          "sha256": "8efefd050512818f5ff80cb67853217e088d967d1ad4605dfeda201a35f4917c",
+          "sizeBytes": 6296332
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/oat/arm64/Athena.vdex",
+          "sha256": "9c12509c6e7247dbaf48e245712cb36a06a81c37dbee20a5c0d5552d83dd6f59",
+          "sizeBytes": 106716
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleGemini/GoogleGemini.apk",
+          "sha256": "3855358284f39bf745e5469754ab246011566cccb8e47c205c331087aae536fa",
+          "sizeBytes": 5358924
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleLocationHistory/GoogleLocationHistory.apk",
+          "sha256": "bca584aeeb3d1be4eacc8812c189bbb9ed0ba354bfa27ccfdae5695d4ccf1259",
+          "sizeBytes": 2720602
+        },
+        {
+          "path": "Gapps/my_product/app/LatinImeGoogle/LatinImeGoogle.apk",
+          "sha256": "7ab89099546d051b831620b8e05a28aaeac6e4e871ba52d22e5f6741d1c27c5b",
+          "sizeBytes": 76475707
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/SpeechServicesByGoogle.apk",
+          "sha256": "da255cc829117c5e029400df097436f354be569309965eed20b1718035de995d",
+          "sizeBytes": 77140139
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/oat/arm64/SpeechServicesByGoogle.vdex",
+          "sha256": "4157c5b0d2fa97a4ca8ce6e74dbd5e2b0ffafda5cf7b593a708229fb63fb4aab",
+          "sizeBytes": 291412
+        },
+        {
+          "path": "Gapps/my_product/etc/extension/feature_contextualsearch_navbarhidden.xml",
+          "sha256": "96315ab1befdcc8c1dc22491d7ea0aef53b2831278de7c072e3964160264a33f",
+          "sizeBytes": 145
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_contextualsearch.xml",
+          "sha256": "7a9cf003162c273c040873ea18ac2dc265917f532e4e146c11a21418f0ea83ec",
+          "sizeBytes": 212
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_gemini_power_menu.xml",
+          "sha256": "3fa60edc6d6ee9eedc3855e27c74063dd0736aa55a0b89b8cb2c99b19c9da502",
+          "sizeBytes": 134
+        },
+        {
+          "path": "Gapps/my_product/overlay/GmsConfigOverlayGSA/GmsConfigOverlayGSA.apk",
+          "sha256": "6c5add710bc20263505756a97e5a0cdbd68b90240af95bf13c848d2dcec13292",
+          "sizeBytes": 8542
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCircleToSearch/OplusAiConfigOverlayCircleToSearch.apk",
+          "sha256": "05d0273dbd582f14c97e8e5457f9c99545fdecb6752b90799794436037d67947",
+          "sizeBytes": 12646
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCommon/OplusAiConfigOverlayCommon.apk",
+          "sha256": "e5b6aabd1f5b54835b1d605eb4f3ac5215eab40116d7a137cac7cbff08abcf04",
+          "sizeBytes": 8550
+        },
+        {
+          "path": "Gapps/my_product/overlay/WukongOTACard.apk",
+          "sha256": "1f7e3cc6c73f005c86309ec728ea28fcb339b9fa61f81aa3a4dd2e0c614a0d1b",
+          "sizeBytes": 20972298
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/GoogleVelvet_CTS.apk",
+          "sha256": "5dd695ade3abd9cf05dd636759e658239bab04b70b24ec3d1e3ce064e2e176e2",
+          "sizeBytes": 310336077
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/oat/arm64/GoogleVelvet_CTS.vdex",
+          "sha256": "40b188462bbe803dcd30859531d0cac17741f3f2d9f77137218669d5f20431d0",
+          "sizeBytes": 3129448
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/Phonesky.apk",
+          "sha256": "e1625729a36c7f0f5b042ccf739be810480b21b76ba44be8b386b3e84b8e6f9b",
+          "sizeBytes": 101349603
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/oat/arm64/Phonesky.vdex",
+          "sha256": "b2575ea2079d814a5d8dcf2412e0acc7678b59bc253a7785a7b8091279d7ac69",
+          "sizeBytes": 1543788
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/GlobalSearch.apk",
+          "sha256": "124cf9b799b532c4b44e5ba07a4f6f364777320917ecdbd4c94312df858d113b",
+          "sizeBytes": 83371462
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/oat/arm64/GlobalSearch.vdex",
+          "sha256": "a92bb7599a275f934908426ab814872ea50d6e245b45cf336e6ec33b557e1576",
+          "sizeBytes": 1151404
+        },
+        {
+          "path": "WK_Installer/system_ext/priv-app/OppoPackageInstaller/OppoPackageInstaller.apk",
+          "sha256": "a46163d14b75133d9f0211330a1bfe7f13da962add7fffd35933be9dde2a8f5d",
+          "sizeBytes": 5148923
+        },
+        {
+          "path": "WK_Manager/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "baf2053bc6361ed3ce6c35bf1dd39a81fadc9a0af5832a571e40c2a2015cea16",
+          "sizeBytes": 66
+        },
+        {
+          "path": "WK_Manager/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "ca6ef56067a406c22e0f1475d9800570c90889c326e1b3b74e09078106b2e66b",
+          "sizeBytes": 1881
+        },
+        {
+          "path": "WK_Manager/system/system/etc/permissions/privapp-permissions-wukong-manager.xml",
+          "sha256": "a533c7fc48d2ade5d11b4912813390fe255eefac765f3a943770eb9ae9f40b70",
+          "sizeBytes": 8386
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_seapp_contexts",
+          "sha256": "a75ad8e86601dff36b8035a357d321f8e5741ed4c85007db68bd10c8d8cb3650",
+          "sizeBytes": 113
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "3a76318a61158345edee1b527e34733f3cf8c699a4855331a84a9ca3ef12cae5",
+          "sizeBytes": 6412
+        },
+        {
+          "path": "WK_Manager/system/system/priv-app/WukongManager/WukongManager.apk",
+          "sha256": "d0d248713a3f5c9efac62c6295062493fa4e4ba064acd4741c23664b05201121",
+          "sizeBytes": 9410413
+        },
+        {
+          "path": "WK_Manager/system/system/stark_build.prop",
+          "sha256": "ab821871c0a1e152b84caf5d96e6a8e24db5588e823e265f0fb6d4ce47667711",
+          "sizeBytes": 25
+        }
+      ],
+      "id": "MOD/RealmeUI_16.0.7",
+      "remote": "wukong-gdrive:WukongROM/content-packs/MOD/RealmeUI_16.0.7",
+      "sizeBytes": 1018926935,
+      "target": "MOD/RealmeUI_16.0.7"
+    },
+    {
+      "archive": {
+        "md5": "32d5ff82de83ee9a24cd050d87a4812c",
+        "sha256": "f4210660e44cf47a57278578b0e73bfc02b8e083b0c1ea3bd8cd844ad36a0fdd",
+        "sizeBytes": 120455292,
+        "uri": "wukong-gdrive:WukongROM/content-packs/copy-image/v1.tar.zst"
+      },
+      "files": [
+        {
+          "path": "PKX110/system_dlkm_gki.img",
+          "sha256": "3247ccfc57902815b270711ae5b3b2d20dc9f9f0381b546ec09f8c4c4ba351a7",
+          "sizeBytes": 12111940
+        },
+        {
+          "path": "PKX110/system_dlkm_oki.img",
+          "sha256": "0bf2ef21b66d63b5f854b2b61006ece6efeecba9c28dc0e63acac1aa4ca82801",
+          "sizeBytes": 12374128
+        },
+        {
+          "path": "PLK110/system_dlkm_oki.img",
+          "sha256": "b76fd17e91cba169ab95530d3dfacb9e2939fece0273c65eae0d6a8a6ab847ad",
+          "sizeBytes": 91541628
+        },
+        {
+          "path": "PLQ110/system_dlkm_gki.img",
+          "sha256": "5dc286c7e5ddea1688bfefa4265bba4e72d1cc595b796947e6be9bfefc944b11",
+          "sizeBytes": 12115968
+        },
+        {
+          "path": "PLQ110/system_dlkm_oki.img",
+          "sha256": "7280851515439a4a8819f009abb5ed52e9a643887ad006725c858d9d7bf9f4d3",
+          "sizeBytes": 12476416
+        },
+        {
+          "path": "PLR110/system_dlkm_oki.img",
+          "sha256": "ace619e18d5081bc526791334cf2421e022554ed992234042b359621b1017fce",
+          "sizeBytes": 92110972
+        },
+        {
+          "path": "PLZ110/system_dlkm_oki.img",
+          "sha256": "77b44fbb1d6f61644ad69c240707ecc6f83cbf562727752ae1224158c5ebdfa6",
+          "sizeBytes": 92115068
+        },
+        {
+          "path": "my_company.img",
+          "sha256": "ec70e6a1bacb79a2d2ca8d0120e2981d92d702c8ad4b8a1a9bdcb4191339db14",
+          "sizeBytes": 335872
+        },
+        {
+          "path": "my_preload.img",
+          "sha256": "ad5a32dad75df4f44e8adc0a81e7cb5d786e25344842f47da229de0813f14ccb",
+          "sizeBytes": 348160
+        }
+      ],
+      "id": "copy-image/v1",
+      "remote": "wukong-gdrive:WukongROM/content-packs/copy-image/v1",
+      "sizeBytes": 325530152,
+      "target": "copy-image"
+    },
+    {
+      "archive": {
+        "md5": "289190c73998ed4d30e6922b9121dc0d",
+        "sha256": "ec74766ad2fbff682ae5f5aa697b785784cc2cd3dbdadbcfefbee87b063b4bd1",
+        "sizeBytes": 180944653,
+        "uri": "wukong-gdrive:WukongROM/content-packs/OFX/v1.tar.zst"
+      },
+      "files": [
+        {
+          "path": "OrangeFox-8845.img",
+          "sha256": "a0fba6780bed5b5a9581b24adf3c58abb22a751b7effb270fb8160cd6e2a7476",
+          "sizeBytes": 104857600
+        },
+        {
+          "path": "OrangeFox-88xx-OP15T.img",
+          "sha256": "e0ffc2b609ebf2cb302b08bc44bc8b7b603c7300891744a9a57956921da086ce",
+          "sizeBytes": 104857600
+        },
+        {
+          "path": "OrangeFox-88xx.img",
+          "sha256": "d18577da5c510f92de673a2c342aa7b9c6e133e951572a2d6bc9d5c4a5beb856",
+          "sizeBytes": 104857600
+        }
+      ],
+      "id": "OFX/v1",
+      "remote": "wukong-gdrive:WukongROM/content-packs/OFX/v1",
+      "sizeBytes": 314572800,
+      "target": "OFX"
+    },
+    {
+      "archive": {
+        "md5": "96bc2a0259b34a53acb7161803e69948",
+        "sha256": "ff9e108748736a41f654fd2c4fcc6e0865205a77633a13e5ffc201db7ff2a80d",
+        "sizeBytes": 165520159,
+        "uri": "wukong-gdrive:WukongROM/content-packs/TWRP/v1.tar.zst"
+      },
+      "files": [
+        {
+          "path": "TWRP-85xx.img",
+          "sha256": "4217d8b898ec8a95fd776fad5cbf10e893911e8d75e0c37a701575ce52dce39d",
+          "sizeBytes": 104857600
+        },
+        {
+          "path": "TWRP-86xx.img",
+          "sha256": "9ca3fc81fab1fa070febacaf9eaafc9f235637729ed87d929aa7878f2b591536",
+          "sizeBytes": 104857600
+        },
+        {
+          "path": "TWRP-87xx.img",
+          "sha256": "03d8de02c1e2d38708a2add17417c3fd7bbb0191e0a561ea09de479cb9949088",
+          "sizeBytes": 104857600
+        }
+      ],
+      "id": "TWRP/v1",
+      "remote": "wukong-gdrive:WukongROM/content-packs/TWRP/v1",
+      "sizeBytes": 314572800,
+      "target": "TWRP"
+    }
+  ],
+  "schemaVersion": 1
+}

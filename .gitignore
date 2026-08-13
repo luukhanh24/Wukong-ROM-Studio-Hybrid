@@ -1,0 +1,70 @@
+# Wukong Studio runtime and generated artifacts
+.wkstudio/
+ROM_BUILD_DONE/
+/PKG110_*/
+analysis/
+Auto_Build_WK_*.zip
+*.log
+/.build-validate-*/
+/.tmp/
+/Backups/
+/Updates/
+/Workspace/
+/Temp/
+/Logs/
+/Data/
+/MOD/
+/copy-image/
+/OFX/
+/TWRP/
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local editor/agent state
+.agents/
+.codex/
+.idea/
+.vscode/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.key
+*.pk8
+
+# Temporary files
+*.tmp
+*.temp
+Thumbs.db
+Desktop.ini
+
+# WinUI build, runtime downloads and installer output
+/bin/Linux/
+desktop/**/bin/
+desktop/**/obj/
+desktop/**/.codexbin/
+desktop/**/.codexobj/
+desktop/artifacts/
+desktop/.buildhome/
+desktop/Runtime/downloads/
+/NuGet/
+
+# Local test scratch directories
+/one/
+/two/
+
+# Additional credential and signing containers
+*.p12
+*.pfx
+*.pem
+telegram.dat
+hybrid.dat
+rclone*.conf

@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WukongStudio.Core", "WukongStudio.Core\WukongStudio.Core.csproj", "{332F9490-EA05-4CDE-8883-E0C46C8C03C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WukongStudio.Tests", "WukongStudio.Tests\WukongStudio.Tests.csproj", "{103E756C-872A-44DB-852A-74EBD6DC6BF8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WukongStudio.App", "WukongStudio.App\WukongStudio.App.csproj", "{2E43D931-170E-4756-8637-BBA85596DEA5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{332F9490-EA05-4CDE-8883-E0C46C8C03C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{332F9490-EA05-4CDE-8883-E0C46C8C03C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{332F9490-EA05-4CDE-8883-E0C46C8C03C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{332F9490-EA05-4CDE-8883-E0C46C8C03C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{103E756C-872A-44DB-852A-74EBD6DC6BF8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{103E756C-872A-44DB-852A-74EBD6DC6BF8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{103E756C-872A-44DB-852A-74EBD6DC6BF8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{103E756C-872A-44DB-852A-74EBD6DC6BF8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E43D931-170E-4756-8637-BBA85596DEA5}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{2E43D931-170E-4756-8637-BBA85596DEA5}.Debug|Any CPU.Build.0 = Debug|x64
+		{2E43D931-170E-4756-8637-BBA85596DEA5}.Release|Any CPU.ActiveCfg = Release|x64
+		{2E43D931-170E-4756-8637-BBA85596DEA5}.Release|Any CPU.Build.0 = Release|x64
+	EndGlobalSection
+EndGlobal

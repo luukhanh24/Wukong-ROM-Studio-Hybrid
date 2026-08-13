@@ -1,0 +1,104 @@
+<Window
+    x:Class="WukongStudio.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:WukongStudio.App"
+    xmlns:tb="using:H.NotifyIcon"
+    mc:Ignorable="d"
+    Title="Wukong ROM Studio">
+
+    <Grid x:Name="WindowRoot" Background="{ThemeResource StudioBackgroundBrush}">
+        <tb:TaskbarIcon x:Name="TrayIcon" ToolTipText="Wukong ROM Studio" IconSource="/Assets/WukongStudio.ico" />
+
+        <Grid RowDefinitions="46,*">
+            <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="18,0,150,0" Background="{ThemeResource StudioTitleBarBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Image Width="28" Height="28" Source="ms-appx:///Assets/WukongStudio.png" Stretch="Uniform" />
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="Wukong ROM Studio" FontWeight="SemiBold" FontSize="15" />
+                    <TextBlock x:Name="HostStatusText" Text="Đang khởi động..." Foreground="{ThemeResource StudioMutedBrush}" FontSize="12" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button x:Name="UpdateButton" Content="Cập nhật" Click="CheckUpdateClick" />
+                    <Button x:Name="OpenOutputButton" Content="Mở output" Click="OpenOutputClick" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <local:NativeStudioView x:Name="NativeStudio" Visibility="Collapsed" />
+
+                <StackPanel x:Name="StartupPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+                    <ProgressRing x:Name="StartupProgressRing" IsActive="False" Width="48" Height="48" Foreground="{StaticResource StudioCyanBrush}" />
+                    <TextBlock Text="Đang khởi động backend và kiểm tra runtime..." FontSize="16" />
+                    <TextBlock Text="C:\WukongROMStudio" Foreground="#666666" HorizontalAlignment="Center" />
+                </StackPanel>
+
+                <ScrollViewer x:Name="FirstRunPanel" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled">
+                    <Grid MaxWidth="880" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Padding="30" CornerRadius="16" Background="White" BorderBrush="#DDDDDD" BorderThickness="1">
+                            <StackPanel Spacing="18">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="Thiết lập Wukong ROM Studio" FontSize="28" FontWeight="Bold" />
+                                    <TextBlock Text="Ứng dụng sẽ lưu runtime, dữ liệu, workspace và ROM hoàn tất trong C:\WukongROMStudio." Foreground="#666666" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <InfoBar x:Name="FirstRunInfo" IsOpen="True" IsClosable="False" Severity="Informational" Title="Đang kiểm tra hệ thống" />
+                                <TextBlock x:Name="FirstRunChecksText" TextWrapping="Wrap" Foreground="#444444" />
+
+                                <Border Padding="16" CornerRadius="10" Background="#F7F7F7" BorderBrush="#E1E1E1" BorderThickness="1">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Nhập dữ liệu từ project cũ" FontWeight="SemiBold" />
+                                        <CheckBox x:Name="ImportLegacyCheckBox" Content="Nhập MOD, TWRP, OFX và copy-image từ C:\Android\Auto_Build_WK" />
+                                        <CheckBox x:Name="MoveLegacyCheckBox" Content="Xóa nội dung nguồn sau khi nhập thành công (CLI cũ sẽ mất content)" IsEnabled="False" />
+                                        <TextBlock x:Name="LegacyStatusText" Foreground="#666666" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Padding="16" CornerRadius="10" Background="#F7F7F7" BorderBrush="#E1E1E1" BorderThickness="1">
+                                    <StackPanel Spacing="10">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <TextBlock Text="Content pack local" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Content="Chọn pack ZIP" Click="SelectContentPacksClick" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="SelectedPacksText" Text="Chưa chọn pack bổ sung." Foreground="#666666" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Padding="16" CornerRadius="10" Background="#F7F7F7" BorderBrush="#E1E1E1" BorderThickness="1">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Telegram (tùy chọn)" FontWeight="SemiBold" />
+                                        <PasswordBox x:Name="TelegramTokenBox" Header="Bot token" PlaceholderText="Token được mã hóa bằng Windows DPAPI" />
+                                        <TextBox x:Name="TelegramChatIdBox" Header="Chat ID" />
+                                    </StackPanel>
+                                </Border>
+
+                                <ProgressBar x:Name="FirstRunProgress" IsIndeterminate="True" Visibility="Collapsed" />
+                                <TextBlock x:Name="FirstRunProgressText" Foreground="#0067C0" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                    <Button Content="Mở thư mục log" Click="OpenLogsClick" />
+                                    <Button x:Name="CompleteFirstRunButton" Content="Hoàn tất thiết lập" Style="{StaticResource AccentButtonStyle}" Click="CompleteFirstRunClick" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+
+                <StackPanel x:Name="ErrorPanel" Visibility="Collapsed" MaxWidth="620" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+                    <TextBlock Text="Không thể khởi động Wukong Studio" FontSize="26" FontWeight="Bold" />
+                    <TextBlock x:Name="ErrorText" TextWrapping="Wrap" Foreground="#C42B1C" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Thử lại" Click="RetryClick" />
+                        <Button Content="Mở log" Click="OpenLogsClick" />
+                        <Button Content="Thoát" Click="ExitClick" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
