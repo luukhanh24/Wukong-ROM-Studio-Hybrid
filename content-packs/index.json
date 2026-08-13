@@ -2,6 +2,12 @@
   "generatedAt": "2026-08-12T13:47:29.735753Z",
   "packs": [
     {
+      "archive": {
+        "md5": "5372b8bd333067dc114fef4ddd72e374",
+        "sha256": "38f2eb6aa87ae967dc4c037ec54a95c748111d5e5fc036f246ec3681217aaaed",
+        "sizeBytes": 338761964,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_15.0.1.tar.zst"
+      },
       "files": [
         {
           "path": "Chat_bubbles/system_ext/app/NotificationCenter/NotificationCenter.apk",
@@ -155,6 +161,12 @@
       "target": "MOD/ColorOS_15.0.1"
     },
     {
+      "archive": {
+        "md5": "853dd5dd50aa9f682041511b6c744a47",
+        "sha256": "c5f5e43c3d226f0b0e48d9ac58e9b821a12528e49bd8e8773f9d77c048ebd84b",
+        "sizeBytes": 1206622918,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.5.tar.zst"
+      },
       "files": [
         {
           "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
@@ -708,6 +720,12 @@
       "target": "MOD/ColorOS_16.0.5"
     },
     {
+      "archive": {
+        "md5": "544b9624d0ebe863200f30bb9ef5756a",
+        "sha256": "d11ae7eabb815ada512acaaa582c5c73038d99a866da0f10bdc478c3c7e62ed9",
+        "sizeBytes": 1370471087,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.7.tar.zst"
+      },
       "files": [
         {
           "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
@@ -2105,6 +2123,12 @@
       "target": "MOD/ColorOS_16.0.8"
     },
     {
+      "archive": {
+        "md5": "7a0061346a11c50e06724520ae1b3d2e",
+        "sha256": "9b3243b0bd429dfe6e697b6f65306c8a9fe0aed6604fabc02e90bcfd007c9315",
+        "sizeBytes": 479161526,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/RealmeUI_16.0.7.tar.zst"
+      },
       "files": [
         {
           "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk",
