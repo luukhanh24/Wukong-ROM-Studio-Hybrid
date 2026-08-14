@@ -883,6 +883,29 @@ class StudioCoreTests(unittest.TestCase):
             self.assertIn(("repack_partitions", "resume", True), selective_calls)
             self.assertFalse(workspace.exists())
 
+    def test_both_preset_honors_explicit_mod_selection_for_each_phase(self):
+        spec = studio_core.BuildSpec(
+            romPath="fixture.zip",
+            preset="both",
+            modVersion="ColorOS_16.0.9",
+            modNames=["Fix_Metis", "Camera_mod"],
+        )
+        defaults = {
+            "lite": ["Fix_Metis", "WK_Installer"],
+            "resume": ["Fix_Metis", "WK_Installer", "Camera_mod", "Gapps"],
+        }
+
+        with mock.patch.object(
+            studio_core,
+            "preset_default_mods",
+            side_effect=lambda preset, _version: defaults[preset],
+        ):
+            lite = studio_core._lite_spec(spec)
+            plus = studio_core._plus_delta_spec(spec)
+
+        self.assertEqual(["Fix_Metis"], lite.modNames)
+        self.assertEqual(["Camera_mod"], plus.modNames)
+
     def test_stark_patch_adds_removes_and_replaces_lines(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -3715,4 +3738,3 @@ class StudioCoreTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

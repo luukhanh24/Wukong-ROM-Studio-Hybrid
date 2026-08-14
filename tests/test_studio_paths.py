@@ -148,6 +148,18 @@ class StudioPathsTests(unittest.TestCase):
             self.assertEqual(paths.workspace_root, source.resolve())
             self.assertEqual(paths.web_root, (source / "studio_static").resolve())
 
+    def test_source_mode_can_override_private_content_root(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "source"
+            content = Path(temp) / "private-content"
+            paths = build_paths(
+                {"WUKONG_STUDIO_CONTENT_ROOT": str(content)},
+                source_root=source,
+            )
+            self.assertFalse(paths.desktop_mode)
+            self.assertEqual(paths.content_root, content.resolve())
+            self.assertEqual(paths.mod_root, (content / "MOD").resolve())
+
     def test_linux_tool_paths_are_platform_specific_and_not_windows_hard_coded(self):
         root = Path("tool-root").resolve()
         self.assertEqual(

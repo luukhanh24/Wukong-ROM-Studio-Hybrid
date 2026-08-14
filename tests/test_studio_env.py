@@ -15,6 +15,7 @@ class StudioEnvTests(unittest.TestCase):
                 "# ignored\n"
                 "WUKONG_TELEGRAM_BOT_TOKEN=local-token\n"
                 "WUKONG_TELEGRAM_CHAT_ID='12345'\n"
+                "WUKONG_TELEGRAM_ADMIN_IDS=12345,67890\n"
                 "IGNORED_KEY=value\n",
                 encoding="utf-8",
             )
@@ -27,6 +28,7 @@ class StudioEnvTests(unittest.TestCase):
                 self.assertNotIn("WUKONG_TELEGRAM_BOT_TOKEN", loaded)
                 self.assertEqual(os.environ["WUKONG_TELEGRAM_BOT_TOKEN"], "process-token")
                 self.assertEqual(os.environ["WUKONG_TELEGRAM_CHAT_ID"], "12345")
+                self.assertEqual(os.environ["WUKONG_TELEGRAM_ADMIN_IDS"], "12345,67890")
                 self.assertNotIn("IGNORED_KEY", os.environ)
 
 

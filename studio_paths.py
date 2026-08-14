@@ -100,7 +100,7 @@ def build_paths(
         install = source
         app = source
         data = source / ".wkstudio"
-        content = source
+        content = _env_path(values, "WUKONG_STUDIO_CONTENT_ROOT", source)
         workspace = source
         output = source / "ROM_BUILD_DONE"
         temp = data

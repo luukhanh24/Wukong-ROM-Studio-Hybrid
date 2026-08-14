@@ -3,9 +3,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
-from wukong.content_packs import ContentPackManager, upload_content_packs, write_content_index
+from wukong.content_packs import (
+    ContentPackManager,
+    build_content_pack_record,
+    merge_content_index_pack,
+    upload_content_packs,
+    write_content_index,
+)
 
 
 def main() -> int:
@@ -16,14 +23,34 @@ def main() -> int:
     parser.add_argument("--remote", default="wukong-gdrive:WukongROM/content-packs")
     parser.add_argument("--pack")
     parser.add_argument("--rclone-config", default=os.environ.get("WUKONG_RCLONE_CONFIG"))
-    parser.add_argument("--verify-download", action="store_true")
-    parser.add_argument("--skip-download-verify", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--verify-download", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--skip-download-verify",
+        action="store_true",
+        help="Skip the default download/extract/SHA verification (not recommended)",
+    )
     args = parser.parse_args()
     content_root = Path(args.content_root).resolve()
     index_path = Path(args.index).resolve()
     config = Path(args.rclone_config).resolve() if args.rclone_config else None
     if args.command == "index":
-        index = write_content_index(content_root, index_path, remote=args.remote)
+        if args.pack and index_path.is_file():
+            existing = json.loads(index_path.read_text(encoding="utf-8"))
+            generated = {
+                "schemaVersion": 1,
+                "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "packs": [
+                    build_content_pack_record(
+                        content_root,
+                        remote=args.remote,
+                        pack_id=args.pack,
+                    )
+                ],
+            }
+            index = merge_content_index_pack(existing, generated, args.pack)
+            index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        else:
+            index = write_content_index(content_root, index_path, remote=args.remote)
         print(json.dumps({"packs": len(index["packs"]), "index": str(index_path)}))
         return 0
     index = json.loads(index_path.read_text(encoding="utf-8"))
@@ -32,7 +59,7 @@ def main() -> int:
             content_root,
             index,
             rclone_config=config,
-            verify_download=args.verify_download and not args.skip_download_verify,
+            verify_download=not args.skip_download_verify,
             pack_id=args.pack,
         )
         index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
