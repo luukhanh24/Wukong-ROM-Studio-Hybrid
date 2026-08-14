@@ -32,6 +32,7 @@ from wukong.content_packs import (
     ContentPackManager,
     build_content_index,
     create_content_pack_archive,
+    merge_content_index_pack,
     upload_content_packs,
 )
 from wukong.github import GitHubActionsAdapter, GitHubApiError
@@ -1530,6 +1531,52 @@ class TelegramAccessContractTests(unittest.TestCase):
 
 
 class ContentPackContractTests(unittest.TestCase):
+    def test_merging_one_pack_preserves_existing_archive_records(self) -> None:
+        existing = {
+            "schemaVersion": 1,
+            "generatedAt": "old",
+            "packs": [
+                {
+                    "id": "MOD/ColorOS_16.0.8",
+                    "target": "MOD/ColorOS_16.0.8",
+                    "remote": "drive:MOD/ColorOS_16.0.8",
+                    "sizeBytes": 1,
+                    "files": [{"path": "a", "sizeBytes": 1, "sha256": "a" * 64}],
+                    "archive": {
+                        "uri": "drive:old.tar.zst",
+                        "sizeBytes": 1,
+                        "sha256": "b" * 64,
+                        "md5": "d" * 32,
+                    },
+                }
+            ],
+        }
+        generated = {
+            "schemaVersion": 1,
+            "generatedAt": "new",
+            "packs": [
+                {
+                    "id": "MOD/ColorOS_16.0.9",
+                    "target": "MOD/ColorOS_16.0.9",
+                    "remote": "drive:MOD/ColorOS_16.0.9",
+                    "sizeBytes": 2,
+                    "files": [{"path": "b", "sizeBytes": 2, "sha256": "c" * 64}],
+                }
+            ],
+        }
+
+        merged = merge_content_index_pack(existing, generated, "MOD/ColorOS_16.0.9")
+
+        self.assertEqual("new", merged["generatedAt"])
+        self.assertEqual(
+            "drive:old.tar.zst",
+            next(pack for pack in merged["packs"] if pack["id"].endswith("16.0.8"))["archive"]["uri"],
+        )
+        self.assertEqual(
+            2,
+            next(pack for pack in merged["packs"] if pack["id"].endswith("16.0.9"))["sizeBytes"],
+        )
+
     def test_content_index_groups_mod_versions_and_hashes_every_file(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             content = Path(root, "content")

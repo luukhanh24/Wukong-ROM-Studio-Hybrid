@@ -45,6 +45,7 @@ runs:
           for pack in copy-image/v1 OFX/v1 TWRP/v1; do
             python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "$pack" --rclone-config "$WUKONG_RCLONE_CONFIG"
           done
+          python3 -m tools.validate_recipe_content --recipe .wkstudio/recipe.json --content-root .
         fi
         if [ '${{ inputs.self_hosted }}' != true ]; then
           python3 -m tools.runner_preflight --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
