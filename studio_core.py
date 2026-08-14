@@ -1280,37 +1280,41 @@ def _mod_special_actions(name: str) -> list[str]:
     return actions
 
 
-def list_mod_versions() -> list[str]:
-    if not MOD_DIR.is_dir():
+def list_mod_versions(*, mod_root: Path | None = None) -> list[str]:
+    root = (mod_root or MOD_DIR).resolve()
+    if not root.is_dir():
         return []
     return sorted(
-        (path.name for path in MOD_DIR.iterdir() if path.is_dir()),
+        (path.name for path in root.iterdir() if path.is_dir()),
         key=str.lower,
     )
 
 
-def normalize_mod_version(value: Any = None) -> str:
+def normalize_mod_version(value: Any = None, *, mod_root: Path | None = None) -> str:
+    root = (mod_root or MOD_DIR).resolve()
     version = str(value or DEFAULT_MOD_VERSION).strip()
     if not version or Path(version).name != version or version in {".", ".."}:
         raise StudioError(f"Invalid MOD version: {version}")
     version = MOD_VERSION_ALIASES.get(version, version)
-    collection_dir = MOD_DIR / version
+    collection_dir = root / version
     if collection_dir.is_dir():
         return version
-    if version == DEFAULT_MOD_VERSION and MOD_DIR.is_dir():
+    if version == DEFAULT_MOD_VERSION and root.is_dir():
         return version
     raise StudioError(f"MOD version does not exist: {version}")
 
 
-def _mod_collection_dir(mod_version: str | None = None) -> Path:
-    version = normalize_mod_version(mod_version)
-    collection_dir = MOD_DIR / version
-    return collection_dir if collection_dir.is_dir() else MOD_DIR
+def _mod_collection_dir(mod_version: str | None = None, *, mod_root: Path | None = None) -> Path:
+    root = (mod_root or MOD_DIR).resolve()
+    version = normalize_mod_version(mod_version, mod_root=root)
+    collection_dir = root / version
+    return collection_dir if collection_dir.is_dir() else root
 
 
-def list_mods(mod_version: str | None = None) -> list[dict[str, Any]]:
-    version = normalize_mod_version(mod_version)
-    collection_dir = _mod_collection_dir(version)
+def list_mods(mod_version: str | None = None, *, mod_root: Path | None = None) -> list[dict[str, Any]]:
+    root = (mod_root or MOD_DIR).resolve()
+    version = normalize_mod_version(mod_version, mod_root=root)
+    collection_dir = _mod_collection_dir(version, mod_root=root)
     results = []
     seen = set()
     if collection_dir.is_dir():
@@ -1385,9 +1389,14 @@ def validate_mods(
     return results
 
 
-def preset_default_mods(preset: str, mod_version: str | None = None) -> list[str]:
+def preset_default_mods(
+    preset: str,
+    mod_version: str | None = None,
+    *,
+    mod_root: Path | None = None,
+) -> list[str]:
     normalized = "lite" if preset == "standard" else preset
-    mods = list_mods(mod_version)
+    mods = list_mods(mod_version, mod_root=mod_root)
     if normalized == "lite":
         return [name for name in LITE_DEFAULT_MODS if any(mod["name"] == name for mod in mods)]
     if normalized in {"resume", "both"}:
@@ -4339,20 +4348,24 @@ def _clear_repack_outputs(context: BuildContext, *, preserve_repacked: bool = Fa
 
 
 def _lite_spec(spec: BuildSpec) -> BuildSpec:
+    selected = spec.selected_mod_names()
+    defaults = preset_default_mods("lite", spec.modVersion)
     return replace(
         spec,
         preset="lite",
         modName=None,
-        modNames=preset_default_mods("lite", spec.modVersion),
+        modNames=[name for name in defaults if not selected or name in selected],
     )
 
 
 def _plus_delta_spec(spec: BuildSpec) -> BuildSpec:
-    lite_mods = set(preset_default_mods("lite", spec.modVersion))
+    selected = spec.selected_mod_names()
+    lite_mods = set(_lite_spec(spec).modNames)
+    available_plus = preset_default_mods("resume", spec.modVersion)
     plus_mods = [
         name
-        for name in preset_default_mods("resume", spec.modVersion)
-        if name not in lite_mods
+        for name in available_plus
+        if name not in lite_mods and (not selected or name in selected)
     ]
     return replace(spec, preset="resume", modName=None, modNames=plus_mods)
 
@@ -4367,7 +4380,7 @@ def _execute_both_build(
     preflight = inspect_rom(
         spec.romPath,
         spec.modName,
-        mod_names=preset_default_mods("both", spec.modVersion),
+        mod_names=spec.selected_mod_names() or preset_default_mods("both", spec.modVersion),
         mod_version=spec.modVersion,
         debloat_paths=spec.debloatPaths,
         required_steps=steps,

@@ -93,6 +93,17 @@ TEXT = {
         "choose_device": "Chọn thiết bị cho bản ROM.",
         "choose_mod_version": "Chọn phiên bản bộ MOD.",
         "choose_preset": "Chọn cấu hình build.",
+        "choose_mods": "Chọn MOD cần áp dụng",
+        "mod_page": "Trang {page}/{pages} · đã chọn {selected}/{total} MOD",
+        "mod_selected": "Đã chọn · {name}",
+        "mod_unselected": "Chọn · {name}",
+        "mods_select_all": "Chọn tất cả",
+        "mods_clear_all": "Bỏ chọn tất cả",
+        "mods_previous": "Trang trước",
+        "mods_next": "Trang sau",
+        "mods_done": "Xong, kiểm tra cấu hình",
+        "mods_empty": "Phiên bản này không có MOD sẵn sàng. Bạn vẫn có thể tiếp tục build không MOD.",
+        "mods_both_required": "Cấu hình tạo cả Lite và Plus cần ít nhất một MOD. Hãy chọn MOD hoặc đổi preset.",
         "preset_lite": "Lite — gọn nhẹ",
         "preset_plus": "Plus — đầy đủ",
         "preset_both": "Tạo cả Lite và Plus",
@@ -108,7 +119,7 @@ TEXT = {
         "job_not_found": "Không thể mở job này. Job không tồn tại hoặc không thuộc tài khoản của bạn.",
         "input_invalid": "Dữ liệu chưa hợp lệ: {error}\nHãy gửi lại giá trị đúng hoặc quay về menu.",
         "status": "Job {job_id}\nTrạng thái: {status}\nGiai đoạn: {stage}\nTiến độ: {progress}%\nRunner: {runner}",
-        "summary": "Kiểm tra cấu hình\n\nTác vụ: {task}\nNơi chạy: {run}\nNguồn: {source}\nThiết bị: {device}\nBộ MOD: {mod_version}\nPreset: {preset}\n\n{advanced}",
+        "summary": "Kiểm tra cấu hình\n\nTác vụ: {task}\nNơi chạy: {run}\nNguồn: {source}\nThiết bị: {device}\nBộ MOD: {mod_version}\nPreset: {preset}\nMOD đã chọn ({mod_count}): {mods}\n\n{advanced}",
         "library_title": "Kho ROM trên Google Drive",
         "diagnostics_title": "Chẩn đoán hệ thống",
         "events_title": "Nhật ký gần nhất của {job_id}",
@@ -144,6 +155,17 @@ TEXT = {
         "choose_device": "Choose the target device.",
         "choose_mod_version": "Choose the MOD pack version.",
         "choose_preset": "Choose a build preset.",
+        "choose_mods": "Choose MODs to apply",
+        "mod_page": "Page {page}/{pages} · {selected}/{total} MODs selected",
+        "mod_selected": "Selected · {name}",
+        "mod_unselected": "Select · {name}",
+        "mods_select_all": "Select all",
+        "mods_clear_all": "Clear all",
+        "mods_previous": "Previous page",
+        "mods_next": "Next page",
+        "mods_done": "Done, review build",
+        "mods_empty": "This version has no ready MODs. You can continue without MODs.",
+        "mods_both_required": "Building both Lite and Plus requires at least one MOD. Select a MOD or change the preset.",
         "preset_lite": "Lite — streamlined",
         "preset_plus": "Plus — complete",
         "preset_both": "Build both Lite and Plus",
@@ -159,7 +181,7 @@ TEXT = {
         "job_not_found": "This job cannot be opened. It does not exist or belongs to another user.",
         "input_invalid": "That value is not valid: {error}\nSend a corrected value or return to the menu.",
         "status": "Job {job_id}\nStatus: {status}\nStage: {stage}\nProgress: {progress}%\nRunner: {runner}",
-        "summary": "Review build configuration\n\nTask: {task}\nRun on: {run}\nSource: {source}\nDevice: {device}\nMOD pack: {mod_version}\nPreset: {preset}\n\n{advanced}",
+        "summary": "Review build configuration\n\nTask: {task}\nRun on: {run}\nSource: {source}\nDevice: {device}\nMOD pack: {mod_version}\nPreset: {preset}\nSelected MODs ({mod_count}): {mods}\n\n{advanced}",
         "library_title": "Google Drive ROM library",
         "diagnostics_title": "System diagnostics",
         "events_title": "Recent events for {job_id}",
@@ -510,7 +532,44 @@ class TelegramBotController:
                 return self._preset_picker(language)
             if action == "pre" and value in {"lite", "plus", "both"}:
                 session = self._require_step(user_id, "preset")
-                session.update({"step": "confirm", "preset": value})
+                session.update({"step": "mods", "preset": value})
+                self.ui_state.set_session(user_id, session)
+                return self._start_mod_picker(user_id, language, session)
+            if action == "mods":
+                session = self._require_step(user_id, "mods")
+                return self._mod_picker(language, session, page=int(value or 0))
+            if action == "mod":
+                session = self._require_step(user_id, "mods")
+                options = session.get("mod_options")
+                index = int(value)
+                if not isinstance(options, list) or index < 0 or index >= len(options):
+                    return self._recovery(language)
+                selected = set(str(item) for item in session.get("selected_mods", []))
+                name = str(options[index])
+                if name in selected:
+                    selected.remove(name)
+                else:
+                    selected.add(name)
+                session["selected_mods"] = [item for item in options if item in selected]
+                self.ui_state.set_session(user_id, session)
+                return self._mod_picker(language, session, page=index // 8)
+            if action == "mods_all" and value in {"0", "1"}:
+                session = self._require_step(user_id, "mods")
+                options = session.get("mod_options")
+                if not isinstance(options, list):
+                    return self._recovery(language)
+                session["selected_mods"] = list(options) if value == "1" else []
+                self.ui_state.set_session(user_id, session)
+                return self._mod_picker(language, session, page=0)
+            if action == "mods_done":
+                session = self._require_step(user_id, "mods")
+                if session.get("preset") == "both" and not session.get("selected_mods"):
+                    response = self._mod_picker(language, session, page=0)
+                    return BotResponse(
+                        f"{TEXT[language]['mods_both_required']}\n\n{response.text}",
+                        response.reply_markup,
+                    )
+                session.update({"step": "confirm"})
                 self.ui_state.set_session(user_id, session)
                 return self._confirmation(language, session)
             if action == "confirm":
@@ -682,8 +741,8 @@ class TelegramBotController:
     def _mod_version_picker(
         self, user_id: int | str, language: str, session: dict[str, Any] | None = None
     ) -> BotResponse:
-        versions = self._mod_versions()
         active = session or self._require_session(user_id)
+        versions = self._mod_versions(active)
         active["mod_version_options"] = versions[:20]
         self.ui_state.set_session(user_id, active)
         rows = [[(version, f"v1:mv:{index}")] for index, version in enumerate(versions[:20])]
@@ -698,10 +757,83 @@ class TelegramBotController:
             [(TEXT[language]["back"], "v1:menu")],
         ]))
 
+    def _start_mod_picker(
+        self, user_id: int | str, language: str, session: dict[str, Any]
+    ) -> BotResponse:
+        catalog = self.catalog_provider()
+        version = str(session.get("mod_version") or "")
+        raw_by_version = catalog.get("modsByVersion", catalog.get("mods", {}))
+        raw_mods = raw_by_version.get(version, []) if isinstance(raw_by_version, dict) else []
+        options = [
+            str(item.get("name") or "")
+            for item in raw_mods
+            if isinstance(item, dict) and item.get("ready") and str(item.get("name") or "")
+        ]
+        defaults_by_version = catalog.get("presetDefaultsByVersion", {})
+        version_defaults = defaults_by_version.get(version, {}) if isinstance(defaults_by_version, dict) else {}
+        preset_key = "lite" if session.get("preset") == "lite" else "both"
+        defaults = version_defaults.get(preset_key, []) if isinstance(version_defaults, dict) else []
+        if session.get("preset") == "both":
+            compatible = {str(item) for item in defaults}
+            options = [name for name in options if name in compatible]
+        selected = {str(item) for item in defaults if str(item) in options}
+        session["mod_options"] = options
+        session["selected_mods"] = [item for item in options if item in selected]
+        self.ui_state.set_session(user_id, session)
+        return self._mod_picker(language, session, page=0)
+
+    def _mod_picker(self, language: str, session: dict[str, Any], *, page: int) -> BotResponse:
+        options = session.get("mod_options")
+        selected = set(str(item) for item in session.get("selected_mods", []))
+        if not isinstance(options, list):
+            return self._recovery(language)
+        page_size = 8
+        pages = max(1, (len(options) + page_size - 1) // page_size)
+        current = max(0, min(page, pages - 1))
+        start = current * page_size
+        rows: list[list[tuple[str, str]]] = []
+        for index, raw_name in enumerate(options[start : start + page_size], start=start):
+            name = str(raw_name)
+            key = "mod_selected" if name in selected else "mod_unselected"
+            rows.append([(
+                self._trim(TEXT[language][key].format(name=name), 52),
+                f"v1:mod:{index}",
+            )])
+        if pages > 1:
+            navigation: list[tuple[str, str]] = []
+            if current > 0:
+                navigation.append((TEXT[language]["mods_previous"], f"v1:mods:{current - 1}"))
+            if current + 1 < pages:
+                navigation.append((TEXT[language]["mods_next"], f"v1:mods:{current + 1}"))
+            if navigation:
+                rows.append(navigation)
+        rows.append([
+            (TEXT[language]["mods_select_all"], "v1:mods_all:1"),
+            (TEXT[language]["mods_clear_all"], "v1:mods_all:0"),
+        ])
+        rows.append([(TEXT[language]["mods_done"], "v1:mods_done")])
+        rows.append([(TEXT[language]["back"], "v1:menu")])
+        status = TEXT[language]["mod_page"].format(
+            page=current + 1,
+            pages=pages,
+            selected=len(selected),
+            total=len(options),
+        )
+        message = f"{TEXT[language]['choose_mods']}\n{status}"
+        if not options:
+            message += f"\n\n{TEXT[language]['mods_empty']}"
+        else:
+            message += "\n\n" + "\n".join(str(item) for item in options[start : start + page_size])
+        return BotResponse(message, self._inline(rows))
+
     def _confirmation(self, language: str, session: dict[str, Any]) -> BotResponse:
         task = TEXT[language]["task_build"] if session.get("task") == "build" else TEXT[language]["task_mirror"]
         run = TEXT[language]["run_github"] if session.get("execution") == "github-auto" else TEXT[language]["run_windows"]
         source = self._trim(self._display_source(session.get("source", {})), 80)
+        selected_mods = [str(item) for item in session.get("selected_mods", [])]
+        visible_mods = ", ".join(selected_mods[:12])
+        if len(selected_mods) > 12:
+            visible_mods += f" +{len(selected_mods) - 12}"
         text = TEXT[language]["summary"].format(
             task=task,
             run=run,
@@ -709,6 +841,8 @@ class TelegramBotController:
             device=session.get("device", "—"),
             mod_version=session.get("mod_version", "—"),
             preset=session.get("preset", "—"),
+            mod_count=len(selected_mods),
+            mods=visible_mods or "—",
             advanced=TEXT[language]["advanced"],
         )
         return BotResponse(text, self._inline([
@@ -733,7 +867,7 @@ class TelegramBotController:
             payload["build"] = {
                 "preset": session["preset"],
                 "modVersion": session["mod_version"],
-                "mods": [],
+                "mods": list(session.get("selected_mods", [])),
                 "package": True,
                 "notifyTelegram": True,
             }
@@ -878,12 +1012,17 @@ class TelegramBotController:
             raise ValueError("Device catalog is empty")
         return devices
 
-    def _mod_versions(self) -> list[str]:
+    def _mod_versions(self, session: Mapping[str, Any] | None = None) -> list[str]:
         payload = self.catalog_provider()
         raw = payload.get("modVersions", []) if isinstance(payload, dict) else []
         versions = [str(item).strip() for item in raw if str(item).strip()]
+        if session and str(session.get("execution") or "").startswith("github"):
+            available = payload.get("availableGitHubModVersions") if isinstance(payload, dict) else None
+            if isinstance(available, list):
+                allowed = {str(item) for item in available}
+                versions = [version for version in versions if version in allowed]
         if not versions:
-            raise ValueError("MOD catalog is empty")
+            raise ValueError("No MOD content-pack is available for the selected runner")
         return versions
 
     def _require_session(self, user_id: int | str) -> dict[str, Any]:
