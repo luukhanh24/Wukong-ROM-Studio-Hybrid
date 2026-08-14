@@ -23,10 +23,14 @@ class HybridRuntime:
         store: JobStore,
         workspace_root: Path,
         data_root: Path,
+        content_root: Path | None = None,
+        content_index: Path | None = None,
     ) -> None:
         self.orchestrator = orchestrator
         self.store = store
         self.workspace_root = workspace_root.resolve()
+        self.content_root = content_root.resolve() if content_root else None
+        self.content_index = content_index.resolve() if content_index else None
         self.rclone_config = self._materialize_rclone_config(data_root)
 
     def start(self, manifest: JobManifest) -> None:
@@ -96,6 +100,8 @@ class HybridRuntime:
             workspace_root=self.workspace_root,
             rclone_config=self.rclone_config,
             build_workspace_root=self.workspace_root.parent.parent,
+            content_root=self.content_root,
+            content_index=self.content_index,
         ).execute(job_id)
 
     def _dispatch_github(self, job_id: str) -> None:

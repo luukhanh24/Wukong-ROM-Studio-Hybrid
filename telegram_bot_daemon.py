@@ -4,11 +4,31 @@ import json
 import os
 from pathlib import Path
 
-from studio_core import list_mod_versions, list_mods, load_devices, stage_cache_status
+
+def _bootstrap_content_root() -> None:
+    if os.environ.get("WUKONG_STUDIO_CONTENT_ROOT", "").strip():
+        return
+    configured = os.environ.get("WUKONG_TELEGRAM_CONTENT_ROOT", "").strip()
+    candidate = Path(configured) if configured else Path(r"C:\WukongROMStudio\Content")
+    if (candidate / "MOD").is_dir():
+        os.environ["WUKONG_STUDIO_CONTENT_ROOT"] = str(candidate.resolve())
+
+
+_bootstrap_content_root()
+
+from studio_core import (
+    LITE_DEFAULT_MODS,
+    PLUS_DEFAULT_EXCLUDED_MODS,
+    list_mod_versions,
+    list_mods,
+    load_devices,
+    stage_cache_status,
+)
 from studio_env import load_local_env
-from studio_paths import DATA_ROOT, JOBS_ROOT, WORKSPACE_ROOT
+from studio_paths import CONTENT_ROOT, DATA_ROOT, JOBS_ROOT, WORKSPACE_ROOT
 from studio_server import diagnostics
 from wukong.orchestrator import FileJobStore, HybridOrchestrator
+from wukong.content_packs import validate_content_index
 from wukong.routing import RunnerInventory
 from wukong.telegram import TelegramAccessStore
 from wukong.telegram_bot import (
@@ -22,6 +42,55 @@ from wukong.security import validate_recipe_access
 
 def _ids(value: str) -> set[str]:
     return {item.strip() for item in value.split(",") if item.strip()}
+
+
+def _content_root() -> Path:
+    configured = os.environ.get("WUKONG_TELEGRAM_CONTENT_ROOT", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve()
+    installed = Path(os.environ.get("WUKONG_STUDIO_INSTALL_ROOT", r"C:\WukongROMStudio")) / "Content"
+    return installed.resolve() if (installed / "MOD").is_dir() else CONTENT_ROOT.resolve()
+
+
+def build_telegram_catalog(content_root: Path, index_path: Path) -> dict[str, object]:
+    mod_root = content_root.resolve() / "MOD"
+    versions = list_mod_versions(mod_root=mod_root)
+    available_github: list[str] = []
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        validate_content_index(index)
+    except (OSError, ValueError, json.JSONDecodeError):
+        index = {}
+    for pack in index.get("packs", []) if isinstance(index, dict) else []:
+        pack_id = str(pack.get("id") or "") if isinstance(pack, dict) else ""
+        archive = pack.get("archive") if isinstance(pack, dict) else None
+        if pack_id.startswith("MOD/") and isinstance(archive, dict) and archive.get("sha256"):
+            available_github.append(pack_id.split("/", 1)[1])
+    mods_by_version = {
+        version: list_mods(version, mod_root=mod_root)
+        for version in versions
+    }
+    return {
+        "devices": load_devices(),
+        "modVersions": versions,
+        "availableGitHubModVersions": sorted(set(available_github), key=str.casefold),
+        "modsByVersion": mods_by_version,
+        "presetDefaultsByVersion": {
+            version: {
+                "lite": [
+                    name
+                    for name in LITE_DEFAULT_MODS
+                    if any(mod["name"] == name for mod in mods_by_version[version])
+                ],
+                "both": [
+                    mod["name"]
+                    for mod in mods_by_version[version]
+                    if mod["name"] not in PLUS_DEFAULT_EXCLUDED_MODS
+                ],
+            }
+            for version in versions
+        },
+    }
 
 
 def main() -> int:
@@ -43,21 +112,21 @@ def main() -> int:
             allowed_remote=os.environ.get("WUKONG_RCLONE_REMOTE", "wukong-gdrive"),
         ),
     )
+    content_root = _content_root()
+    index_path = Path(__file__).resolve().parent / "content-packs" / "index.json"
     runtime = HybridRuntime(
         orchestrator=orchestrator,
         store=store,
         workspace_root=WORKSPACE_ROOT / ".wkstudio" / "hybrid",
         data_root=DATA_ROOT,
+        content_root=content_root,
+        content_index=index_path,
     )
     access = TelegramAccessStore(DATA_ROOT / "telegram-access.json", admin_ids=admins)
     controller = TelegramBotController(
         access=access,
         orchestrator=orchestrator,
-        catalog_provider=lambda: {
-            "devices": load_devices(),
-            "modVersions": list_mod_versions(),
-            "mods": {version: list_mods(version) for version in list_mod_versions()},
-        },
+        catalog_provider=lambda: build_telegram_catalog(content_root, index_path),
         diagnostics_provider=lambda: {"system": diagnostics(), "cache": stage_cache_status()},
         cache_provider=stage_cache_status,
         cache_clearer=None,

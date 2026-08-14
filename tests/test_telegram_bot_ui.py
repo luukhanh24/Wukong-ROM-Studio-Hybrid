@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,7 @@ import requests
 from wukong.models import BuildRecipe, Identity, JobStatus, RecipeValidationError
 from wukong.orchestrator import HybridOrchestrator, InMemoryJobStore
 from wukong.routing import RunnerInventory
+from wukong.runtime import HybridRuntime
 from wukong.telegram import TelegramAccessStore
 from wukong.telegram_bot import (
     BotResponse,
@@ -17,6 +19,7 @@ from wukong.telegram_bot import (
     TelegramLongPollingDaemon,
     TelegramUIStateStore,
 )
+from telegram_bot_daemon import build_telegram_catalog
 
 
 class TelegramBotUITests(unittest.TestCase):
@@ -46,7 +49,20 @@ class TelegramBotUITests(unittest.TestCase):
                     {"product_name": "CPH2725", "name": "OnePlus 13R"},
                 ],
                 "modVersions": ["ColorOS_16.0.8"],
-                "mods": {"ColorOS_16.0.8": []},
+                "availableGitHubModVersions": ["ColorOS_16.0.8"],
+                "modsByVersion": {
+                    "ColorOS_16.0.8": [
+                        {"name": "Fix_Metis", "ready": True},
+                        {"name": "WK_Installer", "ready": True},
+                        {"name": "Camera_mod", "ready": True},
+                    ]
+                },
+                "presetDefaultsByVersion": {
+                    "ColorOS_16.0.8": {
+                        "lite": ["Fix_Metis", "WK_Installer"],
+                        "both": ["Fix_Metis", "WK_Installer", "Camera_mod"],
+                    }
+                },
             },
             diagnostics_provider=lambda: {"runner": "ready"},
             cloud_provider=lambda category: {
@@ -99,7 +115,9 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertIn("PKG110", devices.text)
         self.controller.handle_callback(42, "v1:dev:0")
         self.controller.handle_callback(42, "v1:mv:0")
-        confirmation = self.controller.handle_callback(42, "v1:pre:lite")
+        mods = self.controller.handle_callback(42, "v1:pre:lite")
+        self.assertIn("Fix_Metis", mods.text)
+        confirmation = self.controller.handle_callback(42, "v1:mods_done")
         self.assertIn("PKG110", confirmation.text)
         self.assertIn("GitHub", confirmation.text)
 
@@ -112,6 +130,75 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual("github-auto", recipe.execution.target)
         self.assertEqual("PKG110", recipe.device)
         self.assertEqual("ColorOS_16.0.8", recipe.build.mod_version)
+        self.assertEqual(("Fix_Metis", "WK_Installer"), recipe.build.mods)
+
+    def test_mod_picker_supports_toggle_select_all_and_pagination(self) -> None:
+        many_mods = [
+            {"name": f"Mod_{index:02d}", "ready": True}
+            for index in range(19)
+        ]
+        self.controller.catalog_provider = lambda: {
+            "devices": [{"product_name": "PKG110", "name": "OnePlus Ace 6"}],
+            "modVersions": ["ColorOS_16.0.9"],
+            "availableGitHubModVersions": ["ColorOS_16.0.9"],
+            "modsByVersion": {"ColorOS_16.0.9": many_mods},
+            "presetDefaultsByVersion": {"ColorOS_16.0.9": {"lite": [], "both": []}},
+        }
+        self.controller.handle_callback(42, "v1:new")
+        self.controller.handle_callback(42, "v1:task:build")
+        self.controller.handle_callback(42, "v1:run:github")
+        self.controller.handle_callback(42, "v1:src:url")
+        self.controller.handle_ui(42, "https://example.com/rom.zip")
+        self.controller.handle_callback(42, "v1:dev:0")
+        self.controller.handle_callback(42, "v1:mv:0")
+
+        first_page = self.controller.handle_callback(42, "v1:pre:lite")
+        self.assertIn("1/3", first_page.text)
+        self.assertIn("Mod_00", first_page.text)
+        self.assertNotIn("Mod_08", first_page.text)
+        toggled = self.controller.handle_callback(42, "v1:mod:0")
+        self.assertIn("1/19 MOD", toggled.text)
+        second_page = self.controller.handle_callback(42, "v1:mods:1")
+        self.assertIn("2/3", second_page.text)
+        selected = self.controller.handle_callback(42, "v1:mods_all:1")
+        self.assertIn("19 MOD", selected.text)
+        confirmation = self.controller.handle_callback(42, "v1:mods_done")
+        self.assertIn("19", confirmation.text)
+
+        self.controller.handle_callback(42, "v1:confirm")
+        recipe = self.store.recipe(self.orchestrator.list(Identity("telegram", "42", "user"))[0].job_id)
+        self.assertEqual(19, len(recipe.build.mods))
+
+    def test_both_preset_cannot_confirm_with_empty_mod_selection(self) -> None:
+        self.controller.ui_state.set_session(42, {
+            "step": "mods",
+            "preset": "both",
+            "mod_options": ["Fix_Metis"],
+            "selected_mods": [],
+        })
+
+        response = self.controller.handle_callback(42, "v1:mods_done")
+
+        self.assertIn("Lite và Plus", response.text)
+        self.assertEqual("mods", self.controller.ui_state.session(42)["step"])
+
+    def test_github_wizard_lists_only_versions_with_uploaded_content_pack(self) -> None:
+        self.controller.catalog_provider = lambda: {
+            "devices": [{"product_name": "PKG110", "name": "OnePlus Ace 6"}],
+            "modVersions": ["ColorOS_16.0.8", "ColorOS_16.0.9"],
+            "availableGitHubModVersions": ["ColorOS_16.0.8"],
+            "modsByVersion": {},
+        }
+        self.controller.ui_state.set_session(42, {
+            "step": "mod_version",
+            "execution": "github-auto",
+        })
+
+        response = self.controller._mod_version_picker(42, "vi")
+
+        self.assertIn("ColorOS_16.0.8", response.reply_markup["inline_keyboard"][0][0]["text"])
+        labels = [button["text"] for row in response.reply_markup["inline_keyboard"] for button in row]
+        self.assertNotIn("ColorOS_16.0.9", labels)
 
     def test_cloud_library_source_can_be_selected_with_buttons(self) -> None:
         self.controller.handle_callback(42, "v1:new")
@@ -222,6 +309,73 @@ class TelegramBotUITests(unittest.TestCase):
 
 
 class TelegramDaemonUITests(unittest.TestCase):
+    def test_catalog_uses_installed_mod_root_and_only_uploaded_github_versions(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "Content")
+            (content / "MOD" / "ColorOS_16.0.9" / "Camera_mod" / "system").mkdir(parents=True)
+            (content / "MOD" / "RealmeUI_16.0.9" / "Gapps" / "product").mkdir(parents=True)
+            index_path = Path(root, "index.json")
+            index_path.write_text(json.dumps({
+                "schemaVersion": 1,
+                "packs": [
+                    {
+                        "id": "MOD/ColorOS_16.0.9",
+                        "target": "MOD/ColorOS_16.0.9",
+                        "remote": "drive:MOD/ColorOS_16.0.9",
+                        "sizeBytes": 0,
+                        "files": [],
+                        "archive": {
+                            "uri": "drive:MOD/ColorOS_16.0.9.tar.zst",
+                            "sha256": "a" * 64,
+                            "md5": "b" * 32,
+                            "sizeBytes": 1,
+                        },
+                    },
+                    {
+                        "id": "MOD/RealmeUI_16.0.9",
+                        "target": "MOD/RealmeUI_16.0.9",
+                        "remote": "drive:MOD/RealmeUI_16.0.9",
+                        "sizeBytes": 0,
+                        "files": [],
+                    },
+                ],
+            }), encoding="utf-8")
+
+            catalog = build_telegram_catalog(content, index_path)
+
+        self.assertEqual(
+            ["ColorOS_16.0.9", "RealmeUI_16.0.9"],
+            catalog["modVersions"],
+        )
+        self.assertEqual(["ColorOS_16.0.9"], catalog["availableGitHubModVersions"])
+        self.assertIn(
+            "Camera_mod",
+            [item["name"] for item in catalog["modsByVersion"]["ColorOS_16.0.9"]],
+        )
+
+    def test_runtime_uses_the_same_content_root_as_the_bot_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)
+            content = path / "installed-content"
+            content.mkdir()
+            index = path / "index.json"
+            index.write_text('{"schemaVersion":1,"packs":[]}', encoding="utf-8")
+            store = InMemoryJobStore()
+            runtime = HybridRuntime(
+                orchestrator=HybridOrchestrator(store=store, workspace_root=path / "orchestrator"),
+                store=store,
+                workspace_root=path / "jobs",
+                data_root=path / "data",
+                content_root=content,
+                content_index=index,
+            )
+
+            with patch("wukong.runtime.LocalJobExecutor") as executor:
+                runtime._execute_local("job-id")
+
+        self.assertEqual(content.resolve(), executor.call_args.kwargs["content_root"])
+        self.assertEqual(index.resolve(), executor.call_args.kwargs["content_index"])
+
     def test_registers_commands_and_handles_callback_queries(self) -> None:
         controller = Mock()
         controller.command_sets.return_value = {

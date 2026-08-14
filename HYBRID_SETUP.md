@@ -8,6 +8,10 @@ Install rclone and create an OAuth remote named `wukong-gdrive`:
 rclone config
 ```
 
+Use a private Google OAuth `client_id` and `client_secret` for this remote. The
+shared rclone Drive client is being retired during 2026 and is not suitable for
+a long-running build service.
+
 The expected private layout is:
 
 ```text
@@ -24,6 +28,7 @@ Generate, upload and verify content-packs:
 
 ```text
 python content_pack_tool.py index --content-root . --index content-packs/index.json
+python content_pack_tool.py index --content-root C:\WukongROMStudio\Content --index content-packs/index.json --pack MOD/ColorOS_16.0.9
 python content_pack_tool.py upload --content-root . --index content-packs/index.json --pack MOD/ColorOS_16.0.8
 python content_pack_tool.py install --content-root verification-content --index content-packs/index.json --pack MOD/ColorOS_16.0.8
 python content_pack_tool.py verify --content-root verification-content --index content-packs/index.json --pack MOD/ColorOS_16.0.8
@@ -31,8 +36,9 @@ python content_pack_tool.py verify --content-root verification-content --index c
 
 `upload` creates one deterministic `.tar.zst` object per pack, uploads it
 sequentially, then compares its size and Google Drive MD5 before returning
-success. Omit `--pack` only to upload every pack. Add `--verify-download` when
-you also want a complete download, safe extraction, and per-file SHA-256 check.
+success. It then downloads, safely extracts and checks every per-file SHA-256
+by default. Omit `--pack` only to upload every pack. Use
+`--skip-download-verify` only for emergency diagnostics, never for publishing.
 
 Do not delete local content or publish the clean Git history until every pack
 has been downloaded and verified from Drive.
@@ -90,9 +96,16 @@ python telegram_bot_daemon.py
 
 Send `/start` to open the button menu. The bot registers Telegram's slash-command
 suggestions automatically and provides a Vietnamese/English build wizard for
-execution target, ROM source, device, MOD version, preset and confirmation.
+execution target, ROM source, device, MOD version, preset, paged MOD selection
+and confirmation. Local Windows jobs read the configured installed Content root.
+GitHub jobs list only MOD versions whose verified archive is present in
+`content-packs/index.json`; Actions downloads that private archive from Drive and
+checks it before building.
 Language preference and non-sensitive wizard state are stored in
 `Data/telegram-ui-state.json`; signed URL query strings remain memory-only.
+
+Set `WUKONG_TELEGRAM_CONTENT_ROOT` when the installed content is not in the
+default `C:\WukongROMStudio\Content` location.
 
 Admins approve users with `/approve <telegram_user_id>`. Users may create builds
 without JSON, browse their jobs, refresh progress, view events, download

@@ -61,6 +61,34 @@ def _relative_parts(value: object, *, label: str) -> tuple[str, ...]:
     return path.parts
 
 
+def build_content_pack_record(
+    content_root: Path,
+    *,
+    remote: str,
+    pack_id: str,
+) -> dict[str, object]:
+    parts = _relative_parts(pack_id, label="content-pack ID")
+    if len(parts) == 2 and parts[0] == "MOD":
+        target = f"MOD/{parts[1]}"
+    elif len(parts) == 2 and parts[0] in {"copy-image", "OFX", "TWRP"} and parts[1] == "v1":
+        target = parts[0]
+    else:
+        raise KeyError(f"Unknown content-pack: {pack_id}")
+    root = content_root.resolve().joinpath(*PurePosixPath(target).parts)
+    if not root.is_dir():
+        raise KeyError(f"Content-pack source does not exist: {pack_id}")
+    files = _file_records(root)
+    if not files:
+        raise ValueError(f"Content-pack source is empty: {pack_id}")
+    return {
+        "id": pack_id,
+        "target": target,
+        "remote": f"{remote.rstrip('/')}/{pack_id}",
+        "sizeBytes": sum(int(item["sizeBytes"]) for item in files),
+        "files": files,
+    }
+
+
 def build_content_index(content_root: Path, *, remote: str) -> dict[str, object]:
     content_root = content_root.resolve()
     base_remote = remote.rstrip("/")
@@ -106,6 +134,29 @@ def write_content_index(content_root: Path, output: Path, *, remote: str) -> dic
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return index
+
+
+def merge_content_index_pack(
+    existing: Mapping[str, Any],
+    generated: Mapping[str, Any],
+    pack_id: str,
+) -> dict[str, object]:
+    validate_content_index(existing)
+    validate_content_index(generated)
+    replacement = next(
+        (dict(pack) for pack in generated["packs"] if pack.get("id") == pack_id),
+        None,
+    )
+    if replacement is None:
+        raise KeyError(f"Unknown generated content-pack: {pack_id}")
+    packs = [dict(pack) for pack in existing["packs"] if pack.get("id") != pack_id]
+    packs.append(replacement)
+    packs.sort(key=lambda pack: str(pack.get("id") or "").casefold())
+    return {
+        "schemaVersion": 1,
+        "generatedAt": generated.get("generatedAt"),
+        "packs": packs,
+    }
 
 
 def validate_content_index(index: Mapping[str, Any]) -> None:
@@ -471,7 +522,7 @@ def upload_content_packs(
     *,
     run_command: RunCommand = _run_text,
     rclone_config: Path | None = None,
-    verify_download: bool = False,
+    verify_download: bool = True,
     archive_root: Path | None = None,
     pack_id: str | None = None,
 ) -> None:
