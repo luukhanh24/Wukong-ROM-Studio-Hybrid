@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import PurePosixPath
 from typing import Any, Mapping
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 
 
 SCHEMA_VERSION = 1
@@ -23,6 +23,15 @@ SECRET_KEY_FRAGMENTS = (
     "private_key",
     "clientid",
     "client_id",
+)
+SENSITIVE_URL_PARAMETER_FRAGMENTS = (
+    "access_token",
+    "auth",
+    "credential",
+    "password",
+    "secret",
+    "signature",
+    "token",
 )
 TASKS = {"source_mirror", "build", "artifact_publish"}
 SOURCE_KINDS = {"local", "http", "https", "rclone"}
@@ -112,6 +121,13 @@ class SourceSpec:
             parsed = urlparse(uri)
             if parsed.scheme.casefold() != kind or not parsed.netloc or parsed.username or parsed.password:
                 raise RecipeValidationError(f"Invalid {kind.upper()} ROM source URI")
+            query_keys = {key.casefold() for key, _ in parse_qsl(parsed.query, keep_blank_values=True)}
+            if any(
+                fragment in key
+                for key in query_keys
+                for fragment in SENSITIVE_URL_PARAMETER_FRAGMENTS
+            ):
+                raise RecipeValidationError("ROM source URL must not contain credential parameters")
             # The adapter performs a DNS-aware check immediately before every
             # request/redirect. Reject obvious loopback and private IP literals
             # here so unsafe recipes never enter a job store.
