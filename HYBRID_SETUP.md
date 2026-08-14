@@ -88,10 +88,18 @@ Start long polling:
 python telegram_bot_daemon.py
 ```
 
-Admins approve users with `/approve <telegram_user_id>`. Users may submit full
-recipes and control only their own jobs. Admins may control all jobs and manage
-the allowlist. `TelegramWebhookAdapter` is available for a later VPS/webhook
-deployment without changing orchestration logic.
+Send `/start` to open the button menu. The bot registers Telegram's slash-command
+suggestions automatically and provides a Vietnamese/English build wizard for
+execution target, ROM source, device, MOD version, preset and confirmation.
+Language preference and non-sensitive wizard state are stored in
+`Data/telegram-ui-state.json`; signed URL query strings remain memory-only.
+
+Admins approve users with `/approve <telegram_user_id>`. Users may create builds
+without JSON, browse their jobs, refresh progress, view events, download
+artifacts, cancel and resume only their own jobs. `/submit <recipe JSON>` remains
+available for advanced use. Admins may control all jobs and manage the allowlist.
+`TelegramWebhookAdapter` is available for a later VPS/webhook deployment without
+changing orchestration logic.
 
 ## 5. Recipe and CLI
 
