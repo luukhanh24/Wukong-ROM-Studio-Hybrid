@@ -1,39 +1,336 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-import shlex
+import tempfile
 import threading
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
-from .models import BuildRecipe, Identity, JobStatus, RecipeValidationError
+from .models import BuildRecipe, Identity, JobManifest, JobStatus, RecipeValidationError
 from .orchestrator import HybridOrchestrator, OrchestrationError
-from .telegram import TelegramAccessStore
+from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
+from .telegram import TelegramAccessStore
 
 
-HELP_USER = """Wukong ROM Studio Hybrid
-/catalog - xem thiết bị, preset và MOD
-/submit <recipe JSON> - tạo job build/mirror/upload
-/job <job_id> - xem trạng thái job của bạn
-/events <job_id> - xem event gần nhất
-/cancel <job_id> - hủy job của bạn
+LANGUAGES = {"vi", "en"}
+CALLBACK_VERSION = "v1"
+STATUS_LABELS = {
+    "vi": {
+        "queued": "đang chờ",
+        "preflight": "đang kiểm tra",
+        "downloading": "đang tải ROM",
+        "running": "đang build",
+        "uploading": "đang tải lên",
+        "succeeded": "thành công",
+        "failed": "thất bại",
+        "cancelled": "đã hủy",
+    },
+    "en": {},
+}
+EVENT_LABELS = {
+    "vi": {
+        "submitted": "đã tạo job",
+        "status": "cập nhật trạng thái",
+        "build": "bước build",
+        "cancelled": "đã hủy",
+        "resumed": "đã tiếp tục",
+        "warning": "cảnh báo",
+        "artifact": "artifact sẵn sàng",
+    },
+    "en": {},
+}
+STAGE_LABELS = {
+    "vi": {
+        "preflight": "kiểm tra trước khi chạy",
+        "download": "tải ROM",
+        "build": "build ROM",
+        "upload": "tải artifact lên cloud",
+        "complete": "hoàn tất",
+    },
+    "en": {},
+}
+
+
+class ExpiredCallbackError(ValueError):
+    pass
+
+TEXT = {
+    "vi": {
+        "welcome": "Wukong ROM Studio\n\nChọn “Tạo bản build” để bắt đầu hoặc “Công việc của tôi” để theo dõi. Bạn không cần nhớ lệnh hay viết JSON.",
+        "new": "Tạo bản build",
+        "jobs": "Công việc của tôi",
+        "library": "Kho ROM",
+        "diagnostics": "Chẩn đoán",
+        "language": "English",
+        "back": "Quay lại menu",
+        "refresh": "Làm mới",
+        "events": "Nhật ký",
+        "artifact": "Tải artifact",
+        "cancel": "Hủy job",
+        "resume": "Tiếp tục",
+        "choose_task": "Bạn muốn làm gì?",
+        "task_build": "Build ROM đầy đủ",
+        "task_mirror": "Chỉ lưu ROM gốc lên cloud",
+        "choose_run": "Chọn nơi chạy job.",
+        "run_github": "GitHub Actions",
+        "run_windows": "Windows hiện tại",
+        "choose_source": "Chọn nguồn ROM.",
+        "source_library": "ROM có sẵn trên Drive",
+        "source_url": "Nhập URL tải ROM",
+        "source_drive": "Nhập đường dẫn Google Drive",
+        "source_local": "Nhập đường dẫn file Windows",
+        "send_url": "Gửi URL HTTP/HTTPS của ROM trong tin nhắn tiếp theo.",
+        "send_drive": "Gửi đường dẫn rclone riêng tư, ví dụ:\n{remote}:WukongROM/sources/PKG110/sha256/rom.zip",
+        "send_local": "Gửi đường dẫn đầy đủ tới file ROM trên máy Windows.",
+        "choose_device": "Chọn thiết bị cho bản ROM.",
+        "choose_mod_version": "Chọn phiên bản bộ MOD.",
+        "choose_preset": "Chọn cấu hình build.",
+        "preset_lite": "Lite — gọn nhẹ",
+        "preset_plus": "Plus — đầy đủ",
+        "preset_both": "Tạo cả Lite và Plus",
+        "confirm": "Xác nhận và tạo job",
+        "edit": "Làm lại",
+        "advanced": "Tùy chọn nâng cao dùng lệnh /submit.",
+        "created": "Job {job_id} đã được tạo.\nRunner: {runner}\nTrạng thái: {status}",
+        "no_jobs": "Bạn chưa có job nào. Chọn “Tạo bản build” để bắt đầu.",
+        "no_roms": "Kho ROM chưa có file phù hợp hoặc Drive chưa sẵn sàng.",
+        "expired": "Nút này đã hết hạn hoặc không còn hợp lệ. Hãy mở lại menu để tiếp tục.",
+        "denied": "Bạn chưa được cấp quyền. Hãy gửi Telegram user ID của bạn cho quản trị viên.",
+        "failed": "Không thể thực hiện: {error}\n\nBạn có thể quay lại menu và thử lại.",
+        "job_not_found": "Không thể mở job này. Job không tồn tại hoặc không thuộc tài khoản của bạn.",
+        "input_invalid": "Dữ liệu chưa hợp lệ: {error}\nHãy gửi lại giá trị đúng hoặc quay về menu.",
+        "status": "Job {job_id}\nTrạng thái: {status}\nGiai đoạn: {stage}\nTiến độ: {progress}%\nRunner: {runner}",
+        "summary": "Kiểm tra cấu hình\n\nTác vụ: {task}\nNơi chạy: {run}\nNguồn: {source}\nThiết bị: {device}\nBộ MOD: {mod_version}\nPreset: {preset}\n\n{advanced}",
+        "library_title": "Kho ROM trên Google Drive",
+        "diagnostics_title": "Chẩn đoán hệ thống",
+        "events_title": "Nhật ký gần nhất của {job_id}",
+        "no_artifact": "Job chưa có artifact. Hãy thử lại khi build hoàn tất.",
+    },
+    "en": {
+        "welcome": "Wukong ROM Studio\n\nSelect “New build” to begin or “My jobs” to monitor progress. No commands or JSON are required.",
+        "new": "New build",
+        "jobs": "My jobs",
+        "library": "ROM library",
+        "diagnostics": "Diagnostics",
+        "language": "Tiếng Việt",
+        "back": "Back to menu",
+        "refresh": "Refresh",
+        "events": "Events",
+        "artifact": "Get artifact",
+        "cancel": "Cancel job",
+        "resume": "Resume",
+        "choose_task": "What would you like to do?",
+        "task_build": "Build a complete ROM",
+        "task_mirror": "Mirror the stock ROM to cloud only",
+        "choose_run": "Choose where this job will run.",
+        "run_github": "GitHub Actions",
+        "run_windows": "This Windows PC",
+        "choose_source": "Choose the ROM source.",
+        "source_library": "ROM already on Drive",
+        "source_url": "Enter a ROM URL",
+        "source_drive": "Enter a Google Drive path",
+        "source_local": "Enter a Windows file path",
+        "send_url": "Send the ROM HTTP/HTTPS URL in your next message.",
+        "send_drive": "Send a private rclone path, for example:\n{remote}:WukongROM/sources/PKG110/sha256/rom.zip",
+        "send_local": "Send the full path to the ROM file on this Windows PC.",
+        "choose_device": "Choose the target device.",
+        "choose_mod_version": "Choose the MOD pack version.",
+        "choose_preset": "Choose a build preset.",
+        "preset_lite": "Lite — streamlined",
+        "preset_plus": "Plus — complete",
+        "preset_both": "Build both Lite and Plus",
+        "confirm": "Confirm and create job",
+        "edit": "Start over",
+        "advanced": "Advanced options remain available through /submit.",
+        "created": "Job {job_id} was created.\nRunner: {runner}\nStatus: {status}",
+        "no_jobs": "You do not have any jobs yet. Select “New build” to begin.",
+        "no_roms": "No suitable ROM files were found or Drive is unavailable.",
+        "expired": "This button has expired or is no longer valid. Open the menu to continue.",
+        "denied": "You do not have access yet. Send your Telegram user ID to an administrator.",
+        "failed": "Unable to complete the action: {error}\n\nReturn to the menu and try again.",
+        "job_not_found": "This job cannot be opened. It does not exist or belongs to another user.",
+        "input_invalid": "That value is not valid: {error}\nSend a corrected value or return to the menu.",
+        "status": "Job {job_id}\nStatus: {status}\nStage: {stage}\nProgress: {progress}%\nRunner: {runner}",
+        "summary": "Review build configuration\n\nTask: {task}\nRun on: {run}\nSource: {source}\nDevice: {device}\nMOD pack: {mod_version}\nPreset: {preset}\n\n{advanced}",
+        "library_title": "Google Drive ROM library",
+        "diagnostics_title": "System diagnostics",
+        "events_title": "Recent events for {job_id}",
+        "no_artifact": "This job does not have an artifact yet. Try again after the build completes.",
+    },
+}
+
+
+HELP_USER_VI = """Wukong ROM Studio Hybrid
+/start - mở menu nút / open the button menu
+/new - tạo bản build / new build
+/jobs - công việc của tôi / my jobs
+/cloud - kho ROM / ROM library
+/diagnostics - chẩn đoán / diagnostics
+/language - đổi ngôn ngữ / change language
+/submit <recipe JSON> - chế độ nâng cao / advanced mode
+/job <job_id> - trạng thái job
+/events <job_id> - nhật ký job
+/cancel <job_id> - hủy job
 /resume <job_id> - tiếp tục từ checkpoint
-/diagnostics - trạng thái runner, cloud và cache
-/cache - xem stage cache
-/cache_clear - xóa stage cache
-/cloud [sources|artifacts] - xem thư viện Google Drive
-/jobs - xem lịch sử job của bạn
 /artifacts <job_id> - nhận link artifact
 """
-HELP_ADMIN = HELP_USER + """/approve <telegram_user_id> - duyệt người dùng
+HELP_ADMIN_VI = HELP_USER_VI + """/approve <telegram_user_id> - duyệt người dùng
 /revoke <telegram_user_id> - thu hồi quyền
 /users - xem allowlist
+/cache - xem stage cache
+/cache_clear - xóa stage cache
 """
+HELP_USER_EN = """Wukong ROM Studio Hybrid
+/start - open the button menu
+/new - create a ROM build
+/jobs - view my jobs
+/cloud - browse the ROM library
+/diagnostics - view system diagnostics
+/language - switch language
+/submit <recipe JSON> - advanced mode
+/job <job_id> - inspect a job
+/events <job_id> - view job events
+/cancel <job_id> - cancel a job
+/resume <job_id> - resume from checkpoint
+/artifacts <job_id> - get artifact links
+"""
+HELP_ADMIN_EN = HELP_USER_EN + """/approve <telegram_user_id> - approve a user
+/revoke <telegram_user_id> - revoke a user
+/users - view the allowlist
+/cache - inspect stage cache
+/cache_clear - clear stage cache
+"""
+
+
+@dataclass(frozen=True)
+class BotResponse:
+    text: str
+    reply_markup: dict[str, object] = field(default_factory=dict)
+
+    def telegram_payload(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "text": self.text[:4096],
+            "disable_web_page_preview": True,
+        }
+        if self.reply_markup:
+            payload["reply_markup"] = self.reply_markup
+        return payload
+
+
+class TelegramUIStateStore:
+    """Small atomic preference/session store keyed only by authenticated Telegram ID."""
+
+    def __init__(self, path: Path | None = None) -> None:
+        self.path = path.resolve() if path else None
+        self._memory: dict[str, object] = {
+            "schemaVersion": 1,
+            "languages": {},
+            "sessions": {},
+            "jobRefs": {},
+        }
+        self._lock = threading.RLock()
+        if self.path and self.path.is_file():
+            self._memory = self._load_path()
+
+    def language(self, user_id: int | str) -> str:
+        state = self._read()
+        value = str(state["languages"].get(str(user_id), "vi"))
+        return value if value in LANGUAGES else "vi"
+
+    def set_language(self, user_id: int | str, language: str) -> None:
+        if language not in LANGUAGES:
+            raise ValueError("Unsupported language")
+        state = self._read()
+        state["languages"][str(user_id)] = language
+        self._write(state)
+
+    def session(self, user_id: int | str) -> dict[str, Any]:
+        state = self._read()
+        value = state["sessions"].get(str(user_id), {})
+        return dict(value) if isinstance(value, dict) else {}
+
+    def set_session(self, user_id: int | str, session: Mapping[str, Any]) -> None:
+        state = self._read()
+        state["sessions"][str(user_id)] = dict(session)
+        self._write(state)
+
+    def clear_session(self, user_id: int | str) -> None:
+        state = self._read()
+        state["sessions"].pop(str(user_id), None)
+        self._write(state)
+
+    def remember_job(self, user_id: int | str, job_id: str) -> str:
+        state = self._read()
+        subject = str(user_id)
+        refs = state["jobRefs"].setdefault(subject, {})
+        digest = hashlib.sha256(job_id.encode("utf-8")).hexdigest()
+        length = 12
+        reference = digest[:length]
+        while reference in refs and refs[reference] != job_id:
+            length += 4
+            reference = digest[:length]
+        refs[reference] = job_id
+        self._write(state)
+        return reference
+
+    def resolve_job(self, user_id: int | str, reference: str) -> str | None:
+        state = self._read()
+        refs = state["jobRefs"].get(str(user_id), {})
+        return str(refs.get(reference)) if isinstance(refs, dict) and refs.get(reference) else None
+
+    def _read(self) -> dict[str, Any]:
+        with self._lock:
+            return json.loads(json.dumps(self._memory))
+
+    def _load_path(self) -> dict[str, Any]:
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8")) if self.path else {}
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+        return {
+            "schemaVersion": 1,
+            "languages": payload.get("languages", {}) if isinstance(payload.get("languages"), dict) else {},
+            "sessions": payload.get("sessions", {}) if isinstance(payload.get("sessions"), dict) else {},
+            "jobRefs": payload.get("jobRefs", {}) if isinstance(payload.get("jobRefs"), dict) else {},
+        }
+
+    @staticmethod
+    def _safe_for_disk(state: dict[str, Any]) -> dict[str, Any]:
+        persisted = json.loads(json.dumps(state))
+        for subject, session in list(persisted.get("sessions", {}).items()):
+            source = session.get("source") if isinstance(session, dict) else None
+            uri = str(source.get("uri") or "") if isinstance(source, dict) else ""
+            if source and source.get("kind") in {"http", "https"} and "?" in uri:
+                sanitized = dict(session)
+                sanitized.pop("source", None)
+                sanitized.update({"step": "source_input", "awaiting": "url"})
+                persisted["sessions"][subject] = sanitized
+        return persisted
+
+    def _write(self, state: dict[str, Any]) -> None:
+        with self._lock:
+            self._memory = json.loads(json.dumps(state))
+            if not self.path:
+                return
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            descriptor, temporary_name = tempfile.mkstemp(prefix=self.path.name, dir=self.path.parent)
+            try:
+                with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+                    json.dump(self._safe_for_disk(state), handle, ensure_ascii=False, indent=2, sort_keys=True)
+                    handle.write("\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary_name, self.path)
+            finally:
+                Path(temporary_name).unlink(missing_ok=True)
 
 
 class TelegramBotController:
@@ -48,6 +345,8 @@ class TelegramBotController:
         cache_clearer: Callable[[], dict[str, object]] | None = None,
         cloud_provider: Callable[[str], dict[str, object]] | None = None,
         runtime: HybridRuntime | None = None,
+        ui_state: TelegramUIStateStore | None = None,
+        storage_remote: str | None = None,
     ) -> None:
         self.access = access
         self.orchestrator = orchestrator
@@ -57,17 +356,198 @@ class TelegramBotController:
         self.cache_clearer = cache_clearer
         self.cloud_provider = cloud_provider
         self.runtime = runtime
+        self.ui_state = ui_state or TelegramUIStateStore()
+        self.storage_remote = (storage_remote or os.environ.get("WUKONG_RCLONE_REMOTE", "wukong-gdrive")).rstrip(":")
+
+    def command_sets(self) -> dict[str, list[dict[str, str]]]:
+        return {
+            "vi": [
+                {"command": "start", "description": "Mở menu chính"},
+                {"command": "new", "description": "Tạo bản build"},
+                {"command": "jobs", "description": "Công việc của tôi"},
+                {"command": "cloud", "description": "Kho ROM trên Drive"},
+                {"command": "diagnostics", "description": "Chẩn đoán hệ thống"},
+                {"command": "language", "description": "Đổi sang English"},
+                {"command": "help", "description": "Xem trợ giúp"},
+            ],
+            "en": [
+                {"command": "start", "description": "Open the main menu"},
+                {"command": "new", "description": "Create a ROM build"},
+                {"command": "jobs", "description": "View my jobs"},
+                {"command": "cloud", "description": "Browse the ROM library"},
+                {"command": "diagnostics", "description": "View diagnostics"},
+                {"command": "language", "description": "Switch to Tiếng Việt"},
+                {"command": "help", "description": "Show help"},
+            ],
+        }
 
     def handle(self, user_id: int | str, text: str) -> str:
+        """Compatibility text interface used by existing tests and adapters."""
         identity = self.access.identity(user_id)
         if not identity:
-            return "Bạn chưa được cấp quyền. Hãy gửi Telegram user ID cho quản trị viên."
+            return TEXT["vi"]["denied"]
+        return self._handle_command(identity, text)
+
+    def handle_ui(self, user_id: int | str, text: str) -> BotResponse:
+        identity = self.access.identity(user_id)
+        language = self.ui_state.language(user_id)
+        if not identity:
+            return BotResponse(TEXT[language]["denied"])
+        normalized = (text or "").strip()
+        command = normalized.partition(" ")[0].split("@", 1)[0].casefold()
+        session = self.ui_state.session(user_id)
+        if session.get("awaiting") and not normalized.startswith("/"):
+            return self._wizard_input(identity, normalized, language, session)
+        if command in {"/start", "/menu"}:
+            self.ui_state.clear_session(user_id)
+            return self._main_menu(language)
+        if command == "/new":
+            return self.handle_callback(user_id, "v1:new")
+        if command == "/jobs":
+            return self._jobs_menu(identity, language)
+        if command == "/cloud":
+            return self._cloud_menu(language)
+        if command == "/diagnostics":
+            return self._diagnostics_menu(language)
+        if command == "/language":
+            return self.handle_callback(user_id, f"v1:lang:{'en' if language == 'vi' else 'vi'}")
+        if command in {"/help", ""}:
+            return BotResponse(self._help(identity, language), self._back_markup(language))
+        result = self._handle_command(identity, normalized)
+        return BotResponse(result, self._back_markup(language))
+
+    def handle_callback(self, user_id: int | str, data: str) -> BotResponse:
+        identity = self.access.identity(user_id)
+        language = self.ui_state.language(user_id)
+        if not identity:
+            return BotResponse(TEXT[language]["denied"])
+        try:
+            parts = data.split(":")
+            if not parts or parts[0] != CALLBACK_VERSION:
+                return self._recovery(language)
+            action = parts[1] if len(parts) > 1 else ""
+            value = parts[2] if len(parts) > 2 else ""
+            if action == "menu":
+                self.ui_state.clear_session(user_id)
+                return self._main_menu(language)
+            if action == "lang" and value in LANGUAGES:
+                self.ui_state.set_language(user_id, value)
+                self.ui_state.clear_session(user_id)
+                return self._main_menu(value)
+            if action == "new":
+                self.ui_state.set_session(user_id, {"step": "task"})
+                return BotResponse(
+                    TEXT[language]["choose_task"],
+                    self._inline([
+                        [(TEXT[language]["task_build"], "v1:task:build")],
+                        [(TEXT[language]["task_mirror"], "v1:task:mirror")],
+                        [(TEXT[language]["back"], "v1:menu")],
+                    ]),
+                )
+            if action == "task" and value in {"build", "mirror"}:
+                self._require_step(user_id, "task")
+                session = {"step": "run", "task": "build" if value == "build" else "source_mirror"}
+                self.ui_state.set_session(user_id, session)
+                return self._run_picker(language)
+            if action == "run" and value in {"github", "local"}:
+                session = self._require_step(user_id, "run")
+                session.update({"step": "source", "execution": "github-auto" if value == "github" else "local-windows"})
+                self.ui_state.set_session(user_id, session)
+                return self._source_picker(identity, language, session)
+            if action == "src" and value in {"url", "drive", "local", "library"}:
+                session = self._require_step(user_id, "source")
+                if value == "library":
+                    return self._source_library(identity, language, session)
+                if value == "local" and (session.get("execution") != "local-windows" or identity.role != "admin"):
+                    raise PermissionError("Local ROM files require an administrator running on Windows")
+                session.update({"step": "source_input", "awaiting": value})
+                self.ui_state.set_session(user_id, session)
+                key = {"url": "send_url", "drive": "send_drive", "local": "send_local"}[value]
+                prompt = TEXT[language][key]
+                if value == "drive":
+                    prompt = prompt.format(remote=self.storage_remote)
+                return BotResponse(prompt, self._back_markup(language))
+            if action == "lib":
+                session = self._require_step(user_id, "library")
+                sources = session.get("library")
+                index = int(value)
+                if not isinstance(sources, list) or index < 0 or index >= len(sources):
+                    return self._recovery(language)
+                selected = sources[index]
+                session["source"] = {
+                    "kind": "rclone",
+                    "uri": f"{self.storage_remote}:WukongROM/sources/{selected['path']}",
+                    **({"sizeBytes": selected["sizeBytes"]} if int(selected.get("sizeBytes") or 0) > 0 else {}),
+                }
+                session.pop("library", None)
+                session["step"] = "device"
+                self.ui_state.set_session(user_id, session)
+                return self._device_picker(user_id, language, session)
+            if action == "dev":
+                session = self._require_step(user_id, "device")
+                devices = session.get("device_options")
+                index = int(value)
+                if not isinstance(devices, list) or index < 0 or index >= len(devices):
+                    return self._recovery(language)
+                session["device"] = str(devices[index][0])
+                session.pop("device_options", None)
+                if session.get("task") == "source_mirror":
+                    session.update({"step": "confirm"})
+                    self.ui_state.set_session(user_id, session)
+                    return self._confirmation(language, session)
+                session["step"] = "mod_version"
+                self.ui_state.set_session(user_id, session)
+                return self._mod_version_picker(user_id, language, session)
+            if action == "mv":
+                session = self._require_step(user_id, "mod_version")
+                versions = session.get("mod_version_options")
+                index = int(value)
+                if not isinstance(versions, list) or index < 0 or index >= len(versions):
+                    return self._recovery(language)
+                session.update({"step": "preset", "mod_version": str(versions[index])})
+                session.pop("mod_version_options", None)
+                self.ui_state.set_session(user_id, session)
+                return self._preset_picker(language)
+            if action == "pre" and value in {"lite", "plus", "both"}:
+                session = self._require_step(user_id, "preset")
+                session.update({"step": "confirm", "preset": value})
+                self.ui_state.set_session(user_id, session)
+                return self._confirmation(language, session)
+            if action == "confirm":
+                session = self._require_step(user_id, "confirm")
+                recipe = self._recipe_from_session(session)
+                job = self.orchestrator.submit(recipe, identity)
+                if self.runtime:
+                    self.runtime.start(job)
+                self.ui_state.clear_session(user_id)
+                return BotResponse(
+                    TEXT[language]["created"].format(
+                        job_id=job.job_id, runner=job.runner or "—", status=job.status.value
+                    ),
+                    self._job_markup(job, language, identity.subject),
+                )
+            if action == "jobs":
+                return self._jobs_menu(identity, language)
+            if action in {"job", "events", "artifact", "cancel", "resume"} and value:
+                job_id = self.ui_state.resolve_job(user_id, value) or value
+                return self._job_callback(action, job_id, identity, language)
+            if action == "cloud":
+                return self._cloud_menu(language)
+            if action == "diag":
+                return self._diagnostics_menu(language)
+            return self._recovery(language)
+        except ExpiredCallbackError:
+            return self._recovery(language)
+        except (IndexError, TypeError, KeyError, ValueError, RecipeValidationError, OrchestrationError, RunnerUnavailableError, PermissionError) as exc:
+            return BotResponse(TEXT[language]["failed"].format(error=exc), self._back_markup(language))
+
+    def _handle_command(self, identity: Identity, text: str) -> str:
         command, _, argument = (text or "").strip().partition(" ")
         command = command.split("@", 1)[0].casefold()
         argument = argument.strip()
         try:
             if command in {"/start", "/help", "/menu"}:
-                return HELP_ADMIN if identity.role == "admin" else HELP_USER
+                return HELP_ADMIN_VI if identity.role == "admin" else HELP_USER_VI
             if command == "/catalog":
                 return self._render_json(self.catalog_provider())
             if command == "/diagnostics":
@@ -91,9 +571,7 @@ class TelegramBotController:
                     return "Thư viện cloud chưa được cấu hình."
                 return self._render_json(provider(category))
             if command == "/jobs":
-                return self._render_json(
-                    {"jobs": [job.to_dict() for job in self.orchestrator.list(identity)]}
-                )
+                return self._render_json({"jobs": [job.to_dict() for job in self.orchestrator.list(identity)]})
             if command == "/submit":
                 if not argument:
                     return "Cú pháp: /submit <recipe JSON>"
@@ -115,8 +593,250 @@ class TelegramBotController:
             if command == "/users":
                 return self._render_json(self.access.list_access(actor=identity))
             return "Lệnh không hợp lệ. Dùng /menu để xem chức năng."
-        except (json.JSONDecodeError, RecipeValidationError, OrchestrationError, PermissionError, ValueError) as exc:
+        except (json.JSONDecodeError, RecipeValidationError, OrchestrationError, RunnerUnavailableError, PermissionError, ValueError) as exc:
             return f"Không thể thực hiện: {exc}"
+
+    def _wizard_input(
+        self, identity: Identity, value: str, language: str, session: dict[str, Any]
+    ) -> BotResponse:
+        awaiting = str(session.get("awaiting") or "")
+        try:
+            if awaiting == "url":
+                source = {"kind": "https" if value.casefold().startswith("https://") else "http", "uri": value}
+            elif awaiting == "drive":
+                source = {"kind": "rclone", "uri": value}
+            elif awaiting == "local" and identity.role == "admin" and session.get("execution") == "local-windows":
+                source = {"kind": "local", "uri": value}
+            else:
+                return self._recovery(language)
+            probe = {
+                "schemaVersion": 1,
+                "task": "source_mirror",
+                "device": "probe",
+                "source": source,
+                "execution": {"target": session.get("execution", "github-auto")},
+            }
+            BuildRecipe.from_dict(probe)
+            session.pop("awaiting", None)
+            session.update({"step": "device", "source": source})
+            self.ui_state.set_session(identity.subject, session)
+            return self._device_picker(identity.subject, language, session)
+        except (RecipeValidationError, ValueError) as exc:
+            return BotResponse(TEXT[language]["input_invalid"].format(error=exc), self._back_markup(language))
+
+    def _source_library(self, identity: Identity, language: str, session: dict[str, Any]) -> BotResponse:
+        provider = self.cloud_provider or (
+            (lambda value: self.runtime.cloud_library(category=value)) if self.runtime else None
+        )
+        if not provider:
+            return BotResponse(TEXT[language]["no_roms"], self._back_markup(language))
+        payload = provider("sources")
+        entries = payload.get("entries", []) if isinstance(payload, dict) else []
+        usable = [
+            entry for entry in entries
+            if isinstance(entry, dict)
+            and str(entry.get("path") or "")
+            and not str(entry.get("path") or "").endswith(".metadata.json")
+        ][:12]
+        if not usable:
+            return BotResponse(TEXT[language]["no_roms"], self._back_markup(language))
+        session.update({"step": "library", "library": usable})
+        self.ui_state.set_session(identity.subject, session)
+        rows = [[(self._trim(str(item.get("name") or item["path"]), 44), f"v1:lib:{index}")]
+                for index, item in enumerate(usable)]
+        rows.append([(TEXT[language]["back"], "v1:menu")])
+        names = "\n".join(f"• {item.get('name') or item['path']}" for item in usable)
+        return BotResponse(f"{TEXT[language]['library_title']}\n\n{names}", self._inline(rows))
+
+    def _source_picker(self, identity: Identity, language: str, session: dict[str, Any]) -> BotResponse:
+        rows = [
+            [(TEXT[language]["source_library"], "v1:src:library")],
+            [(TEXT[language]["source_url"], "v1:src:url")],
+            [(TEXT[language]["source_drive"], "v1:src:drive")],
+        ]
+        if session.get("execution") == "local-windows" and identity.role == "admin":
+            rows.append([(TEXT[language]["source_local"], "v1:src:local")])
+        rows.append([(TEXT[language]["back"], "v1:menu")])
+        return BotResponse(TEXT[language]["choose_source"], self._inline(rows))
+
+    def _run_picker(self, language: str) -> BotResponse:
+        return BotResponse(TEXT[language]["choose_run"], self._inline([
+            [(TEXT[language]["run_github"], "v1:run:github")],
+            [(TEXT[language]["run_windows"], "v1:run:local")],
+            [(TEXT[language]["back"], "v1:menu")],
+        ]))
+
+    def _device_picker(
+        self, user_id: int | str, language: str, session: dict[str, Any] | None = None
+    ) -> BotResponse:
+        devices = self._devices()
+        active = session or self._require_session(user_id)
+        active["device_options"] = [list(item) for item in devices[:30]]
+        self.ui_state.set_session(user_id, active)
+        rows = [[(self._trim(f"{product} — {name}", 50), f"v1:dev:{index}")]
+                for index, (product, name) in enumerate(devices[:30])]
+        rows.append([(TEXT[language]["back"], "v1:menu")])
+        names = "\n".join(f"• {product} — {name}" for product, name in devices[:30])
+        return BotResponse(f"{TEXT[language]['choose_device']}\n\n{names}", self._inline(rows))
+
+    def _mod_version_picker(
+        self, user_id: int | str, language: str, session: dict[str, Any] | None = None
+    ) -> BotResponse:
+        versions = self._mod_versions()
+        active = session or self._require_session(user_id)
+        active["mod_version_options"] = versions[:20]
+        self.ui_state.set_session(user_id, active)
+        rows = [[(version, f"v1:mv:{index}")] for index, version in enumerate(versions[:20])]
+        rows.append([(TEXT[language]["back"], "v1:menu")])
+        return BotResponse(TEXT[language]["choose_mod_version"], self._inline(rows))
+
+    def _preset_picker(self, language: str) -> BotResponse:
+        return BotResponse(TEXT[language]["choose_preset"], self._inline([
+            [(TEXT[language]["preset_lite"], "v1:pre:lite")],
+            [(TEXT[language]["preset_plus"], "v1:pre:plus")],
+            [(TEXT[language]["preset_both"], "v1:pre:both")],
+            [(TEXT[language]["back"], "v1:menu")],
+        ]))
+
+    def _confirmation(self, language: str, session: dict[str, Any]) -> BotResponse:
+        task = TEXT[language]["task_build"] if session.get("task") == "build" else TEXT[language]["task_mirror"]
+        run = TEXT[language]["run_github"] if session.get("execution") == "github-auto" else TEXT[language]["run_windows"]
+        source = self._trim(self._display_source(session.get("source", {})), 80)
+        text = TEXT[language]["summary"].format(
+            task=task,
+            run=run,
+            source=source,
+            device=session.get("device", "—"),
+            mod_version=session.get("mod_version", "—"),
+            preset=session.get("preset", "—"),
+            advanced=TEXT[language]["advanced"],
+        )
+        return BotResponse(text, self._inline([
+            [(TEXT[language]["confirm"], "v1:confirm")],
+            [(TEXT[language]["edit"], "v1:new")],
+            [(TEXT[language]["back"], "v1:menu")],
+        ]))
+
+    def _recipe_from_session(self, session: dict[str, Any]) -> BuildRecipe:
+        if session.get("step") != "confirm":
+            raise ValueError("Build wizard is incomplete")
+        task = str(session["task"])
+        payload: dict[str, Any] = {
+            "schemaVersion": 1,
+            "task": task,
+            "device": session["device"],
+            "source": session["source"],
+            "execution": {"target": session["execution"]},
+            "storage": {"remote": self.storage_remote, "publishArtifact": True},
+        }
+        if task == "build":
+            payload["build"] = {
+                "preset": session["preset"],
+                "modVersion": session["mod_version"],
+                "mods": [],
+                "package": True,
+                "notifyTelegram": True,
+            }
+        return BuildRecipe.from_dict(payload)
+
+    def _jobs_menu(self, identity: Identity, language: str) -> BotResponse:
+        jobs = self.orchestrator.list(identity)[:12]
+        if not jobs:
+            return BotResponse(TEXT[language]["no_jobs"], self._inline([
+                [(TEXT[language]["new"], "v1:new")],
+                [(TEXT[language]["back"], "v1:menu")],
+            ]))
+        rows = [[
+            (
+                f"{self._status_label(job.status.value, language)} · {job.job_id[:12]}",
+                f"v1:job:{self.ui_state.remember_job(identity.subject, job.job_id)}",
+            )
+        ] for job in jobs]
+        rows.append([(TEXT[language]["back"], "v1:menu")])
+        return BotResponse(TEXT[language]["jobs"], self._inline(rows))
+
+    def _job_callback(self, action: str, job_id: str, identity: Identity, language: str) -> BotResponse:
+        try:
+            if action == "events":
+                events = self.orchestrator.events(job_id, identity)[-10:]
+                lines = [
+                    f"{event.sequence}. {self._event_label(event.type, language)}"
+                    for event in events
+                ] or ["—"]
+                job = self.orchestrator.inspect(job_id, identity)
+                return BotResponse(
+                    TEXT[language]["events_title"].format(job_id=job_id) + "\n\n" + "\n".join(lines),
+                    self._job_markup(job, language, identity.subject),
+                )
+            if action == "cancel":
+                current = self.orchestrator.inspect(job_id, identity)
+                job = self.orchestrator.cancel(job_id, identity)
+                if self.runtime:
+                    self.runtime.cancel_external(current)
+                return BotResponse(self._render_job(job, language), self._job_markup(job, language, identity.subject))
+            if action == "resume":
+                job = self.runtime.resume(job_id, identity) if self.runtime else self.orchestrator.resume(job_id, identity)
+                return BotResponse(self._render_job(job, language), self._job_markup(job, language, identity.subject))
+            job = self.orchestrator.inspect(job_id, identity)
+            if self.runtime:
+                job = self.runtime.refresh(job)
+            if action == "artifact":
+                text = "\n\n".join(
+                    f"{item.name}\n{item.public_url or item.uri}\nSHA-256: {item.sha256}"
+                    for item in job.artifacts
+                ) or TEXT[language]["no_artifact"]
+                return BotResponse(text, self._job_markup(job, language, identity.subject))
+            return BotResponse(self._render_job(job, language), self._job_markup(job, language, identity.subject))
+        except (OrchestrationError, PermissionError):
+            return BotResponse(TEXT[language]["job_not_found"], self._back_markup(language))
+
+    def _render_job(self, job: JobManifest, language: str) -> str:
+        return TEXT[language]["status"].format(
+            job_id=job.job_id,
+            status=self._status_label(job.status.value, language),
+            stage=self._stage_label(job.stage, language),
+            progress=round(job.progress * 100),
+            runner=job.runner or "—",
+        )
+
+    def _job_markup(
+        self, job: JobManifest, language: str, viewer_id: int | str
+    ) -> dict[str, object]:
+        reference = self.ui_state.remember_job(viewer_id, job.job_id)
+        rows = [[
+            (TEXT[language]["refresh"], f"v1:job:{reference}"),
+            (TEXT[language]["events"], f"v1:events:{reference}"),
+        ]]
+        if job.artifacts:
+            rows.append([(TEXT[language]["artifact"], f"v1:artifact:{reference}")])
+        if job.status not in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}:
+            rows.append([(TEXT[language]["cancel"], f"v1:cancel:{reference}")])
+        if job.status in {JobStatus.FAILED, JobStatus.CANCELLED} and job.checkpoint:
+            rows.append([(TEXT[language]["resume"], f"v1:resume:{reference}")])
+        rows.append([(TEXT[language]["jobs"], "v1:jobs"), (TEXT[language]["back"], "v1:menu")])
+        return self._inline(rows)
+
+    def _cloud_menu(self, language: str) -> BotResponse:
+        provider = self.cloud_provider or (
+            (lambda value: self.runtime.cloud_library(category=value)) if self.runtime else None
+        )
+        if not provider:
+            return BotResponse(TEXT[language]["no_roms"], self._back_markup(language))
+        try:
+            payload = provider("sources")
+            entries = payload.get("entries", []) if isinstance(payload, dict) else []
+            names = [str(item.get("name") or item.get("path")) for item in entries[:20] if isinstance(item, dict)]
+            text = TEXT[language]["library_title"] + "\n\n" + ("\n".join(f"• {name}" for name in names) or TEXT[language]["no_roms"])
+            return BotResponse(text, self._inline([
+                [(TEXT[language]["new"], "v1:new")],
+                [(TEXT[language]["back"], "v1:menu")],
+            ]))
+        except (OSError, ValueError, RuntimeError) as exc:
+            return BotResponse(TEXT[language]["failed"].format(error=exc), self._back_markup(language))
+
+    def _diagnostics_menu(self, language: str) -> BotResponse:
+        text = TEXT[language]["diagnostics_title"] + "\n\n" + self._render_details(self.diagnostics_provider())
+        return BotResponse(text, self._back_markup(language))
 
     def _job_command(self, command: str, job_id: str, identity: Identity) -> str:
         if command == "/job":
@@ -134,11 +854,7 @@ class TelegramBotController:
                 self.runtime.cancel_external(current)
             return self._render_json(cancelled.to_dict())
         if command == "/resume":
-            resumed = (
-                self.runtime.resume(job_id, identity)
-                if self.runtime
-                else self.orchestrator.resume(job_id, identity)
-            )
+            resumed = self.runtime.resume(job_id, identity) if self.runtime else self.orchestrator.resume(job_id, identity)
             return self._render_json(resumed.to_dict())
         job = self.orchestrator.inspect(job_id, identity)
         if self.runtime:
@@ -148,10 +864,117 @@ class TelegramBotController:
             for artifact in job.artifacts
         ) or "Job chưa có artifact."
 
+    def _devices(self) -> list[tuple[str, str]]:
+        payload = self.catalog_provider()
+        raw = payload.get("devices", []) if isinstance(payload, dict) else []
+        devices = []
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            product = str(item.get("product_name") or item.get("productName") or item.get("device") or "").strip()
+            if product:
+                devices.append((product, str(item.get("name") or product).strip()))
+        if not devices:
+            raise ValueError("Device catalog is empty")
+        return devices
+
+    def _mod_versions(self) -> list[str]:
+        payload = self.catalog_provider()
+        raw = payload.get("modVersions", []) if isinstance(payload, dict) else []
+        versions = [str(item).strip() for item in raw if str(item).strip()]
+        if not versions:
+            raise ValueError("MOD catalog is empty")
+        return versions
+
+    def _require_session(self, user_id: int | str) -> dict[str, Any]:
+        session = self.ui_state.session(user_id)
+        if not session:
+            raise ValueError("Build session has expired")
+        return session
+
+    def _require_step(self, user_id: int | str, expected: str) -> dict[str, Any]:
+        session = self._require_session(user_id)
+        if session.get("step") != expected:
+            raise ExpiredCallbackError("Callback does not match the active wizard step")
+        return session
+
+    @staticmethod
+    def _help(identity: Identity, language: str) -> str:
+        if language == "en":
+            return HELP_ADMIN_EN if identity.role == "admin" else HELP_USER_EN
+        return HELP_ADMIN_VI if identity.role == "admin" else HELP_USER_VI
+
+    def _main_menu(self, language: str) -> BotResponse:
+        return BotResponse(TEXT[language]["welcome"], self._inline([
+            [(TEXT[language]["new"], "v1:new")],
+            [(TEXT[language]["jobs"], "v1:jobs"), (TEXT[language]["library"], "v1:cloud")],
+            [(TEXT[language]["diagnostics"], "v1:diag"), (TEXT[language]["language"], f"v1:lang:{'en' if language == 'vi' else 'vi'}")],
+        ]))
+
+    def _recovery(self, language: str) -> BotResponse:
+        return BotResponse(TEXT[language]["expired"], self._back_markup(language))
+
+    @staticmethod
+    def _status_label(status: str, language: str) -> str:
+        return STATUS_LABELS.get(language, {}).get(status, status)
+
+    @classmethod
+    def _stage_label(cls, stage: str | None, language: str) -> str:
+        if not stage:
+            return "—"
+        return STAGE_LABELS.get(language, {}).get(stage, stage)
+
+    @staticmethod
+    def _event_label(event_type: str, language: str) -> str:
+        return EVENT_LABELS.get(language, {}).get(event_type, event_type)
+
+    @staticmethod
+    def _display_source(source: object) -> str:
+        if not isinstance(source, dict):
+            return "—"
+        uri = str(source.get("uri") or "—")
+        if source.get("kind") not in {"http", "https"} or "?" not in uri:
+            return uri
+        parsed = urlsplit(uri)
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "…", ""))
+
+    def _back_markup(self, language: str) -> dict[str, object]:
+        return self._inline([[(TEXT[language]["back"], "v1:menu")]])
+
+    @staticmethod
+    def _inline(rows: list[list[tuple[str, str]]]) -> dict[str, object]:
+        return {"inline_keyboard": [[{"text": text, "callback_data": data} for text, data in row] for row in rows]}
+
+    @staticmethod
+    def _trim(value: str, length: int) -> str:
+        return value if len(value) <= length else value[: length - 1] + "…"
+
     @staticmethod
     def _render_json(payload: object) -> str:
         value = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
         return value if len(value) <= 3900 else value[:3880] + "\n…"
+
+    @classmethod
+    def _render_details(cls, payload: object, prefix: str = "") -> str:
+        lines: list[str] = []
+        if isinstance(payload, dict):
+            for key, value in payload.items():
+                label = f"{prefix}.{key}" if prefix else str(key)
+                if isinstance(value, (dict, list)):
+                    lines.extend(cls._render_details(value, label).splitlines())
+                else:
+                    lines.append(f"{label}: {value}")
+        elif isinstance(payload, list):
+            for index, value in enumerate(payload):
+                label = f"{prefix}[{index}]"
+                if isinstance(value, (dict, list)):
+                    lines.extend(cls._render_details(value, label).splitlines())
+                else:
+                    lines.append(f"{label}: {value}")
+        else:
+            lines.append(f"{prefix or 'value'}: {payload}")
+        rendered = "\n".join(lines) or "—"
+        return rendered if len(rendered) <= 3900 else rendered[:3880] + "\n…"
 
 
 class TelegramLongPollingDaemon:
@@ -164,34 +987,93 @@ class TelegramLongPollingDaemon:
     def stop(self) -> None:
         self._stop.set()
 
+    def register_commands(self) -> None:
+        command_sets = self.controller.command_sets()
+        requests.post(
+            f"{self.base_url}/setMyCommands",
+            json={"commands": command_sets["vi"]},
+            timeout=20,
+        ).raise_for_status()
+        requests.post(
+            f"{self.base_url}/setMyCommands",
+            json={"commands": command_sets["en"], "language_code": "en"},
+            timeout=20,
+        ).raise_for_status()
+
+    def process_update(self, update: dict[str, Any]) -> None:
+        callback = update.get("callback_query") or {}
+        if callback:
+            sender = callback.get("from") or {}
+            message = callback.get("message") or {}
+            chat = message.get("chat") or {}
+            data = callback.get("data")
+            callback_id = callback.get("id")
+            if not sender.get("id") or not chat.get("id") or not isinstance(data, str):
+                return
+            if callback_id:
+                try:
+                    requests.post(
+                        f"{self.base_url}/answerCallbackQuery",
+                        json={"callback_query_id": callback_id},
+                        timeout=20,
+                    ).raise_for_status()
+                except requests.RequestException:
+                    pass
+            response = self.controller.handle_callback(sender["id"], data)
+            payload = {"chat_id": chat["id"], **response.telegram_payload()}
+            if message.get("message_id"):
+                payload["message_id"] = message["message_id"]
+                endpoint = "editMessageText"
+            else:
+                endpoint = "sendMessage"
+            try:
+                requests.post(f"{self.base_url}/{endpoint}", json=payload, timeout=20).raise_for_status()
+            except requests.RequestException:
+                if endpoint != "editMessageText":
+                    raise
+                payload.pop("message_id", None)
+                requests.post(
+                    f"{self.base_url}/sendMessage", json=payload, timeout=20
+                ).raise_for_status()
+            return
+        message = update.get("message") or {}
+        sender = message.get("from") or {}
+        chat = message.get("chat") or {}
+        text = message.get("text")
+        if not sender.get("id") or not chat.get("id") or not isinstance(text, str):
+            return
+        response = self.controller.handle_ui(sender["id"], text)
+        requests.post(
+            f"{self.base_url}/sendMessage",
+            json={"chat_id": chat["id"], **response.telegram_payload()},
+            timeout=20,
+        ).raise_for_status()
+
     def run(self) -> None:
         offset = 0
+        commands_registered = False
+        next_registration_attempt = 0.0
         while not self._stop.is_set():
+            if not commands_registered and time.monotonic() >= next_registration_attempt:
+                try:
+                    self.register_commands()
+                    commands_registered = True
+                except requests.RequestException:
+                    next_registration_attempt = time.monotonic() + 60
             try:
                 response = requests.get(
                     f"{self.base_url}/getUpdates",
-                    params={"offset": offset, "timeout": 30, "allowed_updates": json.dumps(["message"])},
+                    params={
+                        "offset": offset,
+                        "timeout": 30,
+                        "allowed_updates": json.dumps(["message", "callback_query"]),
+                    },
                     timeout=40,
                 )
                 response.raise_for_status()
                 for update in response.json().get("result", []):
                     offset = max(offset, int(update["update_id"]) + 1)
-                    message = update.get("message") or {}
-                    sender = message.get("from") or {}
-                    chat = message.get("chat") or {}
-                    text = message.get("text")
-                    if not sender.get("id") or not chat.get("id") or not isinstance(text, str):
-                        continue
-                    answer = self.controller.handle(sender["id"], text)
-                    requests.post(
-                        f"{self.base_url}/sendMessage",
-                        json={
-                            "chat_id": chat["id"],
-                            "text": answer,
-                            "disable_web_page_preview": True,
-                        },
-                        timeout=20,
-                    ).raise_for_status()
+                    self.process_update(update)
             except requests.RequestException:
                 self._stop.wait(5)
 
@@ -202,10 +1084,17 @@ class TelegramWebhookAdapter:
     def __init__(self, controller: TelegramBotController) -> None:
         self.controller = controller
 
-    def handle_update(self, update: dict[str, Any]) -> str | None:
+    def handle_update(self, update: dict[str, Any]) -> BotResponse | None:
+        callback = update.get("callback_query") or {}
+        if callback:
+            sender = callback.get("from") or {}
+            data = callback.get("data")
+            if sender.get("id") and isinstance(data, str):
+                return self.controller.handle_callback(sender["id"], data)
+            return None
         message = update.get("message") or {}
         sender = message.get("from") or {}
         text = message.get("text")
         if not sender.get("id") or not isinstance(text, str):
             return None
-        return self.controller.handle(sender["id"], text)
+        return self.controller.handle_ui(sender["id"], text)
