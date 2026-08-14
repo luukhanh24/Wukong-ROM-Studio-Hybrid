@@ -1117,10 +1117,17 @@ class TelegramBotController:
 
 
 class TelegramLongPollingDaemon:
-    def __init__(self, token: str, controller: TelegramBotController) -> None:
+    def __init__(
+        self,
+        token: str,
+        controller: TelegramBotController,
+        *,
+        http: requests.Session | None = None,
+    ) -> None:
         self._token = token
         self.controller = controller
         self.base_url = f"https://api.telegram.org/bot{token}"
+        self._http = http if http is not None else requests.Session()
         self._stop = threading.Event()
 
     def stop(self) -> None:
@@ -1128,12 +1135,12 @@ class TelegramLongPollingDaemon:
 
     def register_commands(self) -> None:
         command_sets = self.controller.command_sets()
-        requests.post(
+        self._http.post(
             f"{self.base_url}/setMyCommands",
             json={"commands": command_sets["vi"]},
             timeout=20,
         ).raise_for_status()
-        requests.post(
+        self._http.post(
             f"{self.base_url}/setMyCommands",
             json={"commands": command_sets["en"], "language_code": "en"},
             timeout=20,
@@ -1151,7 +1158,7 @@ class TelegramLongPollingDaemon:
                 return
             if callback_id:
                 try:
-                    requests.post(
+                    self._http.post(
                         f"{self.base_url}/answerCallbackQuery",
                         json={"callback_query_id": callback_id},
                         timeout=20,
@@ -1166,12 +1173,14 @@ class TelegramLongPollingDaemon:
             else:
                 endpoint = "sendMessage"
             try:
-                requests.post(f"{self.base_url}/{endpoint}", json=payload, timeout=20).raise_for_status()
+                self._http.post(
+                    f"{self.base_url}/{endpoint}", json=payload, timeout=20
+                ).raise_for_status()
             except requests.RequestException:
                 if endpoint != "editMessageText":
                     raise
                 payload.pop("message_id", None)
-                requests.post(
+                self._http.post(
                     f"{self.base_url}/sendMessage", json=payload, timeout=20
                 ).raise_for_status()
             return
@@ -1182,7 +1191,7 @@ class TelegramLongPollingDaemon:
         if not sender.get("id") or not chat.get("id") or not isinstance(text, str):
             return
         response = self.controller.handle_ui(sender["id"], text)
-        requests.post(
+        self._http.post(
             f"{self.base_url}/sendMessage",
             json={"chat_id": chat["id"], **response.telegram_payload()},
             timeout=20,
@@ -1200,7 +1209,7 @@ class TelegramLongPollingDaemon:
                 except requests.RequestException:
                     next_registration_attempt = time.monotonic() + 60
             try:
-                response = requests.get(
+                response = self._http.get(
                     f"{self.base_url}/getUpdates",
                     params={
                         "offset": offset,

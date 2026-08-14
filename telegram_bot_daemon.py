@@ -44,6 +44,14 @@ def _ids(value: str) -> set[str]:
     return {item.strip() for item in value.split(",") if item.strip()}
 
 
+def _configured_admin_ids() -> set[str]:
+    configured = _ids(os.environ.get("WUKONG_TELEGRAM_ADMIN_IDS", ""))
+    if configured:
+        return configured
+    private_chat = os.environ.get("WUKONG_TELEGRAM_CHAT_ID", "").strip()
+    return {private_chat} if private_chat.isdigit() and int(private_chat) > 0 else set()
+
+
 def _content_root() -> Path:
     configured = os.environ.get("WUKONG_TELEGRAM_CONTENT_ROOT", "").strip()
     if configured:
@@ -96,7 +104,7 @@ def build_telegram_catalog(content_root: Path, index_path: Path) -> dict[str, ob
 def main() -> int:
     load_local_env()
     token = os.environ.get("WUKONG_TELEGRAM_BOT_TOKEN", "").strip()
-    admins = _ids(os.environ.get("WUKONG_TELEGRAM_ADMIN_IDS", ""))
+    admins = _configured_admin_ids()
     if not token or not admins:
         print("Missing WUKONG_TELEGRAM_BOT_TOKEN or WUKONG_TELEGRAM_ADMIN_IDS")
         return 2
