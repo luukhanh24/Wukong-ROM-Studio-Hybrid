@@ -19,7 +19,7 @@ from wukong.telegram_bot import (
     TelegramLongPollingDaemon,
     TelegramUIStateStore,
 )
-from telegram_bot_daemon import build_telegram_catalog
+from telegram_bot_daemon import _configured_admin_ids, build_telegram_catalog
 
 
 class TelegramBotUITests(unittest.TestCase):
@@ -309,6 +309,39 @@ class TelegramBotUITests(unittest.TestCase):
 
 
 class TelegramDaemonUITests(unittest.TestCase):
+    def test_admin_ids_fall_back_to_the_configured_private_chat(self) -> None:
+        with patch.dict(
+            "telegram_bot_daemon.os.environ",
+            {"WUKONG_TELEGRAM_CHAT_ID": "1678823419"},
+            clear=True,
+        ):
+            self.assertEqual({"1678823419"}, _configured_admin_ids())
+
+        with patch.dict(
+            "telegram_bot_daemon.os.environ",
+            {
+                "WUKONG_TELEGRAM_CHAT_ID": "1678823419",
+                "WUKONG_TELEGRAM_ADMIN_IDS": "42, 43",
+            },
+            clear=True,
+        ):
+            self.assertEqual({"42", "43"}, _configured_admin_ids())
+
+    def test_reuses_one_http_session_for_telegram_requests(self) -> None:
+        controller = Mock()
+        controller.command_sets.return_value = {"vi": [], "en": []}
+        success = Mock()
+        success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+
+        with patch("wukong.telegram_bot.requests.Session", return_value=http) as session:
+            daemon = TelegramLongPollingDaemon("test-token", controller)
+            daemon.register_commands()
+
+        session.assert_called_once_with()
+        self.assertEqual(2, http.post.call_count)
+
     def test_catalog_uses_installed_mod_root_and_only_uploaded_github_versions(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             content = Path(root, "Content")
@@ -385,25 +418,26 @@ class TelegramDaemonUITests(unittest.TestCase):
         controller.handle_callback.return_value = BotResponse(
             "Đã đổi", {"inline_keyboard": [[{"text": "Menu", "callback_data": "v1:menu"}]]}
         )
-        daemon = TelegramLongPollingDaemon("test-token", controller)
         success = Mock()
         success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
 
-        with patch("wukong.telegram_bot.requests.post", return_value=success) as post:
-            daemon.register_commands()
-            daemon.process_update(
-                {
-                    "update_id": 7,
-                    "callback_query": {
-                        "id": "callback-1",
-                        "from": {"id": 42},
-                        "message": {"message_id": 99, "chat": {"id": 100}},
-                        "data": "v1:lang:en",
-                    },
-                }
-            )
+        daemon.register_commands()
+        daemon.process_update(
+            {
+                "update_id": 7,
+                "callback_query": {
+                    "id": "callback-1",
+                    "from": {"id": 42},
+                    "message": {"message_id": 99, "chat": {"id": 100}},
+                    "data": "v1:lang:en",
+                },
+            }
+        )
 
-        endpoints = [call.args[0] for call in post.call_args_list]
+        endpoints = [call.args[0] for call in http.post.call_args_list]
         self.assertTrue(any(value.endswith("/setMyCommands") for value in endpoints))
         self.assertTrue(any(value.endswith("/answerCallbackQuery") for value in endpoints))
         self.assertTrue(any(value.endswith("/editMessageText") for value in endpoints))
@@ -413,7 +447,6 @@ class TelegramDaemonUITests(unittest.TestCase):
         controller.handle_callback.return_value = BotResponse(
             "Recovered", {"inline_keyboard": [[{"text": "Menu", "callback_data": "v1:menu"}]]}
         )
-        daemon = TelegramLongPollingDaemon("test-token", controller)
         success = Mock()
         success.raise_for_status.return_value = None
         failed = Mock()
@@ -422,19 +455,21 @@ class TelegramDaemonUITests(unittest.TestCase):
         def fake_post(endpoint, **_kwargs):
             return failed if endpoint.endswith("/editMessageText") else success
 
-        with patch("wukong.telegram_bot.requests.post", side_effect=fake_post) as post:
-            daemon.process_update(
-                {
-                    "callback_query": {
-                        "id": "callback-1",
-                        "from": {"id": 42},
-                        "message": {"message_id": 99, "chat": {"id": 100}},
-                        "data": "v1:menu",
-                    }
+        http = Mock()
+        http.post.side_effect = fake_post
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+        daemon.process_update(
+            {
+                "callback_query": {
+                    "id": "callback-1",
+                    "from": {"id": 42},
+                    "message": {"message_id": 99, "chat": {"id": 100}},
+                    "data": "v1:menu",
                 }
-            )
+            }
+        )
 
-        endpoints = [call.args[0] for call in post.call_args_list]
+        endpoints = [call.args[0] for call in http.post.call_args_list]
         self.assertTrue(any(value.endswith("/sendMessage") for value in endpoints))
 
 

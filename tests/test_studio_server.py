@@ -40,6 +40,13 @@ class StudioServerTests(unittest.TestCase):
             encoding="utf-8",
         )
         self.patches = [
+            mock.patch.dict(
+                os.environ,
+                {
+                    "WUKONG_RCLONE_CONFIG": "",
+                    "WUKONG_RCLONE_CONFIG_CONTENT_B64": "",
+                },
+            ),
             mock.patch.object(studio_server, "ROOT_DIR", self.root),
             mock.patch.object(studio_server, "CONTENT_ROOT", self.root),
             mock.patch.object(studio_server, "RUNTIME_DIR", self.runtime),
@@ -1486,4 +1493,3 @@ class StudioServerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
