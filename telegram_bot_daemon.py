@@ -11,7 +11,11 @@ from studio_server import diagnostics
 from wukong.orchestrator import FileJobStore, HybridOrchestrator
 from wukong.routing import RunnerInventory
 from wukong.telegram import TelegramAccessStore
-from wukong.telegram_bot import TelegramBotController, TelegramLongPollingDaemon
+from wukong.telegram_bot import (
+    TelegramBotController,
+    TelegramLongPollingDaemon,
+    TelegramUIStateStore,
+)
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
 
@@ -59,6 +63,7 @@ def main() -> int:
         cache_clearer=None,
         cloud_provider=lambda category: runtime.cloud_library(category=category),
         runtime=runtime,
+        ui_state=TelegramUIStateStore(DATA_ROOT / "telegram-ui-state.json"),
     )
     TelegramLongPollingDaemon(token, controller).run()
     return 0
