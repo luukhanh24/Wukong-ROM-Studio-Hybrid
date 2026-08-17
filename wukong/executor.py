@@ -115,6 +115,7 @@ class LocalJobExecutor:
                 return self._succeed(job_id, [record])
 
             self._ensure_content_packs(recipe)
+            recipe = self._reconcile_recipe_mods(job_id, recipe)
             self.store.update(job_id, status=JobStatus.RUNNING, stage="build", progress=0.1)
             from studio_core import (
                 BuildSpec,
@@ -131,34 +132,35 @@ class LocalJobExecutor:
             )
             legacy_spec = recipe.to_legacy_spec(local_rom_path=str(source.path))
             legacy_spec["romSha256"] = source.sha256
+            resume_ready = False
             if manifest.checkpoint:
-                if manifest.checkpoint.startswith("local:"):
-                    checkpoint_path = Path(manifest.checkpoint[6:]).resolve()
-                    if checkpoint_path != build_workspace:
-                        raise OrchestrationError("Resume checkpoint does not match the ROM workspace")
+                resume_ready = self._try_restore_checkpoint(
+                    job_id,
+                    manifest.checkpoint,
+                    build_workspace,
+                    storage,
+                )
+                if resume_ready:
+                    marker_path = build_workspace / ".wkstudio-workspace.json"
+                    import json
+
+                    marker = json.loads(marker_path.read_text(encoding="utf-8"))
+                    legacy_spec["specFingerprint"] = marker.get("specFingerprint")
+                    legacy_spec["resumeFromJobId"] = str(marker.get("jobId") or job_id)
+                    legacy_spec["resumePreset"] = recipe.build.preset
+                    legacy_spec["preset"] = "resume"
                 else:
-                    if build_workspace.exists():
-                        import shutil
-
-                        shutil.rmtree(build_workspace)
-                    storage.restore_tree(manifest.checkpoint, build_workspace)
-                marker_path = build_workspace / ".wkstudio-workspace.json"
-                if not marker_path.is_file():
-                    raise OrchestrationError("Resume checkpoint is missing its workspace marker")
-                import json
-
-                marker = json.loads(marker_path.read_text(encoding="utf-8"))
-                legacy_spec["specFingerprint"] = marker.get("specFingerprint")
-                legacy_spec["resumeFromJobId"] = str(marker.get("jobId") or job_id)
-                legacy_spec["resumePreset"] = recipe.build.preset
-                legacy_spec["preset"] = "resume"
+                    legacy_spec["specFingerprint"] = build_spec_fingerprint(BuildSpec.from_dict(legacy_spec))
             else:
                 legacy_spec["specFingerprint"] = build_spec_fingerprint(BuildSpec.from_dict(legacy_spec))
 
             checkpoint_upload_enabled = True
+            # On Actions, throttle cloud progress pushes: every stage event hits Drive
+            # and easily exhausts API quota during long builds.
+            cloud_progress_counter = 0
 
             def on_event(event: dict[str, Any]) -> None:
-                nonlocal checkpoint_upload_enabled
+                nonlocal checkpoint_upload_enabled, cloud_progress_counter
                 current = self.store.get(job_id)
                 if current and current.status == JobStatus.CANCELLED:
                     raise OrchestrationError("Job was cancelled")
@@ -170,7 +172,13 @@ class LocalJobExecutor:
                     changes["progress"] = max(0.0, min(float(progress) / 100, 0.79))
                 self.store.update(job_id, **changes)
                 self.store.append_event(job_id, event_type, **event)
-                self._push_cloud_progress(job_id, storage)
+                status = str(event.get("status") or "")
+                should_push = status in {"success", "failed"} or event_type in {"error", "warning", "checkpoint"}
+                if should_push:
+                    cloud_progress_counter += 1
+                    # Always push terminal-ish events; sample intermediate successes lightly.
+                    if status in {"failed"} or event_type in {"error", "checkpoint"} or cloud_progress_counter % 2 == 1:
+                        self._push_cloud_progress(job_id, storage)
                 if (
                     event.get("status") == "success"
                     and stage in CHECKPOINT_STAGES
@@ -178,6 +186,13 @@ class LocalJobExecutor:
                 ):
                     try:
                         if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
+                            if os.environ.get("WUKONG_DISABLE_CLOUD_CHECKPOINTS", "").strip().casefold() in {
+                                "1",
+                                "true",
+                                "yes",
+                                "on",
+                            }:
+                                raise RuntimeError("Cloud checkpoints disabled by WUKONG_DISABLE_CLOUD_CHECKPOINTS")
                             checkpoint = storage.sync_tree(
                                 build_workspace,
                                 f"checkpoints/{job_id}/{stage}",
@@ -190,8 +205,7 @@ class LocalJobExecutor:
                         self.store.append_event(job_id, "checkpoint", checkpoint=checkpoint, stage=stage)
                         self._push_cloud_progress(job_id, storage)
                     except Exception as exc:
-                        if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
-                            checkpoint_upload_enabled = False
+                        checkpoint_upload_enabled = False
                         self.store.append_event(
                             job_id,
                             "warning",
@@ -255,7 +269,10 @@ class LocalJobExecutor:
 
     def _ensure_content_packs(self, recipe: BuildRecipe) -> None:
         if not self.content_index.is_file():
-            raise OrchestrationError(f"Content-pack index is unavailable: {self.content_index}")
+            raise OrchestrationError(
+                f"Content-pack index is unavailable: {self.content_index}. "
+                "Run content_pack_tool.py index/upload or clone a tree that includes content-packs/index.json."
+            )
         import json
 
         index = json.loads(self.content_index.read_text(encoding="utf-8"))
@@ -268,16 +285,105 @@ class LocalJobExecutor:
         for pack_id in required:
             pack = next((item for item in index["packs"] if item["id"] == pack_id), None)
             if not pack:
-                raise OrchestrationError(f"Content-pack is unavailable: {pack_id}")
+                raise OrchestrationError(
+                    f"Content-pack is unavailable: {pack_id}. "
+                    f"Add it to content-packs/index.json and upload with content_pack_tool.py."
+                )
             target = (self.content_root / str(pack["target"])).resolve()
             try:
                 manager.verify(target, pack)
             except (FileNotFoundError, SourceIntegrityError):
                 if not self.rclone_config:
                     raise OrchestrationError(
-                        f"Content-pack {pack_id} is missing or invalid and rclone is not configured"
+                        f"Content-pack {pack_id} is missing or invalid under {target} "
+                        "and rclone is not configured (set WUKONG_RCLONE_CONFIG)."
                     )
-                manager.install(index, pack_id)
+                try:
+                    manager.install(index, pack_id)
+                except Exception as exc:
+                    raise OrchestrationError(
+                        f"Failed to install content-pack {pack_id}: {exc}"
+                    ) from exc
+
+    def _reconcile_recipe_mods(self, job_id: str, recipe: BuildRecipe) -> BuildRecipe:
+        if recipe.task != "build":
+            return recipe
+        from tools.validate_recipe_content import apply_resolved_mods, resolve_recipe_mods
+
+        try:
+            resolved = resolve_recipe_mods(recipe, self.content_root)
+        except ValueError as exc:
+            raise OrchestrationError(str(exc)) from exc
+        dropped = [str(item) for item in (resolved.get("dropped") or [])]
+        if dropped:
+            self.store.append_event(
+                job_id,
+                "warning",
+                warning=(
+                    "Dropped unavailable MODs from recipe "
+                    f"({recipe.build.mod_version}): {', '.join(dropped)}"
+                ),
+            )
+        if resolved.get("rewritten") and not resolved.get("mods"):
+            raise OrchestrationError(
+                f"No ready MODs remain in content-pack MOD/{recipe.build.mod_version}. "
+                "Install/upload a complete pack before building."
+            )
+        updated = apply_resolved_mods(recipe, resolved)
+        if updated.digest != recipe.digest:
+            self.store.replace_recipe(job_id, updated)
+            # Keep manifest recipe_digest aligned with the executed MOD set.
+            try:
+                self.store.update(job_id, recipe_digest=updated.digest)
+            except OrchestrationError:
+                pass
+            recipe = updated
+            self.store.append_event(
+                job_id,
+                "state",
+                status="running",
+                stage="mod_reconcile",
+                mods=list(updated.build.mods),
+            )
+        return recipe
+
+    def _try_restore_checkpoint(
+        self,
+        job_id: str,
+        checkpoint: str,
+        build_workspace: Path,
+        storage: RcloneStorageAdapter,
+    ) -> bool:
+        import shutil
+
+        try:
+            if checkpoint.startswith("local:"):
+                checkpoint_path = Path(checkpoint[6:]).resolve()
+                if checkpoint_path != build_workspace:
+                    raise OrchestrationError(
+                        f"Resume checkpoint path {checkpoint_path} does not match workspace {build_workspace}"
+                    )
+                if not (build_workspace / ".wkstudio-workspace.json").is_file():
+                    raise OrchestrationError("Local resume checkpoint is missing its workspace marker")
+                return True
+            if build_workspace.exists():
+                shutil.rmtree(build_workspace)
+            storage.restore_tree(checkpoint, build_workspace)
+            if not (build_workspace / ".wkstudio-workspace.json").is_file():
+                raise OrchestrationError("Resume checkpoint is missing its workspace marker")
+            return True
+        except Exception as exc:
+            if build_workspace.exists():
+                shutil.rmtree(build_workspace, ignore_errors=True)
+            self.store.update(job_id, checkpoint=None, checkpoint_at=None)
+            self.store.append_event(
+                job_id,
+                "warning",
+                warning=(
+                    f"Checkpoint restore failed; continuing with a clean workspace: {exc}"
+                ),
+            )
+            return False
 
     def _push_cloud_progress(self, job_id: str, storage: RcloneStorageAdapter) -> None:
         if os.environ.get("GITHUB_ACTIONS", "").casefold() != "true":

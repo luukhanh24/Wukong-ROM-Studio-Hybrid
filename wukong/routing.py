@@ -46,14 +46,24 @@ class RunnerRouter:
         target: str,
         estimated_workspace_bytes: int,
         inventory: RunnerInventory,
+        allow_hosted_fallback: bool = True,
     ) -> RunnerDecision:
         if target == "local-windows":
             return RunnerDecision("local", "windows", ("windows",), "Local Windows selected")
         if target == "github-hosted":
-            # Direct workflow entry still uses auto routing so a recipe cannot
-            # force hosted execution beyond the safety limit.
+            # Prefer self-hosted when the estimate exceeds the hosted safety
+            # budget, but fall back to maximized hosted runners when the
+            # qualified machine is offline so builds stay unblocked.
             if estimated_workspace_bytes > HOSTED_WORKSPACE_LIMIT:
-                return self._self_hosted(inventory)
+                try:
+                    return self._self_hosted(inventory)
+                except RunnerUnavailableError as exc:
+                    if not allow_hosted_fallback:
+                        raise
+                    return self._hosted(
+                        f"Self-hosted unavailable ({exc}); "
+                        "using maximized GitHub-hosted runner with disk risk for large workspace"
+                    )
             return self._hosted()
         if target == "self-hosted-linux":
             return self._self_hosted(inventory)
@@ -61,21 +71,33 @@ class RunnerRouter:
             raise ValueError(f"Unsupported execution target: {target}")
         if estimated_workspace_bytes <= HOSTED_WORKSPACE_LIMIT:
             return self._hosted()
-        return self._self_hosted(inventory)
+        try:
+            return self._self_hosted(inventory)
+        except RunnerUnavailableError as exc:
+            if not allow_hosted_fallback:
+                raise
+            return self._hosted(
+                f"Self-hosted unavailable ({exc}); "
+                "using maximized GitHub-hosted runner with disk risk for large workspace"
+            )
 
     @staticmethod
-    def _hosted() -> RunnerDecision:
+    def _hosted(reason: str | None = None) -> RunnerDecision:
         return RunnerDecision(
             "github-hosted",
             "ubuntu-24.04",
             ("ubuntu-24.04",),
-            "Estimated workspace fits the hosted runner safety limit",
+            reason or "Estimated workspace fits the hosted runner safety limit",
         )
 
     @staticmethod
     def _self_hosted(inventory: RunnerInventory) -> RunnerDecision:
         if not inventory.self_hosted_online:
-            raise RunnerUnavailableError("Required Wukong self-hosted Linux runner is offline")
+            raise RunnerUnavailableError(
+                "Required Wukong self-hosted Linux runner is offline "
+                "(labels: self-hosted,linux,x64,wukong-rom). "
+                "Start the runner or set execution.target=github-hosted for smaller jobs."
+            )
         missing: list[str] = []
         if inventory.free_disk_bytes < SELF_HOSTED_MIN_DISK:
             missing.append("150 GiB free disk")
@@ -84,7 +106,11 @@ class RunnerRouter:
         if inventory.logical_cpus < SELF_HOSTED_MIN_CPUS:
             missing.append("8 logical CPUs")
         if missing:
-            raise RunnerUnavailableError("Self-hosted runner does not meet: " + ", ".join(missing))
+            raise RunnerUnavailableError(
+                "Self-hosted runner does not meet: "
+                + ", ".join(missing)
+                + ". Free resources on the runner or use a smaller recipe estimate."
+            )
         return RunnerDecision(
             "self-hosted",
             "wukong-rom",

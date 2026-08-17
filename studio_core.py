@@ -293,6 +293,19 @@ class BuildSpec:
             )
         if not isinstance(raw_mod_names, list):
             raw_mod_names = [raw_mod_names]
+        # Empty MOD lists for Plus/Lite presets mean "use preset defaults", not
+        # "skip every MOD". Custom builds may still pass an explicit empty list
+        # only when apply_mod is intentionally omitted from enabledSteps.
+        if (
+            isinstance(raw_mod_names, list)
+            and not [str(name).strip() for name in raw_mod_names if str(name).strip()]
+            and preset in {"lite", "plus", "resume", "both"}
+            and not payload.get("modName")
+        ):
+            try:
+                raw_mod_names = preset_default_mods(preset, mod_version)
+            except StudioError:
+                raw_mod_names = []
         raw_debloat_paths = payload.get("debloatPaths")
         if raw_debloat_paths is not None and not isinstance(raw_debloat_paths, list):
             raw_debloat_paths = []
@@ -1399,7 +1412,7 @@ def preset_default_mods(
     mods = list_mods(mod_version, mod_root=mod_root)
     if normalized == "lite":
         return [name for name in LITE_DEFAULT_MODS if any(mod["name"] == name for mod in mods)]
-    if normalized in {"resume", "both"}:
+    if normalized in {"resume", "plus", "both"}:
         return [
             mod["name"]
             for mod in mods
@@ -1902,6 +1915,8 @@ def plan_steps(spec: BuildSpec, workspace: Path | None = None) -> list[str]:
     resume_requested = preset == "resume"
     if resume_requested and spec.resumePreset:
         preset = spec.resumePreset
+    if preset == "plus":
+        preset = "resume"
     preset = preset if preset in {"lite", "resume", "custom", "both"} else "lite"
     explicit_targets = preset == "custom" or bool(spec.enabledSteps)
     if explicit_targets:

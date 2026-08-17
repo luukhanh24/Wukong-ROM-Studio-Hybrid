@@ -45,6 +45,7 @@ class JobStore(Protocol):
     def get(self, job_id: str) -> JobManifest | None: ...
     def recipe(self, job_id: str) -> BuildRecipe | None: ...
     def update(self, job_id: str, **changes: object) -> JobManifest: ...
+    def replace_recipe(self, job_id: str, recipe: BuildRecipe) -> BuildRecipe: ...
     def append_event(self, job_id: str, event_type: str, **payload: object) -> JobEvent: ...
     def events(self, job_id: str, after: int = 0) -> list[JobEvent]: ...
     def list(self) -> list[JobManifest]: ...
@@ -88,6 +89,13 @@ class InMemoryJobStore:
             if manifest.status in TERMINAL_STATUSES and not manifest.finished_at:
                 manifest.finished_at = manifest.updated_at
             return copy.deepcopy(manifest)
+
+    def replace_recipe(self, job_id: str, recipe: BuildRecipe) -> BuildRecipe:
+        with self._lock:
+            if job_id not in self._jobs:
+                raise OrchestrationError("Job not found")
+            self._recipes[job_id] = recipe
+            return recipe
 
     def append_event(self, job_id: str, event_type: str, **payload: object) -> JobEvent:
         with self._lock:
@@ -185,6 +193,12 @@ class FileJobStore(InMemoryJobStore):
     def update(self, job_id: str, **changes: object) -> JobManifest:
         with self._lock:
             result = super().update(job_id, **changes)
+            self._persist(job_id)
+            return result
+
+    def replace_recipe(self, job_id: str, recipe: BuildRecipe) -> BuildRecipe:
+        with self._lock:
+            result = super().replace_recipe(job_id, recipe)
             self._persist(job_id)
             return result
 

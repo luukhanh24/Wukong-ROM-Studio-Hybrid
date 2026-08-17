@@ -140,6 +140,102 @@ class HybridChannelParityContractTests(unittest.TestCase):
             warnings = [event for event in store.events(manifest.job_id) if event.type == "warning"]
             self.assertTrue(any("remaining checkpoints are disabled" in event.payload["warning"] for event in warnings))
 
+    def test_failed_checkpoint_restore_continues_with_clean_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            rom = root / "source.zip"
+            with zipfile.ZipFile(rom, "w") as archive:
+                archive.writestr(
+                    "META-INF/com/android/metadata",
+                    "oplus_product_name=PKG110\noplus_version_name=resume-fixture\n",
+                )
+                archive.writestr("payload.bin", b"fixture")
+            content_root = root / "content"
+            packs = []
+            for pack_id, target in (
+                ("MOD/ColorOS_16.0.8", "MOD/ColorOS_16.0.8"),
+                ("copy-image/v1", "copy-image"),
+                ("OFX/v1", "OFX"),
+                ("TWRP/v1", "TWRP"),
+            ):
+                directory = content_root / target
+                directory.mkdir(parents=True)
+                fixture = directory / "fixture.txt"
+                fixture.write_text("fixture\n", encoding="utf-8")
+                packs.append(
+                    {
+                        "id": pack_id,
+                        "target": target,
+                        "remote": f"wukong-gdrive:WukongROM/content-packs/{pack_id}",
+                        "fileCount": 1,
+                        "sizeBytes": fixture.stat().st_size,
+                        "files": [
+                            {
+                                "path": fixture.name,
+                                "sha256": sha256_file(fixture),
+                                "sizeBytes": fixture.stat().st_size,
+                            }
+                        ],
+                    }
+                )
+            content_index = root / "content-index.json"
+            content_index.write_text(json.dumps({"schemaVersion": 1, "packs": packs}), encoding="utf-8")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "task": "build",
+                    "device": "PKG110",
+                    "source": {"kind": "local", "uri": str(rom), "sha256": sha256_file(rom)},
+                    "build": {"preset": "custom", "modVersion": "ColorOS_16.0.8"},
+                    "execution": {"target": "local-windows"},
+                    "storage": {"publishArtifact": False},
+                }
+            )
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=root / "jobs")
+            manifest = orchestrator.submit(recipe, Identity("actions", "100", "user"), job_id="resume-soft")
+            store.update(
+                manifest.job_id,
+                checkpoint="wukong-gdrive:WukongROM/checkpoints/resume-soft/extract_payload/dead.tar",
+                checkpoint_at="2026-08-13T14:58:57.313337Z",
+            )
+
+            class FailingRestoreStorage(_FixtureStorage):
+                def restore_tree(self, _uri: str, _destination: Path) -> Path:
+                    raise OSError("quota exceeded while restoring checkpoint")
+
+            seen_presets: list[str] = []
+
+            def legacy_build(_job_id, spec, workspace, callback):
+                seen_presets.append(str(spec.get("preset")))
+                workspace.mkdir(parents=True, exist_ok=True)
+                callback({"type": "step", "step": "extract_payload", "status": "success"})
+                output = workspace / "artifact.zip"
+                output.write_bytes(b"artifact")
+                return {"outputZip": str(output)}
+
+            with patch("wukong.executor.source_adapter_for", return_value=_FixtureSourceAdapter(rom)):
+                completed = LocalJobExecutor(
+                    store=store,
+                    workspace_root=root / "jobs",
+                    build_workspace_root=root / "build",
+                    content_root=content_root,
+                    content_index=content_index,
+                    storage_factory=lambda _remote: FailingRestoreStorage(),
+                    legacy_build=legacy_build,
+                ).execute(manifest.job_id)
+
+            self.assertEqual(completed.status, JobStatus.SUCCEEDED, completed.error)
+            self.assertEqual(seen_presets, ["custom"])
+            # Cloud checkpoint is discarded on restore failure; a later local
+            # checkpoint from a successful stage is allowed.
+            final = store.get(manifest.job_id)
+            self.assertIsNotNone(final)
+            assert final is not None
+            if final.checkpoint:
+                self.assertTrue(str(final.checkpoint).startswith("local:"))
+            warnings = [event for event in store.events(manifest.job_id) if event.type == "warning"]
+            self.assertTrue(any("Checkpoint restore failed" in event.payload["warning"] for event in warnings))
+
     def test_local_build_without_cloud_publish_records_artifact_checksum(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

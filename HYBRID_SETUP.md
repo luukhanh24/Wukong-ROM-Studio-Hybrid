@@ -130,6 +130,29 @@ Recipe JSON cannot contain tokens, passwords, credentials or requester roles.
 Identity is supplied by the authenticated Windows session, Telegram allowlist
 or GitHub runner.
 
+### Build resilience (Actions-friendly defaults)
+
+These knobs reduce the most common hybrid failures without putting multi-GB
+assets back into Git:
+
+| Behaviour | Default on GitHub Actions | Override |
+|-----------|---------------------------|----------|
+| Drop MODs missing from the installed content-pack and rewrite the recipe | on (`WUKONG_DROP_MISSING_MODS=1`) | set `0` / use `--strict` |
+| Fall back to maximized `ubuntu-24.04` when the self-hosted runner is offline (large estimates) | on for `github-auto` / `github-hosted` | explicit `self-hosted-linux` still requires the runner |
+| Continue build if a checkpoint upload hits Drive quota | on | set `WUKONG_DISABLE_CLOUD_CHECKPOINTS=1` to skip uploads entirely |
+| Continue with a clean workspace if checkpoint restore fails | on | n/a |
+
+Still required before a real build: valid `RCLONE_CONFIG_B64`, uploaded
+content-packs for `MOD/<version>`, `copy-image/v1`, `OFX/v1`, `TWRP/v1`, and a
+ROM source that is `http(s)` or `rclone` (never a local Windows path on Actions).
+
+Validate MODs against installed content before downloading a multi-GB ROM:
+
+```text
+python -m tools.validate_recipe_content --recipe recipe.json --content-root . --drop-missing --rewrite
+python -m tools.validate_recipe_content --recipe recipe.json --content-root . --strict
+```
+
 ## 6. Retention and sharing
 
 - Sources, content-packs and recipes stay private.
