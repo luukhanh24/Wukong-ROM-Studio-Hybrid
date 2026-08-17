@@ -21,18 +21,16 @@ def sha256(path: Path) -> str:
 
 
 def _candidate_urls(url: str) -> list[str]:
-    """Prefer the pinned URL, then stable GitHub raw CDN mirrors on transient failures."""
+    """Prefer the pinned URL, then a jsDelivr mirror for GitHub raw objects."""
     candidates = [url]
     prefix = "https://raw.githubusercontent.com/"
     if url.startswith(prefix):
-        rest = url[len(prefix) :]
-        candidates.append(f"https://cdn.jsdelivr.net/gh/{rest.replace('/', '@', 1)}")
-        # jsdelivr uses owner/repo@version/path — convert owner/repo/commit/path
-        parts = rest.split("/", 3)
+        # raw.githubusercontent.com/owner/repo/commit/path
+        # -> cdn.jsdelivr.net/gh/owner/repo@commit/path
+        parts = url[len(prefix) :].split("/", 3)
         if len(parts) == 4:
             owner, repo, commit, path = parts
             candidates.append(f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@{commit}/{path}")
-    # Preserve order, drop duplicates.
     seen: set[str] = set()
     unique: list[str] = []
     for item in candidates:
