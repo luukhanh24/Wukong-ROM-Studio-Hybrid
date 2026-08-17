@@ -33,10 +33,46 @@ SENSITIVE_URL_PARAMETER_FRAGMENTS = (
     "signature",
     "token",
 )
+# Signed OPlus / Allawn OTA CDN links use short-lived AWS-style query auth.
+# Allow those parameter names only on known public OEM hosts so recipes can
+# reference real downloadCheck / gauss-compota URLs without embedding tokens
+# for arbitrary third-party sites.
+SIGNED_OTA_URL_PARAMETER_FRAGMENTS = (
+    "awsaccesskeyid",
+    "expires",
+    "s",
+    "sign",
+    "signature",
+    "t",
+    "x-amz-algorithm",
+    "x-amz-credential",
+    "x-amz-date",
+    "x-amz-expires",
+    "x-amz-security-token",
+    "x-amz-signature",
+    "x-amz-signedheaders",
+)
+SIGNED_OTA_HOST_SUFFIXES = (
+    ".allawnfs.com",
+    ".allawntech.com",
+    ".coloros.com",
+    ".heytapdownload.com",
+    ".heytapimage.com",
+    ".heytapmobi.com",
+    ".oppomobile.com",
+    ".realme.com",
+)
 TASKS = {"source_mirror", "build", "artifact_publish"}
 SOURCE_KINDS = {"local", "http", "https", "rclone"}
 EXECUTION_TARGETS = {"local-windows", "github-auto", "github-hosted", "self-hosted-linux"}
 ROLES = {"admin", "user"}
+
+
+def _host_allows_signed_ota(hostname: str | None) -> bool:
+    host = (hostname or "").rstrip(".").casefold()
+    if not host:
+        return False
+    return any(host == suffix[1:] or host.endswith(suffix) for suffix in SIGNED_OTA_HOST_SUFFIXES)
 
 
 class RecipeValidationError(ValueError):
@@ -122,12 +158,12 @@ class SourceSpec:
             if parsed.scheme.casefold() != kind or not parsed.netloc or parsed.username or parsed.password:
                 raise RecipeValidationError(f"Invalid {kind.upper()} ROM source URI")
             query_keys = {key.casefold() for key, _ in parse_qsl(parsed.query, keep_blank_values=True)}
-            if any(
-                fragment in key
-                for key in query_keys
-                for fragment in SENSITIVE_URL_PARAMETER_FRAGMENTS
-            ):
-                raise RecipeValidationError("ROM source URL must not contain credential parameters")
+            allow_signed = _host_allows_signed_ota(parsed.hostname)
+            for key in query_keys:
+                if any(fragment in key for fragment in SENSITIVE_URL_PARAMETER_FRAGMENTS):
+                    if allow_signed and any(fragment in key for fragment in SIGNED_OTA_URL_PARAMETER_FRAGMENTS):
+                        continue
+                    raise RecipeValidationError("ROM source URL must not contain credential parameters")
             # The adapter performs a DNS-aware check immediately before every
             # request/redirect. Reject obvious loopback and private IP literals
             # here so unsafe recipes never enter a job store.
