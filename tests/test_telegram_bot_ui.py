@@ -132,6 +132,27 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual("ColorOS_16.0.8", recipe.build.mod_version)
         self.assertEqual(("Fix_Metis", "WK_Installer"), recipe.build.mods)
 
+    def test_github_build_falls_back_to_hosted_when_self_hosted_is_offline(self) -> None:
+        self.controller.ui_state.set_session(42, {
+            "step": "confirm",
+            "task": "build",
+            "device": "PKG110",
+            "source": {"kind": "https", "uri": "https://example.com/rom.zip"},
+            "execution": "github-auto",
+            "preset": "lite",
+            "mod_version": "ColorOS_16.0.8",
+            "selected_mods": ["Fix_Metis"],
+        })
+        self.controller.orchestrator.inventory_provider = lambda: RunnerInventory(False)
+
+        response = self.controller.handle_callback(42, "v1:confirm")
+
+        # Large estimates used to hard-fail without a self-hosted runner. Hybrid
+        # now queues on maximized ubuntu-24.04 so Telegram builds stay usable.
+        self.assertIn("ubuntu-24.04", response.text)
+        self.assertIn("queued", response.text.casefold())
+        self.assertNotIn("Required Wukong self-hosted Linux runner is offline", response.text)
+
     def test_mod_picker_supports_toggle_select_all_and_pagination(self) -> None:
         many_mods = [
             {"name": f"Mod_{index:02d}", "ready": True}

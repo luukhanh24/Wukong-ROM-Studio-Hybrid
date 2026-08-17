@@ -163,10 +163,28 @@ class RunnerRoutingContractTests(unittest.TestCase):
         )
         self.assertEqual(decision.labels, ("self-hosted", "linux", "x64", "wukong-rom"))
 
-    def test_large_job_fails_fast_when_runner_is_offline(self) -> None:
+    def test_large_job_falls_back_to_hosted_when_self_hosted_offline(self) -> None:
+        decision = RunnerRouter().choose(
+            target="github-auto",
+            estimated_workspace_bytes=20 * 1024**3,
+            inventory=RunnerInventory(self_hosted_online=False),
+        )
+        self.assertEqual(decision.kind, "github-hosted")
+        self.assertIn("Self-hosted unavailable", decision.reason)
+
+    def test_large_job_can_still_fail_fast_without_hosted_fallback(self) -> None:
         with self.assertRaisesRegex(RunnerUnavailableError, "offline"):
             RunnerRouter().choose(
                 target="github-auto",
+                estimated_workspace_bytes=20 * 1024**3,
+                inventory=RunnerInventory(self_hosted_online=False),
+                allow_hosted_fallback=False,
+            )
+
+    def test_explicit_self_hosted_still_requires_online_runner(self) -> None:
+        with self.assertRaisesRegex(RunnerUnavailableError, "offline"):
+            RunnerRouter().choose(
+                target="self-hosted-linux",
                 estimated_workspace_bytes=20 * 1024**3,
                 inventory=RunnerInventory(self_hosted_online=False),
             )
@@ -183,6 +201,14 @@ class RunnerRoutingContractTests(unittest.TestCase):
             ),
         )
         self.assertEqual(decision.kind, "self-hosted")
+
+    def test_explicit_hosted_large_job_falls_back_when_self_hosted_offline(self) -> None:
+        decision = RunnerRouter().choose(
+            target="github-hosted",
+            estimated_workspace_bytes=20 * 1024**3,
+            inventory=RunnerInventory(self_hosted_online=False),
+        )
+        self.assertEqual(decision.kind, "github-hosted")
 
     def test_job_status_uses_hybrid_contract_names(self) -> None:
         self.assertEqual(JobStatus.SUCCEEDED.value, "succeeded")
