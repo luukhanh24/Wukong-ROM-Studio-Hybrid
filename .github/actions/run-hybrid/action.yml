@@ -85,7 +85,11 @@ runs:
       env:
         WUKONG_JOB_ID: ${{ inputs.job_id }}
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
-      run: python3 -m tools.sync_job "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
+      run: |
+        set +e
+        python3 -m tools.sync_job "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
+        # Pre-execute failures have no local job store yet; do not fail the workflow twice.
+        exit 0
     - name: Fail workflow when recipe failed
       if: always() && steps.execute.outputs.result != '0'
       shell: bash

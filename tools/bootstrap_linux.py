@@ -6,6 +6,8 @@ import json
 import os
 import shutil
 import stat
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -16,6 +18,47 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _candidate_urls(url: str) -> list[str]:
+    """Prefer the pinned URL, then stable GitHub raw CDN mirrors on transient failures."""
+    candidates = [url]
+    prefix = "https://raw.githubusercontent.com/"
+    if url.startswith(prefix):
+        rest = url[len(prefix) :]
+        candidates.append(f"https://cdn.jsdelivr.net/gh/{rest.replace('/', '@', 1)}")
+        # jsdelivr uses owner/repo@version/path — convert owner/repo/commit/path
+        parts = rest.split("/", 3)
+        if len(parts) == 4:
+            owner, repo, commit, path = parts
+            candidates.append(f"https://cdn.jsdelivr.net/gh/{owner}/{repo}@{commit}/{path}")
+    # Preserve order, drop duplicates.
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in candidates:
+        if item not in seen:
+            seen.add(item)
+            unique.append(item)
+    return unique
+
+
+def _download(url: str, destination: Path, *, attempts: int = 5) -> None:
+    last_error: Exception | None = None
+    for index in range(attempts):
+        for candidate in _candidate_urls(url):
+            try:
+                request = urllib.request.Request(
+                    candidate,
+                    headers={"User-Agent": "Wukong-ROM-Studio/1"},
+                )
+                with urllib.request.urlopen(request, timeout=180) as response, destination.open("wb") as handle:
+                    shutil.copyfileobj(response, handle, 1024 * 1024)
+                return
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+                last_error = exc
+                destination.unlink(missing_ok=True)
+        time.sleep(min(2 ** index, 20))
+    raise RuntimeError(f"Failed to download {url} after {attempts} attempts: {last_error}")
 
 
 def main() -> int:
@@ -36,9 +79,7 @@ def main() -> int:
         if not target.is_file() or sha256(target) != tool["sha256"]:
             partial = target.with_suffix(target.suffix + ".partial")
             partial.unlink(missing_ok=True)
-            request = urllib.request.Request(tool["url"], headers={"User-Agent": "Wukong-ROM-Studio/1"})
-            with urllib.request.urlopen(request, timeout=120) as response, partial.open("wb") as handle:
-                shutil.copyfileobj(response, handle, 1024 * 1024)
+            _download(str(tool["url"]), partial)
             if partial.stat().st_size != int(tool["sizeBytes"]) or sha256(partial) != tool["sha256"]:
                 partial.unlink(missing_ok=True)
                 raise RuntimeError(f"Checksum or size mismatch for {tool['name']}")
