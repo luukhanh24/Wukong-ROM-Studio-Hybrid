@@ -227,18 +227,18 @@ EXCLUDED_FIRMWARE = DYNAMIC_SOURCE_IMAGES | CORE_SOURCE_IMAGES | {
 }
 
 STEP_DEFINITIONS = [
-    ("inspect_rom", "1. Check ROM info", True),
-    ("extract_payload", "2. Extract system images from OTA", True),
-    ("unpack_partitions", "3. Open partition images", True),
-    ("debloat", "4. Remove bloat apps", False),
-    ("apply_mod", "5. Apply selected MODs", False),
-    ("sync_configs", "6. Update permissions & SELinux", True),
-    ("repack_partitions", "7. Rebuild partition images", True),
-    ("repack_super", "8. Rebuild super.img", True),
-    ("patch_vbmeta", "9. Patch vbmeta (boot verify)", False),
-    ("patch_vendor_boot", "10. Patch vendor_boot", False),
-    ("package_zip", "11. Create flashable ZIP", True),
-    ("notify_telegram", "12. Send Telegram report", False),
+    ("inspect_rom", "Inspect ROM", True),
+    ("extract_payload", "Extract payload", True),
+    ("unpack_partitions", "Unpack partitions", True),
+    ("debloat", "Remove bloatware", False),
+    ("apply_mod", "Apply MOD", False),
+    ("sync_configs", "Sync fs_config and SELinux contexts", True),
+    ("repack_partitions", "Repack partitions", True),
+    ("repack_super", "Repack super.img", True),
+    ("patch_vbmeta", "Patch vbmeta", False),
+    ("patch_vendor_boot", "Patch vendor_boot", False),
+    ("package_zip", "Package ROM ZIP", True),
+    ("notify_telegram", "Send Telegram notification", False),
 ]
 STEP_ORDER = [step[0] for step in STEP_DEFINITIONS]
 STEP_LABELS = {step[0]: step[1] for step in STEP_DEFINITIONS}
@@ -2004,8 +2004,8 @@ def _run_7z_package(command: list[str], context: BuildContext, *, cwd: Path = RO
             progress = max(0, min(100, int(match.group(1))))
             if progress != last_progress:
                 last_progress = progress
-                _emit_progress(context, round(progress * 0.9), f"Đang nén ZIP · {progress}%")
-                print(f"[*] Đang nén ZIP: {progress}%", flush=True)
+                _emit_progress(context, round(progress * 0.9), f"ZIP {progress}%")
+                print(f"[*] ZIP progress: {progress}%", flush=True)
             return
         print(text, flush=True)
 
@@ -2025,9 +2025,9 @@ def _run_7z_package(command: list[str], context: BuildContext, *, cwd: Path = RO
     return_code = process.wait()
     if return_code != 0:
         raise StudioError(f"Command failed with exit code {return_code}: {command[0]}")
-    _emit_progress(context, 90, "Nén ZIP xong · chuẩn bị kiểm tra file")
+    _emit_progress(context, 90, "ZIP 100% · chuẩn bị hậu kiểm")
     if last_progress != 100:
-        print("[*] Nén ZIP: 100%", flush=True)
+        print("[*] ZIP progress: 100%", flush=True)
 
 
 def _safe_relative_path(value: str) -> Path:
@@ -2373,12 +2373,12 @@ def _patch_jar_with_apktool(
     decode_started = time.perf_counter()
     if decoded_reused:
         if status_callback:
-            status_callback(f"Dùng lại bản giải mã {jar.name}")
+            status_callback(f"Tái sử dụng decode {jar.name}")
     else:
         if decoded.exists():
             shutil.rmtree(decoded)
         if status_callback:
-            status_callback(f"Đang giải mã {jar.name}")
+            status_callback(f"Giải mã {jar.name}")
         _run_command(["java", "-jar", str(APKTOOL_JAR), "d", "-f", str(jar), "-o", str(decoded)])
     decode_seconds = time.perf_counter() - decode_started
 
@@ -2389,7 +2389,7 @@ def _patch_jar_with_apktool(
         if generated.exists():
             shutil.rmtree(generated)
     if status_callback:
-        status_callback(f"Đang đóng gói lại {jar.name}")
+        status_callback(f"Đóng gói {jar.name}")
     build_started = time.perf_counter()
     _run_command(["java", "-jar", str(APKTOOL_JAR), "b", str(decoded), "-o", str(rebuilt)])
     build_seconds = time.perf_counter() - build_started
@@ -2724,10 +2724,7 @@ def apply_selected_mods(
 
     total_mods = max(1, len(mods))
     for index, mod in enumerate(mods, start=1):
-        emit_progress(
-            int((index - 1) * 35 / total_mods),
-            f"Đang cài MOD {index}/{len(mods)} · {mod['name']}",
-        )
+        emit_progress(int((index - 1) * 35 / total_mods), f"MOD {index}/{len(mods)} · {mod['name']}")
         mod_dir = _mod_collection_dir(version) / mod["name"]
         for partition in mod["partitions"]:
             destination_info = _partition_destination(rom_unpack, partition, device)
@@ -2824,7 +2821,7 @@ def apply_selected_mods(
     if SELINUX_HASH_MODS.intersection(applied):
         sepolicy_hash = _refresh_plat_sepolicy_hash(rom_unpack)
         modified_partitions.add("system")
-    emit_progress(100, "Đã cài xong tất cả MOD")
+    emit_progress(100, "Đã áp dụng xong MOD")
     if not copied and not patched:
         raise StudioError("Selected MODs did not copy or patch any files")
     return {
@@ -3054,14 +3051,14 @@ def _rom_sha256(context: BuildContext) -> str:
             context.progress_callback(
                 {
                     "progress": 20,
-                    "progressMessage": "Đã dùng lại mã kiểm tra ROM (SHA-256) trong phiên này",
+                    "progressMessage": "Reused ROM SHA-256 from this session",
                 }
             )
         return cached
     value = rom_sha256(path)
     if context.progress_callback:
         context.progress_callback(
-            {"progress": 20, "progressMessage": "Đã tính xong mã kiểm tra ROM (SHA-256)"}
+            {"progress": 20, "progressMessage": "ROM SHA-256 ready"}
         )
     return value
 
@@ -3145,7 +3142,7 @@ def _stage_extract_payload(context: BuildContext) -> dict[str, Any]:
         try:
             cached = _restore_payload_cache(context, cache_key)
             if cached is not None:
-                print(f"[*] Dùng lại cache ảnh OTA {cache_key[:12]}", flush=True)
+                print(f"[*] Reused payload cache {cache_key[:12]}", flush=True)
                 return {"sourceRom": str(context.source_rom), **cached}
         except (OSError, StudioError, json.JSONDecodeError) as exc:
             print(f"[!] Payload cache restore skipped: {exc}", flush=True)
@@ -3712,11 +3709,7 @@ def _compress_prepared_package(
     bundled_seven_zip = platform_tool_path("7z", BIN_ROOT)
     seven_zip = shutil.which("7z") or shutil.which("7zz") or str(bundled_seven_zip)
     validation_mode = _zip_validation_mode()
-    _emit_progress(
-        context,
-        0,
-        f"Đang tạo file ZIP cài ROM · nén {ZIP_COMPRESSION_LABEL}",
-    )
+    _emit_progress(context, 0, f"Đang đóng gói ZIP · {ZIP_COMPRESSION_LABEL} (-mx{ZIP_COMPRESSION_LEVEL})")
     compression_started = time.perf_counter()
     try:
         if Path(seven_zip).is_file() or shutil.which(seven_zip):
@@ -3739,24 +3732,20 @@ def _compress_prepared_package(
                 for index, file in enumerate(files, start=1):
                     archive.write(file, file.relative_to(package_root))
                     archive_progress = int(index * 100 / total)
-                    _emit_progress(
-                        context,
-                        round(archive_progress * 0.9),
-                        f"Đang nén ZIP · {archive_progress}%",
-                    )
+                    _emit_progress(context, round(archive_progress * 0.9), f"ZIP {archive_progress}%")
         compression_seconds = time.perf_counter() - compression_started
         validation_message = (
-            "Đang kiểm tra toàn bộ file trong ZIP"
+            "Đang kiểm tra CRC toàn phần"
             if validation_mode == "deep"
-            else "Đang kiểm tra nhanh file ZIP"
+            else "Đang xác thực nhanh ZIP"
         )
         _emit_progress(context, 95, validation_message)
         validation_started = time.perf_counter()
         validation = validate_final_zip(partial_path, context.device, mode=validation_mode)
         validation_seconds = time.perf_counter() - validation_started
-        _emit_progress(context, 99, "Kiểm tra ZIP đạt")
+        _emit_progress(context, 99, "Hậu kiểm ZIP đã đạt")
         os.replace(partial_path, zip_path)
-        _emit_progress(context, 100, "File ZIP sẵn sàng")
+        _emit_progress(context, 100, "ZIP đã xác thực")
         return {
             **validation,
             "validationMode": validation_mode,
@@ -3909,7 +3898,7 @@ def _stage_package(context: BuildContext) -> dict[str, Any]:
             "outputZip": str(zip_path),
             "outputZips": [str(path) for path in context.output_zips],
             "progress": 0,
-            "progressMessage": "ZIP đang nén nền (background)",
+            "progressMessage": "ZIP queued in background",
             "packagingPending": True,
             "taskId": task_key,
             "taskFile": str(task_file),
@@ -3940,7 +3929,7 @@ def _stage_package(context: BuildContext) -> dict[str, Any]:
         "outputZip": str(zip_path),
         "outputZips": [str(path) for path in context.output_zips],
         "progress": 100,
-        "progressMessage": "Nén ZIP xong 100%",
+        "progressMessage": "ZIP 100%",
         "validation": details,
         "timing": timing,
         **timing,

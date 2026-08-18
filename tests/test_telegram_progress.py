@@ -16,13 +16,13 @@ class TelegramProgressTests(unittest.TestCase):
             "deviceName": "OnePlus Ace 5",
             "productName": "PKG110",
             "percent": 45,
-            "currentLabel": "Lite · 11. Tạo file ZIP cài ROM",
-            "progressMessage": "Đang nén ZIP · 45%",
+            "currentLabel": "Lite · Đóng gói ROM ZIP",
+            "progressMessage": "ZIP 45%",
             "elapsedSeconds": 3723,
             "steps": [
-                {"label": "1. Kiểm tra thông tin ROM", "status": "success"},
-                {"label": "Lite · 11. Tạo file ZIP cài ROM", "status": "running"},
-                {"label": "Plus · 5. Cài MOD đã chọn", "status": "pending"},
+                {"label": "Phân tích ROM", "status": "success"},
+                {"label": "Lite · Đóng gói ROM ZIP", "status": "running"},
+                {"label": "Plus · Áp dụng MOD", "status": "pending"},
             ],
             "error": None,
             "locale": "vi",
@@ -36,8 +36,8 @@ class TelegramProgressTests(unittest.TestCase):
         self.assertIn("ĐANG BUILD ROM", message)
         self.assertIn("Wukong Lite + Plus V3.4", message)
         self.assertIn("█████████░░░░░░░░░░░  45%", message)
-        self.assertIn("Lite · 11. Tạo file ZIP cài ROM", message)
-        self.assertIn("Plus · 5. Cài MOD đã chọn", message)
+        self.assertIn("Lite · Đóng gói ROM ZIP", message)
+        self.assertIn("Plus · Áp dụng MOD", message)
         self.assertIn("01:02:03", message)
 
     def test_terminal_message_mentions_separate_artifact_report(self):
@@ -45,9 +45,9 @@ class TelegramProgressTests(unittest.TestCase):
             self.snapshot(
                 status="success",
                 percent=100,
-                currentLabel="Hoàn tất",
+                currentLabel="Đã hoàn tất",
                 finalReportSent=True,
-                steps=[{"label": "11. Tạo file ZIP cài ROM", "status": "success"}],
+                steps=[{"label": "Đóng gói ROM ZIP", "status": "success"}],
             )
         )
 
@@ -58,14 +58,14 @@ class TelegramProgressTests(unittest.TestCase):
         message = render_progress_message(
             self.snapshot(
                 status="failed",
-                currentLabel="Plus · 8. Tạo super.img",
+                currentLabel="Plus · Tạo super.img",
                 error="lpmake exited with code 1",
-                steps=[{"label": "Plus · 8. Tạo super.img", "status": "failed"}],
+                steps=[{"label": "Plus · Tạo super.img", "status": "failed"}],
             )
         )
 
         self.assertIn("BUILD ROM THẤT BẠI", message)
-        self.assertIn("Plus · 8. Tạo super.img", message)
+        self.assertIn("Plus · Tạo super.img", message)
         self.assertIn("lpmake exited with code 1", message)
 
     def test_reporter_sends_then_edits_the_same_message(self):
