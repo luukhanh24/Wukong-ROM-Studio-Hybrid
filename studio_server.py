@@ -166,18 +166,18 @@ def _telegram_configured() -> bool:
 
 
 TELEGRAM_STEP_LABELS_VI = {
-    "inspect_rom": "1. Kiểm tra thông tin ROM",
-    "extract_payload": "2. Tách ảnh hệ thống từ OTA",
-    "unpack_partitions": "3. Mở các phân vùng",
-    "debloat": "4. Gỡ app rác",
-    "apply_mod": "5. Cài MOD đã chọn",
-    "sync_configs": "6. Cập nhật quyền file & SELinux",
-    "repack_partitions": "7. Đóng gói lại phân vùng",
-    "repack_super": "8. Tạo super.img",
-    "patch_vbmeta": "9. Vá vbmeta (kiểm tra boot)",
-    "patch_vendor_boot": "10. Vá vendor_boot",
-    "package_zip": "11. Tạo file ZIP cài ROM",
-    "notify_telegram": "12. Gửi báo cáo Telegram",
+    "inspect_rom": "Phân tích ROM",
+    "extract_payload": "Trích xuất payload",
+    "unpack_partitions": "Giải nén phân vùng",
+    "debloat": "Xóa ứng dụng không cần thiết",
+    "apply_mod": "Áp dụng MOD",
+    "sync_configs": "Đồng bộ fs_config và SELinux",
+    "repack_partitions": "Đóng gói phân vùng",
+    "repack_super": "Tạo super.img",
+    "patch_vbmeta": "Vá vbmeta",
+    "patch_vendor_boot": "Vá vendor_boot",
+    "package_zip": "Đóng gói ROM ZIP",
+    "notify_telegram": "Gửi báo cáo Telegram",
 }
 TELEGRAM_STEP_LABELS_EN = {step: label for step, label, _ in STEP_DEFINITIONS}
 
@@ -1284,11 +1284,7 @@ def _merge_package_step_details(job_id: str, output_zip: str | None = None) -> l
                 "outputZips": outputs,
                 "packagingPending": True,
                 "progress": 100 if output_zip else int(details.get("progress") or 0),
-                "progressMessage": (
-                    "File ZIP đã kiểm tra xong"
-                    if output_zip
-                    else "Đang nén ZIP ở nền (background)"
-                ),
+                "progressMessage": "ZIP validated" if output_zip else "ZIP running in background",
                 **timing_details,
             }
         )
@@ -1394,7 +1390,7 @@ def _finalize_packaging(job_id: str) -> None:
                 "outputZips": outputs,
                 "packagingPending": False,
                 "progress": 100,
-                "progressMessage": "Nén ZIP xong 100%",
+                "progressMessage": "ZIP 100%",
                 "finishedAt": utc_now(),
                 **timing_details,
                 **cleanup_details,
@@ -1452,7 +1448,7 @@ def _handle_package_event(job_id: str, payload: dict[str, Any]) -> None:
                     "taskId": payload.get("taskId"),
                     "phase": payload.get("phase"),
                     "progress": 100,
-                    "progressMessage": "File ZIP đã kiểm tra xong",
+                    "progressMessage": "ZIP validated",
                 },
             },
         )
