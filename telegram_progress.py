@@ -49,11 +49,11 @@ def render_progress_message(snapshot: dict[str, Any]) -> str:
             "failed": "❌ <b>ROM BUILD FAILED</b>",
             "cancelled": "⛔ <b>ROM BUILD CANCELLED</b>",
         }
-        current_title = "Current stage"
-        timeline_title = "Pipeline timeline"
-        elapsed_title = "Elapsed"
-        progress_title = "Overall progress"
-        job_title = "Job"
+        current_title = "Now doing"
+        timeline_title = "Build steps"
+        elapsed_title = "Time elapsed"
+        progress_title = "Overall"
+        job_title = "Job ID"
         error_title = "Error"
         if status == "success":
             footer = (
@@ -72,11 +72,11 @@ def render_progress_message(snapshot: dict[str, Any]) -> str:
             "failed": "❌ <b>BUILD ROM THẤT BẠI</b>",
             "cancelled": "⛔ <b>BUILD ROM ĐÃ HỦY</b>",
         }
-        current_title = "Bước hiện tại"
-        timeline_title = "Tiến trình pipeline"
+        current_title = "Đang làm"
+        timeline_title = "Các bước build"
         elapsed_title = "Đã chạy"
-        progress_title = "Tiến độ tổng"
-        job_title = "Job"
+        progress_title = "Tổng tiến độ"
+        job_title = "Mã job"
         error_title = "Lỗi"
         if status == "success":
             footer = (
