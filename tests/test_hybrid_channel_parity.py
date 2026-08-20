@@ -14,7 +14,13 @@ import studio_server
 from wukong.adapters import MaterializedSource, sha256_file
 from wukong.cli import main as cli_main
 from wukong.content_packs import build_content_index
-from wukong.executor import CHECKPOINT_STAGES, LocalJobExecutor, source_target_for
+from wukong.executor import (
+    CHECKPOINT_STAGES,
+    DEFAULT_CLOUD_CHECKPOINT_STAGES,
+    LocalJobExecutor,
+    checkpoint_stages_for_environment,
+    source_target_for,
+)
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
 from wukong.orchestrator import FileJobStore, HybridOrchestrator, InMemoryJobStore, JobStore
 from wukong.routing import RunnerInventory
@@ -95,6 +101,13 @@ class HybridChannelParityContractTests(unittest.TestCase):
         self.assertIn("unpack_partitions", CHECKPOINT_STAGES)
         self.assertIn("repack_partitions", CHECKPOINT_STAGES)
         self.assertIn("patch_vendor_boot", CHECKPOINT_STAGES)
+
+    def test_actions_checkpoint_policy_keeps_only_high_value_extract_snapshot(self) -> None:
+        self.assertEqual({"extract_payload"}, DEFAULT_CLOUD_CHECKPOINT_STAGES)
+        with patch.dict("os.environ", {"GITHUB_ACTIONS": "true"}, clear=False):
+            self.assertEqual({"extract_payload"}, checkpoint_stages_for_environment())
+        with patch.dict("os.environ", {"GITHUB_ACTIONS": "false"}, clear=False):
+            self.assertEqual(CHECKPOINT_STAGES, checkpoint_stages_for_environment())
 
     def test_actions_checkpoint_failure_does_not_stop_or_repeat_build(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
