@@ -154,6 +154,18 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertIn("chưa có job", jobs.text.casefold())
         self.assertIn("Chẩn đoán", diagnostics.text)
 
+    def test_mini_app_cache_actions_preserve_admin_boundary(self) -> None:
+        self.controller.cache_provider = lambda: {"entryCount": 3, "totalBytes": 2048}
+        self.controller.cache_clearer = lambda: {"entryCount": 0, "totalBytes": 0}
+
+        inspected = self.controller.handle_web_app_data(42, '{"version":1,"action":"cache"}')
+        denied = self.controller.handle_web_app_data(42, '{"version":1,"action":"cache_clear"}')
+        cleared = self.controller.handle_web_app_data(1, '{"version":1,"action":"cache_clear"}')
+
+        self.assertIn("entryCount", inspected.text)
+        self.assertIn("Admin", denied.text)
+        self.assertIn("entryCount", cleared.text)
+
     def test_language_callback_is_persisted_per_user(self) -> None:
         response = self.controller.handle_callback(42, "v1:lang:en")
         self.assertIn("New build", response.text)

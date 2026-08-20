@@ -5,6 +5,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable
 
+from .actions_ui import GitHubActionsUI
 from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
 from .cloud_sync import CloudJobSync
 from .content_packs import ContentPackManager, validate_content_index
@@ -70,6 +71,7 @@ class LocalJobExecutor:
         build_workspace_root: Path | None = None,
         content_root: Path | None = None,
         content_index: Path | None = None,
+        actions_ui: GitHubActionsUI | None = None,
     ) -> None:
         self.store = store
         self.workspace_root = workspace_root.resolve()
@@ -83,6 +85,7 @@ class LocalJobExecutor:
         self.content_index = (
             content_index or SCRIPT_ROOT / "content-packs" / "index.json"
         ).resolve()
+        self.actions_ui = actions_ui or GitHubActionsUI()
 
     def execute(self, job_id: str) -> JobManifest:
         manifest = self.store.get(job_id)
@@ -97,6 +100,7 @@ class LocalJobExecutor:
             self.store.update(job_id, status=JobStatus.PREFLIGHT, stage="preflight", progress=0.0, error=None)
             self.store.append_event(job_id, "state", status=JobStatus.PREFLIGHT.value, stage="preflight")
             self.store.update(job_id, status=JobStatus.DOWNLOADING, stage="download", progress=0.0)
+            self.actions_ui.begin("download")
             adapter = source_adapter_for(recipe.source.kind, config_path=self.rclone_config)
             source = adapter.materialize(recipe.source.uri, source_target, recipe.source.sha256)
             if recipe.source.size_bytes is not None and source.size_bytes != recipe.source.size_bytes:
@@ -114,10 +118,12 @@ class LocalJobExecutor:
             storage = self.storage_factory(recipe.storage.remote)
             if recipe.task == "source_mirror":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
+                self.actions_ui.begin("upload")
                 record = storage.store_source(source.path, device=recipe.device, digest=source.sha256)
                 return self._succeed(job_id, [record])
             if recipe.task == "artifact_publish":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
+                self.actions_ui.begin("upload")
                 record = storage.publish_artifact(source.path, device=recipe.device, build="published")
                 return self._succeed(job_id, [record])
 
@@ -179,6 +185,7 @@ class LocalJobExecutor:
                     changes["progress"] = max(0.0, min(float(progress) / 100, 0.79))
                 self.store.update(job_id, **changes)
                 self.store.append_event(job_id, event_type, **event)
+                self.actions_ui.event(event)
                 status = str(event.get("status") or "")
                 should_push = status in {"success", "failed"} or event_type in {"error", "warning", "checkpoint"}
                 if should_push:
@@ -231,6 +238,9 @@ class LocalJobExecutor:
             )
             current = self.store.get(job_id)
             if current and current.status == JobStatus.CANCELLED:
+                self.actions_ui.close_group()
+                self.actions_ui.write_summary(current, recipe)
+                self._push_cancelled_terminal(job_id, recipe)
                 return current
             output_values = result.get("outputZips") or ([result.get("outputZip")] if result.get("outputZip") else [])
             outputs = [Path(str(value)).resolve() for value in output_values if value]
@@ -238,6 +248,7 @@ class LocalJobExecutor:
                 raise OrchestrationError("Build completed without an artifact")
             records: list[ArtifactRecord] = []
             self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
+            self.actions_ui.begin("upload")
             for output in outputs:
                 if recipe.storage.publish_artifact:
                     records.append(
@@ -256,15 +267,20 @@ class LocalJobExecutor:
         except Exception as exc:
             current = self.store.get(job_id)
             if current and current.status == JobStatus.CANCELLED:
+                self.actions_ui.close_group()
+                self.actions_ui.write_summary(current, recipe)
                 self._push_cancelled_terminal(job_id, recipe)
                 return current
+            self.actions_ui.close_group()
             self.store.append_event(job_id, "error", error=str(exc), traceback=traceback.format_exc())
-            return self.store.update(
+            failed = self.store.update(
                 job_id,
                 status=JobStatus.FAILED,
                 error=str(exc),
                 stage="failed",
             )
+            self.actions_ui.write_summary(failed, recipe)
+            return failed
 
     def _push_cancelled_terminal(self, job_id: str, recipe: BuildRecipe) -> None:
         if os.environ.get("GITHUB_ACTIONS", "").casefold() != "true":
@@ -413,10 +429,15 @@ class LocalJobExecutor:
             progress=1.0,
             artifacts=artifacts,
         )
+        self.actions_ui.close_group()
+        self.actions_ui.begin("complete")
+        self.actions_ui.close_group()
         recipe = self.store.recipe(job_id)
         if recipe and os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
             try:
                 CloudJobSync(self.store, self.storage_factory(recipe.storage.remote)).push(job_id)
             except Exception as exc:
                 self.store.append_event(job_id, "warning", warning=f"Terminal cloud sync failed: {exc}")
+        if recipe:
+            self.actions_ui.write_summary(manifest, recipe)
         return manifest

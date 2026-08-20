@@ -2,69 +2,83 @@
 
 ## Direction
 
-The Telegram Mini App uses the **Build Flight Deck** operating model: one
-continuous, inspectable route from source ROM to runner, MOD plan and delivery.
-It inherits the Windows application's Fluent graphite/blue visual language and
-does not introduce a separate Telegram brand.
+The Telegram Mini App is a **Minimalist Editorial technical dossier**. It
+treats a ROM build like a numbered production document: source, configuration,
+delivery, result. It deliberately rejects the soft cards, rounded dashboard
+chrome, gradients, glass and interchangeable “AI SaaS” look.
 
-The surface is an Operate interface. Clarity, touch reach, truthful system
-state and recovery from errors take precedence over decorative expression.
+The product remains an Operate interface. The editorial system exists to make
+complex choices easier to audit, never to hide state or replace familiar form
+controls.
 
-## Visual tokens
+## Material and typography
 
-- Background: Telegram `secondary_bg_color`, with `#eef1f4` fallback.
-- Surface: Telegram `bg_color`, with white fallback.
-- Text and muted text: Telegram `text_color` and `hint_color`.
-- Accent: Telegram `button_color`, with Wukong blue `#0878d1` fallback.
-- Success: `#16853b`; destructive actions use Telegram's destructive color.
-- Radius: 14 px for sections, 9–11 px for controls.
-- Typography: system UI stack headed by Segoe UI Variable on Windows and the
-  native platform font in Telegram.
-- Dividers are thin and low contrast; shadows only establish sticky launch and
-  app-bar elevation.
+- Light mode uses warm technical stock `#f1efe8`, a near-white working sheet
+  `#fbfaf5`, and carbon ink `#151515`.
+- Dark mode preserves the paper/ink relationship with `#171716`, `#222220`
+  and `#f0eee6`; it is selected by the user's system.
+- One cobalt signal comes from Telegram's button color, with `#1756d8` as the
+  fallback. It is reserved for selection, active navigation and dispatch.
+- Success and destructive state retain semantic green and red. Neither is
+  used decoratively.
+- Literata carries only primary editorial headlines. Archivo Narrow carries
+  interface copy; tabular identifiers, hashes and measurements use its
+  numeric forms rather than decorative monospace.
+- Borders are square 1–3 px rules. Controls have zero radius. There are no
+  shadows, gradients, blur layers or glass surfaces.
 
-## Structure
+## Information architecture
 
-The build surface is ordered as a flight plan:
+Five indexed destinations map the Windows operating model to mobile:
 
-1. Source ROM and task.
-2. Runner, edition, private content-pack, MODs and advanced pipeline stages.
-3. Packaging, Drive publishing and Telegram notification.
-4. A sticky launch summary that always names device, edition/task and runner.
+1. **Studio** — source library entry, task choice, runner, preset, complete MOD
+   selection, pipeline, packaging, Drive publishing and Telegram notification.
+2. **Jobs** — list, inspect, events, artifact, cancel and checkpoint resume.
+3. **Library** — sources, artifacts, source mirror and retention policy.
+4. **Catalog** — searchable devices, verified content-pack versions and the
+   complete MOD inventory exported from the shared catalog.
+5. **System** — diagnostics, connection status, cache inspection/clear and
+   local Mini App defaults.
 
-Jobs, Cloud and System are peer destinations in a four-item bottom navigation.
-Their actions return authenticated results to the Telegram chat, where longer
-logs and artifact links remain readable and shareable.
+Credentials remain outside the Mini App. GitHub, Telegram and rclone secrets
+are managed through Windows DPAPI or GitHub Secrets; this security boundary is
+stated in the System screen rather than represented by disabled password
+fields.
 
-## Responsive behavior
+## Composition and interaction
 
-- Mobile is the primary layout: single-column fields, two-column MOD grid above
-  390 px, one column below it, full-width launch action and safe-area padding.
-- Desktop keeps the same mental model in a centered 1060 px workspace, using
-  two/three-column field groups and a three-column MOD grid.
-- The launch bar and bottom navigation remain reachable without obscuring the
-  final content; reduced-motion preferences remove nonessential animation.
+- Desktop uses a 1180 px editorial sheet, a horizontal contents index and a
+  sticky dispatch docket beside the build form.
+- Mobile uses one column and a five-cell bottom index. A compact persistent
+  dispatch action sits above that index while the full docket remains the final
+  recipe section; extra bottom spacing prevents either control obscuring fields.
+- Real sequential numbers are used only where order matters: recipe sections,
+  pipeline stages, job actions and canonical job states.
+- The complete MOD list is visible on mobile. Desktop may scroll the bounded
+  list while still showing the selected count and bulk selection controls.
+- One reveal motion uses clip-path when changing destinations. Reduced-motion
+  preference removes it.
+- Vietnamese is the default and English is maintained as a complete parallel
+  vocabulary. Language and default preset persist per browser profile.
 
-## Interaction and content rules
+## GitHub Actions presentation
 
-- Vietnamese is the default; English is a complete parallel vocabulary.
-- Presets select real MOD defaults exported from verified content-pack
-  manifests. Users may choose defaults, all or none, then inspect the exact
-  selected count.
-- Source mirror hides build-only controls. Runner and selection changes update
-  the launch summary immediately.
-- Validation errors identify the field and stay in the current view. Requests
-  above Telegram's 4096-byte limit are rejected before transmission.
-- Mini App payloads never include identity or credentials. Telegram chat
-  identity remains the authority for job ownership and permissions.
-- The chat menu creates a one-time reply-keyboard Web App button. This is the
-  Telegram transport that delivers `sendData` to the long-polling daemon; an
-  inline or persistent menu-button launch must not replace it without a public
-  backend that verifies Telegram `initData`.
+Actions is the same product surface expressed as an operational log:
+
+- Jobs and setup steps use numbered Vietnamese/English titles.
+- Runtime pipeline events open GitHub log groups for source download, payload,
+  partitions, MOD, metadata, repack, super/vbmeta/vendor_boot, ZIP, upload and
+  final publication.
+- Each completed stage emits a GitHub notice with duration where available;
+  failures emit an error annotation carrying the stage title.
+- Job Summary records job ID, device, task, runner, recipe digest, MOD pack,
+  preset, selected MOD count and artifact size/SHA/link.
+- Presentation is an adapter only. The orchestrator and manifest remain the
+  source of truth for state, progress and ownership.
 
 ## Accessibility floor
 
-All controls use native form elements or semantic buttons, visible focus rings,
-44 px-class touch targets where practical, live status messages and sufficient
-contrast through Telegram theme variables. Icons supplement text and never
-carry an action's meaning alone.
+Native inputs and semantic buttons retain keyboard behavior. Focus is a 3 px
+cobalt outline; touch controls target 44 px where practical. Text contrast is
+at least 4.5:1, icons never replace action labels, status messages are live,
+and horizontal overflow is tested at 390 px and 1440 px.

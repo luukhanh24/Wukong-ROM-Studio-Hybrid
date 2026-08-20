@@ -92,6 +92,32 @@ class TelegramMiniAppTests(unittest.TestCase):
         exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")
         self.assertNotIn("from studio_core import", exporter)
 
+    def test_mini_app_maps_windows_operating_surfaces_without_saas_chrome(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        for surface in ("build", "jobs", "cloud", "catalog", "system"):
+            self.assertIn(f'id="{surface}"', html)
+            self.assertIn(f'data-nav="{surface}"', html)
+        for control in (
+            "catalog-search",
+            "catalog-version",
+            "device-list",
+            "catalog-mod-list",
+            "default-preset",
+            "pipeline-count",
+            "mod-search",
+            "telegram-auth-state",
+        ):
+            self.assertIn(f'id="{control}"', html)
+        self.assertIn('data-action="cache"', html)
+        self.assertIn('data-action="cache_clear"', html)
+        self.assertIn("renderCatalog", script)
+        self.assertNotIn("backdrop-filter", styles)
+        self.assertNotIn("linear-gradient", styles)
+        self.assertNotIn("border-radius: 14px", styles)
+
 
 if __name__ == "__main__":
     unittest.main()
