@@ -89,6 +89,9 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("const translations", script)
         self.assertIn("source_mirror", script)
 
+        exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")
+        self.assertNotIn("from studio_core import", exporter)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -50,6 +50,7 @@ from studio_paths import (
     platform_tool_path,
 )
 from src.core.utils import gettype
+from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 
 
@@ -113,18 +114,6 @@ RESERVED_WORKSPACE_NAMES = {
     "tests",
     "twrp",
 }
-LITE_DEFAULT_MODS = [
-    "Global_props",
-    "Cts_Gemini",
-    "Fix_noti",
-    "Fix_Metis",
-    "Gapps",
-    "Chat_bubbles",
-    "Block_ota",
-    "GlobalSearch",
-    "WK_Installer",
-]
-PLUS_DEFAULT_EXCLUDED_MODS: set[str] = {"Gallery_mod_CN"}
 RESUME_DEFAULT_MODS: list[str] = []
 BLOCKED_MODS: dict[str, str] = {}
 PROTECTED_DEBLOAT_PATHS = {

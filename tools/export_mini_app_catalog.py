@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from studio_core import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS
+from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS
 from wukong.content_packs import validate_content_index
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 
