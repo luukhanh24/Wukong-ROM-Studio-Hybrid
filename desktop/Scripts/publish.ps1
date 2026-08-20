@@ -46,7 +46,7 @@ if (-not $SkipTests) {
             tests.test_studio_server `
             tests.test_telegram_progress `
             tests.test_uploader `
-            tests.test_wk_manager_patcher
+            tests.test_wk_manager_patcher `
             tests.test_wukong_hybrid
         if ($LASTEXITCODE -ne 0) {
             throw 'Python test gate failed.'

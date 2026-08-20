@@ -93,8 +93,8 @@ def build_paths(
         package_root = temp / "Packages"
         bin_root = app / "Bin"
         config_root = app / "Config"
-        flash_root = app / "Flash_script"
-        stark_root = app / "STARK"
+        flash_root = (content / "Flash_script") if (content / "Flash_script").is_dir() else app / "Flash_script"
+        stark_root = (content / "STARK") if (content / "STARK").is_dir() else app / "STARK"
         web_root = app / "Web"
     else:
         install = source

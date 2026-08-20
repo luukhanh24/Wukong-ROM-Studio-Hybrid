@@ -31,6 +31,7 @@ from wukong.cli import configure_utf8_stdio
 from wukong.content_packs import (
     ContentPackManager,
     build_content_index,
+    build_content_pack_record,
     create_content_pack_archive,
     merge_content_index_pack,
     upload_content_packs,
@@ -1687,6 +1688,29 @@ class ContentPackContractTests(unittest.TestCase):
 
             self.assertEqual([pack["id"] for pack in index["packs"]], ["MOD/ColorOS_16.0.8", "TWRP/v1"])
             self.assertEqual(index["packs"][0]["files"][0]["sha256"], "dd37c2d7274f7ea982cb83390c36918fee9ce8889073c44b68cdc00bdb8c3e04")
+
+    def test_shared_runtime_content_packs_have_stable_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            runtime = Path(root)
+            (runtime / "STARK" / "WK_Manager" / "system").mkdir(parents=True)
+            (runtime / "STARK" / "WK_Manager" / "system" / "manager.apk").write_bytes(b"manager")
+            (runtime / "Flash_script" / "bin").mkdir(parents=True)
+            (runtime / "Flash_script" / "bin" / "flash").write_bytes(b"flash")
+
+            stark = build_content_pack_record(
+                runtime,
+                remote="drive:content-packs",
+                pack_id="STARK/common",
+            )
+            flash = build_content_pack_record(
+                runtime,
+                remote="drive:content-packs",
+                pack_id="Flash_script/common",
+            )
+
+        self.assertEqual("STARK", stark["target"])
+        self.assertEqual("Flash_script", flash["target"])
+        self.assertEqual("drive:content-packs/STARK/common", stark["remote"])
 
     def test_install_downloads_to_staging_and_rejects_tampered_pack(self) -> None:
         with tempfile.TemporaryDirectory() as root:

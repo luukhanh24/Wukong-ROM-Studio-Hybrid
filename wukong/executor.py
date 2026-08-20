@@ -300,7 +300,14 @@ class LocalJobExecutor:
 
         index = json.loads(self.content_index.read_text(encoding="utf-8"))
         validate_content_index(index)
-        required = [f"MOD/{recipe.build.mod_version}", "copy-image/v1", "OFX/v1", "TWRP/v1"]
+        required = [
+            f"MOD/{recipe.build.mod_version}",
+            "STARK/common",
+            "Flash_script/common",
+            "copy-image/v1",
+            "OFX/v1",
+            "TWRP/v1",
+        ]
         manager = ContentPackManager(
             self.content_root,
             rclone_config=self.rclone_config,

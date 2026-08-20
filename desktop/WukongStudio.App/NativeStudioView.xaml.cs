@@ -3238,6 +3238,125 @@ public sealed partial class NativeStudioView : UserControl
         });
     }
 
+    private async void SyncContentToDriveClick(object sender, RoutedEventArgs e)
+    {
+        await RunBusyActionAsync(async () =>
+        {
+            ContentSyncStatusText.Text = "Đang kiểm kê, đóng gói và xác minh tải lại từ Drive…";
+            var output = await RunPlatformContentSyncAsync("drive");
+            HybridResultBox.Text = output;
+            ContentSyncStatusText.Text = "Drive đã đồng bộ và checksum đã được xác minh.";
+            ShowMessage(
+                "Đã đồng bộ content-pack",
+                "Binary mới đã lên Drive. Bạn có thể công bố manifest lên GitHub.",
+                InfoBarSeverity.Success);
+        });
+    }
+
+    private async void PublishContentManifestClick(object sender, RoutedEventArgs e)
+    {
+        await RunBusyActionAsync(async () =>
+        {
+            ContentSyncStatusText.Text = "Đang kiểm tra archive và công bố manifest lên GitHub…";
+            var output = await RunPlatformContentSyncAsync("github");
+            HybridResultBox.Text = output;
+            ContentSyncStatusText.Text = "Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới.";
+            ShowMessage(
+                "Đã công bố manifest",
+                "GitHub Actions và catalog Telegram đã nhận mốc content-pack mới.",
+                InfoBarSeverity.Success);
+        });
+    }
+
+    private async Task<string> RunPlatformContentSyncAsync(string target)
+    {
+        if (_layout is null)
+        {
+            throw new InvalidOperationException("Studio layout chưa sẵn sàng.");
+        }
+        var credentials = new HybridSecretStore(_layout).Load()
+            ?? throw new InvalidOperationException("Hãy lưu GitHub token và rclone.conf trong Thiết đặt trước.");
+        var python = Path.Combine(_layout.PythonRoot, "python.exe");
+        var script = Path.Combine(_layout.ScriptsRoot, "tools", "sync_platform_content.py");
+        var templateIndex = Path.Combine(_layout.ScriptsRoot, "content-packs", "index.json");
+        var syncDataRoot = Path.Combine(_layout.DataRoot, "ContentSync");
+        var index = Path.Combine(syncDataRoot, "index.json");
+        if (!File.Exists(python) || !File.Exists(script) || !File.Exists(templateIndex))
+        {
+            throw new FileNotFoundException("Runtime đồng bộ content-pack chưa được cài đầy đủ. Hãy build/cài lại Wukong ROM Studio.");
+        }
+        Directory.CreateDirectory(syncDataRoot);
+        if (!File.Exists(index))
+        {
+            File.Copy(templateIndex, index);
+        }
+        Directory.CreateDirectory(_layout.SecretsRoot);
+        var rcloneConfig = Path.Combine(_layout.SecretsRoot, $".content-sync-{Guid.NewGuid():N}.conf");
+        try
+        {
+            await File.WriteAllTextAsync(rcloneConfig, credentials.RcloneConfig, new UTF8Encoding(false));
+            File.SetAttributes(rcloneConfig, FileAttributes.Hidden | FileAttributes.Temporary);
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = python,
+                WorkingDirectory = _layout.ScriptsRoot,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            startInfo.ArgumentList.Add("-m");
+            startInfo.ArgumentList.Add("tools.sync_platform_content");
+            startInfo.ArgumentList.Add("--install-root");
+            startInfo.ArgumentList.Add(_layout.InstallRoot);
+            startInfo.ArgumentList.Add("--index");
+            startInfo.ArgumentList.Add(index);
+            startInfo.ArgumentList.Add("--remote");
+            startInfo.ArgumentList.Add($"{credentials.RcloneRemote.TrimEnd(':')}:WukongROM/content-packs");
+            startInfo.ArgumentList.Add("--target");
+            startInfo.ArgumentList.Add(target);
+            startInfo.ArgumentList.Add("--repository");
+            startInfo.ArgumentList.Add(credentials.GitHubRepository);
+            if (target == "drive")
+            {
+                startInfo.ArgumentList.Add("--rclone-config");
+                startInfo.ArgumentList.Add(rcloneConfig);
+                startInfo.ArgumentList.Add("--migrate-shared");
+            }
+            startInfo.Environment["PYTHONUTF8"] = "1";
+            startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
+            startInfo.Environment["WUKONG_GITHUB_REPOSITORY"] = credentials.GitHubRepository;
+            startInfo.Environment["WUKONG_GITHUB_TOKEN"] = credentials.GitHubToken;
+            startInfo.Environment["PATH"] = string.Join(
+                Path.PathSeparator,
+                Path.Combine(_layout.RuntimeRoot, "Bin", "Windows", "AMD64"),
+                Environment.GetEnvironmentVariable("PATH"));
+            using var process = new System.Diagnostics.Process { StartInfo = startInfo };
+            if (!process.Start())
+            {
+                throw new InvalidOperationException("Không thể khởi động tác vụ đồng bộ content-pack.");
+            }
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var output = await outputTask;
+            var error = await errorTask;
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output : error);
+            }
+            return output.Trim();
+        }
+        finally
+        {
+            if (File.Exists(rcloneConfig))
+            {
+                File.SetAttributes(rcloneConfig, FileAttributes.Normal);
+                File.Delete(rcloneConfig);
+            }
+        }
+    }
+
     private async Task RefreshArtifactsAsync()
     {
         await RunBusyActionAsync(async () =>
@@ -3957,6 +4076,8 @@ public sealed partial class NativeStudioView : UserControl
         AddRomPathButton.IsEnabled = !value;
         PreflightButton.IsEnabled = !value;
         StartBuildButton.IsEnabled = !value;
+        SyncContentDriveButton.IsEnabled = !value;
+        PublishContentManifestButton.IsEnabled = !value;
         RenameRomFileButton.IsEnabled = !value;
         RenameRomFolderButton.IsEnabled = !value;
         ClearRomRenameButton.IsEnabled = !value && (_romRenamePreview?.Total ?? 0) > 0;

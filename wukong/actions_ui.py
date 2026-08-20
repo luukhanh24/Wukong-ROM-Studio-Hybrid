@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -34,6 +35,16 @@ def _command_text(value: object) -> str:
     return str(value).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
+def _emit(value: object) -> None:
+    """Write annotations without letting a legacy Windows code page fail a job."""
+    rendered = str(value)
+    try:
+        print(rendered, flush=True)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(rendered.encode(encoding, errors="replace").decode(encoding), flush=True)
+
+
 class GitHubActionsUI:
     """Emit GitHub-native stage groups and a durable run summary.
 
@@ -56,8 +67,8 @@ class GitHubActionsUI:
             return
         self.close_group()
         title = STAGE_TITLES.get(stage, stage.replace("_", " ").title())
-        print(f"::group::{title}", flush=True)
-        print(f"::notice title={_command_text(title)}::Đang thực hiện / In progress", flush=True)
+        _emit(f"::group::{title}")
+        _emit(f"::notice title={_command_text(title)}::Đang thực hiện / In progress")
         self._active_stage = stage
 
     def event(self, event: Mapping[str, Any]) -> None:
@@ -69,23 +80,23 @@ class GitHubActionsUI:
             self.begin(stage)
             message = event.get("message")
             if message:
-                print(f"[Wukong] {message}", flush=True)
+                _emit(f"[Wukong] {message}")
             return
         title = STAGE_TITLES.get(stage, stage)
         if status == "success":
             details = event.get("details") if isinstance(event.get("details"), Mapping) else {}
             duration = details.get("durationSeconds")
             suffix = f" · {duration}s" if duration is not None else ""
-            print(f"::notice title={_command_text(title)}::Hoàn thành / Completed{suffix}", flush=True)
+            _emit(f"::notice title={_command_text(title)}::Hoàn thành / Completed{suffix}")
             self.close_group()
         elif status == "failed":
             message = event.get("message") or "Stage failed"
-            print(f"::error title={_command_text(title)}::{_command_text(message)}", flush=True)
+            _emit(f"::error title={_command_text(title)}::{_command_text(message)}")
             self.close_group()
 
     def close_group(self) -> None:
         if self.enabled and self._active_stage is not None:
-            print("::endgroup::", flush=True)
+            _emit("::endgroup::")
         self._active_stage = None
 
     def write_summary(self, manifest: JobManifest, recipe: BuildRecipe) -> None:

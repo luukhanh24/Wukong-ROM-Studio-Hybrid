@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#18191b">
+  <meta name="theme-color" content="#29255d">
   <title>Wukong ROM Studio</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <!--
-  THESIS: Wukong is a build control ledger: every surface exists to expose source truth, configuration state, execution route and the next required action.
-  OWN-WORLD: Warm neutral work sheets, a graphite command bar, amber interaction signals, green/red system states, IBM Plex Sans prose and JetBrains Mono data.
-  STORY: Read live transport status, identify the ROM, compose grouped MODs, stage delivery, clear the readiness checklist, dispatch, then inspect jobs and artifacts.
-  FIRST VIEWPORT: A compact command bar, destination tabs, factual runtime strip and the active ROM source row; there is no decorative hero.
-  FORM: Editorial operations ledger for a mobile-first developer tool; dense, bordered, precise and status-led.
+  THESIS: Wukong is a chromatic technical atlas: dense ROM work becomes legible, tactile and confident without looking like a mass-produced SaaS template.
+  OWN-WORLD: Ink-violet instruments, pearl work sheets, cobalt actions, aqua/coral/sun signals, editorial rhythm, IBM Plex Sans prose and JetBrains Mono measurements.
+  STORY: Identify the ROM in place, compose the build, verify the route, dispatch with confidence, then inspect jobs, artifacts, catalog and system health.
+  FIRST VIEWPORT: A compact instrument masthead opens onto a vivid editorial title plate, live runtime rail and the active source workbench.
+  FORM: Chromatic technical atlas; information-dense, asymmetric, calm in motion and explicit about every state.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
   <header class="masthead">
-    <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9h30M8 14l4 19 8-16 8 16 4-19"/></svg><span><strong>WUKONG</strong><small>ROM BUILD CONTROL</small></span></a>
+    <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9h30M8 14l4 19 8-16 8 16 4-19"/></svg><span><strong>WUKONG</strong><small>ROM STUDIO / HYBRID</small></span></a>
     <div class="masthead-meta"><span class="connection" id="telegram-state"><i></i><span data-i18n="previewMode">PREVIEW MODE</span></span><button id="language" class="language-button" type="button">VI / EN</button></div>
   </header>
 
@@ -30,7 +30,7 @@
     <section class="view active" id="build" aria-labelledby="build-title">
       <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Lập hồ sơ build.</h1><p data-i18n="buildIntro">Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.</p></div></header>
       <section class="runtime-strip" aria-label="Build runtime status">
-        <div><i class="status-dot online" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
+        <div><i class="status-dot waiting" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
         <div><i class="status-dot waiting" id="runtime-pipeline-dot" aria-hidden="true"></i><span><small data-i18n="runtimePipeline">PIPELINE</small><strong id="runtime-pipeline-state" data-i18n="runtimeWaiting">Chờ recipe hợp lệ</strong></span></div>
         <div><i class="status-dot neutral" aria-hidden="true"></i><span><small data-i18n="runtimeLastBuild">BUILD GẦN NHẤT</small><strong data-i18n="runtimeJobs">Xem trong Jobs</strong></span></div>
       </section>
@@ -50,6 +50,8 @@
               <div><dt data-i18n="detectedType">Loại nguồn</dt><dd id="source-type">···</dd></div>
               <div><dt data-i18n="detectedDevice">Thiết bị</dt><dd id="source-device-detected">···</dd></div>
               <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">···</dd></div>
+              <div><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
+              <div><dt data-i18n="fileName">Tên file</dt><dd id="source-filename">—</dd></div>
             </dl>
           </div>
           <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 (không bắt buộc)</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>

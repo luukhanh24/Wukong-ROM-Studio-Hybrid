@@ -162,7 +162,8 @@ put in GitHub cache; they remain checksum-verified downloads from the configured
 Drive to avoid stale or cross-version builds.
 
 Still required before a real build: valid `RCLONE_CONFIG_B64`, uploaded
-content-packs for `MOD/<version>`, `copy-image/v1`, `OFX/v1`, `TWRP/v1`, and a
+content-packs for `MOD/<version>`, `STARK/common`, `Flash_script/common`,
+`copy-image/v1`, `OFX/v1`, `TWRP/v1`, and a
 ROM source that is `http(s)` or `rclone` (never a local Windows path on Actions).
 
 Validate MODs against installed content before downloading a multi-GB ROM:

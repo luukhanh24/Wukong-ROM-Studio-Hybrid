@@ -15,7 +15,11 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 from .adapters import SourceIntegrityError, sha256_file
 
 
-CONTENT_GROUPS = ("MOD", "copy-image", "OFX", "TWRP")
+CONTENT_GROUPS = ("MOD", "copy-image", "OFX", "TWRP", "STARK", "Flash_script")
+SHARED_RUNTIME_PACKS = {
+    "STARK/common": "STARK",
+    "Flash_script/common": "Flash_script",
+}
 RunCommand = Callable[..., str]
 ARCHIVE_CHUNK_SIZE = 1024 * 1024
 
@@ -72,6 +76,8 @@ def build_content_pack_record(
         target = f"MOD/{parts[1]}"
     elif len(parts) == 2 and parts[0] in {"copy-image", "OFX", "TWRP"} and parts[1] == "v1":
         target = parts[0]
+    elif pack_id in SHARED_RUNTIME_PACKS:
+        target = SHARED_RUNTIME_PACKS[pack_id]
     else:
         raise KeyError(f"Unknown content-pack: {pack_id}")
     root = content_root.resolve().joinpath(*PurePosixPath(target).parts)
@@ -118,6 +124,21 @@ def build_content_index(content_root: Path, *, remote: str) -> dict[str, object]
                     "id": f"{name}/v1",
                     "target": name,
                     "remote": f"{base_remote}/{name}/v1",
+                    "sizeBytes": sum(int(item["sizeBytes"]) for item in files),
+                    "files": files,
+                }
+            )
+    for pack_id, target in SHARED_RUNTIME_PACKS.items():
+        root = content_root / target
+        if not root.is_dir():
+            continue
+        files = _file_records(root)
+        if files:
+            packs.append(
+                {
+                    "id": pack_id,
+                    "target": target,
+                    "remote": f"{base_remote}/{pack_id}",
                     "sizeBytes": sum(int(item["sizeBytes"]) for item in files),
                     "files": files,
                 }

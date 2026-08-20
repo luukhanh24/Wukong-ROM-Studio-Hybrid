@@ -26,7 +26,7 @@ const translations = {
     sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Dán link để nhận diện", sourceIdleMessage: "Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.",
     sourceDetectedKicker: "ĐÃ NHẬN DIỆN", sourceInvalidKicker: "CHƯA HỢP LỆ", sourceInvalidTitle: "Không nhận ra nguồn ROM", sourceInvalidMessage: "Dùng URL HTTP/HTTPS hoặc đường dẫn rclone remote:path.",
     provider: "Nhà cung cấp", detectedType: "Loại nguồn", detectedDevice: "Thiết bị", detectedVersion: "Phiên bản", analyzeSource: "Phân tích ROM", editSourceManual: "Chỉnh thông tin thủ công",
-    deepProbeHint: "Chạm Phân tích để bot đọc metadata ZIP và trả kết quả trong chat.", probeSent: "Đang chuyển sang bot…", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", incompleteLabel: "HỒ SƠ CHƯA ĐỦ", finishSource: "Hoàn tất cấu hình", completeSourceHint: "Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.", chooseDeviceHint: "Nguồn đã hợp lệ. Hãy chọn thiết bị trong phần chỉnh thủ công bên dưới.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone",
+    deepProbeHint: "Phân tích ngay tại đây để kiểm tra máy chủ, tên file và dung lượng mà không tải cả ROM.", probeAnalyzing: "Đang phân tích…", probeSuccess: "Nguồn ROM hoạt động và đã được nhận diện.", probeLimited: "Trình duyệt không được máy chủ ROM cho phép đọc metadata. Link vẫn được giữ nguyên và sẽ được kiểm tra đầy đủ ở bước preflight.", probeFailed: "Nguồn ROM không phản hồi hoặc đã hết hạn. Hãy dùng link mới hơn.", probeReadyKicker: "ROM KHẢ DỤNG", probeLimitedKicker: "CHỜ PREFLIGHT", probeFailedKicker: "KHÔNG KHẢ DỤNG", resolvedHost: "Máy chủ đích", fileName: "Tên file", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", incompleteLabel: "HỒ SƠ CHƯA ĐỦ", finishSource: "Hoàn tất cấu hình", completeSourceHint: "Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.", chooseDeviceHint: "Nguồn đã hợp lệ. Hãy chọn thiết bị trong phần chỉnh thủ công bên dưới.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone",
     runtimePipeline: "PIPELINE", runtimeWaiting: "Chờ recipe hợp lệ", runtimeReady: "Recipe sẵn sàng gửi", runtimeLastBuild: "BUILD GẦN NHẤT", runtimeJobs: "Xem trong Jobs", checklistSource: "Nguồn ROM", checklistSourcePending: "Chưa có URL hợp lệ", checklistSourceDone: "Đã nhận diện nguồn", checklistDevice: "Thiết bị đích", checklistDevicePending: "Cần chọn thủ công", checklistDeviceDone: "Đã chọn thiết bị", checklistRunner: "Tuyến thực thi", checklistRunnerDone: "Đã cấu hình runner", readinessProgress: "{done}/3 điều kiện", pipelinePending: "Chưa chạy", pipelineRunning: "Đang chạy", pipelineComplete: "Hoàn tất", pipelineFailed: "Lỗi", pipelineSkipped: "Bỏ qua", modGroupGoogle: "Google & ứng dụng", modGroupCamera: "Camera & hình ảnh", modGroupInterface: "Giao diện hệ thống", modGroupSecurity: "Bảo mật & quyền", modGroupCore: "Hệ thống & công cụ", modGroupOther: "Khác"
   },
   en: {
@@ -54,7 +54,7 @@ const translations = {
     sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Paste a link to identify it", sourceIdleMessage: "Source type is recognized immediately; the bot inspects deep metadata without downloading the entire ROM.",
     sourceDetectedKicker: "SOURCE RECOGNIZED", sourceInvalidKicker: "NOT VALID YET", sourceInvalidTitle: "ROM source not recognized", sourceInvalidMessage: "Use an HTTP/HTTPS URL or an rclone remote:path reference.",
     provider: "Provider", detectedType: "Source type", detectedDevice: "Device", detectedVersion: "Version", analyzeSource: "Analyze ROM", editSourceManual: "Edit source details manually",
-    deepProbeHint: "Tap Analyze and the bot will inspect ZIP metadata, then return the result in chat.", probeSent: "Opening the bot…", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", incompleteLabel: "DOCKET INCOMPLETE", finishSource: "Complete configuration", completeSourceHint: "Paste a ROM source and choose the correct device to continue.", chooseDeviceHint: "The source is valid. Choose a device in the manual details below.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone",
+    deepProbeHint: "Analyze here to check the host, filename and size without downloading the full ROM.", probeAnalyzing: "Analyzing…", probeSuccess: "The ROM source is reachable and has been identified.", probeLimited: "The ROM server does not allow browser metadata access. The link is preserved and will be fully checked during preflight.", probeFailed: "The ROM source did not respond or has expired. Use a newer link.", probeReadyKicker: "ROM AVAILABLE", probeLimitedKicker: "PREFLIGHT NEEDED", probeFailedKicker: "UNAVAILABLE", resolvedHost: "Resolved host", fileName: "Filename", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", incompleteLabel: "DOCKET INCOMPLETE", finishSource: "Complete configuration", completeSourceHint: "Paste a ROM source and choose the correct device to continue.", chooseDeviceHint: "The source is valid. Choose a device in the manual details below.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone",
     runtimePipeline: "PIPELINE", runtimeWaiting: "Waiting for a valid recipe", runtimeReady: "Recipe ready to dispatch", runtimeLastBuild: "LAST BUILD", runtimeJobs: "Inspect in Jobs", checklistSource: "ROM source", checklistSourcePending: "Valid URL required", checklistSourceDone: "Source recognized", checklistDevice: "Target device", checklistDevicePending: "Manual selection required", checklistDeviceDone: "Device selected", checklistRunner: "Execution route", checklistRunnerDone: "Runner configured", readinessProgress: "{done}/3 checks", pipelinePending: "Not started", pipelineRunning: "Running", pipelineComplete: "Complete", pipelineFailed: "Failed", pipelineSkipped: "Skipped", modGroupGoogle: "Google & apps", modGroupCamera: "Camera & imaging", modGroupInterface: "System interface", modGroupSecurity: "Security & access", modGroupCore: "System & tools", modGroupOther: "Other"
   }
 };
@@ -128,6 +128,7 @@ const state = {
   defaultPreset: localStorage.getItem("wukong-default-preset") || "plus",
   sourceDetection: null,
   sourceAutoDevice: null,
+  sourceProbe: null,
   delivery: { package: "pending", publish: "pending", notify: "pending" }
 };
 
@@ -229,10 +230,12 @@ function updateSourceDetection() {
     updateSummary();
   }
   state.sourceAutoDevice = null;
+  state.sourceProbe = null;
   state.sourceDetection = detection;
   updateSummary();
   node.classList.toggle("detected", Boolean(detection?.valid));
   node.classList.toggle("invalid", Boolean(detection && !detection.valid));
+  node.classList.remove("probing", "analyzed", "probe-limited", "probe-failed");
   const marker = node.querySelector(".source-state-mark span");
   const facts = $("#source-facts");
   const probe = $("#probe-source");
@@ -258,6 +261,8 @@ function updateSourceDetection() {
   $("#source-type").textContent = detection.type;
   $("#source-device-detected").textContent = detection.device || "—";
   $("#source-version-detected").textContent = detection.version || "—";
+  $("#source-host").textContent = detection.kind === "rclone" ? "Google Drive" : new URL($("#source-uri").value.trim()).hostname;
+  $("#source-filename").textContent = "—";
   facts.hidden = false;
   probe.hidden = detection.marker === "DRV";
   if (detection.device && [...$("#device").options].some((option) => option.value === detection.device)) {
@@ -267,6 +272,91 @@ function updateSourceDetection() {
   }
   if (!$("#device").value) {
     $(".source-manual").open = true;
+  }
+}
+
+function responseFilename(response, targetUrl) {
+  const disposition = response.headers.get("content-disposition") || "";
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  const quoted = /filename="([^"]+)"/i.exec(disposition);
+  const plain = /filename=([^;]+)/i.exec(disposition);
+  const headerName = encoded?.[1] || quoted?.[1] || plain?.[1]?.trim();
+  if (headerName) {
+    try { return decodeURIComponent(headerName.replace(/^['"]|['"]$/g, "")); } catch { return headerName; }
+  }
+  try {
+    const part = new URL(targetUrl).pathname.split("/").filter(Boolean).at(-1) || "";
+    return decodeURIComponent(part) || "—";
+  } catch { return "—"; }
+}
+
+function responseSize(response) {
+  const range = response.headers.get("content-range") || "";
+  const total = /\/(\d+)$/.exec(range)?.[1];
+  const length = response.headers.get("content-length");
+  const value = Number(total || length || 0);
+  return Number.isSafeInteger(value) && value > 1 ? value : null;
+}
+
+function setProbePresentation(status, messageKey) {
+  const node = $("#source-state");
+  node.classList.remove("probing", "analyzed", "probe-limited", "probe-failed");
+  node.classList.add(status);
+  const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
+  $("#source-kicker").textContent = t(kickerKey);
+  $("#source-state-message").textContent = t(messageKey);
+}
+
+async function probeSourceInPlace() {
+  const button = $("#probe-source");
+  const uri = $("#source-uri").value.trim();
+  if (!state.sourceDetection?.valid || !/^https?:\/\//i.test(uri)) throw new Error(t("invalidUrl"));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  button.disabled = true;
+  button.textContent = t("probeAnalyzing");
+  setProbePresentation("probing", "probeAnalyzing");
+  try {
+    const response = await fetch(uri, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+      redirect: "follow",
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok && response.status !== 206) throw new Error(`HTTP ${response.status}`);
+    const targetUrl = response.url || uri;
+    const detected = classifySource(targetUrl) || state.sourceDetection;
+    const size = responseSize(response);
+    const filename = responseFilename(response, targetUrl);
+    const host = new URL(targetUrl).hostname;
+    const inferred = classifySource(`https://${host}/${encodeURIComponent(filename)}`);
+    const device = detected.device || inferred?.device || state.sourceDetection.device || "";
+    const version = detected.version || inferred?.version || state.sourceDetection.version || "";
+    $("#source-provider").textContent = detected.provider || state.sourceDetection.provider;
+    $("#source-type").textContent = detected.type || state.sourceDetection.type;
+    $("#source-host").textContent = host;
+    $("#source-filename").textContent = filename;
+    $("#source-device-detected").textContent = device || "—";
+    $("#source-version-detected").textContent = version || "—";
+    if (size) $("#source-size").value = String(size);
+    if (device && [...$("#device").options].some((option) => option.value === device)) {
+      $("#device").value = device;
+      state.sourceAutoDevice = device;
+    }
+    state.sourceProbe = { status: "analyzed", host, filename, size };
+    setProbePresentation("analyzed", "probeSuccess");
+    await response.body?.cancel();
+    updateSummary();
+  } catch (error) {
+    const unavailable = error?.name === "AbortError" || navigator.onLine === false || /^HTTP\s(?:4|5)/.test(error?.message || "");
+    state.sourceProbe = { status: unavailable ? "failed" : "limited" };
+    setProbePresentation(unavailable ? "probe-failed" : "probe-limited", unavailable ? "probeFailed" : "probeLimited");
+    if (unavailable) toast(t("probeFailed"), true);
+  } finally {
+    clearTimeout(timeout);
+    button.disabled = false;
+    button.textContent = t("analyzeSource");
   }
 }
 
@@ -542,6 +632,9 @@ async function loadCatalog() {
     const catalog = await response.json();
     if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.devices) || !Array.isArray(catalog.modVersions)) throw new Error("Invalid catalog");
     state.catalog = catalog;
+    if (!$("#debloat-paths").value.trim() && Array.isArray(catalog.defaultDebloatPaths)) {
+      $("#debloat-paths").value = catalog.defaultDebloatPaths.join("\n");
+    }
     options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
@@ -575,18 +668,7 @@ function bindEvents() {
   $("#source-uri").addEventListener("input", updateSourceDetection);
   $("#source-uri").addEventListener("paste", () => queueMicrotask(updateSourceDetection));
   $("#probe-source").addEventListener("click", () => {
-    const button = $("#probe-source");
-    try {
-      const uri = $("#source-uri").value.trim();
-      if (!state.sourceDetection?.valid || !/^https?:\/\//i.test(uri)) throw new Error(t("invalidUrl"));
-      button.disabled = true;
-      button.textContent = t("probeSent");
-      send("probe_source", { uri });
-    } catch (error) {
-      button.disabled = false;
-      button.textContent = t("analyzeSource");
-      toast(error.message, true);
-    }
+    probeSourceInPlace().catch((error) => toast(error.message, true));
   });
   $("#select-defaults").addEventListener("click", () => setMods("defaults"));
   $("#select-all").addEventListener("click", () => setMods("all"));
