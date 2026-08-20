@@ -1,4 +1,5 @@
 const TelegramApp = window.Telegram && window.Telegram.WebApp;
+const sourceProbeEndpoint = document.querySelector('meta[name="wukong-source-probe-endpoint"]')?.content?.trim() || "";
 
 const translations = {
   vi: {
@@ -84,6 +85,12 @@ Object.assign(translations.vi, {
   previewMode: "CHẾ ĐỘ XEM TRƯỚC", authenticatedPreview: "Chưa xác thực — mở từ nút Mini App trong bot"
 });
 
+Object.assign(translations.vi, {
+  confirmSource: "Xác nhận nguồn",
+  probeDeferred: "Đã nhận diện link. Máy chủ build sẽ xác minh khả dụng và metadata ở bước preflight trước khi tải ROM.",
+  probeDeferredKicker: "SẴN SÀNG KIỂM TRA"
+});
+
 Object.assign(translations.en, {
   navBuild: "Studio", navCloud: "Library", navCatalog: "Catalog", buildTitle: "Compose a build docket.",
   buildIntro: "One recipe and one pipeline, with equivalent results on Windows and GitHub Actions.", routePolicy: "RUNNER",
@@ -107,6 +114,12 @@ Object.assign(translations.en, {
   searchMods: "Filter selectable MODs", jobActionHint: "Enter an ID to reveal actions; the bot verifies ownership and state.",
   stageQueued: "Queued", stagePreflight: "Preflight", stageDownloading: "Downloading", stageRunning: "Running", stageUploading: "Uploading", stageTerminal: "Succeeded / Failed",
   previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button"
+});
+
+Object.assign(translations.en, {
+  confirmSource: "Confirm source",
+  probeDeferred: "Link recognized. Build preflight will verify availability and metadata before downloading the ROM.",
+  probeDeferredKicker: "READY FOR PREFLIGHT"
 });
 
 const pipelineLabels = {
@@ -235,10 +248,11 @@ function updateSourceDetection() {
   updateSummary();
   node.classList.toggle("detected", Boolean(detection?.valid));
   node.classList.toggle("invalid", Boolean(detection && !detection.valid));
-  node.classList.remove("probing", "analyzed", "probe-limited", "probe-failed");
+  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed");
   const marker = node.querySelector(".source-state-mark span");
   const facts = $("#source-facts");
   const probe = $("#probe-source");
+  probe.textContent = t(sourceProbeEndpoint ? "analyzeSource" : "confirmSource");
   if (!detection) {
     marker.textContent = "URL";
     $("#source-kicker").textContent = t("sourceIdleKicker");
@@ -275,36 +289,58 @@ function updateSourceDetection() {
   }
 }
 
-function responseFilename(response, targetUrl) {
-  const disposition = response.headers.get("content-disposition") || "";
-  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
-  const quoted = /filename="([^"]+)"/i.exec(disposition);
-  const plain = /filename=([^;]+)/i.exec(disposition);
-  const headerName = encoded?.[1] || quoted?.[1] || plain?.[1]?.trim();
-  if (headerName) {
-    try { return decodeURIComponent(headerName.replace(/^['"]|['"]$/g, "")); } catch { return headerName; }
-  }
-  try {
-    const part = new URL(targetUrl).pathname.split("/").filter(Boolean).at(-1) || "";
-    return decodeURIComponent(part) || "—";
-  } catch { return "—"; }
-}
-
-function responseSize(response) {
-  const range = response.headers.get("content-range") || "";
-  const total = /\/(\d+)$/.exec(range)?.[1];
-  const length = response.headers.get("content-length");
-  const value = Number(total || length || 0);
-  return Number.isSafeInteger(value) && value > 1 ? value : null;
-}
-
 function setProbePresentation(status, messageKey) {
   const node = $("#source-state");
-  node.classList.remove("probing", "analyzed", "probe-limited", "probe-failed");
+  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed");
   node.classList.add(status);
-  const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
+  const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-deferred" ? "probeDeferredKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
   $("#source-kicker").textContent = t(kickerKey);
   $("#source-state-message").textContent = t(messageKey);
+}
+
+async function probeSourceViaBackend(uri, signal) {
+  if (!sourceProbeEndpoint) return null;
+  const headers = { "Content-Type": "application/json" };
+  if (TelegramApp?.initData) headers.Authorization = `tma ${TelegramApp.initData}`;
+  const response = await fetch(sourceProbeEndpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ uri }),
+    cache: "no-store",
+    signal
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error || `HTTP ${response.status}`);
+    error.sourceRejected = response.status >= 400 && response.status < 500;
+    throw error;
+  }
+  return payload;
+}
+
+function applyProbeResult(result, uri) {
+  const detected = state.sourceDetection;
+  const url = new URL(uri);
+  const rawFilename = url.pathname.split("/").filter(Boolean).at(-1) || "";
+  const localFilename = /\.(?:zip|ozip|bin)$/i.test(rawFilename) ? decodeURIComponent(rawFilename) : "—";
+  const filename = result?.filename || localFilename;
+  const host = result?.host || url.hostname;
+  const inferred = filename !== "—" ? classifySource(`https://${host}/${encodeURIComponent(filename)}`) : null;
+  const device = result?.device || detected.device || inferred?.device || "";
+  const version = result?.version || detected.version || inferred?.version || "";
+  const size = Number(result?.sizeBytes || 0);
+  $("#source-provider").textContent = result?.provider || detected.provider;
+  $("#source-type").textContent = result?.type || detected.type;
+  $("#source-host").textContent = host;
+  $("#source-filename").textContent = filename;
+  $("#source-device-detected").textContent = device || "—";
+  $("#source-version-detected").textContent = version || "—";
+  if (Number.isSafeInteger(size) && size > 0) $("#source-size").value = String(size);
+  if (device && [...$("#device").options].some((option) => option.value === device)) {
+    $("#device").value = device;
+    state.sourceAutoDevice = device;
+  }
+  updateSummary();
 }
 
 async function probeSourceInPlace() {
@@ -317,46 +353,19 @@ async function probeSourceInPlace() {
   button.textContent = t("probeAnalyzing");
   setProbePresentation("probing", "probeAnalyzing");
   try {
-    const response = await fetch(uri, {
-      method: "GET",
-      headers: { Range: "bytes=0-0" },
-      redirect: "follow",
-      cache: "no-store",
-      signal: controller.signal
-    });
-    if (!response.ok && response.status !== 206) throw new Error(`HTTP ${response.status}`);
-    const targetUrl = response.url || uri;
-    const detected = classifySource(targetUrl) || state.sourceDetection;
-    const size = responseSize(response);
-    const filename = responseFilename(response, targetUrl);
-    const host = new URL(targetUrl).hostname;
-    const inferred = classifySource(`https://${host}/${encodeURIComponent(filename)}`);
-    const device = detected.device || inferred?.device || state.sourceDetection.device || "";
-    const version = detected.version || inferred?.version || state.sourceDetection.version || "";
-    $("#source-provider").textContent = detected.provider || state.sourceDetection.provider;
-    $("#source-type").textContent = detected.type || state.sourceDetection.type;
-    $("#source-host").textContent = host;
-    $("#source-filename").textContent = filename;
-    $("#source-device-detected").textContent = device || "—";
-    $("#source-version-detected").textContent = version || "—";
-    if (size) $("#source-size").value = String(size);
-    if (device && [...$("#device").options].some((option) => option.value === device)) {
-      $("#device").value = device;
-      state.sourceAutoDevice = device;
-    }
-    state.sourceProbe = { status: "analyzed", host, filename, size };
-    setProbePresentation("analyzed", "probeSuccess");
-    await response.body?.cancel();
-    updateSummary();
+    const result = await probeSourceViaBackend(uri, controller.signal);
+    applyProbeResult(result, uri);
+    state.sourceProbe = { status: result ? "analyzed" : "deferred" };
+    setProbePresentation(result ? "analyzed" : "probe-deferred", result ? "probeSuccess" : "probeDeferred");
   } catch (error) {
-    const unavailable = error?.name === "AbortError" || navigator.onLine === false || /^HTTP\s(?:4|5)/.test(error?.message || "");
-    state.sourceProbe = { status: unavailable ? "failed" : "limited" };
-    setProbePresentation(unavailable ? "probe-failed" : "probe-limited", unavailable ? "probeFailed" : "probeLimited");
+    const unavailable = error?.sourceRejected || navigator.onLine === false;
+    state.sourceProbe = { status: unavailable ? "failed" : "deferred" };
+    setProbePresentation(unavailable ? "probe-failed" : "probe-deferred", unavailable ? "probeFailed" : "probeDeferred");
     if (unavailable) toast(t("probeFailed"), true);
   } finally {
     clearTimeout(timeout);
     button.disabled = false;
-    button.textContent = t("analyzeSource");
+    button.textContent = t(sourceProbeEndpoint ? "analyzeSource" : "confirmSource");
   }
 }
 
