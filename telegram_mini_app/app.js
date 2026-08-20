@@ -612,6 +612,11 @@ function sourceSpec() {
   return source;
 }
 
+function sameStringList(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
+
 function buildRecipe() {
   const task = $('input[name="task"]:checked').value;
   if (!$("#device").value) throw new Error(t("deviceRequired"));
@@ -629,7 +634,13 @@ function buildRecipe() {
       package: $("#package").checked, notifyTelegram: $("#notify").checked
     };
     const paths = $("#debloat-paths").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-    if (paths.length) recipe.build.debloatPaths = paths;
+    // The shared default list is intentionally visible/editable in the Mini App,
+    // but repeating it in sendData can exceed Telegram's 4096-byte hard limit.
+    // Omitting an unchanged list is lossless: every runner resolves a missing
+    // debloatPaths field from the same versioned config/debloat.json catalog.
+    if (paths.length && !sameStringList(paths, state.catalog.defaultDebloatPaths)) {
+      recipe.build.debloatPaths = paths;
+    }
   }
   return recipe;
 }

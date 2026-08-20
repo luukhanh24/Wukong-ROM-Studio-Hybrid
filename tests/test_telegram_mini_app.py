@@ -104,6 +104,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("!TelegramApp.initData", script)
         self.assertIn("keyboardConnected", script)
         self.assertIn("4096", script)
+        self.assertIn("sameStringList(paths, state.catalog.defaultDebloatPaths)", script)
         self.assertIn("catalog.json", script)
         self.assertIn("const translations", script)
         self.assertIn("source_mirror", script)

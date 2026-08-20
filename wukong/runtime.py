@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import base64
 import os
+import shutil
+import subprocess
 import threading
 import time
 from dataclasses import replace
@@ -109,10 +111,17 @@ class HybridRuntime:
         if not recipe:
             self._fail(job_id, "Job recipe is unavailable")
             return
-        token = os.environ.get("WUKONG_GITHUB_TOKEN", "").strip()
+        token = self._github_token()
         repository = os.environ.get("WUKONG_GITHUB_REPOSITORY", "").strip()
-        if not token or "/" not in repository or not self.rclone_config:
-            self._fail(job_id, "GitHub or rclone credentials are not configured")
+        missing = []
+        if not token:
+            missing.append("GitHub authentication (WUKONG_GITHUB_TOKEN or gh auth login)")
+        if "/" not in repository:
+            missing.append("WUKONG_GITHUB_REPOSITORY=owner/repository")
+        if not self.rclone_config:
+            missing.append("rclone configuration")
+        if missing:
+            self._fail(job_id, "Cloud dispatch is not configured: " + "; ".join(missing))
             return
         try:
             self.store.update(job_id, status=JobStatus.PREFLIGHT, stage="cloud-dispatch")
@@ -190,6 +199,29 @@ class HybridRuntime:
     def _fail(self, job_id: str, error: str) -> None:
         self.store.append_event(job_id, "error", error=error)
         self.store.update(job_id, status=JobStatus.FAILED, stage="dispatch-failed", error=error)
+
+    @staticmethod
+    def _github_token() -> str:
+        for name in ("WUKONG_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
+            token = os.environ.get(name, "").strip()
+            if token:
+                return token
+        executable = shutil.which("gh")
+        if not executable:
+            return ""
+        options: dict[str, object] = {
+            "capture_output": True,
+            "text": True,
+            "timeout": 10,
+            "check": False,
+        }
+        if os.name == "nt" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+            options["creationflags"] = subprocess.CREATE_NO_WINDOW
+        try:
+            completed = subprocess.run([executable, "auth", "token"], **options)
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return completed.stdout.strip() if completed.returncode == 0 else ""
 
     @staticmethod
     def _materialize_rclone_config(data_root: Path) -> Path | None:
