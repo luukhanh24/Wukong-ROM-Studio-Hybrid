@@ -203,6 +203,22 @@ public sealed record HybridSourceSpec(
     string Uri,
     string? Sha256 = null,
     long? SizeBytes = null);
+public sealed record HybridSourceProbe(
+    string Provider,
+    string Filename,
+    string ResolvedHost,
+    long? SizeBytes,
+    string? ContentType,
+    string? Etag,
+    string? LastModified,
+    string? Md5,
+    string? ProductName,
+    string? Device,
+    string? Version,
+    string? SecurityPatch,
+    string? OtaType,
+    bool DeepInspected,
+    string? Warning);
 public sealed record HybridBuildOptions(
     string Preset,
     IReadOnlyList<string> Mods,
@@ -375,6 +391,11 @@ public sealed class StudioApiClient : IDisposable
         HybridBuildRecipe recipe,
         CancellationToken cancellationToken = default) =>
         PostAsync<HybridRecipeValidation>("api/v1/recipes/validate", recipe, cancellationToken);
+
+    public Task<HybridSourceProbe> ProbeHybridSourceAsync(
+        string uri,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<HybridSourceProbe>("api/v1/sources/probe", new { uri }, cancellationToken);
 
     public Task<HybridJobManifest> CreateHybridJobAsync(
         HybridBuildRecipe recipe,

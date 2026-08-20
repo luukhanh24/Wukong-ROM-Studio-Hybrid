@@ -33,9 +33,21 @@
         <section class="dossier-section source-section">
           <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2><p data-i18n="sourceHint">URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.</p></div></header>
           <div class="task-tabs" role="group" aria-label="Task"><label><input type="radio" name="task" value="build" checked><span data-i18n="taskBuild">Build đầy đủ</span></label><label><input type="radio" name="task" value="source_mirror"><span data-i18n="taskMirror">Lưu ROM gốc</span></label><label><input type="radio" name="task" value="artifact_publish"><span data-i18n="taskPublish">Phát hành file</span></label></div>
-          <label class="field field-wide"><span data-i18n="sourceUrl">URL hoặc Drive reference</span><textarea id="source-uri" rows="3" required placeholder="https://roms.danielspringer.at/index.php?view=ota&build=…"></textarea><small data-i18n="sourceSecure">URL ký tạm thời được che khỏi tóm tắt và log.</small></label>
-          <div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="8680370027"></label></div>
-          <label class="field field-wide"><span data-i18n="checksum">SHA-256 — không bắt buộc</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label>
+          <div class="smart-source">
+            <label class="field field-wide"><span data-i18n="sourceUrl">Dán link ROM</span><textarea id="source-uri" rows="3" required spellcheck="false" aria-describedby="source-state source-facts" placeholder="https://component-ota-cn.allawntech.com/downloadCheck?…"></textarea><small data-i18n="sourceSecure">Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.</small></label>
+            <div class="source-state idle" id="source-state" aria-live="polite">
+              <div class="source-state-mark" aria-hidden="true"><span>URL</span></div>
+              <div class="source-state-copy"><small id="source-kicker" data-i18n="sourceIdleKicker">SMART SOURCE</small><strong id="source-state-title" data-i18n="sourceIdleTitle">Dán link để nhận diện</strong><p id="source-state-message" data-i18n="sourceIdleMessage">Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.</p></div>
+              <button id="probe-source" type="button" class="probe-button" hidden data-i18n="analyzeSource">Phân tích ROM</button>
+            </div>
+            <dl class="source-facts" id="source-facts" hidden>
+              <div><dt data-i18n="provider">Nhà cung cấp</dt><dd id="source-provider">—</dd></div>
+              <div><dt data-i18n="detectedType">Loại nguồn</dt><dd id="source-type">—</dd></div>
+              <div><dt data-i18n="detectedDevice">Thiết bị</dt><dd id="source-device-detected">—</dd></div>
+              <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">—</dd></div>
+            </dl>
+          </div>
+          <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 — không bắt buộc</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>
         </section>
 
         <section class="dossier-section build-options" id="build-options">

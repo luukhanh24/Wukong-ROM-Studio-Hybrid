@@ -56,6 +56,41 @@ runs:
         if [ '${{ inputs.self_hosted }}' != true ]; then
           python3 -m tools.runner_preflight --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
         fi
+    - name: "C2 · Nhận diện ROM nguồn / Identify source ROM"
+      shell: bash
+      run: |
+        set -euo pipefail
+        source_uri="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['source']['uri'])")"
+        case "$source_uri" in
+          http://*|https://*)
+            if python3 wukong_cli.py probe-source "$source_uri" > .wkstudio/source-probe.json; then
+              python3 - <<'PY'
+        import json, os
+        probe = json.load(open('.wkstudio/source-probe.json', encoding='utf-8'))
+        size = probe.get('sizeBytes')
+        def safe(value):
+            return str(value or '—').replace('`', "'").replace('\r', ' ').replace('\n', ' ')[:240]
+        rows = [
+            '## C2 · Nhận diện ROM nguồn / Source ROM identity',
+            '',
+            f"- Provider: `{safe(probe.get('provider'))}`",
+            f"- File: `{safe(probe.get('filename'))}`",
+            f"- Product: `{safe(probe.get('productName'))}`",
+            f"- Device: `{safe(probe.get('device'))}`",
+            f"- Version: `{safe(probe.get('version'))}`",
+            f"- Security patch: `{safe(probe.get('securityPatch'))}`",
+            f"- OTA: `{safe(probe.get('otaType'))}`",
+            f"- Size: `{size if size else '—'}` bytes",
+        ]
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+            summary.write('\n'.join(rows) + '\n')
+        PY
+            else
+              echo "::warning title=C2 · Source ROM identity::Metadata probe unavailable; the normal downloader will retry during stage 05."
+              printf '%s\n' '## C2 · Nhận diện ROM nguồn / Source ROM identity' '' '> Metadata probe unavailable. The normal downloader will retry during stage 05.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+            ;;
+        esac
     - name: "D · Toolchain Linux / Bootstrap & smoke test"
       shell: bash
       run: |

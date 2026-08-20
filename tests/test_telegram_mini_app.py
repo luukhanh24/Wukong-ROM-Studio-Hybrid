@@ -118,6 +118,17 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("linear-gradient", styles)
         self.assertNotIn("border-radius: 14px", styles)
 
+    def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        for element_id in ("source-state", "source-facts", "probe-source", "source-provider"):
+            self.assertIn(f'id="{element_id}"', html)
+        self.assertIn("downloadcheck", script.casefold())
+        self.assertIn('send("probe_source"', script)
+        self.assertNotIn("resolvedUrl", html + script)
+        self.assertNotIn("Signature=signed", html + script)
+
 
 if __name__ == "__main__":
     unittest.main()

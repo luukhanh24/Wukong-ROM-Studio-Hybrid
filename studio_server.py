@@ -91,6 +91,7 @@ from wukong.routing import RunnerInventory, RunnerUnavailableError
 from wukong.github import GitHubActionsAdapter
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
+from wukong.source_probe import probe_http_source
 from wukong.telegram import TelegramAccessStore
 from wukong.telegram_bot import TelegramBotController, TelegramLongPollingDaemon
 
@@ -2051,6 +2052,7 @@ def create_app(*, start_queue: bool = True) -> Flask:
             cache_provider=stage_cache_status,
             cache_clearer=clear_hybrid_cache,
             cloud_provider=lambda category: hybrid_runtime.cloud_library(category=category),
+            source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
             runtime=hybrid_runtime,
         )
         telegram_daemon = TelegramLongPollingDaemon(telegram_token, controller)
@@ -2109,6 +2111,17 @@ def create_app(*, start_queue: bool = True) -> Flask:
                 }
             )
         except (RecipeValidationError, RunnerUnavailableError, ValueError) as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    @app.post("/api/v1/sources/probe")
+    def hybrid_source_probe() -> Response:
+        try:
+            payload = request.get_json(force=True) or {}
+            uri = str(payload.get("uri") or "").strip()
+            if not uri:
+                raise ValueError("ROM source URL is required")
+            return jsonify(probe_http_source(uri).to_dict())
+        except (ValueError, OSError, RuntimeError) as exc:
             return jsonify({"error": str(exc)}), 400
 
     @app.post("/api/v1/jobs")

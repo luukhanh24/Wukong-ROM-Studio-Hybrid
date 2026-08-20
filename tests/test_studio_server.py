@@ -157,6 +157,37 @@ class StudioServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("secrets", response.get_json()["error"])
 
+    def test_hybrid_v1_probes_remote_rom_without_exposing_signed_url(self):
+        safe_result = SimpleNamespace(
+            to_dict=lambda: {
+                "provider": "oplus",
+                "filename": "PKG110.zip",
+                "device": "OP5D2BL1",
+                "version": "PKG110_16.0.8.300(CN01)",
+                "sizeBytes": 8645349608,
+                "deepInspected": True,
+            }
+        )
+        with mock.patch.object(studio_server, "probe_http_source", return_value=safe_result) as probe:
+            response = self.client.post(
+                "/api/v1/sources/probe",
+                headers=self.headers,
+                json={"uri": "https://component-ota-cn.allawntech.com/downloadCheck?c=abc"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["provider"], "oplus")
+        self.assertNotIn("resolvedUrl", response.get_json())
+        probe.assert_called_once()
+
+    def test_hybrid_v1_probe_requires_url(self):
+        response = self.client.post(
+            "/api/v1/sources/probe",
+            headers=self.headers,
+            json={"uri": ""},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("required", response.get_json()["error"])
+
     def test_hybrid_v1_lists_catalog_jobs_diagnostics_cache_and_cloud(self):
         recipe = {
             "schemaVersion": 1,

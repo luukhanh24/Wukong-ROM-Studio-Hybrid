@@ -22,7 +22,11 @@ const translations = {
     catalogFailed: "Không tải được catalog. Hãy thử mở lại Mini App.", invalidUrl: "Nhập URL HTTP/HTTPS hoặc đường dẫn rclone hợp lệ.", invalidSha: "SHA-256 phải có đúng 64 ký tự hex.",
     invalidSize: "Dung lượng ROM phải là số nguyên dương.", invalidWorkspace: "Ước lượng workspace phải là số nguyên dương.", jobRequired: "Hãy nhập Job ID.", payloadLarge: "Recipe vượt giới hạn 4096 byte. Hãy giảm MOD hoặc đường dẫn debloat.",
     sent: "Đã gửi yêu cầu sang bot Telegram.", telegramOnly: "Hãy mở trang này từ nút Mini App trong bot Telegram để gửi yêu cầu.", noMods: "Bộ nội dung này chưa có MOD sẵn sàng.",
-    runnerAuto: "GitHub Auto", runnerHosted: "GitHub Hosted", runnerSelf: "Self-hosted Linux", taskMirrorShort: "Lưu ROM gốc", taskPublishShort: "Phát hành", taskBuildShort: "Build", custom: "Custom"
+    runnerAuto: "GitHub Auto", runnerHosted: "GitHub Hosted", runnerSelf: "Self-hosted Linux", taskMirrorShort: "Lưu ROM gốc", taskPublishShort: "Phát hành", taskBuildShort: "Build", custom: "Custom",
+    sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Dán link để nhận diện", sourceIdleMessage: "Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.",
+    sourceDetectedKicker: "ĐÃ NHẬN DIỆN", sourceInvalidKicker: "CHƯA HỢP LỆ", sourceInvalidTitle: "Không nhận ra nguồn ROM", sourceInvalidMessage: "Dùng URL HTTP/HTTPS hoặc đường dẫn rclone remote:path.",
+    provider: "Nhà cung cấp", detectedType: "Loại nguồn", detectedDevice: "Thiết bị", detectedVersion: "Phiên bản", analyzeSource: "Phân tích ROM", editSourceManual: "Chỉnh thông tin thủ công",
+    deepProbeHint: "Chạm Phân tích để bot đọc metadata ZIP và trả kết quả trong chat.", probeSent: "Đang chuyển sang bot…", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone"
   },
   en: {
     connected: "BOT CONNECTED", buildTitle: "Prepare a build flight", buildIntro: "Verify the ROM source, runner and delivery before dispatching the recipe.",
@@ -45,14 +49,18 @@ const translations = {
     catalogFailed: "Catalog could not be loaded. Reopen the Mini App and try again.", invalidUrl: "Enter a valid HTTP/HTTPS URL or rclone reference.", invalidSha: "SHA-256 must contain exactly 64 hexadecimal characters.",
     invalidSize: "ROM size must be a positive integer.", invalidWorkspace: "Workspace estimate must be a positive integer.", jobRequired: "Enter a Job ID.", payloadLarge: "Recipe exceeds Telegram's 4096-byte limit. Reduce MODs or debloat paths.",
     sent: "Request sent to the Telegram bot.", telegramOnly: "Open this page from the Mini App button in Telegram to send requests.", noMods: "No ready MODs are available in this content pack.",
-    runnerAuto: "GitHub Auto", runnerHosted: "GitHub Hosted", runnerSelf: "Self-hosted Linux", taskMirrorShort: "Mirror", taskPublishShort: "Publish", taskBuildShort: "Build", custom: "Custom"
+    runnerAuto: "GitHub Auto", runnerHosted: "GitHub Hosted", runnerSelf: "Self-hosted Linux", taskMirrorShort: "Mirror", taskPublishShort: "Publish", taskBuildShort: "Build", custom: "Custom",
+    sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Paste a link to identify it", sourceIdleMessage: "Source type is recognized immediately; the bot inspects deep metadata without downloading the entire ROM.",
+    sourceDetectedKicker: "SOURCE RECOGNIZED", sourceInvalidKicker: "NOT VALID YET", sourceInvalidTitle: "ROM source not recognized", sourceInvalidMessage: "Use an HTTP/HTTPS URL or an rclone remote:path reference.",
+    provider: "Provider", detectedType: "Source type", detectedDevice: "Device", detectedVersion: "Version", analyzeSource: "Analyze ROM", editSourceManual: "Edit source details manually",
+    deepProbeHint: "Tap Analyze and the bot will inspect ZIP metadata, then return the result in chat.", probeSent: "Opening the bot…", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone"
   }
 };
 
 Object.assign(translations.vi, {
   navBuild: "Studio", navCloud: "Thư viện", navCatalog: "Catalog", buildTitle: "Lập hồ sơ build.",
   buildIntro: "Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.", routePolicy: "RUNNER",
-  sourceHint: "URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.", taskMirror: "Lưu ROM gốc", taskPublish: "Phát hành file",
+  sourceHint: "URL trực tiếp, link OPlus chưa resolve, trang OTA Daniel Springer hoặc Drive riêng tư.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.", taskMirror: "Lưu ROM gốc", taskPublish: "Phát hành file",
   recipeHint: "Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.", runner: "Nơi chạy", modPack: "Nền MOD",
   deliveryTitle: "Đóng gói & phát hành", deliveryHint: "Kiểm SHA-256 trước khi công bố artifact.",
   packageZip: "ZIP flashable", packageHint: "Đóng gói sau repack", publish: "Upload Drive", publishHint: "Tạo link tải khi thành công",
@@ -77,7 +85,7 @@ Object.assign(translations.vi, {
 Object.assign(translations.en, {
   navBuild: "Studio", navCloud: "Library", navCatalog: "Catalog", buildTitle: "Compose a build docket.",
   buildIntro: "One recipe and one pipeline, with equivalent results on Windows and GitHub Actions.", routePolicy: "RUNNER",
-  sourceHint: "Use a direct URL, Daniel Springer OTA page, or private Drive reference.", taskMirror: "Mirror source", taskPublish: "Publish file",
+  sourceHint: "Use a direct URL, unresolved OPlus link, Daniel Springer OTA page, or private Drive reference.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct links, unresolved OPlus links, Daniel Springer and Drive are supported. Signed URLs never appear in logs.", taskMirror: "Mirror source", taskPublish: "Publish file",
   recipeHint: "A preset is the starting point; every MOD and stage remains editable.", runner: "Run on", modPack: "MOD base",
   deliveryTitle: "Package & publish", deliveryHint: "Verify SHA-256 before publishing an artifact.",
   packageZip: "Flashable ZIP", packageHint: "Package after repacking", publish: "Upload to Drive", publishHint: "Create a link after success",
@@ -115,7 +123,9 @@ const state = {
   language: localStorage.getItem("wukong-language") || "vi",
   catalog: null,
   toastTimer: null,
-  defaultPreset: localStorage.getItem("wukong-default-preset") || "plus"
+  defaultPreset: localStorage.getItem("wukong-default-preset") || "plus",
+  sourceDetection: null,
+  sourceAutoDevice: null
 };
 
 function t(key, values = {}) {
@@ -128,11 +138,14 @@ function applyLanguage() {
   document.documentElement.lang = state.language;
   $$('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
   $("#language").textContent = state.language === "vi" ? "VI / EN" : "EN / VI";
+  const devicePlaceholder = $("#device option[value='']");
+  if (devicePlaceholder) devicePlaceholder.textContent = t("chooseDevice");
   renderMods(false);
   renderPipelineSteps(false);
   renderCatalog();
   updateSummary();
   updateTelegramState();
+  updateSourceDetection();
 }
 
 function toast(message, error = false) {
@@ -167,6 +180,82 @@ function options(select, entries, preferred) {
     option.value = value; option.textContent = label; return option;
   }));
   if (preferred && entries.some((entry) => entry.value === preferred)) select.value = preferred;
+}
+
+function classifySource(rawValue) {
+  const value = rawValue.trim();
+  if (!value) return null;
+  if (/^[A-Za-z]:[\\/]/.test(value) || /^\\\\/.test(value)) return { valid: false };
+  const rclone = /^([A-Za-z0-9][A-Za-z0-9_.-]*):(?!\/\/)(.+)$/.exec(value);
+  if (rclone && !rclone[1].includes("\\")) {
+    return { valid: true, kind: "rclone", provider: t("providerDrive"), type: t("sourceDriveType"), marker: "DRV" };
+  }
+  let url;
+  try { url = new URL(value); } catch { return { valid: false }; }
+  if (!/^https?:$/.test(url.protocol)) return { valid: false };
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.toLowerCase();
+  let provider = t("providerDirect");
+  let type = t("sourceDirect");
+  let marker = "HTTP";
+  if (host.includes("allawn") || host.includes("oppo") || host.includes("coloros") || path.endsWith("/downloadcheck")) {
+    provider = "OPlus OTA"; type = path.endsWith("/downloadcheck") ? t("sourceResolver") : t("sourceDirect"); marker = "OTA";
+  } else if (host === "roms.danielspringer.at") {
+    provider = "Daniel Springer"; type = url.searchParams.has("build") ? t("sourcePage") : t("sourceDirect"); marker = "OTA";
+  } else if (host.includes("drive.google.com")) {
+    provider = "Google Drive"; type = t("sourceDriveType"); marker = "DRV";
+  }
+  let decoded = "";
+  try { decoded = decodeURIComponent(url.pathname); } catch { decoded = url.pathname; }
+  const device = state.catalog?.devices?.find((item) => decoded.toLowerCase().includes(String(item.product).toLowerCase()))?.product || "";
+  const version = decoded.match(/(?:^|[_-])(\d{1,2}(?:\.\d+){1,3}(?:\([^)]*\))?)(?:[_./-]|$)/)?.[1] || "";
+  return { valid: true, kind: url.protocol === "https:" ? "https" : "http", provider, type, marker, device, version };
+}
+
+function updateSourceDetection() {
+  const node = $("#source-state");
+  if (!node) return;
+  const detection = classifySource($("#source-uri").value);
+  if (state.sourceAutoDevice && $("#device").value === state.sourceAutoDevice) {
+    $("#device").value = "";
+    updateSummary();
+  }
+  state.sourceAutoDevice = null;
+  state.sourceDetection = detection;
+  node.classList.toggle("detected", Boolean(detection?.valid));
+  node.classList.toggle("invalid", Boolean(detection && !detection.valid));
+  const marker = node.querySelector(".source-state-mark span");
+  const facts = $("#source-facts");
+  const probe = $("#probe-source");
+  if (!detection) {
+    marker.textContent = "URL";
+    $("#source-kicker").textContent = t("sourceIdleKicker");
+    $("#source-state-title").textContent = t("sourceIdleTitle");
+    $("#source-state-message").textContent = t("sourceIdleMessage");
+    facts.hidden = true; probe.hidden = true; return;
+  }
+  if (!detection.valid) {
+    marker.textContent = "?";
+    $("#source-kicker").textContent = t("sourceInvalidKicker");
+    $("#source-state-title").textContent = t("sourceInvalidTitle");
+    $("#source-state-message").textContent = t("sourceInvalidMessage");
+    facts.hidden = true; probe.hidden = true; return;
+  }
+  marker.textContent = detection.marker;
+  $("#source-kicker").textContent = t("sourceDetectedKicker");
+  $("#source-state-title").textContent = `${detection.provider} · ${detection.type}`;
+  $("#source-state-message").textContent = t("deepProbeHint");
+  $("#source-provider").textContent = detection.provider;
+  $("#source-type").textContent = detection.type;
+  $("#source-device-detected").textContent = detection.device || "—";
+  $("#source-version-detected").textContent = detection.version || "—";
+  facts.hidden = false;
+  probe.hidden = detection.marker === "DRV";
+  if (detection.device && [...$("#device").options].some((option) => option.value === detection.device)) {
+    $("#device").value = detection.device;
+    state.sourceAutoDevice = detection.device;
+    updateSummary();
+  }
 }
 
 function selectedMods() {
@@ -297,12 +386,11 @@ function positiveInteger(input, errorKey) {
 
 function sourceSpec() {
   const uri = $("#source-uri").value.trim();
-  const url = /^https?:\/\//i.test(uri);
-  const remote = /^[A-Za-z0-9][A-Za-z0-9_.-]*:(?!\/\/).+/.test(uri) && !uri.split(":", 1)[0].includes("\\");
-  if (!url && !remote) throw new Error(t("invalidUrl"));
+  const detection = classifySource(uri);
+  if (!detection?.valid) throw new Error(t("invalidUrl"));
   const sha = $("#source-sha").value.trim().toLowerCase();
   if (sha && !/^[a-f0-9]{64}$/.test(sha)) throw new Error(t("invalidSha"));
-  const source = { kind: url ? (uri.toLowerCase().startsWith("https://") ? "https" : "http") : "rclone", uri };
+  const source = { kind: detection.kind, uri };
   const size = positiveInteger($("#source-size"), "invalidSize");
   if (sha) source.sha256 = sha;
   if (size) source.sizeBytes = size;
@@ -311,6 +399,7 @@ function sourceSpec() {
 
 function buildRecipe() {
   const task = $('input[name="task"]:checked').value;
+  if (!$("#device").value) throw new Error(t("deviceRequired"));
   const recipe = {
     schemaVersion: 1, task, device: $("#device").value, source: sourceSpec(),
     execution: { target: $("#execution").value },
@@ -337,7 +426,7 @@ async function loadCatalog() {
     const catalog = await response.json();
     if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.devices) || !Array.isArray(catalog.modVersions)) throw new Error("Invalid catalog");
     state.catalog = catalog;
-    options($("#device"), catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` })), "PKG110");
+    options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     const count = Object.values(catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
@@ -346,6 +435,7 @@ async function loadCatalog() {
     renderPipelineSteps();
     renderMods();
     renderCatalog();
+    updateSourceDetection();
   } catch (error) {
     $("#catalog-status").textContent = t("catalogFailed");
     toast(t("catalogFailed"), true);
@@ -366,6 +456,22 @@ function bindEvents() {
     try { const jobId = $("#job-id").value.trim(); if (!jobId) throw new Error(t("jobRequired")); send(button.dataset.jobAction, { jobId }); } catch (error) { toast(error.message, true); }
   }));
   $("#recipe-form").addEventListener("submit", (event) => { event.preventDefault(); try { send("submit_recipe", { recipe: buildRecipe() }); } catch (error) { toast(error.message, true); } });
+  $("#source-uri").addEventListener("input", updateSourceDetection);
+  $("#source-uri").addEventListener("paste", () => queueMicrotask(updateSourceDetection));
+  $("#probe-source").addEventListener("click", () => {
+    const button = $("#probe-source");
+    try {
+      const uri = $("#source-uri").value.trim();
+      if (!state.sourceDetection?.valid || !/^https?:\/\//i.test(uri)) throw new Error(t("invalidUrl"));
+      button.disabled = true;
+      button.textContent = t("probeSent");
+      send("probe_source", { uri });
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = t("analyzeSource");
+      toast(error.message, true);
+    }
+  });
   $("#select-defaults").addEventListener("click", () => setMods("defaults"));
   $("#select-all").addEventListener("click", () => setMods("all"));
   $("#clear-mods").addEventListener("click", () => setMods("none"));
