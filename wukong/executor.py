@@ -21,6 +21,25 @@ LegacyBuild = Callable[[str, dict[str, Any], Path, Callable[[dict[str, Any]], No
 # Read-only/preflight stages such as inspect_rom would upload the same multi-GB
 # tree again and can exhaust cloud API quotas without improving resumability.
 CHECKPOINT_STAGES = set(CHECKPOINT_PIPELINE_STEPS)
+# A hosted checkpoint uploads the whole multi-GB workspace.  Production timing
+# showed that snapshots after unpack/sync/repack cost ~50 minutes while the
+# work they protect takes only a few minutes.  Keep the valuable post-extract
+# snapshot (it avoids re-downloading and re-extracting the ROM) and let local
+# runs retain their cheap filesystem checkpoints after every reusable stage.
+DEFAULT_CLOUD_CHECKPOINT_STAGES = {"extract_payload"}
+
+
+def checkpoint_stages_for_environment() -> set[str]:
+    if os.environ.get("GITHUB_ACTIONS", "").casefold() != "true":
+        return set(CHECKPOINT_STAGES)
+    configured = os.environ.get("WUKONG_CLOUD_CHECKPOINT_STAGES", "").strip()
+    if not configured:
+        return set(DEFAULT_CLOUD_CHECKPOINT_STAGES)
+    return {
+        item.strip()
+        for item in configured.split(",")
+        if item.strip() in CHECKPOINT_STAGES
+    }
 
 
 def source_target_for(recipe: BuildRecipe, root: Path) -> Path:
@@ -168,6 +187,7 @@ class LocalJobExecutor:
                 legacy_spec["specFingerprint"] = build_spec_fingerprint(BuildSpec.from_dict(legacy_spec))
 
             checkpoint_upload_enabled = True
+            checkpoint_stages = checkpoint_stages_for_environment()
             # On Actions, throttle cloud progress pushes: every stage event hits Drive
             # and easily exhausts API quota during long builds.
             cloud_progress_counter = 0
@@ -195,7 +215,7 @@ class LocalJobExecutor:
                         self._push_cloud_progress(job_id, storage)
                 if (
                     event.get("status") == "success"
-                    and stage in CHECKPOINT_STAGES
+                    and stage in checkpoint_stages
                     and checkpoint_upload_enabled
                 ):
                     try:
