@@ -7,6 +7,7 @@ import subprocess
 import threading
 import time
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .adapters import RcloneStorageAdapter, sha256_file
@@ -18,6 +19,8 @@ from .orchestrator import HybridOrchestrator, JobStore
 
 
 class HybridRuntime:
+    CLOUD_WATCH_MAX_AGE_SECONDS = 12 * 60 * 60
+
     def __init__(
         self,
         *,
@@ -55,6 +58,8 @@ class HybridRuntime:
                 JobStatus.FAILED,
                 JobStatus.CANCELLED,
             }:
+                continue
+            if self._cloud_watch_expired(manifest):
                 continue
             recipe = self.store.recipe(manifest.job_id)
             if not recipe:
@@ -229,14 +234,44 @@ class HybridRuntime:
                 JobStatus.CANCELLED,
             }:
                 return
+            if self._cloud_watch_expired(manifest):
+                self.store.append_event(
+                    job_id,
+                    "warning",
+                    warning="Cloud watcher stopped after 12 hours without a terminal state",
+                )
+                return
+            before = self._cloud_progress_key(manifest)
             refreshed = sync.pull(job_id)
-            if refreshed and refreshed.updated_at != manifest.updated_at:
+            if refreshed and self._cloud_progress_key(refreshed) != before:
                 failures = 0
             else:
                 failures += 1
             # A temporary Drive/API outage must not turn a running job into a
             # failure; interactive inspect calls continue to retry as well.
             time.sleep(5 if failures < 12 else 30)
+
+    @classmethod
+    def _cloud_watch_expired(cls, manifest: JobManifest) -> bool:
+        try:
+            created = datetime.fromisoformat(manifest.created_at.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return True
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - created).total_seconds() > cls.CLOUD_WATCH_MAX_AGE_SECONDS
+
+    @staticmethod
+    def _cloud_progress_key(manifest: JobManifest) -> tuple[object, ...]:
+        return (
+            manifest.status,
+            manifest.stage,
+            manifest.progress,
+            manifest.checkpoint,
+            manifest.finished_at,
+            manifest.error,
+            tuple((item.name, item.uri, item.sha256, item.public_url) for item in manifest.artifacts),
+        )
 
     def _fail(self, job_id: str, error: str) -> None:
         self.store.append_event(job_id, "error", error=error)
