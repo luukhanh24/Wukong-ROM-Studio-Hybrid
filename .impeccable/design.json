@@ -1,127 +1,124 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-20T19:07:54.9699202+07:00",
+  "generatedAt": "2026-08-20T20:05:00+07:00",
   "title": "Design System: Wukong ROM Studio Hybrid",
   "extensions": {
     "colorMeta": {
-      "canvas": {"role":"neutral","displayName":"Cool Canvas","canonical":"#ececf3","tonalRamp":["oklch(15% 0.012 286)","oklch(27% 0.012 286)","oklch(39% 0.012 286)","oklch(51% 0.012 286)","oklch(63% 0.012 286)","oklch(75% 0.012 286)","oklch(87% 0.012 286)","oklch(95% 0.012 286)"]},
-      "work-surface": {"role":"neutral","displayName":"Pearl Work Surface","canonical":"#ffffff","tonalRamp":["oklch(15% 0.006 286)","oklch(27% 0.006 286)","oklch(39% 0.006 286)","oklch(51% 0.006 286)","oklch(63% 0.006 286)","oklch(75% 0.006 286)","oklch(87% 0.006 286)","oklch(95% 0.006 286)"]},
-      "work-surface-soft": {"role":"neutral","displayName":"Soft Pearl","canonical":"#f5f5fa","tonalRamp":["oklch(15% 0.009 286)","oklch(27% 0.009 286)","oklch(39% 0.009 286)","oklch(51% 0.009 286)","oklch(63% 0.009 286)","oklch(75% 0.009 286)","oklch(87% 0.009 286)","oklch(95% 0.009 286)"]},
-      "hardware-violet": {"role":"primary","displayName":"Hardware Violet","canonical":"#201d3d","tonalRamp":["oklch(15% 0.045 290)","oklch(27% 0.045 290)","oklch(39% 0.045 290)","oklch(51% 0.045 290)","oklch(63% 0.045 290)","oklch(75% 0.045 290)","oklch(87% 0.045 290)","oklch(95% 0.045 290)"]},
-      "ink": {"role":"neutral","displayName":"Atlas Ink","canonical":"#1d1b2e","tonalRamp":["oklch(15% 0.027 290)","oklch(27% 0.027 290)","oklch(39% 0.027 290)","oklch(51% 0.027 290)","oklch(63% 0.027 290)","oklch(75% 0.027 290)","oklch(87% 0.027 290)","oklch(95% 0.027 290)"]},
-      "muted-ink": {"role":"neutral","displayName":"Muted Atlas Ink","canonical":"#68677a","tonalRamp":["oklch(15% 0.02 286)","oklch(27% 0.02 286)","oklch(39% 0.02 286)","oklch(51% 0.02 286)","oklch(63% 0.02 286)","oklch(75% 0.02 286)","oklch(87% 0.02 286)","oklch(95% 0.02 286)"]},
-      "divider": {"role":"neutral","displayName":"Pearl Divider","canonical":"#d9d8e5","tonalRamp":["oklch(15% 0.014 286)","oklch(27% 0.014 286)","oklch(39% 0.014 286)","oklch(51% 0.014 286)","oklch(63% 0.014 286)","oklch(75% 0.014 286)","oklch(87% 0.014 286)","oklch(95% 0.014 286)"]},
-      "signal-violet": {"role":"primary","displayName":"Signal Violet","canonical":"var(--tg-theme-button-color, #5146e5)","tonalRamp":["oklch(15% 0.19 285)","oklch(27% 0.19 285)","oklch(39% 0.19 285)","oklch(51% 0.19 285)","oklch(63% 0.19 285)","oklch(75% 0.19 285)","oklch(87% 0.19 285)","oklch(95% 0.19 285)"]},
-      "signal-violet-strong": {"role":"primary","displayName":"Strong Signal Violet","canonical":"#4037c4","tonalRamp":["oklch(15% 0.18 285)","oklch(27% 0.18 285)","oklch(39% 0.18 285)","oklch(51% 0.18 285)","oklch(63% 0.18 285)","oklch(75% 0.18 285)","oklch(87% 0.18 285)","oklch(95% 0.18 285)"]},
-      "signal-text": {"role":"neutral","displayName":"Signal Text","canonical":"var(--tg-theme-button-text-color, #ffffff)","tonalRamp":["oklch(15% 0.004 286)","oklch(27% 0.004 286)","oklch(39% 0.004 286)","oklch(51% 0.004 286)","oklch(63% 0.004 286)","oklch(75% 0.004 286)","oklch(87% 0.004 286)","oklch(95% 0.004 286)"]},
-      "aqua": {"role":"secondary","displayName":"Atlas Aqua","canonical":"#42c9b7","tonalRamp":["oklch(15% 0.11 174)","oklch(27% 0.11 174)","oklch(39% 0.11 174)","oklch(51% 0.11 174)","oklch(63% 0.11 174)","oklch(75% 0.11 174)","oklch(87% 0.11 174)","oklch(95% 0.11 174)"]},
-      "coral": {"role":"secondary","displayName":"Dispatch Coral","canonical":"#f47761","tonalRamp":["oklch(15% 0.15 30)","oklch(27% 0.15 30)","oklch(39% 0.15 30)","oklch(51% 0.15 30)","oklch(63% 0.15 30)","oklch(75% 0.15 30)","oklch(87% 0.15 30)","oklch(95% 0.15 30)"]},
-      "sun": {"role":"tertiary","displayName":"Readiness Sun","canonical":"#f2bd4b","tonalRamp":["oklch(15% 0.14 85)","oklch(27% 0.14 85)","oklch(39% 0.14 85)","oklch(51% 0.14 85)","oklch(63% 0.14 85)","oklch(75% 0.14 85)","oklch(87% 0.14 85)","oklch(95% 0.14 85)"]},
-      "success": {"role":"tertiary","displayName":"System Green","canonical":"#18845a","tonalRamp":["oklch(15% 0.11 155)","oklch(27% 0.11 155)","oklch(39% 0.11 155)","oklch(51% 0.11 155)","oklch(63% 0.11 155)","oklch(75% 0.11 155)","oklch(87% 0.11 155)","oklch(95% 0.11 155)"]},
-      "danger": {"role":"tertiary","displayName":"Destructive Red","canonical":"var(--tg-theme-destructive-text-color, #c63d4d)","tonalRamp":["oklch(15% 0.15 20)","oklch(27% 0.15 20)","oklch(39% 0.15 20)","oklch(51% 0.15 20)","oklch(63% 0.15 20)","oklch(75% 0.15 20)","oklch(87% 0.15 20)","oklch(95% 0.15 20)"]},
-      "dark-canvas": {"role":"neutral","displayName":"Night Canvas","canonical":"#11101b","tonalRamp":["oklch(15% 0.018 290)","oklch(27% 0.018 290)","oklch(39% 0.018 290)","oklch(51% 0.018 290)","oklch(63% 0.018 290)","oklch(75% 0.018 290)","oklch(87% 0.018 290)","oklch(95% 0.018 290)"]},
-      "dark-work-surface": {"role":"neutral","displayName":"Night Work Surface","canonical":"#1c1a29","tonalRamp":["oklch(15% 0.023 290)","oklch(27% 0.023 290)","oklch(39% 0.023 290)","oklch(51% 0.023 290)","oklch(63% 0.023 290)","oklch(75% 0.023 290)","oklch(87% 0.023 290)","oklch(95% 0.023 290)"]},
-      "dark-work-surface-soft": {"role":"neutral","displayName":"Night Soft Surface","canonical":"#252333","tonalRamp":["oklch(15% 0.025 290)","oklch(27% 0.025 290)","oklch(39% 0.025 290)","oklch(51% 0.025 290)","oklch(63% 0.025 290)","oklch(75% 0.025 290)","oklch(87% 0.025 290)","oklch(95% 0.025 290)"]},
-      "dark-hardware-violet": {"role":"primary","displayName":"Night Hardware Violet","canonical":"#0b0a13","tonalRamp":["oklch(15% 0.024 290)","oklch(27% 0.024 290)","oklch(39% 0.024 290)","oklch(51% 0.024 290)","oklch(63% 0.024 290)","oklch(75% 0.024 290)","oklch(87% 0.024 290)","oklch(95% 0.024 290)"]},
-      "dark-ink": {"role":"neutral","displayName":"Night Pearl Ink","canonical":"#f4f2ff","tonalRamp":["oklch(15% 0.016 290)","oklch(27% 0.016 290)","oklch(39% 0.016 290)","oklch(51% 0.016 290)","oklch(63% 0.016 290)","oklch(75% 0.016 290)","oklch(87% 0.016 290)","oklch(95% 0.016 290)"]},
-      "dark-muted-ink": {"role":"neutral","displayName":"Night Muted Ink","canonical":"#aaa7bb","tonalRamp":["oklch(15% 0.021 290)","oklch(27% 0.021 290)","oklch(39% 0.021 290)","oklch(51% 0.021 290)","oklch(63% 0.021 290)","oklch(75% 0.021 290)","oklch(87% 0.021 290)","oklch(95% 0.021 290)"]},
-      "dark-divider": {"role":"neutral","displayName":"Night Divider","canonical":"#373447","tonalRamp":["oklch(15% 0.026 290)","oklch(27% 0.026 290)","oklch(39% 0.026 290)","oklch(51% 0.026 290)","oklch(63% 0.026 290)","oklch(75% 0.026 290)","oklch(87% 0.026 290)","oklch(95% 0.026 290)"]}
+      "canvas": {"role":"neutral","displayName":"Warm Canvas","canonical":"#f3f1eb","tonalRamp":["oklch(15% 0.01 85)","oklch(27% 0.01 85)","oklch(39% 0.01 85)","oklch(51% 0.01 85)","oklch(63% 0.01 85)","oklch(75% 0.01 85)","oklch(87% 0.01 85)","oklch(95% 0.01 85)"]},
+      "work-surface-raised": {"role":"neutral","displayName":"Raised Work Surface","canonical":"#ffffff","tonalRamp":["oklch(15% 0.004 85)","oklch(27% 0.004 85)","oklch(39% 0.004 85)","oklch(51% 0.004 85)","oklch(63% 0.004 85)","oklch(75% 0.004 85)","oklch(87% 0.004 85)","oklch(98% 0.004 85)"]},
+      "command-bar": {"role":"neutral","displayName":"Graphite Command Bar","canonical":"#191a1c","tonalRamp":["oklch(15% 0.008 260)","oklch(27% 0.008 260)","oklch(39% 0.008 260)","oklch(51% 0.008 260)","oklch(63% 0.008 260)","oklch(75% 0.008 260)","oklch(87% 0.008 260)","oklch(95% 0.008 260)"]},
+      "ink": {"role":"neutral","displayName":"Ledger Ink","canonical":"#202124","tonalRamp":["oklch(15% 0.008 260)","oklch(27% 0.008 260)","oklch(39% 0.008 260)","oklch(51% 0.008 260)","oklch(63% 0.008 260)","oklch(75% 0.008 260)","oklch(87% 0.008 260)","oklch(95% 0.008 260)"]},
+      "signal-amber": {"role":"primary","displayName":"Execution Amber","canonical":"#d97706","tonalRamp":["oklch(15% 0.15 70)","oklch(27% 0.15 70)","oklch(39% 0.15 70)","oklch(51% 0.15 70)","oklch(63% 0.15 70)","oklch(75% 0.15 70)","oklch(87% 0.15 70)","oklch(95% 0.15 70)"]},
+      "status-green": {"role":"secondary","displayName":"System Green","canonical":"#16775a","tonalRamp":["oklch(15% 0.09 165)","oklch(27% 0.09 165)","oklch(39% 0.09 165)","oklch(51% 0.09 165)","oklch(63% 0.09 165)","oklch(75% 0.09 165)","oklch(87% 0.09 165)","oklch(95% 0.09 165)"]},
+      "danger": {"role":"secondary","displayName":"Failure Red","canonical":"#bd3f32","tonalRamp":["oklch(15% 0.13 28)","oklch(27% 0.13 28)","oklch(39% 0.13 28)","oklch(51% 0.13 28)","oklch(63% 0.13 28)","oklch(75% 0.13 28)","oklch(87% 0.13 28)","oklch(95% 0.13 28)"]},
+      "focus-blue": {"role":"tertiary","displayName":"Keyboard Focus Blue","canonical":"#2563eb","tonalRamp":["oklch(15% 0.19 260)","oklch(27% 0.19 260)","oklch(39% 0.19 260)","oklch(51% 0.19 260)","oklch(63% 0.19 260)","oklch(75% 0.19 260)","oklch(87% 0.19 260)","oklch(95% 0.19 260)"]}
     },
     "typographyMeta": {
-      "display": {"displayName":"Atlas Display","purpose":"Destination-level page titles."},
-      "headline": {"displayName":"Section Headline","purpose":"Work-surface and section names."},
-      "title": {"displayName":"Instrument Title","purpose":"Source states, routes, and prominent actions."},
-      "body": {"displayName":"Operational Body","purpose":"Controls and explanatory copy."},
-      "label": {"displayName":"Machine Label","purpose":"Indices, IDs, measurements, counts, and status kickers."}
+      "display": {"displayName":"Destination Display","purpose":"Compact destination headings without hero scale."},
+      "body": {"displayName":"Operational Body","purpose":"Vietnamese and English explanatory copy and controls."},
+      "data": {"displayName":"Machine Data","purpose":"URLs, device codes, runner names, versions, states, and identifiers."},
+      "label": {"displayName":"Ledger Label","purpose":"Uppercase indices and measurement labels."}
     },
-    "shadows": [
-      {"name":"work-surface","value":"0 8px 22px rgba(31, 28, 62, .08)","purpose":"Cards and ledgers."},
-      {"name":"instrument-panel","value":"0 18px 48px rgba(31, 28, 62, .13)","purpose":"Navigation, hero plates, and Smart Source."},
-      {"name":"floating-control","value":"0 24px 60px rgba(31, 28, 62, .2)","purpose":"Docket, mobile controls, and toast."}
-    ],
+    "shadows": [],
     "motion": [
-      {"name":"atlas-ease","value":"cubic-bezier(.22, 1, .36, 1)","purpose":"State transitions and the clipped destination reveal."},
-      {"name":"view-reveal","value":"420ms","purpose":"Destination entry; disabled by reduced-motion preference."},
-      {"name":"micro-interaction","value":"180ms–200ms","purpose":"Hover, focus, and press feedback."}
+      {"name":"ledger-reveal","value":"240ms cubic-bezier(.16, 1, .3, 1)","purpose":"One clipped destination reveal; disabled for reduced motion."},
+      {"name":"status-pulse","value":"1800ms ease-out infinite","purpose":"Waiting state lamp only."}
     ],
     "breakpoints": [
-      {"name":"mobile-atlas","value":"860px"},
-      {"name":"narrow-mobile","value":"390px"},
-      {"name":"short-landscape","value":"orientation: landscape; max-height: 500px; max-width: 860px"}
+      {"name":"compact","value":"860px"},
+      {"name":"narrow","value":"390px"},
+      {"name":"short-landscape","value":"500px height"}
     ]
   },
   "components": [
     {
-      "name":"Primary Button","kind":"button","refersTo":"button-primary","description":"Canonical Signal Violet action.",
+      "name":"Primary Dispatch Button",
+      "kind":"button",
+      "refersTo":"button-primary",
+      "description":"The single submit or dispatch action on an operational surface.",
       "html":"<button class=\"ds-btn-primary\">Tạo job build</button>",
-      "css":".ds-btn-primary { min-height: 50px; padding: 11px 17px; border: 0; border-radius: 13px; color: var(--signal-text, #fff); background: var(--signal, #5146e5); font: 800 16px/1.2 Manrope, sans-serif; box-shadow: 0 10px 24px rgba(81,70,229,.24); transition: transform .18s cubic-bezier(.22,1,.36,1), background .18s, box-shadow .18s; cursor: pointer; } .ds-btn-primary:hover { background: var(--signal-strong, #4037c4); box-shadow: 0 14px 30px rgba(81,70,229,.32); transform: translateY(-2px); } .ds-btn-primary:active { transform: translateY(0); } .ds-btn-primary:focus-visible { outline: 3px solid var(--aqua, #42c9b7); outline-offset: 3px; }"
+      "css":".ds-btn-primary{min-height:46px;padding:10px 15px;border:1px solid #b45309;border-radius:4px;color:#fff;background:#d97706;font:700 12px/1.35 'IBM Plex Sans',sans-serif;cursor:pointer;transition:background .16s,transform .16s}.ds-btn-primary:hover{background:#b45309}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:focus-visible{outline:3px solid #2563eb;outline-offset:2px}"
     },
     {
-      "name":"Operational Field","kind":"input","refersTo":"field","description":"Soft Pearl input with mono label and dual focus treatment.",
-      "html":"<label class=\"ds-field\"><span>JOB ID</span><input placeholder=\"abc123…\"></label>",
-      "css":".ds-field { display: grid; gap: 8px; color: var(--ink, #1d1b2e); } .ds-field span { color: var(--muted, #68677a); font: 600 10px/1.3 \"IBM Plex Mono\", monospace; letter-spacing: .06em; text-transform: uppercase; } .ds-field input { min-height: 50px; padding: 12px 14px; border: 1px solid var(--line, #d9d8e5); border-radius: 13px; color: inherit; background: var(--surface-soft, #f5f5fa); font: 400 16px/1.55 Manrope, sans-serif; } .ds-field input:hover { border-color: var(--line-strong, #aaa8bc); } .ds-field input:focus { outline: 0; border-color: var(--signal, #5146e5); background: var(--surface, #fff); box-shadow: 0 0 0 4px rgba(81,70,229,.12); } .ds-field input:focus-visible { outline: 3px solid var(--aqua, #42c9b7); outline-offset: 3px; }"
+      "name":"Technical Input",
+      "kind":"input",
+      "refersTo":"field",
+      "description":"A labeled field for ROM URLs, IDs, checksums, and measured values.",
+      "html":"<label class=\"ds-field\"><span>ROM SOURCE URL</span><input value=\"https://example.com/rom.zip\"></label>",
+      "css":".ds-field{display:grid;gap:6px;color:#66676b;font:500 9px/1.2 'JetBrains Mono',monospace;letter-spacing:.05em}.ds-field input{min-height:44px;padding:9px 11px;border:1px solid #aaa59b;border-radius:4px;color:#202124;background:#fff;font:500 12px/1.4 'JetBrains Mono',monospace}.ds-field input:hover{border-color:#77746e}.ds-field input:focus{border-color:#d97706;outline:3px solid #2563eb;outline-offset:2px}"
     },
     {
-      "name":"Active Navigation","kind":"nav","refersTo":"nav-active","description":"Numbered active destination treatment.",
+      "name":"Active Destination",
+      "kind":"nav",
+      "refersTo":"nav-active",
+      "description":"The indexed active state shared by desktop and mobile navigation.",
       "html":"<button class=\"ds-nav-active\"><b>01</b><span>Studio</span></button>",
-      "css":".ds-nav-active { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 14px; border: 0; border-radius: 12px; color: #fff; background: var(--surface-strong, #201d3d); font: 700 13px/1 Manrope, sans-serif; cursor: pointer; } .ds-nav-active b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; color: var(--surface-strong, #201d3d); background: var(--aqua, #42c9b7); font: 600 9px/1 \"IBM Plex Mono\", monospace; } .ds-nav-active:hover { color: #fff; filter: brightness(1.08); } .ds-nav-active:focus-visible { outline: 3px solid var(--aqua, #42c9b7); outline-offset: 3px; }"
+      "css":".ds-nav-active{position:relative;min-height:54px;padding:6px 12px;border:0;border-radius:4px;color:#202124;background:#fff0d2;font:600 12px/1.2 'IBM Plex Sans',sans-serif;cursor:pointer}.ds-nav-active:before{content:'';position:absolute;top:0;right:9px;left:9px;height:2px;background:#d97706}.ds-nav-active b{margin-right:8px;color:#b45309;font:500 9px/1 'JetBrains Mono',monospace}.ds-nav-active:focus-visible{outline:3px solid #2563eb;outline-offset:2px}"
     },
     {
-      "name":"Selected Task Chip","kind":"chip","description":"Selected option inside the Soft Pearl segmented group.",
-      "html":"<span class=\"ds-task-chip\">Build đầy đủ</span>",
-      "css":".ds-task-chip { display: grid; place-items: center; min-height: 48px; padding: 8px 12px; border-radius: 11px; color: #fff; background: var(--signal, #5146e5); font: 700 12px/1.2 Manrope, sans-serif; box-shadow: 0 8px 20px rgba(81,70,229,.22); transition: transform .18s cubic-bezier(.22,1,.36,1); } .ds-task-chip:hover { transform: translateY(-1px); } .ds-task-chip:focus-visible { outline: 3px solid var(--aqua, #42c9b7); outline-offset: 2px; }"
+      "name":"Selected MOD",
+      "kind":"chip",
+      "description":"A selected MOD with three redundant state cues: border, surface, and check mark.",
+      "html":"<label class=\"ds-mod\"><input type=\"checkbox\" checked><span><svg viewBox=\"0 0 16 16\"><path d=\"M3.5 8.2 6.5 11l6-6.5\"/></svg><b>WK_Manager</b></span></label>",
+      "css":".ds-mod{position:relative}.ds-mod input{position:absolute;opacity:0}.ds-mod span{display:flex;min-height:44px;align-items:center;gap:9px;padding:8px 9px;border:1px solid #d7d3cb;border-radius:4px;background:#fff;cursor:pointer}.ds-mod svg{width:17px;height:17px;padding:2px;border:1px solid #aaa59b;border-radius:3px;fill:none;stroke:transparent;stroke-width:1.8}.ds-mod b{font:500 10px/1.3 'JetBrains Mono',monospace}.ds-mod input:checked+span{border-color:#d97706;background:#fff0d2}.ds-mod input:checked+span svg{border-color:#d97706;color:#fff;background:#d97706;stroke:#fff}.ds-mod input:focus-visible+span{outline:3px solid #2563eb;outline-offset:2px}"
     },
     {
-      "name":"Pearl Work Card","kind":"card","refersTo":"card","description":"Canonical raised work surface.",
-      "html":"<section class=\"ds-work-card\"><small>02</small><h3>Cấu hình bản ROM</h3><p>Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.</p></section>",
-      "css":".ds-work-card { padding: 24px; border-radius: 24px; color: var(--ink, #1d1b2e); background: var(--surface, #fff); box-shadow: 0 8px 22px rgba(31,28,62,.08); font-family: Manrope, sans-serif; } .ds-work-card small { color: var(--signal, #5146e5); font: 600 10px/1 \"IBM Plex Mono\", monospace; } .ds-work-card h3 { margin: 8px 0 6px; font: 600 20px/1.15 Sora, sans-serif; letter-spacing: -.025em; } .ds-work-card p { margin: 0; color: var(--muted, #68677a); font-size: 13px; line-height: 1.55; } .ds-work-card:hover { box-shadow: 0 18px 48px rgba(31,28,62,.13); } .ds-work-card:focus-within { outline: 3px solid var(--aqua, #42c9b7); outline-offset: 3px; }"
+      "name":"Recognized Source Row",
+      "kind":"custom",
+      "description":"The Smart Source recognized state without implying a completed download.",
+      "html":"<div class=\"ds-source\"><i>OTA</i><span><small>ĐÃ NHẬN DIỆN</small><strong>OPlus OTA · Link OTA chưa resolve</strong><p>Phân tích metadata sâu trong Telegram.</p></span></div>",
+      "css":".ds-source{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center;padding:12px 15px;border:1px solid #d7d3cb;border-radius:6px;background:#e2f3eb;color:#202124}.ds-source i{display:grid;place-items:center;width:34px;height:34px;border:1px solid #16775a;border-radius:4px;color:#16775a;font:600 8px/1 'JetBrains Mono',monospace;font-style:normal}.ds-source small,.ds-source strong,.ds-source p{display:block}.ds-source small{color:#16775a;font:600 8px/1 'JetBrains Mono',monospace;letter-spacing:.06em}.ds-source strong{margin-top:5px;font:600 13px/1.25 'IBM Plex Sans',sans-serif}.ds-source p{margin:4px 0 0;color:#66676b;font:400 11px/1.4 'IBM Plex Sans',sans-serif}"
     },
     {
-      "name":"Smart Source","kind":"custom","description":"Signature dark source-recognition instrument.",
-      "html":"<section class=\"ds-smart-source\"><label>SMART SOURCE<textarea placeholder=\"Dán link ROM\"></textarea></label><div><b>URL</b><span><small>ĐÃ NHẬN DIỆN</small><strong>HTTP server · Direct download</strong></span></div></section>",
-      "css":".ds-smart-source { overflow: hidden; border-radius: 20px; color: #fff; background: var(--surface-strong, #201d3d); box-shadow: 0 18px 48px rgba(31,28,62,.13); font-family: Manrope, sans-serif; } .ds-smart-source label { display: grid; gap: 8px; padding: 20px; color: var(--aqua, #42c9b7); font: 600 10px/1.3 \"IBM Plex Mono\", monospace; letter-spacing: .06em; } .ds-smart-source textarea { min-height: 90px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.13); border-radius: 13px; color: #fff; background: rgba(255,255,255,.07); font: 400 15px/1.55 Manrope, sans-serif; resize: vertical; } .ds-smart-source textarea:focus { outline: 0; border-color: var(--aqua, #42c9b7); box-shadow: 0 0 0 4px rgba(66,201,183,.16); } .ds-smart-source > div { display: grid; grid-template-columns: 54px 1fr; gap: 15px; align-items: center; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.1); } .ds-smart-source b { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 17px; color: var(--surface-strong, #201d3d); background: var(--aqua, #42c9b7); font: 600 10px/1 \"IBM Plex Mono\", monospace; } .ds-smart-source small,.ds-smart-source strong { display: block; } .ds-smart-source small { margin-bottom: 5px; color: var(--aqua, #42c9b7); font: 600 10px/1 \"IBM Plex Mono\", monospace; letter-spacing: .1em; } .ds-smart-source strong { font: 600 16px/1.3 Sora, sans-serif; }"
+      "name":"Delivery State Row",
+      "kind":"custom",
+      "description":"A delivery stage that can represent pending, running, complete, failed, or skipped.",
+      "html":"<div class=\"ds-delivery\" data-state=\"running\"><i></i><span><strong>Upload Drive</strong><small>Tạo link tải khi thành công</small></span><em>Đang chạy</em></div>",
+      "css":".ds-delivery{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;min-height:64px;padding:10px 12px;border:1px solid #d7d3cb;border-radius:6px;background:#fff}.ds-delivery i{display:grid;place-items:center;width:22px;height:22px;border:1px solid #d97706;border-radius:50%;background:#fff0d2}.ds-delivery i:after{content:'';width:6px;height:6px;border-radius:50%;background:#d97706}.ds-delivery strong,.ds-delivery small{display:block}.ds-delivery strong{font:600 12px/1.3 'IBM Plex Sans',sans-serif}.ds-delivery small{margin-top:3px;color:#66676b;font:400 10px/1.35 'IBM Plex Sans',sans-serif}.ds-delivery em{color:#b45309;font:500 9px/1 'JetBrains Mono',monospace;font-style:normal}"
     },
     {
-      "name":"Incomplete Readiness Docket","kind":"custom","description":"Truthful pre-dispatch state before source and device are complete.",
-      "html":"<aside class=\"ds-docket\"><small>HỒ SƠ CHƯA ĐỦ</small><strong>— / PLUS / GITHUB AUTO</strong><p>Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.</p><button>Hoàn tất cấu hình</button></aside>",
-      "css":".ds-docket { width: 300px; padding: 22px; border-radius: 24px; color: #fff; background: #38354f; box-shadow: 0 24px 60px rgba(31,28,62,.2); font-family: Manrope, sans-serif; } .ds-docket small { display: block; margin-bottom: 13px; color: var(--sun, #f2bd4b); font: 600 10px/1 \"IBM Plex Mono\", monospace; letter-spacing: .08em; } .ds-docket strong { display: block; padding-block: 16px; border-block: 1px solid rgba(255,255,255,.13); font: 600 19px/1.35 Sora, sans-serif; text-transform: uppercase; } .ds-docket p { margin: 15px 0 20px; color: #aaa8be; font-size: 11px; line-height: 1.5; } .ds-docket button { width: 100%; min-height: 50px; padding: 11px 17px; border: 0; border-radius: 13px; color: var(--surface-strong, #201d3d); background: var(--sun, #f2bd4b); font-weight: 800; box-shadow: 0 10px 24px rgba(242,189,75,.22); cursor: pointer; } .ds-docket button:hover { transform: translateY(-2px); } .ds-docket button:active { transform: translateY(0); } .ds-docket button:focus-visible { outline: 3px solid var(--aqua, #42c9b7); outline-offset: 3px; }"
+      "name":"Readiness Ledger",
+      "kind":"card",
+      "refersTo":"ledger-card",
+      "description":"The truthful final checklist and route summary before dispatch.",
+      "html":"<aside class=\"ds-readiness\"><header><small>HỒ SƠ CHƯA ĐỦ</small><span>2/3 điều kiện</span></header><strong>— / PLUS / GitHub Auto</strong><ul><li class=\"done\"><i></i>Nguồn ROM</li><li><i></i>Thiết bị đích</li><li class=\"done\"><i></i>Tuyến thực thi</li></ul></aside>",
+      "css":".ds-readiness{width:300px;padding:16px;border:1px solid #d7a34f;border-radius:8px;color:#202124;background:#fff;font-family:'IBM Plex Sans',sans-serif}.ds-readiness header{display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid #d7d3cb}.ds-readiness header small{color:#b45309;font:600 9px/1 'JetBrains Mono',monospace}.ds-readiness header span{color:#66676b;font:500 9px/1 'JetBrains Mono',monospace}.ds-readiness>strong{display:block;padding:13px 0;border-bottom:1px solid #d7d3cb;font:600 12px/1.4 'JetBrains Mono',monospace}.ds-readiness ul{margin:0;padding:6px 0;list-style:none}.ds-readiness li{display:flex;min-height:42px;align-items:center;gap:9px;border-bottom:1px solid #d7d3cb;font-size:11px}.ds-readiness li:last-child{border-bottom:0}.ds-readiness li i{width:14px;height:14px;border:1px solid #aaa59b;border-radius:50%}.ds-readiness li.done i{border-color:#16775a;background:#16775a;box-shadow:inset 0 0 0 3px #fff}"
     }
   ],
   "narrative": {
-    "northStar":"The Chromatic Technical Atlas",
-    "overview":"Wukong turns dense ROM operations into a connected control atlas. Deep-violet hardware panels establish the instrument layer; pearl work surfaces hold forms, ledgers, and catalogs; aqua, coral, and sun signals make source, delivery, and readiness states immediately legible. The result is technical and information-rich without feeling like a generic admin dashboard.\n\nThis is an Operate interface. Color, depth, and large display type establish orientation, while native controls, explicit labels, sequential numbering, and honest status copy preserve auditability. The visual world must support one-handed Telegram use and the same orchestration truth expressed through Windows, chat, CLI, and GitHub Actions.",
+    "northStar":"The Build Control Ledger",
+    "overview":"Wukong is an editorial operations ledger for real ROM work. Every surface exists to expose source truth, configuration state, execution route, pipeline status, and the next required action. Warm work sheets sit under a compact graphite command bar; amber marks interaction, green confirms valid or complete state, and red is reserved for failure and destructive work. This is an Operate interface for technical users, not a marketing dashboard. Dense information is organized by hairline rules, compact grids, honest labels, and machine-readable measurements.",
     "keyCharacteristics":[
-      "Deep-violet instrument panels floating over pearl work surfaces.",
-      "Violet for selection and action; aqua, coral, and sun for distinct semantic signals.",
-      "Sora for orientation, Manrope for operation, and IBM Plex Mono for measurements and identifiers.",
-      "Soft physical shadows and a rounded 10–28px hierarchy.",
-      "A dark Smart Source instrument that recognizes source state before dispatch.",
-      "A live readiness docket that changes only when the URL is valid and a device is selected."
+      "Factual runtime state replaces decorative hero content.",
+      "Warm neutral sheets and graphite command surfaces establish the workspace.",
+      "One amber action signal is separated from green success and red failure.",
+      "IBM Plex Sans explains; JetBrains Mono identifies and measures.",
+      "Small 2–8px corners and one-pixel rules produce technical precision.",
+      "Grouped MODs, delivery states, and readiness checks expose selection truth."
     ],
     "rules":[
-      {"name":"The Signal Has a Job Rule","body":"Violet acts, aqua recognizes, coral dispatches, sun warns or summarizes, green succeeds, and red destroys or fails. Never use these colors as interchangeable decoration.","section":"colors"},
-      {"name":"The Chassis and Desk Rule","body":"Dark violet belongs to hardware-like instrument surfaces; pearl belongs to work surfaces. Preserve that material contrast in every new view.","section":"colors"},
-      {"name":"The Three Voices Rule","body":"Use Sora to orient, Manrope to operate, and IBM Plex Mono to measure. Do not let mono type expand into paragraphs or general controls.","section":"typography"},
-      {"name":"The Work Must Stay Reachable Rule","body":"Floating navigation and dispatch controls require matching bottom clearance; landscape removes the extra CTA when vertical room is scarce.","section":"layout"},
-      {"name":"The Docket Remains in the Record Rule","body":"The mobile floating CTA accelerates action but never replaces the in-flow readiness docket.","section":"layout"},
-      {"name":"The Soft Hardware Rule","body":"Shadows communicate physical layer and persistence, not ornament. Use the smallest established shadow that explains the surface's position.","section":"elevation"},
-      {"name":"The Radius Follows Scale Rule","body":"Larger containing surfaces receive larger corners. Do not apply one universal radius or return to the obsolete square editorial system.","section":"shapes"}
+      {"name":"The Signal Means State Rule","body":"Amber acts or waits, green validates or completes, and red fails or destroys. Never distribute them as decoration.","section":"colors"},
+      {"name":"The Neutral Majority Rule","body":"Most of every screen remains neutral. Accent rarity is what makes status readable.","section":"colors"},
+      {"name":"The Two Registers Rule","body":"Sans-serif explains what the operator should understand; monospace carries what the system can identify or measure.","section":"typography"},
+      {"name":"The Runtime Before Recipe Rule","body":"The first work viewport exposes runner, pipeline readiness, and job access before asking the operator to configure details.","section":"layout"},
+      {"name":"The Work Stays Reachable Rule","body":"Fixed navigation always receives matching content clearance and never shares space with a floating submit control.","section":"layout"},
+      {"name":"The Border Before Shadow Rule","body":"Use a divider or tonal shift to explain hierarchy. Do not add soft card shadows to make neutral containers feel important.","section":"elevation"}
     ],
     "dos":[
-      "Do preserve the dark-hardware / pearl-work-surface contrast in every destination.",
-      "Do bind readiness styling and dispatch language to real validation state.",
-      "Do keep Vietnamese and English labels, errors, and recovery actions complete together.",
-      "Do preserve safe-area clearance, 44px practical touch targets, visible focus, dark mode, and reduced motion.",
-      "Do use sequential numbers only for meaningful order: recipe sections, pipeline stages, job actions, and canonical states.",
-      "Do keep GitHub Actions presentation aligned with the same orchestration events and summary facts."
+      "Do keep runtime, source, pipeline, and readiness copy bound to actual state.",
+      "Do preserve Vietnamese and English labels, errors, and recovery actions together.",
+      "Do group MODs by function and show selection through border, surface, and check mark.",
+      "Do preserve 44px touch targets, visible keyboard focus, safe areas, dark mode, and reduced motion.",
+      "Do use monospace only for data, identifiers, state, and measurement.",
+      "Do keep Telegram identity at the channel boundary and treat empty initData as valid only for a known keyboard-button transport."
     ],
     "donts":[
-      "Don't revive the Minimalist Editorial direction: square zero-radius controls, paper-dossier styling, and a no-shadow rule are obsolete.",
-      "Don't flatten every surface into the same light card or spread semantic colors decoratively.",
-      "Don't let floating navigation or CTA controls obscure fields, especially in mobile landscape.",
-      "Don't signal a ready build from preset or MOD selection alone; valid source plus device is the current readiness gate.",
-      "Don't expose credentials, signed URLs, tokens, or ownership fields in browser state, recipes, logs, or messages.",
-      "Don't replace explicit action labels with unlabeled icons."
+      "Don't restore purple/indigo hero panels, blurred blobs, glass surfaces, or generic SaaS dashboard chrome.",
+      "Don't add decorative welcome banners or abstract illustrations to an operating surface.",
+      "Don't make selected and unselected MODs differ only by fill intensity.",
+      "Don't use large pill radii or repeat the same soft shadow on every card and control.",
+      "Don't allow fixed navigation, toast, or submit controls to obscure the form.",
+      "Don't report a connection, ready recipe, running stage, or completed artifact unless the underlying state supports it."
     ]
   }
 }
