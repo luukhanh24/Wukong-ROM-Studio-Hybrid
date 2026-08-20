@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import threading
 import time
@@ -531,6 +532,22 @@ class TelegramDaemonUITests(unittest.TestCase):
 
         self.assertEqual(content.resolve(), executor.call_args.kwargs["content_root"])
         self.assertEqual(index.resolve(), executor.call_args.kwargs["content_index"])
+
+    def test_runtime_uses_gh_cli_auth_when_dedicated_token_is_missing(self) -> None:
+        with patch.dict(os.environ, {
+            "WUKONG_GITHUB_TOKEN": "",
+            "GH_TOKEN": "",
+            "GITHUB_TOKEN": "",
+        }, clear=False), patch("wukong.runtime.shutil.which", return_value="gh"), patch(
+            "wukong.runtime.subprocess.run"
+        ) as run:
+            run.return_value.returncode = 0
+            run.return_value.stdout = "token-from-keyring\n"
+
+            token = HybridRuntime._github_token()
+
+        self.assertEqual("token-from-keyring", token)
+        self.assertEqual(["gh", "auth", "token"], run.call_args.args[0])
 
     def test_registers_commands_and_handles_callback_queries(self) -> None:
         controller = Mock()
