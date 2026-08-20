@@ -18,6 +18,11 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--rclone-config")
     parser.add_argument("--force-github-auto", action="store_true")
+    parser.add_argument(
+        "--coerce-github",
+        action="store_true",
+        help="Replace local-windows with github-auto while preserving explicit GitHub targets",
+    )
     args = parser.parse_args()
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -41,13 +46,15 @@ def main() -> int:
         if root not in source.parents or source.suffix.casefold() != ".json" or not source.is_file():
             raise ValueError("Repository recipe reference must be a safe JSON path")
         output.write_bytes(source.read_bytes())
-    if args.force_github_auto:
+    if args.force_github_auto or args.coerce_github:
         payload = json.loads(output.read_text(encoding="utf-8"))
         execution = payload.get("execution")
         if not isinstance(execution, dict):
             execution = {}
             payload["execution"] = execution
-        execution["target"] = "github-auto"
+        current = str(execution.get("target") or "github-auto").strip().casefold()
+        if args.force_github_auto or current == "local-windows":
+            execution["target"] = "github-auto"
         output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0
 

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "task": "build",
+  "device": "PKG110",
+  "source": {
+    "kind": "https",
+    "uri": "https://roms.danielspringer.at/index.php?view=ota&build=8429f705a32868eeabdddea9",
+    "sizeBytes": 8680370027
+  },
+  "build": {
+    "preset": "plus",
+    "modVersion": "ColorOS_16.0.9",
+    "mods": [
+      "Ai_global",
+      "Calendar_global",
+      "Call_mms_contacts",
+      "Camera_mod",
+      "Chat_bubbles",
+      "Cts_Gemini",
+      "Fake_lock",
+      "Fix_noti",
+      "Gallery_mod",
+      "Gapps",
+      "Global_props",
+      "GlobalSearch",
+      "Launcher_mod",
+      "Settings_mod",
+      "Theme_cr",
+      "WK_Installer",
+      "WK_Manager"
+    ],
+    "enabledSteps": [
+      "inspect_rom",
+      "extract_payload",
+      "unpack_partitions",
+      "debloat",
+      "apply_mod",
+      "sync_configs",
+      "repack_partitions",
+      "repack_super",
+      "patch_vbmeta",
+      "package_zip"
+    ],
+    "package": true,
+    "notifyTelegram": true
+  },
+  "execution": {
+    "target": "github-auto"
+  },
+  "storage": {
+    "remote": "wukong-gdrive",
+    "publishArtifact": true
+  }
+}

@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
-from urllib.request import Request
+from urllib.request import HTTPCookieProcessor, Request
 
 from wukong.adapters import (
     HttpSourceAdapter,
@@ -109,6 +109,18 @@ class BuildRecipeContractTests(unittest.TestCase):
                     "device": "CPH2725",
                     "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
                     "build": {"modVersion": "../secret"},
+                }
+            )
+
+    def test_recipe_rejects_unknown_pipeline_step(self) -> None:
+        with self.assertRaisesRegex(RecipeValidationError, "Unsupported pipeline step"):
+            BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "build",
+                    "device": "PKG110",
+                    "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+                    "build": {"enabledSteps": ["sync_metadata"]},
                 }
             )
 
@@ -215,6 +227,12 @@ class RunnerRoutingContractTests(unittest.TestCase):
 
 
 class SourceAndStorageContractTests(unittest.TestCase):
+    def test_default_http_opener_preserves_resolver_session_cookies(self) -> None:
+        adapter = HttpSourceAdapter()
+        self.assertTrue(
+            any(isinstance(handler, HTTPCookieProcessor) for handler in adapter.opener.handlers)
+        )
+
     class _HttpResponse(io.BytesIO):
         def __init__(
             self,
@@ -582,6 +600,60 @@ class SourceAndStorageContractTests(unittest.TestCase):
             request_headers = dict(opener.requests[0].header_items())
             self.assertEqual(request_headers["User-agent"], "okhttp/3.12.12")
             self.assertEqual(request_headers["Userid"], "oplus-ota|16002018")
+
+    def test_http_source_resolves_stable_daniel_springer_build_page(self) -> None:
+        page_url = (
+            "https://roms.danielspringer.at/index.php?view=ota&"
+            "build=8429f705a32868eeabdddea9"
+        )
+        download_url = "https://93.184.216.35/rom.zip?Expires=2000000000&Signature=signed"
+        page = b'''<!doctype html><div id="resultBox"
+            data-url="" data-ota-key="ota-key" data-csrf="csrf-token"></div>'''
+        opener = self._SequenceOpener(
+            [
+                self._HttpResponse(page, url=page_url, content_type="text/html; charset=UTF-8"),
+                self._HttpResponse(
+                    json.dumps({"ok": True, "url": download_url}).encode(),
+                    url=(
+                        "https://roms.danielspringer.at/index.php?view=ota&"
+                        "ota_action=resolve_json"
+                    ),
+                    content_type="application/json",
+                ),
+                self._HttpResponse(
+                    b"PK\x03\x04resolved-rom",
+                    url=download_url,
+                    content_type="application/zip",
+                ),
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            result = HttpSourceAdapter(attempts=1, opener=opener).materialize(page_url, target)
+
+            self.assertEqual(result.path.read_bytes(), b"PK\x03\x04resolved-rom")
+            self.assertEqual(len(opener.requests), 3)
+            resolve_request = opener.requests[1]
+            self.assertEqual(resolve_request.get_method(), "POST")
+            self.assertIn(b"k=ota-key", resolve_request.data)
+            self.assertIn(b"csrf=csrf-token", resolve_request.data)
+
+    def test_http_source_rejects_daniel_page_without_resolver_state(self) -> None:
+        page_url = (
+            "https://roms.danielspringer.at/index.php?view=ota&"
+            "build=8429f705a32868eeabdddea9"
+        )
+        opener = self._SequenceOpener(
+            [self._HttpResponse(b"<html>expired</html>", url=page_url, content_type="text/html")]
+        )
+
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaisesRegex(SourceResolutionError, "resolver state"):
+                HttpSourceAdapter(attempts=1, opener=opener).materialize(
+                    page_url,
+                    Path(root, "rom.zip"),
+                )
 
     def test_http_source_reports_ota_error_instead_of_saving_json_as_rom(self) -> None:
         resolver_url = "https://93.184.216.34/downloadCheck"

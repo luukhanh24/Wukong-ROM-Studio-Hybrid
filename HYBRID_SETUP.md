@@ -68,8 +68,10 @@ self-hosted, linux, x64, wukong-rom
 
 Minimum verified capacity is 150 GiB free disk, 16 GiB memory and 8 logical
 CPUs. Install Python 3.13 and allow the runner account to use `sudo apt-get`.
-Run `python3 tools/runner_preflight.py` after registration. If the runner is
-offline or does not meet the profile, large recipes fail before dispatch.
+Run `python3 tools/runner_preflight.py` after registration. An explicit
+`self-hosted-linux` recipe fails immediately when that runner is unavailable.
+`github-auto` instead falls back to a maximized `ubuntu-24.04` runner, so a
+missing private runner does not leave the Telegram job queued forever.
 
 Hosted recipes use `ubuntu-24.04`, must estimate at most 10 GiB workspace and
 must retain at least 4 GiB free disk after dependencies/content are installed.
@@ -86,6 +88,7 @@ store:
 ```text
 WUKONG_TELEGRAM_BOT_TOKEN=...
 WUKONG_TELEGRAM_ADMIN_IDS=123456789,987654321
+WUKONG_TELEGRAM_WEB_APP_URL=https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/
 ```
 
 Start long polling:
@@ -103,6 +106,17 @@ GitHub jobs list only MOD versions whose verified archive is present in
 checks it before building.
 Language preference and non-sensitive wizard state are stored in
 `Data/telegram-ui-state.json`; signed URL query strings remain memory-only.
+
+The same menu prepares a one-time Telegram reply-keyboard button that opens the
+bilingual Mini App. This launch mode is required for Telegram `sendData` to
+deliver authenticated `web_app_data` back to the long-polling daemon; menu and
+inline Web App launches are intentionally not used. The Mini App is
+deployed by `.github/workflows/telegram-mini-app-pages.yml`; enable GitHub Pages
+with **Source: GitHub Actions**, run that workflow once, set the HTTPS URL above,
+then restart the daemon. Telegram supplies the authenticated sender when the
+Mini App calls `sendData`; the app never receives the bot token, GitHub token or
+rclone configuration. Build, mirror, jobs, events, artifact, cancel, resume,
+cloud and diagnostics actions all return their result in the chat.
 
 Set `WUKONG_TELEGRAM_CONTENT_ROOT` when the installed content is not in the
 default `C:\WukongROMStudio\Content` location.
@@ -137,10 +151,15 @@ assets back into Git:
 
 | Behaviour | Default on GitHub Actions | Override |
 |-----------|---------------------------|----------|
-| Drop MODs missing from the installed content-pack and rewrite the recipe | on (`WUKONG_DROP_MISSING_MODS=1`) | set `0` / use `--strict` |
+| Reject missing MODs before downloading the ROM | on (`WUKONG_DROP_MISSING_MODS=0`) | set `1` only for an explicit best-effort recovery |
 | Fall back to maximized `ubuntu-24.04` when the self-hosted runner is offline (large estimates) | on for `github-auto` / `github-hosted` | explicit `self-hosted-linux` still requires the runner |
 | Continue build if a checkpoint upload hits Drive quota | on | set `WUKONG_DISABLE_CLOUD_CHECKPOINTS=1` to skip uploads entirely |
 | Continue with a clean workspace if checkpoint restore fails | on | n/a |
+
+Hosted jobs cache the pinned Linux toolchain, common recovery/image content and
+Python packages. ROM source archives and private per-version MOD packs are not
+put in GitHub cache; they remain checksum-verified downloads from the configured
+Drive to avoid stale or cross-version builds.
 
 Still required before a real build: valid `RCLONE_CONFIG_B64`, uploaded
 content-packs for `MOD/<version>`, `copy-image/v1`, `OFX/v1`, `TWRP/v1`, and a
@@ -152,6 +171,30 @@ Validate MODs against installed content before downloading a multi-GB ROM:
 python -m tools.validate_recipe_content --recipe recipe.json --content-root . --drop-missing --rewrite
 python -m tools.validate_recipe_content --recipe recipe.json --content-root . --strict
 ```
+
+### Detailed workflow dispatch
+
+`Wukong Hybrid Build` accepts either a private `recipe_ref` or detailed manual
+fields. When `recipe_ref` is empty, Actions materializes a validated BuildRecipe
+from `task`, `device`, `source_uri`, optional source checksum/size, MOD pack,
+preset, individual MODs, enabled pipeline steps, debloat paths, runner policy,
+workspace estimate, ZIP packaging, Drive publishing and Telegram notification.
+The generated recipe is uploaded privately to
+`wukong-gdrive:WukongROM/recipes/<job-id>.json` before routing.
+
+For Daniel Springer OTA pages, use the stable build page itself as `source_uri`,
+for example:
+
+```text
+https://roms.danielspringer.at/index.php?view=ota&build=8429f705a32868eeabdddea9
+```
+
+The downloader resolves that page immediately before transfer and follows the
+short-lived OPlus CDN link with resume and parallel ranges. Do not persist the
+temporary CDN URL in a recipe. For this PKG110 build, set `source_size_bytes` to
+`8680370027`; the known upstream MD5 is
+`6fb0095cc9c07dbdb74074c87cbb643f` (SHA-256 may remain empty and is computed
+after download).
 
 ## 6. Retention and sharing
 

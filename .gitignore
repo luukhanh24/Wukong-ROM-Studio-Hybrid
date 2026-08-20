@@ -68,3 +68,6 @@ desktop/Runtime/downloads/
 telegram.dat
 hybrid.dat
 rclone*.conf
+
+# Generated Telegram Pages catalog
+/telegram_mini_app/catalog.json

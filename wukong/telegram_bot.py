@@ -69,6 +69,8 @@ TEXT = {
         "jobs": "Công việc của tôi",
         "library": "Kho ROM",
         "diagnostics": "Chẩn đoán",
+        "mini_app": "Mở Wukong Mini App",
+        "mini_app_prompt": "Chạm nút bên dưới để mở Wukong Mini App. Telegram sẽ xác thực tài khoản của bạn và gửi kết quả trở lại cuộc trò chuyện này.",
         "language": "English",
         "back": "Quay lại menu",
         "refresh": "Làm mới",
@@ -79,6 +81,7 @@ TEXT = {
         "choose_task": "Bạn muốn làm gì?",
         "task_build": "Build ROM đầy đủ",
         "task_mirror": "Chỉ lưu ROM gốc lên cloud",
+        "task_publish": "Phát hành file artifact lên cloud",
         "choose_run": "Chọn nơi chạy job.",
         "run_github": "GitHub Actions",
         "run_windows": "Windows hiện tại",
@@ -131,6 +134,8 @@ TEXT = {
         "jobs": "My jobs",
         "library": "ROM library",
         "diagnostics": "Diagnostics",
+        "mini_app": "Open Wukong Mini App",
+        "mini_app_prompt": "Tap the button below to open Wukong Mini App. Telegram authenticates your account and returns results to this chat.",
         "language": "Tiếng Việt",
         "back": "Back to menu",
         "refresh": "Refresh",
@@ -141,6 +146,7 @@ TEXT = {
         "choose_task": "What would you like to do?",
         "task_build": "Build a complete ROM",
         "task_mirror": "Mirror the stock ROM to cloud only",
+        "task_publish": "Publish an artifact file to cloud",
         "choose_run": "Choose where this job will run.",
         "run_github": "GitHub Actions",
         "run_windows": "This Windows PC",
@@ -192,6 +198,7 @@ TEXT = {
 
 HELP_USER_VI = """Wukong ROM Studio Hybrid
 /start - mở menu nút / open the button menu
+/app - mở Telegram Mini App / open Telegram Mini App
 /new - tạo bản build / new build
 /jobs - công việc của tôi / my jobs
 /cloud - kho ROM / ROM library
@@ -212,6 +219,7 @@ HELP_ADMIN_VI = HELP_USER_VI + """/approve <telegram_user_id> - duyệt người
 """
 HELP_USER_EN = """Wukong ROM Studio Hybrid
 /start - open the button menu
+/app - open Telegram Mini App
 /new - create a ROM build
 /jobs - view my jobs
 /cloud - browse the ROM library
@@ -369,6 +377,7 @@ class TelegramBotController:
         runtime: HybridRuntime | None = None,
         ui_state: TelegramUIStateStore | None = None,
         storage_remote: str | None = None,
+        web_app_url: str | None = None,
     ) -> None:
         self.access = access
         self.orchestrator = orchestrator
@@ -380,11 +389,23 @@ class TelegramBotController:
         self.runtime = runtime
         self.ui_state = ui_state or TelegramUIStateStore()
         self.storage_remote = (storage_remote or os.environ.get("WUKONG_RCLONE_REMOTE", "wukong-gdrive")).rstrip(":")
+        configured_web_app = (web_app_url or os.environ.get("WUKONG_TELEGRAM_WEB_APP_URL", "")).strip()
+        if configured_web_app:
+            parsed_web_app = urlsplit(configured_web_app)
+            if (
+                parsed_web_app.scheme.casefold() != "https"
+                or not parsed_web_app.netloc
+                or parsed_web_app.username
+                or parsed_web_app.password
+            ):
+                raise ValueError("Telegram Mini App URL must be a public HTTPS URL")
+        self.web_app_url = configured_web_app
 
     def command_sets(self) -> dict[str, list[dict[str, str]]]:
         return {
             "vi": [
                 {"command": "start", "description": "Mở menu chính"},
+                {"command": "app", "description": "Mở Wukong Mini App"},
                 {"command": "new", "description": "Tạo bản build"},
                 {"command": "jobs", "description": "Công việc của tôi"},
                 {"command": "cloud", "description": "Kho ROM trên Drive"},
@@ -394,6 +415,7 @@ class TelegramBotController:
             ],
             "en": [
                 {"command": "start", "description": "Open the main menu"},
+                {"command": "app", "description": "Open Wukong Mini App"},
                 {"command": "new", "description": "Create a ROM build"},
                 {"command": "jobs", "description": "View my jobs"},
                 {"command": "cloud", "description": "Browse the ROM library"},
@@ -423,6 +445,8 @@ class TelegramBotController:
         if command in {"/start", "/menu"}:
             self.ui_state.clear_session(user_id)
             return self._main_menu(language)
+        if command == "/app":
+            return self._mini_app_launcher(language)
         if command == "/new":
             return self.handle_callback(user_id, "v1:new")
         if command == "/jobs":
@@ -438,6 +462,57 @@ class TelegramBotController:
         result = self._handle_command(identity, normalized)
         return BotResponse(result, self._back_markup(language))
 
+    def handle_web_app_data(self, user_id: int | str, raw_data: str) -> BotResponse:
+        identity = self.access.identity(user_id)
+        language = self.ui_state.language(user_id)
+        if not identity:
+            return BotResponse(TEXT[language]["denied"])
+        try:
+            if len(raw_data.encode("utf-8")) > 4096:
+                raise ValueError("Mini App request exceeds Telegram's 4096-byte limit")
+            request = json.loads(raw_data)
+            if not isinstance(request, dict) or int(request.get("version", 0)) != 1:
+                raise ValueError("Unsupported Mini App request version")
+            action = str(request.get("action") or "").strip().casefold()
+            if action == "submit_recipe":
+                payload = request.get("recipe")
+                if not isinstance(payload, dict):
+                    raise ValueError("Mini App build recipe is missing")
+                recipe = BuildRecipe.from_dict(payload)
+                job = self.orchestrator.submit(recipe, identity)
+                if self.runtime:
+                    self.runtime.start(job)
+                return BotResponse(
+                    TEXT[language]["created"].format(
+                        job_id=job.job_id,
+                        runner=job.runner or "—",
+                        status=job.status.value,
+                    ),
+                    self._job_markup(job, language, identity.subject),
+                )
+            if action == "jobs":
+                return self._jobs_menu(identity, language)
+            if action == "cloud":
+                return self._cloud_menu(language)
+            if action == "diagnostics":
+                return self._diagnostics_menu(language)
+            if action in {"job", "events", "artifact", "cancel", "resume"}:
+                job_id = str(request.get("jobId") or "").strip()
+                if not job_id:
+                    raise ValueError("Mini App job ID is required")
+                return self._job_callback(action, job_id, identity, language)
+            raise ValueError("Unsupported Mini App action")
+        except (
+            json.JSONDecodeError,
+            TypeError,
+            ValueError,
+            RecipeValidationError,
+            OrchestrationError,
+            RunnerUnavailableError,
+            PermissionError,
+        ) as exc:
+            return BotResponse(TEXT[language]["failed"].format(error=exc), self._back_markup(language))
+
     def handle_callback(self, user_id: int | str, data: str) -> BotResponse:
         identity = self.access.identity(user_id)
         language = self.ui_state.language(user_id)
@@ -452,6 +527,8 @@ class TelegramBotController:
             if action == "menu":
                 self.ui_state.clear_session(user_id)
                 return self._main_menu(language)
+            if action == "app":
+                return self._mini_app_launcher(language)
             if action == "lang" and value in LANGUAGES:
                 self.ui_state.set_language(user_id, value)
                 self.ui_state.clear_session(user_id)
@@ -463,12 +540,14 @@ class TelegramBotController:
                     self._inline([
                         [(TEXT[language]["task_build"], "v1:task:build")],
                         [(TEXT[language]["task_mirror"], "v1:task:mirror")],
+                        [(TEXT[language]["task_publish"], "v1:task:publish")],
                         [(TEXT[language]["back"], "v1:menu")],
                     ]),
                 )
-            if action == "task" and value in {"build", "mirror"}:
+            if action == "task" and value in {"build", "mirror", "publish"}:
                 self._require_step(user_id, "task")
-                session = {"step": "run", "task": "build" if value == "build" else "source_mirror"}
+                tasks = {"build": "build", "mirror": "source_mirror", "publish": "artifact_publish"}
+                session = {"step": "run", "task": tasks[value]}
                 self.ui_state.set_session(user_id, session)
                 return self._run_picker(language)
             if action == "run" and value in {"github", "local"}:
@@ -513,7 +592,7 @@ class TelegramBotController:
                     return self._recovery(language)
                 session["device"] = str(devices[index][0])
                 session.pop("device_options", None)
-                if session.get("task") == "source_mirror":
+                if session.get("task") != "build":
                     session.update({"step": "confirm"})
                     self.ui_state.set_session(user_id, session)
                     return self._confirmation(language, session)
@@ -827,7 +906,12 @@ class TelegramBotController:
         return BotResponse(message, self._inline(rows))
 
     def _confirmation(self, language: str, session: dict[str, Any]) -> BotResponse:
-        task = TEXT[language]["task_build"] if session.get("task") == "build" else TEXT[language]["task_mirror"]
+        task_key = {
+            "build": "task_build",
+            "source_mirror": "task_mirror",
+            "artifact_publish": "task_publish",
+        }.get(str(session.get("task")), "task_build")
+        task = TEXT[language][task_key]
         run = TEXT[language]["run_github"] if session.get("execution") == "github-auto" else TEXT[language]["run_windows"]
         source = self._trim(self._display_source(session.get("source", {})), 80)
         selected_mods = [str(item) for item in session.get("selected_mods", [])]
@@ -1044,11 +1128,32 @@ class TelegramBotController:
         return HELP_ADMIN_VI if identity.role == "admin" else HELP_USER_VI
 
     def _main_menu(self, language: str) -> BotResponse:
-        return BotResponse(TEXT[language]["welcome"], self._inline([
+        markup = self._inline([
             [(TEXT[language]["new"], "v1:new")],
             [(TEXT[language]["jobs"], "v1:jobs"), (TEXT[language]["library"], "v1:cloud")],
             [(TEXT[language]["diagnostics"], "v1:diag"), (TEXT[language]["language"], f"v1:lang:{'en' if language == 'vi' else 'vi'}")],
-        ]))
+        ])
+        if self.web_app_url:
+            markup["inline_keyboard"].insert(
+                0, [{"text": TEXT[language]["mini_app"], "callback_data": "v1:app"}]
+            )
+        return BotResponse(TEXT[language]["welcome"], markup)
+
+    def _mini_app_launcher(self, language: str) -> BotResponse:
+        if not self.web_app_url:
+            return BotResponse(TEXT[language]["failed"].format(error="Mini App URL is not configured"), self._back_markup(language))
+        return BotResponse(
+            TEXT[language]["mini_app_prompt"],
+            {
+                "keyboard": [[{
+                    "text": TEXT[language]["mini_app"],
+                    "web_app": {"url": self.web_app_url},
+                }]],
+                "resize_keyboard": True,
+                "one_time_keyboard": True,
+                "input_field_placeholder": TEXT[language]["mini_app"],
+            },
+        )
 
     def _recovery(self, language: str) -> BotResponse:
         return BotResponse(TEXT[language]["expired"], self._back_markup(language))
@@ -1167,7 +1272,7 @@ class TelegramLongPollingDaemon:
                     pass
             response = self.controller.handle_callback(sender["id"], data)
             payload = {"chat_id": chat["id"], **response.telegram_payload()}
-            if message.get("message_id"):
+            if message.get("message_id") and "keyboard" not in response.reply_markup:
                 payload["message_id"] = message["message_id"]
                 endpoint = "editMessageText"
             else:
@@ -1187,6 +1292,20 @@ class TelegramLongPollingDaemon:
         message = update.get("message") or {}
         sender = message.get("from") or {}
         chat = message.get("chat") or {}
+        web_app_data = message.get("web_app_data") or {}
+        if (
+            sender.get("id")
+            and chat.get("id")
+            and isinstance(web_app_data, dict)
+            and isinstance(web_app_data.get("data"), str)
+        ):
+            response = self.controller.handle_web_app_data(sender["id"], web_app_data["data"])
+            self._http.post(
+                f"{self.base_url}/sendMessage",
+                json={"chat_id": chat["id"], **response.telegram_payload()},
+                timeout=20,
+            ).raise_for_status()
+            return
         text = message.get("text")
         if not sender.get("id") or not chat.get("id") or not isinstance(text, str):
             return

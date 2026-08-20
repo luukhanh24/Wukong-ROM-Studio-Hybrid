@@ -37,7 +37,7 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
       run: |
         set -euo pipefail
-        python3 -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
+        python3 -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --coerce-github
         task="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['task'])")"
         if [ "$task" = build ]; then
           mod_version="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['build']['modVersion'])")"
@@ -45,10 +45,13 @@ runs:
           for pack in copy-image/v1 OFX/v1 TWRP/v1; do
             python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "$pack" --rclone-config "$WUKONG_RCLONE_CONFIG"
           done
-          # Drop MODs missing from the installed pack and rewrite the recipe so
-          # long ROM downloads are not wasted on an impossible apply_mod step.
-          export WUKONG_DROP_MISSING_MODS="${WUKONG_DROP_MISSING_MODS:-1}"
-          python3 -m tools.validate_recipe_content --recipe .wkstudio/recipe.json --content-root . --drop-missing --rewrite
+          # Validate before downloading the multi-GB ROM. Strict mode preserves
+          # channel parity: a requested MOD is never silently removed.
+          if [ "${WUKONG_DROP_MISSING_MODS:-0}" = 1 ]; then
+            python3 -m tools.validate_recipe_content --recipe .wkstudio/recipe.json --content-root . --drop-missing --rewrite
+          else
+            python3 -m tools.validate_recipe_content --recipe .wkstudio/recipe.json --content-root . --strict
+          fi
         fi
         if [ '${{ inputs.self_hosted }}' != true ]; then
           python3 -m tools.runner_preflight --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
@@ -67,7 +70,7 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
         WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
         WUKONG_GITHUB_TOKEN: ${{ inputs.github_token }}
-        WUKONG_DROP_MISSING_MODS: "1"
+        WUKONG_DROP_MISSING_MODS: "0"
       run: |
         set -euo pipefail
         job_json="$(python3 wukong_cli.py submit --recipe .wkstudio/recipe.json --job-id "$WUKONG_JOB_ID" --channel actions --subject "$GITHUB_ACTOR_ID" --role user)"

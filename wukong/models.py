@@ -10,6 +10,8 @@ from pathlib import PurePosixPath
 from typing import Any, Mapping
 from urllib.parse import parse_qsl, urlparse
 
+from .pipeline import PIPELINE_STEP_NAMES
+
 
 SCHEMA_VERSION = 1
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -211,6 +213,11 @@ class BuildOptions:
             raise RecipeValidationError("MOD version must be path-safe")
         if any(not safe_name.fullmatch(value) for value in (*mods, *steps)):
             raise RecipeValidationError("MOD and enabled-step names must be path-safe")
+        unknown_steps = [value for value in steps if value not in PIPELINE_STEP_NAMES]
+        if unknown_steps:
+            raise RecipeValidationError(
+                f"Unsupported pipeline step: {', '.join(unknown_steps)}"
+            )
         raw_debloat = data.get("debloatPaths")
         debloat = None
         if raw_debloat is not None:

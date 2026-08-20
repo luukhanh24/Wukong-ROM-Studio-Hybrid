@@ -5,13 +5,92 @@ on:
   workflow_dispatch:
     inputs:
       recipe_ref:
-        description: "Repository JSON path or private rclone URI"
-        required: true
+        description: "Optional recipe JSON path/private Drive URI; leave empty to use the fields below"
+        required: false
+        default: ""
         type: string
       job_id:
         description: "Stable Wukong job ID"
         required: true
         type: string
+      task:
+        description: "Operation"
+        required: true
+        default: "build"
+        type: choice
+        options: [build, source_mirror, artifact_publish]
+      device:
+        description: "Target product code"
+        required: true
+        default: "PKG110"
+        type: string
+      source_uri:
+        description: "ROM HTTP(S) URL, Daniel Springer build page, or private rclone URI"
+        required: false
+        default: ""
+        type: string
+      source_sha256:
+        description: "Optional ROM SHA-256 (64 hexadecimal characters)"
+        required: false
+        default: ""
+        type: string
+      source_size_bytes:
+        description: "Optional exact ROM size in bytes"
+        required: false
+        default: ""
+        type: string
+      mod_version:
+        description: "Private MOD content-pack version"
+        required: true
+        default: "ColorOS_16.0.9"
+        type: string
+      preset:
+        description: "Build edition"
+        required: true
+        default: "plus"
+        type: choice
+        options: [lite, plus, both, custom]
+      mods:
+        description: "Comma-separated MOD names; empty uses preset defaults"
+        required: false
+        default: ""
+        type: string
+      enabled_steps:
+        description: "Optional comma-separated pipeline steps; empty uses the complete plan"
+        required: false
+        default: ""
+        type: string
+      debloat_paths:
+        description: "Optional comma-separated partition-relative paths to remove"
+        required: false
+        default: ""
+        type: string
+      execution_target:
+        description: "Runner routing policy"
+        required: true
+        default: "github-auto"
+        type: choice
+        options: [github-auto, github-hosted, self-hosted-linux]
+      estimated_workspace_bytes:
+        description: "Optional workspace estimate; auto-calculated when empty"
+        required: false
+        default: ""
+        type: string
+      package:
+        description: "Create flashable ZIP"
+        required: true
+        default: true
+        type: boolean
+      publish_artifact:
+        description: "Upload successful artifact to Google Drive and create a link"
+        required: true
+        default: true
+        type: boolean
+      notify_telegram:
+        description: "Send completion notification through configured Telegram settings"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -32,6 +111,7 @@ jobs:
     outputs:
       runner_kind: ${{ steps.route.outputs.runner_kind }}
       recipe_digest: ${{ steps.route.outputs.recipe_digest }}
+      recipe_ref: ${{ steps.route.outputs.recipe_ref }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,6 +119,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+          cache: pip
       - name: Install router dependencies
         run: |
           sudo apt-get update
@@ -58,15 +139,45 @@ jobs:
         id: route
         env:
           RECIPE_REF: ${{ inputs.recipe_ref }}
+          WUKONG_JOB_ID: ${{ inputs.job_id }}
           WUKONG_GITHUB_TOKEN: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          WUKONG_INPUT_TASK: ${{ inputs.task }}
+          WUKONG_INPUT_DEVICE: ${{ inputs.device }}
+          WUKONG_INPUT_SOURCE_URI: ${{ inputs.source_uri }}
+          WUKONG_INPUT_SOURCE_SHA256: ${{ inputs.source_sha256 }}
+          WUKONG_INPUT_SOURCE_SIZE_BYTES: ${{ inputs.source_size_bytes }}
+          WUKONG_INPUT_MOD_VERSION: ${{ inputs.mod_version }}
+          WUKONG_INPUT_PRESET: ${{ inputs.preset }}
+          WUKONG_INPUT_MODS: ${{ inputs.mods }}
+          WUKONG_INPUT_ENABLED_STEPS: ${{ inputs.enabled_steps }}
+          WUKONG_INPUT_DEBLOAT_PATHS: ${{ inputs.debloat_paths }}
+          WUKONG_INPUT_EXECUTION_TARGET: ${{ inputs.execution_target }}
+          WUKONG_INPUT_ESTIMATED_WORKSPACE_BYTES: ${{ inputs.estimated_workspace_bytes }}
+          WUKONG_INPUT_PACKAGE: ${{ inputs.package }}
+          WUKONG_INPUT_PUBLISH_ARTIFACT: ${{ inputs.publish_artifact }}
+          WUKONG_INPUT_NOTIFY_TELEGRAM: ${{ inputs.notify_telegram }}
         shell: bash
         run: |
           set -euo pipefail
-          python -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --force-github-auto
+          python - <<'PY'
+          import os, re
+          job_id = os.environ['WUKONG_JOB_ID']
+          if not job_id.isascii() or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,63}', job_id):
+              raise SystemExit('job_id must contain only ASCII letters, numbers and hyphens (max 64)')
+          PY
+          if [ -n "$RECIPE_REF" ]; then
+            python -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --coerce-github
+            effective_recipe_ref="$RECIPE_REF"
+          else
+            python -m tools.materialize_workflow_recipe --output .wkstudio/recipe.json
+            effective_recipe_ref="wukong-gdrive:WukongROM/recipes/${WUKONG_JOB_ID}.json"
+            rclone copyto .wkstudio/recipe.json "$effective_recipe_ref" --config "$WUKONG_RCLONE_CONFIG" --retries 3
+          fi
           if ! python wukong_cli.py validate --recipe .wkstudio/recipe.json > .wkstudio/route.json; then
             cat .wkstudio/route.json
             exit 2
           fi
+          printf 'recipe_ref=%s\n' "$effective_recipe_ref" >> "$GITHUB_OUTPUT"
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           data = json.load(open('.wkstudio/route.json', encoding='utf-8'))
@@ -96,14 +207,28 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+          cache: pip
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: "17"
+      - name: Restore pinned Linux tool cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: bin/Linux
+          key: wukong-linux-tools-${{ runner.os }}-${{ hashFiles('tools/linux-x86_64.json', 'tools/bootstrap_linux.py') }}
+      - name: Restore shared ROM content cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            copy-image
+            OFX
+            TWRP
+          key: wukong-common-content-${{ hashFiles('content-packs/index.json') }}
       - name: Run hosted build
         uses: ./.github/actions/run-hybrid
         with:
-          recipe_ref: ${{ inputs.recipe_ref }}
+          recipe_ref: ${{ needs.route.outputs.recipe_ref }}
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
@@ -123,7 +248,7 @@ jobs:
       - name: Run self-hosted build
         uses: ./.github/actions/run-hybrid
         with:
-          recipe_ref: ${{ inputs.recipe_ref }}
+          recipe_ref: ${{ needs.route.outputs.recipe_ref }}
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
