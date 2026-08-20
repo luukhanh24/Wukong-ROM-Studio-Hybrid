@@ -160,10 +160,18 @@ class TelegramMiniAppTests(unittest.TestCase):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("downloadcheck", script.casefold())
         self.assertIn("probeSourceInPlace", script)
-        self.assertIn("fetch(uri", script)
+        self.assertIn("probeSourceViaBackend", script)
+        self.assertIn('name="wukong-source-probe-endpoint"', html)
+        self.assertNotIn("fetch(uri", script)
         self.assertNotIn('send("probe_source"', script)
         self.assertNotIn("resolvedUrl", html + script)
         self.assertNotIn("Signature=signed", html + script)
+
+    def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("probeSourceViaBackend", script)
+        self.assertNotIn("fetch(uri", script)
 
     def test_default_debloat_list_is_embedded_for_recipe_parity(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
