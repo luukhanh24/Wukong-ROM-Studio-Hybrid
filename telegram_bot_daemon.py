@@ -131,6 +131,9 @@ def main() -> int:
         content_root=content_root,
         content_index=index_path,
     )
+    resumed_watchers = runtime.resume_cloud_watchers()
+    if resumed_watchers:
+        print(f"Resumed {resumed_watchers} cloud job watcher(s).", flush=True)
     access = TelegramAccessStore(DATA_ROOT / "telegram-access.json", admin_ids=admins)
     controller = TelegramBotController(
         access=access,
