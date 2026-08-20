@@ -17,7 +17,7 @@ const translations = {
     cloudIntro: "ROM nguồn, checkpoint và artifact vẫn riêng tư; chỉ artifact được phát hành mới có link chia sẻ.", browseCloud: "Duyệt thư viện",
     browseCloudHint: "Mở danh sách nguồn và artifact trong chat", mirrorRom: "Lưu ROM gốc", mirrorHint: "Chọn “Chỉ lưu ROM gốc” trong màn hình Build",
     systemTitle: "Tình trạng hệ thống", systemIntro: "Kiểm tra bot, Drive, runner và content-pack trước khi tạo job lớn.", runDiagnostics: "Chạy chẩn đoán",
-    authenticated: "Đã xác thực phiên hiện tại", runnerChecked: "Runner được kiểm tra khi submit", driveChecked: "Quyền truy cập được kiểm tra trước upload",
+    authenticated: "Đã xác thực phiên hiện tại", keyboardConnected: "Kết nối qua nút Telegram · danh tính được xác nhận khi gửi", runnerChecked: "Runner được kiểm tra khi submit", driveChecked: "Quyền truy cập được kiểm tra trước upload",
     navBuild: "Build", navJobs: "Jobs", navCloud: "Cloud", navSystem: "Hệ thống", selected: "đã chọn", catalogReady: "{mods} MOD · {versions} bộ nội dung sẵn sàng",
     catalogFailed: "Không tải được catalog. Hãy thử mở lại Mini App.", invalidUrl: "Nhập URL HTTP/HTTPS hoặc đường dẫn rclone hợp lệ.", invalidSha: "SHA-256 phải có đúng 64 ký tự hex.",
     invalidSize: "Dung lượng ROM phải là số nguyên dương.", invalidWorkspace: "Ước lượng workspace phải là số nguyên dương.", jobRequired: "Hãy nhập Job ID.", payloadLarge: "Recipe vượt giới hạn 4096 byte. Hãy giảm MOD hoặc đường dẫn debloat.",
@@ -26,7 +26,8 @@ const translations = {
     sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Dán link để nhận diện", sourceIdleMessage: "Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.",
     sourceDetectedKicker: "ĐÃ NHẬN DIỆN", sourceInvalidKicker: "CHƯA HỢP LỆ", sourceInvalidTitle: "Không nhận ra nguồn ROM", sourceInvalidMessage: "Dùng URL HTTP/HTTPS hoặc đường dẫn rclone remote:path.",
     provider: "Nhà cung cấp", detectedType: "Loại nguồn", detectedDevice: "Thiết bị", detectedVersion: "Phiên bản", analyzeSource: "Phân tích ROM", editSourceManual: "Chỉnh thông tin thủ công",
-    deepProbeHint: "Chạm Phân tích để bot đọc metadata ZIP và trả kết quả trong chat.", probeSent: "Đang chuyển sang bot…", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", incompleteLabel: "HỒ SƠ CHƯA ĐỦ", finishSource: "Hoàn tất cấu hình", completeSourceHint: "Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.", chooseDeviceHint: "Nguồn đã hợp lệ. Hãy chọn thiết bị trong phần chỉnh thủ công bên dưới.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone"
+    deepProbeHint: "Chạm Phân tích để bot đọc metadata ZIP và trả kết quả trong chat.", probeSent: "Đang chuyển sang bot…", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", incompleteLabel: "HỒ SƠ CHƯA ĐỦ", finishSource: "Hoàn tất cấu hình", completeSourceHint: "Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.", chooseDeviceHint: "Nguồn đã hợp lệ. Hãy chọn thiết bị trong phần chỉnh thủ công bên dưới.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone",
+    runtimePipeline: "PIPELINE", runtimeWaiting: "Chờ recipe hợp lệ", runtimeReady: "Recipe sẵn sàng gửi", runtimeLastBuild: "BUILD GẦN NHẤT", runtimeJobs: "Xem trong Jobs", checklistSource: "Nguồn ROM", checklistSourcePending: "Chưa có URL hợp lệ", checklistSourceDone: "Đã nhận diện nguồn", checklistDevice: "Thiết bị đích", checklistDevicePending: "Cần chọn thủ công", checklistDeviceDone: "Đã chọn thiết bị", checklistRunner: "Tuyến thực thi", checklistRunnerDone: "Đã cấu hình runner", readinessProgress: "{done}/3 điều kiện", pipelinePending: "Chưa chạy", pipelineRunning: "Đang chạy", pipelineComplete: "Hoàn tất", pipelineFailed: "Lỗi", pipelineSkipped: "Bỏ qua", modGroupGoogle: "Google & ứng dụng", modGroupCamera: "Camera & hình ảnh", modGroupInterface: "Giao diện hệ thống", modGroupSecurity: "Bảo mật & quyền", modGroupCore: "Hệ thống & công cụ", modGroupOther: "Khác"
   },
   en: {
     connected: "BOT CONNECTED", buildTitle: "Prepare a build flight", buildIntro: "Verify the ROM source, runner and delivery before dispatching the recipe.",
@@ -44,7 +45,7 @@ const translations = {
     cloudIntro: "Sources, checkpoints and artifacts stay private; only published artifacts receive a share link.", browseCloud: "Browse library",
     browseCloudHint: "Open source and artifact lists in chat", mirrorRom: "Mirror source ROM", mirrorHint: "Choose “Mirror source only” on the Build screen",
     systemTitle: "System status", systemIntro: "Check the bot, Drive, runners and content packs before a large build.", runDiagnostics: "Run diagnostics",
-    authenticated: "Current session authenticated", runnerChecked: "Runner availability checked on submit", driveChecked: "Access verified before upload",
+    authenticated: "Current session authenticated", keyboardConnected: "Connected through the Telegram button · identity is confirmed on send", runnerChecked: "Runner availability checked on submit", driveChecked: "Access verified before upload",
     navBuild: "Build", navJobs: "Jobs", navCloud: "Cloud", navSystem: "System", selected: "selected", catalogReady: "{mods} MODs · {versions} content packs ready",
     catalogFailed: "Catalog could not be loaded. Reopen the Mini App and try again.", invalidUrl: "Enter a valid HTTP/HTTPS URL or rclone reference.", invalidSha: "SHA-256 must contain exactly 64 hexadecimal characters.",
     invalidSize: "ROM size must be a positive integer.", invalidWorkspace: "Workspace estimate must be a positive integer.", jobRequired: "Enter a Job ID.", payloadLarge: "Recipe exceeds Telegram's 4096-byte limit. Reduce MODs or debloat paths.",
@@ -53,7 +54,8 @@ const translations = {
     sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Paste a link to identify it", sourceIdleMessage: "Source type is recognized immediately; the bot inspects deep metadata without downloading the entire ROM.",
     sourceDetectedKicker: "SOURCE RECOGNIZED", sourceInvalidKicker: "NOT VALID YET", sourceInvalidTitle: "ROM source not recognized", sourceInvalidMessage: "Use an HTTP/HTTPS URL or an rclone remote:path reference.",
     provider: "Provider", detectedType: "Source type", detectedDevice: "Device", detectedVersion: "Version", analyzeSource: "Analyze ROM", editSourceManual: "Edit source details manually",
-    deepProbeHint: "Tap Analyze and the bot will inspect ZIP metadata, then return the result in chat.", probeSent: "Opening the bot…", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", incompleteLabel: "DOCKET INCOMPLETE", finishSource: "Complete configuration", completeSourceHint: "Paste a ROM source and choose the correct device to continue.", chooseDeviceHint: "The source is valid. Choose a device in the manual details below.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone"
+    deepProbeHint: "Tap Analyze and the bot will inspect ZIP metadata, then return the result in chat.", probeSent: "Opening the bot…", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", incompleteLabel: "DOCKET INCOMPLETE", finishSource: "Complete configuration", completeSourceHint: "Paste a ROM source and choose the correct device to continue.", chooseDeviceHint: "The source is valid. Choose a device in the manual details below.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone",
+    runtimePipeline: "PIPELINE", runtimeWaiting: "Waiting for a valid recipe", runtimeReady: "Recipe ready to dispatch", runtimeLastBuild: "LAST BUILD", runtimeJobs: "Inspect in Jobs", checklistSource: "ROM source", checklistSourcePending: "Valid URL required", checklistSourceDone: "Source recognized", checklistDevice: "Target device", checklistDevicePending: "Manual selection required", checklistDeviceDone: "Device selected", checklistRunner: "Execution route", checklistRunnerDone: "Runner configured", readinessProgress: "{done}/3 checks", pipelinePending: "Not started", pipelineRunning: "Running", pipelineComplete: "Complete", pipelineFailed: "Failed", pipelineSkipped: "Skipped", modGroupGoogle: "Google & apps", modGroupCamera: "Camera & imaging", modGroupInterface: "System interface", modGroupSecurity: "Security & access", modGroupCore: "System & tools", modGroupOther: "Other"
   }
 };
 
@@ -125,7 +127,8 @@ const state = {
   toastTimer: null,
   defaultPreset: localStorage.getItem("wukong-default-preset") || "plus",
   sourceDetection: null,
-  sourceAutoDevice: null
+  sourceAutoDevice: null,
+  delivery: { package: "pending", publish: "pending", notify: "pending" }
 };
 
 function t(key, values = {}) {
@@ -161,9 +164,13 @@ function toast(message, error = false) {
 function send(action, extra = {}) {
   const data = JSON.stringify({ version: 1, action, ...extra });
   if (new TextEncoder().encode(data).length > 4096) throw new Error(t("payloadLarge"));
-  if (!TelegramApp?.sendData || !TelegramApp.initData) throw new Error(t("telegramOnly"));
+  if (!telegramTransportAvailable()) throw new Error(t("telegramOnly"));
   TelegramApp.sendData(data);
   toast(t("sent"));
+}
+
+function telegramTransportAvailable() {
+  return typeof TelegramApp?.sendData === "function" && Boolean(TelegramApp.platform) && TelegramApp.platform !== "unknown";
 }
 
 function navigate(name, smooth = true) {
@@ -273,6 +280,37 @@ function defaultMods() {
   return state.catalog?.presetDefaultsByVersion?.[version]?.[preset] || [];
 }
 
+function modCategory(name) {
+  const value = name.toLocaleLowerCase();
+  if (/gapps|google|play[_ -]?store|youtube|chrome|maps/.test(value)) return "google";
+  if (/camera|cam|photo|gallery|image|video/.test(value)) return "camera";
+  if (/security|secure|selinux|root|magisk|permission|safetynet|integrity/.test(value)) return "security";
+  if (/system[_ -]?ui|launcher|theme|font|icon|wallpaper|aod|status|control[_ -]?center/.test(value)) return "interface";
+  if (/wk|manager|framework|service|core|kernel|module|tools?/.test(value)) return "core";
+  return "other";
+}
+
+function modCategoryLabel(category) {
+  return t({
+    google: "modGroupGoogle",
+    camera: "modGroupCamera",
+    interface: "modGroupInterface",
+    security: "modGroupSecurity",
+    core: "modGroupCore",
+    other: "modGroupOther"
+  }[category]);
+}
+
+function selectionMark() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", "M3.5 8.2 6.5 11l6-6.5");
+  svg.append(path);
+  return svg;
+}
+
 function renderMods(reset = true) {
   const list = $("#mod-list");
   if (!list || !state.catalog) return;
@@ -282,11 +320,29 @@ function renderMods(reset = true) {
   if (!names.length) {
     const empty = document.createElement("div"); empty.className = "mod-empty"; empty.textContent = t("noMods"); list.append(empty);
   }
+  const groups = new Map();
   names.forEach((name) => {
-    const label = document.createElement("label");
-    const input = document.createElement("input"); input.type = "checkbox"; input.value = name; input.checked = current.has(name);
-    const span = document.createElement("span"); span.textContent = name; span.title = name;
-    label.append(input, span); list.append(label);
+    const category = modCategory(name);
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(name);
+  });
+  ["google", "camera", "interface", "security", "core", "other"].forEach((category) => {
+    const groupNames = groups.get(category);
+    if (!groupNames?.length) return;
+    const section = document.createElement("section"); section.className = "mod-group"; section.dataset.category = category;
+    const header = document.createElement("header");
+    const title = document.createElement("h3"); title.textContent = modCategoryLabel(category);
+    const count = document.createElement("span"); count.textContent = String(groupNames.length);
+    const items = document.createElement("div"); items.className = "mod-group-items";
+    header.append(title, count); section.append(header, items);
+    groupNames.forEach((name) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input"); input.type = "checkbox"; input.value = name; input.checked = current.has(name);
+      const span = document.createElement("span"); span.title = name;
+      const text = document.createElement("b"); text.textContent = name;
+      span.append(selectionMark(), text); label.append(input, span); items.append(label);
+    });
+    list.append(section);
   });
   updateSummary();
 }
@@ -308,22 +364,28 @@ function filterMods() {
   $$("#mod-list label").forEach((label) => {
     label.hidden = Boolean(query) && !label.textContent.toLocaleLowerCase().includes(query);
   });
+  $$("#mod-list .mod-group").forEach((group) => {
+    group.hidden = ![...group.querySelectorAll("label")].some((label) => !label.hidden);
+  });
 }
 
 function updateTelegramState() {
   const authenticated = Boolean(TelegramApp?.initData);
+  const keyboardConnected = telegramTransportAvailable();
+  const connected = authenticated || keyboardConnected;
   const connection = $("#telegram-state");
   const connectionText = connection?.querySelector("span");
   if (connectionText) {
-    connectionText.dataset.i18n = authenticated ? "connected" : "previewMode";
-    connectionText.textContent = t(authenticated ? "connected" : "previewMode");
+    connectionText.dataset.i18n = connected ? "connected" : "previewMode";
+    connectionText.textContent = t(connected ? "connected" : "previewMode");
   }
-  connection?.classList.toggle("preview", !authenticated);
-  $("#telegram-health")?.classList.toggle("ok", authenticated);
+  connection?.classList.toggle("preview", !connected);
+  $("#telegram-health")?.classList.toggle("ok", connected);
   const authText = $("#telegram-auth-state");
   if (authText) {
-    authText.dataset.i18n = authenticated ? "authenticated" : "authenticatedPreview";
-    authText.textContent = t(authenticated ? "authenticated" : "authenticatedPreview");
+    const stateKey = authenticated ? "authenticated" : keyboardConnected ? "keyboardConnected" : "authenticatedPreview";
+    authText.dataset.i18n = stateKey;
+    authText.textContent = t(stateKey);
   }
 }
 
@@ -367,6 +429,32 @@ function runnerLabel(value) {
   return t(value === "github-hosted" ? "runnerHosted" : value === "self-hosted-linux" ? "runnerSelf" : "runnerAuto");
 }
 
+function updateDeliveryStates() {
+  $$(".switches input").forEach((input) => {
+    const status = input.checked ? state.delivery[input.id] || "pending" : "skipped";
+    const label = input.closest("label");
+    if (label) label.dataset.state = status;
+    const stateText = input.closest("label")?.querySelector("em");
+    const key = { pending: "pipelinePending", running: "pipelineRunning", complete: "pipelineComplete", failed: "pipelineFailed", skipped: "pipelineSkipped" }[status];
+    if (stateText) stateText.textContent = t(key || "pipelinePending");
+  });
+}
+
+function setDeliveryState(stage, status) {
+  if (!Object.hasOwn(state.delivery, stage) || !["pending", "running", "complete", "failed"].includes(status)) return false;
+  state.delivery[stage] = status;
+  updateDeliveryStates();
+  return true;
+}
+
+function updateChecklistItem(id, done, completeKey, pendingKey) {
+  const item = document.getElementById(id);
+  if (!item) return;
+  item.classList.toggle("complete", done);
+  const detail = item.querySelector("small");
+  if (detail) detail.textContent = t(done ? completeKey : pendingKey);
+}
+
 function updateSummary() {
   const task = $('input[name="task"]:checked')?.value || "build";
   const selectedDevice = $("#device")?.value || "";
@@ -377,16 +465,28 @@ function updateSummary() {
   const simpleTask = task === "source_mirror" ? t("taskMirrorShort") : t("taskPublishShort");
   const summary = task !== "build" ? `${device} / ${simpleTask} / ${runner}` : `${device} / ${preset === "custom" ? t("custom") : preset.toUpperCase()} / ${runner}`;
   $("#launch-summary").textContent = summary;
-  $("#mobile-launch-summary").textContent = summary;
+  if ($("#mobile-launch-summary")) $("#mobile-launch-summary").textContent = summary;
   $("#mod-count").textContent = `${selectedMods().length} ${t("selected")}`;
   $("#build-options").hidden = task !== "build";
   $("#package").disabled = task !== "build";
   const sourceReady = Boolean(classifySource($("#source-uri")?.value || "")?.valid);
   const ready = sourceReady && Boolean(selectedDevice);
+  const runnerReady = Boolean($("#execution")?.value);
+  const completedChecks = [sourceReady, Boolean(selectedDevice), runnerReady].filter(Boolean).length;
   const docket = $(".dispatch-docket");
   docket?.classList.toggle("incomplete", !ready);
+  const runtimeState = $("#runtime-pipeline-state");
+  const runtimeDot = $("#runtime-pipeline-dot");
+  if (runtimeState) runtimeState.textContent = t(ready ? "runtimeReady" : "runtimeWaiting");
+  runtimeDot?.classList.toggle("waiting", !ready);
+  runtimeDot?.classList.toggle("online", ready);
   if ($("#readiness-label")) $("#readiness-label").textContent = t(ready ? "readyLabel" : "incompleteLabel");
+  if ($("#readiness-count")) $("#readiness-count").textContent = t("readinessProgress", { done: completedChecks });
   if ($("#launch-warning")) $("#launch-warning").textContent = t(ready ? "fallbackWarning" : sourceReady ? "chooseDeviceHint" : "completeSourceHint");
+  updateChecklistItem("check-source", sourceReady, "checklistSourceDone", "checklistSourcePending");
+  updateChecklistItem("check-device", Boolean(selectedDevice), "checklistDeviceDone", "checklistDevicePending");
+  updateChecklistItem("check-runner", runnerReady, "checklistRunnerDone", "checklistRunnerDone");
+  updateDeliveryStates();
   $$('[data-i18n="launch"], [data-i18n="finishSource"]').forEach((node) => {
     node.dataset.i18n = ready ? "launch" : "finishSource";
     node.textContent = t(ready ? "launch" : "finishSource");
@@ -498,6 +598,10 @@ function bindEvents() {
   $("#mod-list").addEventListener("change", updateSummary);
   $("#mod-search").addEventListener("input", filterMods);
   $("#steps").addEventListener("change", updatePipelineCount);
+  $$(".switches input").forEach((input) => input.addEventListener("change", () => {
+    state.delivery[input.id] = input.checked ? "pending" : "skipped";
+    updateSummary();
+  }));
   $("#catalog-search").addEventListener("input", renderCatalog);
   $("#catalog-version").addEventListener("change", renderCatalog);
   $("#default-preset").value = state.defaultPreset;
@@ -524,6 +628,7 @@ if (TelegramApp) {
 }
 
 bindEvents();
+window.WukongMiniApp = Object.freeze({ setDeliveryState });
 applyLanguage();
 navigate(location.hash.slice(1) || "build", false);
 loadCatalog();

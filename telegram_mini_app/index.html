@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f1efe8">
+  <meta name="theme-color" content="#18191b">
   <title>Wukong ROM Studio</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <!--
-  THESIS: Wukong is a chromatic technical atlas: dense ROM work becomes calm, legible and tactile without collapsing into a generic SaaS dashboard.
-  OWN-WORLD: Deep violet instrument panels, pearl work surfaces, aqua/coral/sun signal colors, soft physical depth, Sora display type and monospaced measurements.
-  STORY: Identify the source, compose the build, verify its route, dispatch with confidence, then move through jobs, library, catalog and system as one connected control deck.
-  FIRST VIEWPORT: A dark hardware masthead floats above an indigo atlas plate; the source composer and live dispatch docket form the first working spread.
-  FORM: Third grounded Operate direction, chromatic technical atlas; seed key efdc090d.
+  THESIS: Wukong is a build control ledger: every surface exists to expose source truth, configuration state, execution route and the next required action.
+  OWN-WORLD: Warm neutral work sheets, a graphite command bar, amber interaction signals, green/red system states, IBM Plex Sans prose and JetBrains Mono data.
+  STORY: Read live transport status, identify the ROM, compose grouped MODs, stage delivery, clear the readiness checklist, dispatch, then inspect jobs and artifacts.
+  FIRST VIEWPORT: A compact command bar, destination tabs, factual runtime strip and the active ROM source row; there is no decorative hero.
+  FORM: Editorial operations ledger for a mobile-first developer tool; dense, bordered, precise and status-led.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
   <header class="masthead">
-    <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9h30M8 14l4 19 8-16 8 16 4-19"/></svg><span><strong>WUKONG</strong><small>ROM STUDIO / HYBRID</small></span></a>
+    <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9h30M8 14l4 19 8-16 8 16 4-19"/></svg><span><strong>WUKONG</strong><small>ROM BUILD CONTROL</small></span></a>
     <div class="masthead-meta"><span class="connection" id="telegram-state"><i></i><span data-i18n="previewMode">PREVIEW MODE</span></span><button id="language" class="language-button" type="button">VI / EN</button></div>
   </header>
 
@@ -28,7 +28,12 @@
 
   <main>
     <section class="view active" id="build" aria-labelledby="build-title">
-      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Lập hồ sơ build.</h1><p data-i18n="buildIntro">Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.</p></div><div class="route-stamp"><span data-i18n="routePolicy">RUNNER</span><strong id="route-label">GitHub Auto</strong></div></header>
+      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Lập hồ sơ build.</h1><p data-i18n="buildIntro">Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.</p></div></header>
+      <section class="runtime-strip" aria-label="Build runtime status">
+        <div><i class="status-dot online" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
+        <div><i class="status-dot waiting" id="runtime-pipeline-dot" aria-hidden="true"></i><span><small data-i18n="runtimePipeline">PIPELINE</small><strong id="runtime-pipeline-state" data-i18n="runtimeWaiting">Chờ recipe hợp lệ</strong></span></div>
+        <div><i class="status-dot neutral" aria-hidden="true"></i><span><small data-i18n="runtimeLastBuild">BUILD GẦN NHẤT</small><strong data-i18n="runtimeJobs">Xem trong Jobs</strong></span></div>
+      </section>
       <form id="recipe-form">
         <section class="dossier-section source-section">
           <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2><p data-i18n="sourceHint">URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.</p></div></header>
@@ -61,9 +66,19 @@
 
         <section class="dossier-section delivery-section">
           <header class="section-heading"><span>03</span><div><h2 data-i18n="deliveryTitle">Đóng gói & phát hành</h2><p data-i18n="deliveryHint">Kiểm SHA-256 trước khi công bố artifact.</p></div></header>
-          <div class="switches"><label><input id="package" type="checkbox" checked><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><i></i></label><label><input id="publish" type="checkbox" checked><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><i></i></label><label><input id="notify" type="checkbox" checked><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><i></i></label></div>
+          <div class="switches"><label data-state="pending"><input id="package" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="publish" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="notify" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label></div>
         </section>
-        <aside class="dispatch-docket incomplete"><div><small id="readiness-label" data-i18n="incompleteLabel">HỒ SƠ CHƯA ĐỦ</small><strong id="launch-summary">— / PLUS / GITHUB AUTO</strong><span id="launch-warning" data-i18n="completeSourceHint">Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.</span></div><button class="primary" type="submit"><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></aside>
+        <aside class="dispatch-docket incomplete">
+          <header><small id="readiness-label" data-i18n="incompleteLabel">HỒ SƠ CHƯA ĐỦ</small><span id="readiness-count">1/3 điều kiện</span></header>
+          <strong id="launch-summary">— / PLUS / GITHUB AUTO</strong>
+          <ol class="readiness-checklist">
+            <li id="check-source"><i aria-hidden="true"></i><span><b data-i18n="checklistSource">Nguồn ROM</b><small data-i18n="checklistSourcePending">Chưa có URL hợp lệ</small></span></li>
+            <li id="check-device"><i aria-hidden="true"></i><span><b data-i18n="checklistDevice">Thiết bị đích</b><small data-i18n="checklistDevicePending">Cần chọn thủ công</small></span></li>
+            <li id="check-runner" class="complete"><i aria-hidden="true"></i><span><b data-i18n="checklistRunner">Tuyến thực thi</b><small data-i18n="checklistRunnerDone">Đã cấu hình runner</small></span></li>
+          </ol>
+          <p id="launch-warning" data-i18n="completeSourceHint">Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.</p>
+          <button class="primary" type="submit"><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+        </aside>
       </form>
     </section>
 
@@ -94,7 +109,6 @@
     </section>
   </main>
 
-  <button class="mobile-dispatch" type="submit" form="recipe-form"><span><small id="mobile-launch-summary">PKG110 / PLUS / GITHUB AUTO</small><strong data-i18n="launch">Tạo job build</strong></span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
   <nav class="bottom-nav" aria-label="Mobile navigation"><button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="cloud"><b>03</b><span data-i18n="navCloud">Thư viện</span></button><button data-nav="catalog"><b>04</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>05</b><span data-i18n="navSystem">Hệ thống</span></button></nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./app.js" type="module"></script>

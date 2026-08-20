@@ -1,279 +1,278 @@
 ---
 name: Wukong ROM Studio Hybrid
-description: A chromatic technical atlas for composing and monitoring ROM builds with confidence.
+description: A build control ledger for composing, routing, and monitoring ROM work with truthful operational state.
 colors:
-  canvas: "#ececf3"
-  work-surface: "#ffffff"
-  work-surface-soft: "#f5f5fa"
-  hardware-violet: "#201d3d"
-  ink: "#1d1b2e"
-  muted-ink: "#68677a"
-  divider: "#d9d8e5"
-  signal-violet: "var(--tg-theme-button-color, #5146e5)"
-  signal-violet-strong: "#4037c4"
-  signal-text: "var(--tg-theme-button-text-color, #ffffff)"
-  aqua: "#42c9b7"
-  coral: "#f47761"
-  sun: "#f2bd4b"
-  success: "#18845a"
-  danger: "var(--tg-theme-destructive-text-color, #c63d4d)"
-  dark-canvas: "#11101b"
-  dark-work-surface: "#1c1a29"
-  dark-work-surface-soft: "#252333"
-  dark-hardware-violet: "#0b0a13"
-  dark-ink: "#f4f2ff"
-  dark-muted-ink: "#aaa7bb"
-  dark-divider: "#373447"
+  canvas: "#f3f1eb"
+  work-surface: "#fffdfa"
+  work-surface-raised: "#ffffff"
+  work-surface-soft: "#eeece6"
+  command-bar: "#191a1c"
+  ink: "#202124"
+  muted-ink: "#66676b"
+  divider: "#d7d3cb"
+  divider-strong: "#aaa59b"
+  signal-amber: "#d97706"
+  signal-amber-strong: "#b45309"
+  signal-amber-soft: "#fff0d2"
+  status-green: "#16775a"
+  status-green-soft: "#e2f3eb"
+  danger: "var(--tg-theme-destructive-text-color, #bd3f32)"
+  danger-soft: "#f9e7e3"
+  focus-blue: "#2563eb"
+  dark-canvas: "#141516"
+  dark-work-surface: "#1b1c1e"
+  dark-work-surface-raised: "#202124"
+  dark-work-surface-soft: "#28292c"
+  dark-command-bar: "#0e0f10"
+  dark-ink: "#f0eee8"
+  dark-muted-ink: "#aaa8a2"
+  dark-divider: "#3b3c3f"
+  dark-divider-strong: "#5b5c60"
+  dark-signal-amber: "#e89a34"
+  dark-signal-amber-strong: "#ffc46b"
 typography:
   display:
-    fontFamily: "Sora, sans-serif"
-    fontSize: "clamp(40px, 5.5vw, 68px)"
-    fontWeight: 600
-    lineHeight: 1.02
-    letterSpacing: "-0.04em"
+    fontFamily: "IBM Plex Sans, sans-serif"
+    fontSize: "clamp(26px, 3vw, 36px)"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "-0.03em"
   headline:
-    fontFamily: "Sora, sans-serif"
-    fontSize: "20px"
+    fontFamily: "IBM Plex Sans, sans-serif"
+    fontSize: "18px"
     fontWeight: 600
-    lineHeight: 1.15
-    letterSpacing: "-0.025em"
+    lineHeight: 1.25
+    letterSpacing: "-0.015em"
   title:
-    fontFamily: "Sora, sans-serif"
-    fontSize: "16px"
+    fontFamily: "IBM Plex Sans, sans-serif"
+    fontSize: "14px"
     fontWeight: 600
-    lineHeight: 1.3
+    lineHeight: 1.35
   body:
-    fontFamily: "Manrope, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "IBM Plex Sans, sans-serif"
     fontSize: "16px"
     fontWeight: 400
-    lineHeight: 1.55
+    lineHeight: 1.5
+  data:
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: 1.4
   label:
-    fontFamily: "IBM Plex Mono, monospace"
-    fontSize: "10px"
-    fontWeight: 600
-    lineHeight: 1.3
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: "9px"
+    fontWeight: 500
+    lineHeight: 1.2
     letterSpacing: "0.06em"
 rounded:
-  sm: "10px"
-  compact: "12px"
-  control: "13px"
-  md: "16px"
-  lg: "20px"
-  panel: "24px"
-  hero: "28px"
+  mark: "2px"
+  micro: "3px"
+  sm: "4px"
+  md: "6px"
+  lg: "8px"
 spacing:
-  xs: "6px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "20px"
-  2xl: "24px"
-  page: "34px"
+  xs: "4px"
+  sm: "7px"
+  md: "10px"
+  lg: "12px"
+  xl: "16px"
+  2xl: "20px"
+  page: "28px"
 components:
   button-primary:
-    backgroundColor: "{colors.signal-violet}"
-    textColor: "{colors.signal-text}"
-    typography: "{typography.body}"
-    rounded: "{rounded.control}"
-    padding: "11px 17px"
-    height: "50px"
-  button-primary-hover:
-    backgroundColor: "{colors.signal-violet-strong}"
-    textColor: "{colors.signal-text}"
-    rounded: "{rounded.control}"
-  field:
-    backgroundColor: "{colors.work-surface-soft}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.control}"
-    padding: "12px 14px"
-    height: "50px"
-  card:
-    backgroundColor: "{colors.work-surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.panel}"
-    padding: "24px"
-  nav-active:
-    backgroundColor: "{colors.hardware-violet}"
-    textColor: "{colors.signal-text}"
-    rounded: "{rounded.compact}"
-    padding: "8px 14px"
+    backgroundColor: "{colors.signal-amber}"
+    textColor: "{colors.work-surface-raised}"
+    typography: "{typography.title}"
+    rounded: "{rounded.sm}"
+    padding: "10px 15px"
     height: "46px"
+  button-primary-hover:
+    backgroundColor: "{colors.signal-amber-strong}"
+    textColor: "{colors.work-surface-raised}"
+    rounded: "{rounded.sm}"
+  field:
+    backgroundColor: "{colors.work-surface-raised}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.sm}"
+    padding: "9px 11px"
+    height: "44px"
+  ledger-card:
+    backgroundColor: "{colors.work-surface-raised}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "20px"
+  nav-active:
+    backgroundColor: "{colors.signal-amber-soft}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.sm}"
+    height: "54px"
 ---
 
 # Design System: Wukong ROM Studio Hybrid
 
 ## Overview
 
-**Creative North Star: "The Chromatic Technical Atlas"**
+**Creative North Star: "The Build Control Ledger"**
 
-Wukong turns dense ROM operations into a connected control atlas. Deep-violet hardware panels establish the instrument layer; pearl work surfaces hold forms, ledgers, and catalogs; aqua, coral, and sun signals make source, delivery, and readiness states immediately legible. The result is technical and information-rich without feeling like a generic admin dashboard.
+Wukong is an editorial operations ledger for real ROM work. Every surface exists to expose source truth, configuration state, execution route, pipeline status, and the next required action. Warm work sheets sit under a compact graphite command bar; amber marks interaction, green confirms valid or complete state, and red is reserved for failure and destructive work.
 
-This is an Operate interface. Color, depth, and large display type establish orientation, while native controls, explicit labels, sequential numbering, and honest status copy preserve auditability. The visual world must support one-handed Telegram use and the same orchestration truth expressed through Windows, chat, CLI, and GitHub Actions.
+This is an Operate interface for technical users, not a marketing dashboard. Dense information is organized by hairline rules, compact grids, honest labels, and machine-readable measurements. It remains legible in a Telegram webview, on desktop, in dark mode, and in short landscape without floating controls covering the work.
 
 **Key Characteristics:**
 
-- Deep-violet instrument panels floating over pearl work surfaces.
-- Violet for selection and action; aqua, coral, and sun for distinct semantic signals.
-- Sora for orientation, Manrope for operation, and IBM Plex Mono for measurements and identifiers.
-- Soft physical shadows and a rounded 10–28px hierarchy.
-- A dark Smart Source instrument that recognizes source state before dispatch.
-- A live readiness docket that changes only when the URL is valid and a device is selected.
+- Factual runtime state replaces decorative hero content.
+- Warm neutral sheets and graphite command surfaces establish the workspace.
+- One amber action signal is separated from green success and red failure.
+- IBM Plex Sans explains; JetBrains Mono identifies and measures.
+- Small 2–8px corners and one-pixel rules produce technical precision.
+- Grouped MODs, delivery states, and readiness checks expose selection truth.
 
 ## Colors
 
-The palette combines cool pearl neutrals with a deep violet chassis and four tightly assigned chromatic signals. Telegram theme variables may supply the primary and destructive colors; the documented fallbacks preserve the atlas character outside Telegram.
+The palette is deliberately neutral and low-chroma. Amber is scarce and operational; system green and destructive red never become decoration.
 
 ### Primary
 
-- **Signal Violet:** Selection, active navigation, primary actions, and caret color. Its stronger companion is reserved for hover emphasis.
-- **Hardware Violet:** Masthead, hero plates, Smart Source, readiness docket, floating mobile navigation, and toast surfaces.
+- **Execution Amber:** Primary actions, active route markers, selected controls, focus-adjacent emphasis, and waiting state.
+- **Graphite Command Bar:** Masthead, selected task tab, Smart Source analysis action, and other command surfaces.
 
 ### Secondary
 
-- **Atlas Aqua:** Source recognition, active section markers, connection health, checked micro-indicators, and the global focus outline.
-- **Dispatch Coral:** Delivery markers and the ready-to-dispatch docket action. Coral is never a substitute for destructive red.
-
-### Tertiary
-
-- **Readiness Sun:** Runner stamps, build-option markers, catalog totals, and the incomplete-docket state.
-- **System Green:** Success and healthy connection states only.
-- **Destructive Red:** Cancel, invalid source, failed toast, and destructive maintenance only.
+- **System Green:** Valid source, connected Telegram transport, complete readiness checks, and completed delivery state.
+- **Failure Red:** Invalid source, failed delivery state, destructive maintenance, and error toast only.
 
 ### Neutral
 
-- **Cool Canvas:** The app backdrop; pale chromatic blocks may edge the desktop canvas but disappear on mobile.
-- **Pearl Work Surface:** Primary cards, forms, catalogs, and ledgers.
-- **Soft Pearl:** Nested controls and quiet grouped regions.
-- **Atlas Ink / Muted Ink / Divider:** Primary copy, explanatory copy, and structural separation.
-- **Night Atlas Set:** System dark mode swaps the canvas, work surfaces, hardware, text, and divider tokens while retaining signal meanings.
+- **Warm Canvas:** The page backdrop that separates the working sheets without decorative color fields.
+- **Work Surface / Raised Work Surface:** Forms, ledgers, status strips, tables, and cards.
+- **Soft Work Surface:** Segmented controls, nested rows, and grouped headings.
+- **Ledger Ink / Muted Ink / Divider:** Primary copy, supporting copy, indices, and structural rules.
+- **Night Ledger Set:** Dark mode maps the same roles to charcoal surfaces without changing semantic signals.
 
 ### Named Rules
 
-**The Signal Has a Job Rule.** Violet acts, aqua recognizes, coral dispatches, sun warns or summarizes, green succeeds, and red destroys or fails. Never use these colors as interchangeable decoration.
+**The Signal Means State Rule.** Amber acts or waits, green validates or completes, and red fails or destroys. Never distribute them as decoration.
 
-**The Chassis and Desk Rule.** Dark violet belongs to hardware-like instrument surfaces; pearl belongs to work surfaces. Preserve that material contrast in every new view.
+**The Neutral Majority Rule.** Most of every screen remains neutral. Accent rarity is what makes status readable.
 
 ## Typography
 
-**Display Font:** Sora (with sans-serif fallback)
+**Display Font:** IBM Plex Sans (with system sans-serif fallback)
 
-**Body Font:** Manrope (with system sans-serif fallbacks)
+**Body Font:** IBM Plex Sans (with system sans-serif fallback)
 
-**Label/Mono Font:** IBM Plex Mono (with monospace fallback)
+**Label/Mono Font:** JetBrains Mono (with monospace fallback)
 
-**Character:** Sora gives the atlas decisive wayfinding, Manrope keeps dense operational copy humane, and IBM Plex Mono marks machine-readable facts without making the whole interface resemble a terminal.
+**Character:** IBM Plex Sans keeps dense Vietnamese and English interface copy calm and legible. JetBrains Mono is reserved for URLs, device codes, runner names, stage state, counts, versions, and identifiers.
 
 ### Hierarchy
 
-- **Display:** Large Sora headlines orient each destination and balance tightly; on mobile they scale down while retaining their short measure.
-- **Headline:** Sora names sections and work-surface groups.
-- **Title:** Sora identifies Smart Source state, routes, and prominent card actions.
-- **Body:** Manrope carries controls and explanatory text; supporting paragraphs generally stay within 62–72 characters.
-- **Label:** IBM Plex Mono carries indices, status kickers, IDs, measurements, counts, and uppercase field labels.
+- **Display:** Bold, compact destination headings that orient without becoming hero typography.
+- **Headline:** Section and work-area names.
+- **Title:** Buttons, list actions, MOD group headings, and card labels.
+- **Body:** Explanatory copy and standard controls, generally limited to 70 characters per line.
+- **Data:** Machine-readable values and runtime facts.
+- **Label:** Uppercase indices and measurement labels with tracked spacing.
 
 ### Named Rules
 
-**The Three Voices Rule.** Use Sora to orient, Manrope to operate, and IBM Plex Mono to measure. Do not let mono type expand into paragraphs or general controls.
+**The Two Registers Rule.** Sans-serif explains what the operator should understand; monospace carries what the system can identify or measure.
 
 ## Layout
 
-The desktop atlas centers within a 1240px main frame. A sticky 1180px destination rail sits beneath the masthead; the Studio form uses a wide work column and a narrower sticky dispatch docket. Major page heads are asymmetric dark plates with geometric signal forms, while operational content is divided into discrete pearl sheets.
+The desktop workspace is capped at 1240px. A 64px sticky command bar and 48px destination rail precede a factual three-cell runtime strip. Studio uses a wide work column and a 320px sticky readiness ledger; each build section occupies the work column, while the checklist spans the recipe stages beside them.
 
-At 860px and below, the interface becomes one column. The horizontal rail becomes a five-cell floating bottom navigation, and Studio gains a floating dispatch action above it; safe-area insets are included in both controls and in page padding. The full dispatch docket remains in document flow as the truthful final recipe summary. At 390px, dense two-column inventories collapse to one. In short mobile landscape, the floating dispatch action is removed and only bottom navigation remains, preventing the work surface from being obscured.
+At 860px and below, runtime facts stack, the form becomes one column, the readiness ledger returns to document flow, and navigation becomes a compact five-cell bottom bar. At 390px, source facts, catalogs, MOD groups, and maintenance actions collapse to one column. Short landscape keeps the runtime strip horizontal while reserving bottom clearance for navigation. Safe-area insets are included and no persistent build CTA overlays form fields.
 
-Views enter with a brief clipped reveal (420ms using the atlas ease). System reduced-motion preference collapses animations, transitions, and smooth scrolling to effectively instantaneous behavior.
+Spacing follows a compact 4/7/10/12/16/20/28px rhythm. Views use a single 240ms clipped reveal; reduced-motion preference removes it.
 
 ### Named Rules
 
-**The Work Must Stay Reachable Rule.** Floating navigation and dispatch controls require matching bottom clearance; landscape removes the extra CTA when vertical room is scarce.
+**The Runtime Before Recipe Rule.** The first work viewport exposes runner, pipeline readiness, and job access before asking the operator to configure details.
 
-**The Docket Remains in the Record Rule.** The mobile floating CTA accelerates action but never replaces the in-flow readiness docket.
+**The Work Stays Reachable Rule.** Fixed navigation always receives matching content clearance and never shares space with a floating submit control.
 
 ## Elevation & Depth
 
-This system uses soft physical elevation rather than hard outlines alone. Pearl cards sit lightly above the canvas, navigation and hero panels take a firmer ambient lift, and floating controls receive the strongest shadow. Nested controls use tonal separation and fine dividers so depth remains calm rather than glossy.
-
-### Shadow Vocabulary
-
-- **Work Surface:** `0 8px 22px rgba(31, 28, 62, .08)` for cards and ledgers.
-- **Instrument Panel:** `0 18px 48px rgba(31, 28, 62, .13)` for the destination rail, hero plates, and Smart Source.
-- **Floating Control:** `0 24px 60px rgba(31, 28, 62, .2)` for the dispatch docket, mobile navigation, CTA, and toast.
-- **Night Work Surface / Instrument / Float:** Dark mode raises opacity to `.22`, `.34`, and `.48` respectively against black.
+The ledger is flat by default. Depth comes from tonal surface changes, one-pixel borders, sticky positioning, and semantic state fills rather than card shadows. Toasts and Telegram-native chrome may sit above the interface through z-order, but they do not introduce decorative elevation.
 
 ### Named Rules
 
-**The Soft Hardware Rule.** Shadows communicate physical layer and persistence, not ornament. Use the smallest established shadow that explains the surface's position.
+**The Border Before Shadow Rule.** Use a divider or tonal shift to explain hierarchy. Do not add soft card shadows to make neutral containers feel important.
 
 ## Shapes
 
-Corners form a deliberate 10–28px hierarchy. Dense list cells and compact controls use the smallest radii; inputs and buttons sit around 12–13px; grouped controls and source states use 14–20px; cards and dockets use 20–24px; hero plates reach 28px. Circular forms are reserved for status lamps and the large geometric signal shapes in hero panels.
+The interface uses a strict 2–8px radius scale. Two- and three-pixel corners belong to tiny selection marks; four pixels belong to buttons, fields, and compact controls; six pixels group nested status regions; eight pixels cap major sheets. Circles are reserved for status lamps, pipeline nodes, and readiness checks.
 
-Borders are quiet, usually one pixel, and strengthen on hover or focus. Keyboard focus is always a 3px aqua outline with visible offset; focused fields additionally shift to Signal Violet and receive a restrained four-pixel halo.
-
-**The Radius Follows Scale Rule.** Larger containing surfaces receive larger corners. Do not apply one universal radius or return to the obsolete square editorial system.
+One-pixel rules define nearly every container. Selected MODs must change border, background, and check mark together; color fill alone is insufficient.
 
 ## Components
 
 ### Buttons
 
-- **Shape:** Tactile rounded controls with at least a 44–50px target for primary actions.
-- **Primary:** Signal Violet with bold Manrope copy and a restrained colored shadow; hover deepens the violet and lifts two pixels, while active returns to rest.
-- **Dispatch:** Coral when ready. The same location becomes sun on a muted-violet docket while incomplete, and its label changes from dispatch to completion guidance.
-- **Secondary / Ghost:** Pearl or transparent controls use a divider stroke and gain signal color on hover.
-- **Focus:** Every button retains the global aqua focus-visible ring.
+- **Shape:** Compact four-pixel corners with at least a 44px practical touch target.
+- **Primary:** Execution Amber with explicit action copy; hover deepens the amber and active state moves by one pixel.
+- **Secondary:** Neutral surface with a one-pixel stroke; hover borrows amber only for action emphasis.
+- **Focus:** A three-pixel blue focus-visible ring remains independent of semantic state color.
 
 ### Chips
 
-- **Task tabs:** Three choices sit inside a Soft Pearl segmented group; the selected choice becomes Signal Violet with white text.
-- **MOD and pipeline choices:** Compact rounded cells show selection through violet fill, aqua marks, or aqua-soft state rather than checkmarks alone.
-- **State:** Hover may lift a cell by one pixel, but status colors keep their assigned meanings.
+- **Task tabs:** A segmented neutral group; the selected task becomes Graphite with white text.
+- **MOD selector:** Unselected entries are white with an empty square. Selected entries gain an amber border, pale amber surface, and filled check SVG.
+- **Pipeline choices:** Checkbox marks combine border and fill so selection is not communicated by color alone.
 
 ### Cards / Containers
 
-- **Corner Style:** Work cards use the 20–24px end of the radius scale; hero plates use the 28px maximum.
-- **Background:** Pearl for work, Soft Pearl for nested groups, Hardware Violet for instruments.
-- **Shadow Strategy:** Work Surface by default; Instrument Panel and Floating Control only when position requires them.
-- **Internal Padding:** Typically 20–24px, reduced to 15–18px on narrow screens.
+- **Corner Style:** Six pixels for grouped status regions and eight pixels for major work sheets.
+- **Background:** Raised Work Surface over the Warm Canvas; Soft Work Surface for nested rows.
+- **Shadow Strategy:** None at rest.
+- **Border:** One-pixel Divider or Divider Strong according to hierarchy.
+- **Internal Padding:** Usually 16–20px, reduced to 12–15px on narrow screens.
 
 ### Inputs / Fields
 
-- **Style:** Soft Pearl fill, one-pixel divider, 13px radius, Manrope content, and an uppercase mono label.
-- **Focus:** Pearl fill, Signal Violet border, violet halo, and visible aqua keyboard outline.
-- **Error / Disabled:** Invalid source uses Destructive Red; disabled controls retain context at reduced opacity and a not-allowed cursor.
+- **Style:** Raised neutral surface, one-pixel strong divider, four-pixel corners, visible label, and 44px minimum height.
+- **Technical content:** URLs, checksums, versions, and IDs use JetBrains Mono.
+- **Focus:** Amber border plus a restrained amber outline; keyboard focus also retains the global blue ring.
+- **Error / Disabled:** Red belongs next to the failing field or source state; disabled inputs retain context at reduced opacity.
 
 ### Navigation
 
-Desktop navigation floats as a pearl rail with numbered destinations; the active destination becomes Hardware Violet and its number tile becomes aqua. Mobile navigation becomes a five-cell Hardware Violet dock with a Signal Violet active cell. Destination changes update both systems together.
+Desktop uses a flat five-cell destination rail with one-pixel separators and a two-pixel amber active rule. Mobile uses a five-cell bottom bar with the same index and label pair; the active cell gets a pale amber surface and top rule. Both systems update together.
+
+### Runtime Strip
+
+Three cells expose runner, current pipeline readiness, and access to recent job state. Waiting uses an amber lamp; a valid source plus selected device changes the pipeline copy and lamp to green. Runtime state must be computed, never ornamental.
 
 ### Smart Source
 
-Smart Source is the signature dark instrument panel. The URL field, source-state marker, optional analysis action, and four metadata facts form one contained unit. Idle, detected, and invalid states alter the marker and copy truthfully; recognition never implies that the whole ROM has been downloaded or validated.
+The ROM URL, analysis row, and metadata facts form one bordered instrument. Idle is neutral, recognized is green-tinted, and invalid is red-tinted. Recognition reports provider and source type without implying that the ROM has been fully downloaded or validated.
 
-### Readiness Docket
+### Delivery State Row
 
-The docket is a live recipe summary, not a decorative CTA. It is incomplete until source classification is valid and a device is selected. The label, guidance, summary, button copy, background, and action color update together; mobile mirrors the same summary in its floating CTA.
+ZIP, Drive, and Telegram stages support `pending`, `running`, `complete`, `failed`, and `skipped`. Bilingual copy, node color, and state metadata update together. External orchestration adapters may update them through the documented Mini App state setter.
 
-### GitHub Actions Adapter
+### Readiness Ledger
 
-Actions is the same operational truth rendered as a log: setup and pipeline stages use numbered bilingual titles; runtime stages open log groups; completions emit notices with duration when available; failures emit an error annotation with the stage title. The Job Summary records job ID, device, task, runner, recipe digest, MOD pack, preset, selected MOD count, and artifact size, SHA, and link. This presentation remains an adapter—the orchestrator and manifest own state, progress, validation, and ownership.
+The sticky ledger is incomplete until the source is valid and a target device is selected. It shows three explicit checks, their details, a progress count, the route summary, a recovery sentence, and exactly one submit action.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** preserve the dark-hardware / pearl-work-surface contrast in every destination.
-- **Do** bind readiness styling and dispatch language to real validation state.
-- **Do** keep Vietnamese and English labels, errors, and recovery actions complete together.
-- **Do** preserve safe-area clearance, 44px practical touch targets, visible focus, dark mode, and reduced motion.
-- **Do** use sequential numbers only for meaningful order: recipe sections, pipeline stages, job actions, and canonical states.
-- **Do** keep GitHub Actions presentation aligned with the same orchestration events and summary facts.
+- **Do** keep runtime, source, pipeline, and readiness copy bound to actual state.
+- **Do** preserve Vietnamese and English labels, errors, and recovery actions together.
+- **Do** group MODs by function and show selection through border, surface, and check mark.
+- **Do** preserve 44px touch targets, visible keyboard focus, safe areas, dark mode, and reduced motion.
+- **Do** use monospace only for data, identifiers, state, and measurement.
+- **Do** keep Telegram identity at the channel boundary and treat empty `initData` as valid only for a known keyboard-button transport.
 
 ### Don't:
 
-- **Don't** revive the Minimalist Editorial direction: square zero-radius controls, paper-dossier styling, and a no-shadow rule are obsolete.
-- **Don't** flatten every surface into the same light card or spread semantic colors decoratively.
-- **Don't** let floating navigation or CTA controls obscure fields, especially in mobile landscape.
-- **Don't** signal a ready build from preset or MOD selection alone; valid source plus device is the current readiness gate.
-- **Don't** expose credentials, signed URLs, tokens, or ownership fields in browser state, recipes, logs, or messages.
-- **Don't** replace explicit action labels with unlabeled icons.
+- **Don't** restore purple/indigo hero panels, blurred blobs, glass surfaces, or generic SaaS dashboard chrome.
+- **Don't** add decorative welcome banners or abstract illustrations to an operating surface.
+- **Don't** make selected and unselected MODs differ only by fill intensity.
+- **Don't** use large pill radii or repeat the same soft shadow on every card and control.
+- **Don't** allow fixed navigation, toast, or submit controls to obscure the form.
+- **Don't** report a connection, ready recipe, running stage, or completed artifact unless the underlying state supports it.
