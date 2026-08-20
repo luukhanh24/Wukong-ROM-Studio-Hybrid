@@ -26,7 +26,7 @@ const translations = {
     sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Dán link để nhận diện", sourceIdleMessage: "Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.",
     sourceDetectedKicker: "ĐÃ NHẬN DIỆN", sourceInvalidKicker: "CHƯA HỢP LỆ", sourceInvalidTitle: "Không nhận ra nguồn ROM", sourceInvalidMessage: "Dùng URL HTTP/HTTPS hoặc đường dẫn rclone remote:path.",
     provider: "Nhà cung cấp", detectedType: "Loại nguồn", detectedDevice: "Thiết bị", detectedVersion: "Phiên bản", analyzeSource: "Phân tích ROM", editSourceManual: "Chỉnh thông tin thủ công",
-    deepProbeHint: "Chạm Phân tích để bot đọc metadata ZIP và trả kết quả trong chat.", probeSent: "Đang chuyển sang bot…", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone"
+    deepProbeHint: "Chạm Phân tích để bot đọc metadata ZIP và trả kết quả trong chat.", probeSent: "Đang chuyển sang bot…", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", incompleteLabel: "HỒ SƠ CHƯA ĐỦ", finishSource: "Hoàn tất cấu hình", completeSourceHint: "Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.", chooseDeviceHint: "Nguồn đã hợp lệ. Hãy chọn thiết bị trong phần chỉnh thủ công bên dưới.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone"
   },
   en: {
     connected: "BOT CONNECTED", buildTitle: "Prepare a build flight", buildIntro: "Verify the ROM source, runner and delivery before dispatching the recipe.",
@@ -53,7 +53,7 @@ const translations = {
     sourceIdleKicker: "SMART SOURCE", sourceIdleTitle: "Paste a link to identify it", sourceIdleMessage: "Source type is recognized immediately; the bot inspects deep metadata without downloading the entire ROM.",
     sourceDetectedKicker: "SOURCE RECOGNIZED", sourceInvalidKicker: "NOT VALID YET", sourceInvalidTitle: "ROM source not recognized", sourceInvalidMessage: "Use an HTTP/HTTPS URL or an rclone remote:path reference.",
     provider: "Provider", detectedType: "Source type", detectedDevice: "Device", detectedVersion: "Version", analyzeSource: "Analyze ROM", editSourceManual: "Edit source details manually",
-    deepProbeHint: "Tap Analyze and the bot will inspect ZIP metadata, then return the result in chat.", probeSent: "Opening the bot…", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone"
+    deepProbeHint: "Tap Analyze and the bot will inspect ZIP metadata, then return the result in chat.", probeSent: "Opening the bot…", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", incompleteLabel: "DOCKET INCOMPLETE", finishSource: "Complete configuration", completeSourceHint: "Paste a ROM source and choose the correct device to continue.", chooseDeviceHint: "The source is valid. Choose a device in the manual details below.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone"
   }
 };
 
@@ -170,6 +170,7 @@ function navigate(name, smooth = true) {
   if (!document.getElementById(name)) name = "build";
   $$(".view").forEach((node) => node.classList.toggle("active", node.id === name));
   $$(".bottom-nav [data-nav]").forEach((node) => node.classList.toggle("active", node.dataset.nav === name));
+  $$(".contents-rail [data-nav]").forEach((node) => node.classList.toggle("active", node.dataset.nav === name));
   history.replaceState(null, "", `#${name}`);
   window.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
 }
@@ -222,6 +223,7 @@ function updateSourceDetection() {
   }
   state.sourceAutoDevice = null;
   state.sourceDetection = detection;
+  updateSummary();
   node.classList.toggle("detected", Boolean(detection?.valid));
   node.classList.toggle("invalid", Boolean(detection && !detection.valid));
   const marker = node.querySelector(".source-state-mark span");
@@ -255,6 +257,9 @@ function updateSourceDetection() {
     $("#device").value = detection.device;
     state.sourceAutoDevice = detection.device;
     updateSummary();
+  }
+  if (!$("#device").value) {
+    $(".source-manual").open = true;
   }
 }
 
@@ -364,7 +369,8 @@ function runnerLabel(value) {
 
 function updateSummary() {
   const task = $('input[name="task"]:checked')?.value || "build";
-  const device = $("#device")?.value || "—";
+  const selectedDevice = $("#device")?.value || "";
+  const device = selectedDevice || "—";
   const preset = $("#preset")?.value || "plus";
   const runner = runnerLabel($("#execution")?.value || "github-auto");
   $("#route-label").textContent = runner;
@@ -375,6 +381,16 @@ function updateSummary() {
   $("#mod-count").textContent = `${selectedMods().length} ${t("selected")}`;
   $("#build-options").hidden = task !== "build";
   $("#package").disabled = task !== "build";
+  const sourceReady = Boolean(classifySource($("#source-uri")?.value || "")?.valid);
+  const ready = sourceReady && Boolean(selectedDevice);
+  const docket = $(".dispatch-docket");
+  docket?.classList.toggle("incomplete", !ready);
+  if ($("#readiness-label")) $("#readiness-label").textContent = t(ready ? "readyLabel" : "incompleteLabel");
+  if ($("#launch-warning")) $("#launch-warning").textContent = t(ready ? "fallbackWarning" : sourceReady ? "chooseDeviceHint" : "completeSourceHint");
+  $$('[data-i18n="launch"], [data-i18n="finishSource"]').forEach((node) => {
+    node.dataset.i18n = ready ? "launch" : "finishSource";
+    node.textContent = t(ready ? "launch" : "finishSource");
+  });
 }
 
 function positiveInteger(input, errorKey) {

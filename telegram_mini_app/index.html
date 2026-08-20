@@ -10,11 +10,11 @@
 </head>
 <body>
   <!--
-  THESIS: Wukong is a technical build dossier: every choice and stage stays inspectable; it refuses the soft SaaS dashboard.
-  OWN-WORLD: Warm stock paper, carbon ink, square rules, condensed editorial type, and one cobalt signal reserved for active work.
-  STORY: Choose a ROM, compose the exact build, verify the route, dispatch it, then control jobs, library, catalog, and system from one index.
-  FIRST VIEWPORT: A masthead and compact contents rail lead directly into Source / 01; the build docket stays pinned above mobile navigation.
-  FORM: Fourth grounded Operate direction, industrial parts catalogue; seed key 8d413335.
+  THESIS: Wukong is a chromatic technical atlas: dense ROM work becomes calm, legible and tactile without collapsing into a generic SaaS dashboard.
+  OWN-WORLD: Deep violet instrument panels, pearl work surfaces, aqua/coral/sun signal colors, soft physical depth, Sora display type and monospaced measurements.
+  STORY: Identify the source, compose the build, verify its route, dispatch with confidence, then move through jobs, library, catalog and system as one connected control deck.
+  FIRST VIEWPORT: A dark hardware masthead floats above an indigo atlas plate; the source composer and live dispatch docket form the first working spread.
+  FORM: Third grounded Operate direction, chromatic technical atlas; seed key efdc090d.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
   <header class="masthead">
@@ -41,13 +41,13 @@
               <button id="probe-source" type="button" class="probe-button" hidden data-i18n="analyzeSource">Phân tích ROM</button>
             </div>
             <dl class="source-facts" id="source-facts" hidden>
-              <div><dt data-i18n="provider">Nhà cung cấp</dt><dd id="source-provider">—</dd></div>
-              <div><dt data-i18n="detectedType">Loại nguồn</dt><dd id="source-type">—</dd></div>
-              <div><dt data-i18n="detectedDevice">Thiết bị</dt><dd id="source-device-detected">—</dd></div>
-              <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">—</dd></div>
+              <div><dt data-i18n="provider">Nhà cung cấp</dt><dd id="source-provider">···</dd></div>
+              <div><dt data-i18n="detectedType">Loại nguồn</dt><dd id="source-type">···</dd></div>
+              <div><dt data-i18n="detectedDevice">Thiết bị</dt><dd id="source-device-detected">···</dd></div>
+              <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">···</dd></div>
             </dl>
           </div>
-          <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 — không bắt buộc</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>
+          <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 (không bắt buộc)</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>
         </section>
 
         <section class="dossier-section build-options" id="build-options">
@@ -56,14 +56,14 @@
           <div class="selection-bar"><div><strong data-i18n="mods">MOD áp dụng</strong><small id="mod-count">0 đã chọn</small></div><div><button id="select-defaults" type="button" data-i18n="defaults">Mặc định</button><button id="select-all" type="button" data-i18n="selectAll">Tất cả</button><button id="clear-mods" type="button" data-i18n="clear">Bỏ chọn</button></div></div>
           <label class="field mod-search"><span data-i18n="searchMods">Lọc MOD để chọn</span><input id="mod-search" type="search" placeholder="Gapps / Camera / WK…"></label>
           <div class="mod-list" id="mod-list" aria-live="polite"></div>
-          <details class="advanced"><summary><span data-i18n="advanced">Pipeline nâng cao</span><b id="pipeline-count">0/0</b></summary><div class="advanced-body"><div class="steps" id="steps"></div><label class="field field-wide"><span data-i18n="debloatPaths">Đường dẫn cần xóa — mỗi dòng một mục</span><textarea id="debloat-paths" rows="4" placeholder="my_stock/app/Browser"></textarea></label><label class="field field-wide"><span data-i18n="workspaceEstimate">Ước lượng workspace byte — để trống để tự tính</span><input id="workspace-estimate" inputmode="numeric"></label></div></details>
+          <details class="advanced"><summary><span data-i18n="advanced">Pipeline nâng cao</span><b id="pipeline-count">0/0</b></summary><div class="advanced-body"><div class="steps" id="steps"></div><label class="field field-wide"><span data-i18n="debloatPaths">Đường dẫn cần xóa (mỗi dòng một mục)</span><textarea id="debloat-paths" rows="4" placeholder="my_stock/app/Browser"></textarea></label><label class="field field-wide"><span data-i18n="workspaceEstimate">Ước lượng workspace byte (để trống để tự tính)</span><input id="workspace-estimate" inputmode="numeric"></label></div></details>
         </section>
 
         <section class="dossier-section delivery-section">
           <header class="section-heading"><span>03</span><div><h2 data-i18n="deliveryTitle">Đóng gói & phát hành</h2><p data-i18n="deliveryHint">Kiểm SHA-256 trước khi công bố artifact.</p></div></header>
           <div class="switches"><label><input id="package" type="checkbox" checked><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><i></i></label><label><input id="publish" type="checkbox" checked><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><i></i></label><label><input id="notify" type="checkbox" checked><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><i></i></label></div>
         </section>
-        <aside class="dispatch-docket"><div><small data-i18n="readyLabel">HỒ SƠ SẴN SÀNG</small><strong id="launch-summary">PKG110 / PLUS / GITHUB AUTO</strong><span id="launch-warning" data-i18n="fallbackWarning">Auto kiểm tra runner trước khi gửi; không để job treo khi runner offline.</span></div><button class="primary" type="submit"><span data-i18n="launch">Tạo job build</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></aside>
+        <aside class="dispatch-docket incomplete"><div><small id="readiness-label" data-i18n="incompleteLabel">HỒ SƠ CHƯA ĐỦ</small><strong id="launch-summary">— / PLUS / GITHUB AUTO</strong><span id="launch-warning" data-i18n="completeSourceHint">Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.</span></div><button class="primary" type="submit"><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></aside>
       </form>
     </section>
 
@@ -80,7 +80,7 @@
     </section>
 
     <section class="view" id="catalog" aria-labelledby="catalog-title">
-      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật.</h1><p data-i18n="catalogIntro">Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.</p></div><div class="catalog-total" id="catalog-total">—</div></header>
+      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật.</h1><p data-i18n="catalogIntro">Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.</p></div><div class="catalog-total" id="catalog-total">···</div></header>
       <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
       <section class="catalog-sheet"><header><h2 data-i18n="devicesTitle">Thiết bị</h2><span id="device-count">0</span></header><div class="device-table" id="device-list"></div></section>
       <section class="catalog-sheet"><header><h2 data-i18n="modsTitle">MOD trong pack</h2><span id="catalog-mod-count">0</span></header><div class="catalog-mods" id="catalog-mod-list"></div></section>
@@ -88,7 +88,7 @@
 
     <section class="view" id="system" aria-labelledby="system-title">
       <header class="page-head"><div><h1 id="system-title" data-i18n="systemTitle">Hệ thống.</h1><p data-i18n="systemIntro">Kiểm tra kết nối, content-pack và cache trước một job lớn.</p></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
-      <div class="system-ledger"><div><b>01</b><i id="telegram-health"></i><span><strong>Telegram</strong><small id="telegram-auth-state" data-i18n="authenticatedPreview">Chưa xác thực — mở từ nút Mini App trong bot</small></span></div><div><b>02</b><i></i><span><strong>GitHub Actions</strong><small data-i18n="runnerChecked">Kiểm runner ngay khi submit</small></span></div><div><b>03</b><i></i><span><strong>Google Drive</strong><small data-i18n="driveChecked">Kiểm quyền trước upload</small></span></div><div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div></div>
+      <div class="system-ledger"><div><b>01</b><i id="telegram-health"></i><span><strong>Telegram</strong><small id="telegram-auth-state" data-i18n="authenticatedPreview">Chưa xác thực. Hãy mở từ nút Mini App trong bot.</small></span></div><div><b>02</b><i></i><span><strong>GitHub Actions</strong><small data-i18n="runnerChecked">Kiểm runner ngay khi submit</small></span></div><div><b>03</b><i></i><span><strong>Google Drive</strong><small data-i18n="driveChecked">Kiểm quyền trước upload</small></span></div><div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div></div>
       <section class="system-actions"><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div></section>
       <section class="local-settings"><h2 data-i18n="miniSettings">Thiết đặt Mini App</h2><label><span data-i18n="defaultPreset">Preset mặc định</span><select id="default-preset"><option value="lite">Lite</option><option value="plus">Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><p data-i18n="secretBoundary">Token GitHub, Telegram và rclone không hiển thị ở đây. Quản lý chúng trong Windows app hoặc GitHub Secrets.</p></section>
     </section>

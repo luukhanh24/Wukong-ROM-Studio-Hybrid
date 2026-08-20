@@ -114,9 +114,16 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-action="cache"', html)
         self.assertIn('data-action="cache_clear"', html)
         self.assertIn("renderCatalog", script)
+        self.assertIn('.contents-rail [data-nav]', script)
+        self.assertIn("incompleteLabel", script)
+        self.assertIn("chooseDeviceHint", script)
         self.assertNotIn("backdrop-filter", styles)
         self.assertNotIn("linear-gradient", styles)
-        self.assertNotIn("border-radius: 14px", styles)
+        self.assertIn('"Sora"', styles)
+        self.assertIn('"IBM Plex Mono"', styles)
+        self.assertIn("--aqua:", styles)
+        self.assertIn("--coral:", styles)
+        self.assertIn("--shadow-md:", styles)
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
