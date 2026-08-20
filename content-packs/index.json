@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T14:50:41.628186Z",
+  "generatedAt": "2026-08-20T18:02:51.808384Z",
   "packs": [
     {
       "archive": {
@@ -62,9 +62,9 @@
     },
     {
       "archive": {
-        "md5": "22f849b509ab99c1f53753d9ea72a955",
-        "sha256": "bc2c23ebe38a30d06d8d365fe60347243172cecc25e145e5bb10d44b568b3870",
-        "sizeBytes": 31864313,
+        "md5": "73d285cc2537d28c5e7aa7245bddb69a",
+        "sha256": "040aba883a2657e2f47b02144f1f1a14f2e6554b1e87eb83f29a5bd2b07dd59d",
+        "sizeBytes": 31907116,
         "uri": "wukong-gdrive:WukongROM/content-packs/Flash_script/common.tar.zst"
       },
       "files": [
@@ -75,13 +75,13 @@
         },
         {
           "path": "META-INF/com/google/android/update-binary",
-          "sha256": "1c702afe7186afdc6f008462ec1776023dc93da2ff42946702332cd8fc7f09d0",
-          "sizeBytes": 5481
+          "sha256": "85327d9871853fc7cb33d796362747cfeb2ca621aa2cd4f29e7f51ff63b9a4bd",
+          "sizeBytes": 5623
         },
         {
           "path": "META-INF/com/google/android/updater-script",
-          "sha256": "30429ff2966e67ef9f14f5f85a12b98de497d27fb4103fcdac83647be8a5196d",
-          "sizeBytes": 10
+          "sha256": "ce73b804d4fdc57f08758d92e5919ebbe34c6b40793b8b5b707defda1ff816a7",
+          "sizeBytes": 11
         },
         {
           "path": "Wukong_Flashing_Tool_Linux.sh",
@@ -95,13 +95,13 @@
         },
         {
           "path": "Wukong_Flashing_Tool_Windows.bat",
-          "sha256": "deedb6a4cc0a5597934446abcb56920abbfd9dd4177a8c98bf26d9486ef351d1",
-          "sizeBytes": 9683
+          "sha256": "4b8ec067b13842bf5270742060b8223058741b4d41de33284953662ba565cdf6",
+          "sizeBytes": 9691
         },
         {
           "path": "bin/linux/NOTICE.txt",
-          "sha256": "3aaf99086d24f1546b834697950a68ecefd110aa6a4a75bdefcb30906a66001b",
-          "sizeBytes": 1177384
+          "sha256": "93100d355a4944a45900b8fab37e834eb323f6fff80be1ef1ca82f562c30323a",
+          "sizeBytes": 1199731
         },
         {
           "path": "bin/linux/adb",
@@ -145,13 +145,13 @@
         },
         {
           "path": "bin/linux/mke2fs.conf",
-          "sha256": "ad58a58dcdd24d85055814ca9cac67db89d4e67c434e96774bdce0d0a007d067",
-          "sizeBytes": 1157
+          "sha256": "d49809c1c774a788f1ca36ae0081d9cce75f7ef1523f40adcf4abe5772ba34c2",
+          "sizeBytes": 1210
         },
         {
           "path": "bin/linux/source.properties",
-          "sha256": "fbd87c8567afbc6dc78e140097fcde234f4a61fa7065e85081d43e442ccd3d24",
-          "sizeBytes": 38
+          "sha256": "c31e5f21c1c22a1b048b0c9a4d1ad46fb46f0cb3866445a12cfbad8e952ad5a3",
+          "sizeBytes": 40
         },
         {
           "path": "bin/linux/sqlite3",
@@ -160,8 +160,8 @@
         },
         {
           "path": "bin/macos/NOTICE.txt",
-          "sha256": "f74735e1636534c2165b51815c4de870a2a06c24d8fe3e8c91149c841b81d33e",
-          "sizeBytes": 1153968
+          "sha256": "840cae648779952f5a107420affd14f2f0c73d1ca081193e0b284585b953e542",
+          "sizeBytes": 1175856
         },
         {
           "path": "bin/macos/adb",
@@ -205,13 +205,13 @@
         },
         {
           "path": "bin/macos/mke2fs.conf",
-          "sha256": "ad58a58dcdd24d85055814ca9cac67db89d4e67c434e96774bdce0d0a007d067",
-          "sizeBytes": 1157
+          "sha256": "d49809c1c774a788f1ca36ae0081d9cce75f7ef1523f40adcf4abe5772ba34c2",
+          "sizeBytes": 1210
         },
         {
           "path": "bin/macos/source.properties",
-          "sha256": "fbd87c8567afbc6dc78e140097fcde234f4a61fa7065e85081d43e442ccd3d24",
-          "sizeBytes": 38
+          "sha256": "c31e5f21c1c22a1b048b0c9a4d1ad46fb46f0cb3866445a12cfbad8e952ad5a3",
+          "sizeBytes": 40
         },
         {
           "path": "bin/macos/sqlite3",
@@ -230,8 +230,8 @@
         },
         {
           "path": "bin/windows/NOTICE.txt",
-          "sha256": "628f43e9c88e2bf5aee9fc4c1cb672bf3931ba12dd5ef75c8170678395f3ca23",
-          "sizeBytes": 1154858
+          "sha256": "04dde1b32e930319d8731f3e1aee7e0e9598ac59f1e54d0b451a0b4bf3775abb",
+          "sizeBytes": 1176763
         },
         {
           "path": "bin/windows/adb.exe",
@@ -270,8 +270,8 @@
         },
         {
           "path": "bin/windows/mke2fs.conf",
-          "sha256": "ad58a58dcdd24d85055814ca9cac67db89d4e67c434e96774bdce0d0a007d067",
-          "sizeBytes": 1157
+          "sha256": "d49809c1c774a788f1ca36ae0081d9cce75f7ef1523f40adcf4abe5772ba34c2",
+          "sizeBytes": 1210
         },
         {
           "path": "bin/windows/mke2fs.exe",
@@ -280,8 +280,8 @@
         },
         {
           "path": "bin/windows/source.properties",
-          "sha256": "fbd87c8567afbc6dc78e140097fcde234f4a61fa7065e85081d43e442ccd3d24",
-          "sizeBytes": 38
+          "sha256": "c31e5f21c1c22a1b048b0c9a4d1ad46fb46f0cb3866445a12cfbad8e952ad5a3",
+          "sizeBytes": 40
         },
         {
           "path": "bin/windows/sqlite3.exe",
@@ -306,7 +306,7 @@
       ],
       "id": "Flash_script/common",
       "remote": "wukong-gdrive:WukongROM/content-packs/Flash_script/common",
-      "sizeBytes": 79297644,
+      "sizeBytes": 79364100,
       "target": "Flash_script"
     },
     {
@@ -4347,9 +4347,9 @@
     },
     {
       "archive": {
-        "md5": "862e3782af4e5a8e5328b1f78ba41f63",
-        "sha256": "99ac444b02b6430bc86712f4633ae10be2ff7a4ea2a87f810d359304492d7c19",
-        "sizeBytes": 10511965,
+        "md5": "f79fc41546d7d542fecc65b57c166398",
+        "sha256": "28169f423e2d0ec310c50872bbbfc0fcdf6ad103c75de151826ab809060bfd75",
+        "sizeBytes": 10512788,
         "uri": "wukong-gdrive:WukongROM/content-packs/STARK/common.tar.zst"
       },
       "files": [
@@ -4395,548 +4395,548 @@
         },
         {
           "path": "android/preference/SettingsHelper.smali",
-          "sha256": "25b1c650904ee1b346262537fd3a858d18fd82df76f3cc9b9311ca13cd281f7d",
-          "sizeBytes": 14364
+          "sha256": "03410712b3b800264685c00a999ac11d5bf1ba3b58c48f79e134316eb529cfb0",
+          "sizeBytes": 14926
         },
         {
           "path": "com/wukong/manager/WukongFrameworkBridge.smali",
-          "sha256": "20923491287c4af84399d626720cd2df279b9305c1f87b106af595aa7c72e2a3",
-          "sizeBytes": 121395
+          "sha256": "4d58c2ed051d0bdd88a7e313717738cea065fb42aa9534b194963313b8d2369b",
+          "sizeBytes": 126839
         },
         {
           "path": "com/wukong/manager/WukongHmaPolicyBridge.smali",
-          "sha256": "47fb4fd0bd2bd54f9e0829cb21cda0ab27a1f2c2ebd0d5701dde830a3f96e53b",
-          "sizeBytes": 134683
+          "sha256": "bc74a0d70cc511907c318e397eba197a68d44deb62f5984715f4c39703fdaf74",
+          "sizeBytes": 141431
         },
         {
           "path": "com/wukong/manager/WukongInstrumentationHook.smali",
-          "sha256": "51ce29b7120603f8d4938ab19ee69a0372841e76c7c719f3d8fb1f72a127b132",
-          "sizeBytes": 101733
+          "sha256": "ae16c4ebf02422235d9115a140d1386043f47fcb8d9e71bb8c5892e3a74595da",
+          "sizeBytes": 106614
         },
         {
           "path": "com/wukong/manager/WukongPackageManagerHook.smali",
-          "sha256": "1606ab03bbda45619cbf2cd2d1c7a9c68780800e87e448f8ad3c8f1d12cf9550",
-          "sizeBytes": 28157
+          "sha256": "2c6db2e7825c4abc92725e0e9b59357fb27c4f79bcc12673bc5cb850249a3ae8",
+          "sizeBytes": 29569
         },
         {
           "path": "com/wukong/manager/a.smali",
-          "sha256": "6b9df8ea4ebfc54777b7d3fea904baf24544b17d149834c42e5680340a831bf4",
-          "sizeBytes": 5560
+          "sha256": "04c1bd20dba2523607774fa10f8d37d787599c84379e456dc5fa9197f8e8ea81",
+          "sizeBytes": 5914
         },
         {
           "path": "com/wukong/manager/aa.smali",
-          "sha256": "99ffc872992c522a936be070c3efdddbc4fb29dc48c8cddc072aa40805183196",
-          "sizeBytes": 5239
+          "sha256": "d6608386472bc3201a157909d6ec24cdde45ca4fe1cdf80a8e6fd90bdad063eb",
+          "sizeBytes": 5562
         },
         {
           "path": "com/wukong/manager/ab.smali",
-          "sha256": "dce001cd6f6a64e0edd9101b8f00e45bef03714b372cf6034409c108af3af743",
-          "sizeBytes": 5316
+          "sha256": "404b08af55ec99441eaea374af25cf3c09bafdc6f7f57672571e2899235adf43",
+          "sizeBytes": 5645
         },
         {
           "path": "com/wukong/manager/ac.smali",
-          "sha256": "a1f1442430432c465906b1a3ba0b5438624e868ad7750b507699d72067063c7a",
-          "sizeBytes": 5218
+          "sha256": "17b64f1be48429d3aa281ff409a1fa8e6ae3cd78c7b894f5c0b96df7c23e3474",
+          "sizeBytes": 5541
         },
         {
           "path": "com/wukong/manager/ad.smali",
-          "sha256": "7e78e7ca3ed60fef5d01995ec8fe5e0cb645d57877514377a24e7ee33129df67",
-          "sizeBytes": 5155
+          "sha256": "c068f8260058d8f084d7f655d47166857fb500b587a71279aca09521eecd1f0d",
+          "sizeBytes": 5474
         },
         {
           "path": "com/wukong/manager/ae.smali",
-          "sha256": "341ecaffc6439bdb7a5d50c8cd018dc06712870623ddd49e93763ef4d04dff83",
-          "sizeBytes": 5217
+          "sha256": "3f53d13a75abd67c3f00b6e3e08053738f3842d005f4fb93ce84e6867de9f40c",
+          "sizeBytes": 5541
         },
         {
           "path": "com/wukong/manager/af.smali",
-          "sha256": "956fb3090898b6ce5c3d4859370f572c98cb427cc834999a9bd0a6cca3315a89",
-          "sizeBytes": 5366
+          "sha256": "616f97abac847997dcc5fe0533c0656da2006cd5fe806be2deb6864771c243b3",
+          "sizeBytes": 5689
         },
         {
           "path": "com/wukong/manager/ag.smali",
-          "sha256": "51f756a3d741f15d48d6e5317891d00dfc4e967c5ea7cfe5719d09e06ec59b38",
-          "sizeBytes": 5580
+          "sha256": "9b9cc2cb4613e357feb8026b776a490caa130b32320d33a42eb7a7c01cea03e9",
+          "sizeBytes": 5934
         },
         {
           "path": "com/wukong/manager/ah.smali",
-          "sha256": "01bd3f82625d30f391649b5bcb2d6c80923a30fca21a87351dbebec2a0684754",
-          "sizeBytes": 5215
+          "sha256": "f66ca2d6411d65bc39035813d92ed9ccebe9b27977b811c3db74454f41727052",
+          "sizeBytes": 5539
         },
         {
           "path": "com/wukong/manager/ai.smali",
-          "sha256": "2c83ea7a2bd64ca34e0c507794eeb4f0f2715059364798d80355feae880a0e89",
-          "sizeBytes": 5311
+          "sha256": "ca2a7eb4108c0949dbf8bab81c70533466d47f654564d1e701789606fe64051c",
+          "sizeBytes": 5640
         },
         {
           "path": "com/wukong/manager/aj.smali",
-          "sha256": "a4c76fe411f082b26ce2e49995d7209b7aa94c6aa55ec2718c1f11654e1fd172",
-          "sizeBytes": 5341
+          "sha256": "d8886334a8879a873a094e97b1dd539c6877a741c7204be0928c768231c03e99",
+          "sizeBytes": 5672
         },
         {
           "path": "com/wukong/manager/ak.smali",
-          "sha256": "593aed814a8040c36dd7693c6a7c17834f4eea8c500b997a79f015f8de102eaa",
-          "sizeBytes": 5191
+          "sha256": "1f7cd66ab0f468552ac3c63602e78d16e21b19151d01312e5098808887232b4b",
+          "sizeBytes": 5515
         },
         {
           "path": "com/wukong/manager/al.smali",
-          "sha256": "b5f0d8790bee3970132a0dc2cbd85e8a58d557fc7d72c6b12b41026afb49aac4",
-          "sizeBytes": 5216
+          "sha256": "5fd398d740176de5920502e8c64fb4c0bab72a35d58a0db4915ce0b5e3633e6c",
+          "sizeBytes": 5540
         },
         {
           "path": "com/wukong/manager/am.smali",
-          "sha256": "2a949e24f5c0a6f2d533769550bb66eea01dc87463ca5c46a644cbbea716c4d7",
-          "sizeBytes": 5202
+          "sha256": "e22130415e3278e357ad2882bf2d59f1c78f16161f4aadf15474af1d4c8c3502",
+          "sizeBytes": 5526
         },
         {
           "path": "com/wukong/manager/an.smali",
-          "sha256": "2e03319261623d043400b253be1cde3e8673f9913fec06566990e14b488c6a80",
-          "sizeBytes": 5254
+          "sha256": "f7816125d0e35038850ae5995dfdc871f0704372aa0bf3d3e85ac5bd6016fc07",
+          "sizeBytes": 5577
         },
         {
           "path": "com/wukong/manager/ao.smali",
-          "sha256": "dbcf73777c2d2961f50b7aab5d400022c979dc5dd8e74a014153648d74b48260",
-          "sizeBytes": 5581
+          "sha256": "d02034b860054450dd57fdc6c88b353c34251a851456164592fe147e3456432c",
+          "sizeBytes": 5935
         },
         {
           "path": "com/wukong/manager/ap.smali",
-          "sha256": "e38b4ccc009a46771095af78381a151ebc9230380cbfe95f59a658f588b5960e",
-          "sizeBytes": 5598
+          "sha256": "a07b3f9ae4fe189b8c2c07edcbd78c7eee008ff1ca6ab1bbed9993e3b231f6e2",
+          "sizeBytes": 5952
         },
         {
           "path": "com/wukong/manager/aq.smali",
-          "sha256": "aaa5a9a11a7fd2c7c4431419dc9c325d8736726aca6169f2b2fbd27b62bc9aec",
-          "sizeBytes": 5336
+          "sha256": "05c3e3a8e7936d762aa51f97e178cc7e04be31ed9f45db76a0b3ab4c105b06f9",
+          "sizeBytes": 5667
         },
         {
           "path": "com/wukong/manager/ar.smali",
-          "sha256": "c39a39b9337f311cafce6ca50c852201b8a5fd9d822f0705bd230d7dc3f4390e",
-          "sizeBytes": 5355
+          "sha256": "08bab8d8ccefa307d53216bd2483ec5126da561e4d78831278d3c10b10ccff98",
+          "sizeBytes": 5686
         },
         {
           "path": "com/wukong/manager/as.smali",
-          "sha256": "483a9965118e34743f40381ff973b05b5f37298ddab476efbf2ba01dba1cff74",
-          "sizeBytes": 5382
+          "sha256": "311daa60d6d6a65b63bfe4673eef3a8386e70f4dd777b8b374a1c9059e5f7d95",
+          "sizeBytes": 5705
         },
         {
           "path": "com/wukong/manager/at.smali",
-          "sha256": "418ab30429f6d95151c324f005d7c570e1ee5291e230de60059d0a3fde230865",
-          "sizeBytes": 5182
+          "sha256": "8d6f95545cd09d24642e787a353f371c3bcef1d46adf026d4ce775c793c896ef",
+          "sizeBytes": 5506
         },
         {
           "path": "com/wukong/manager/au.smali",
-          "sha256": "acd0e843107ed75005163bc0d382270ff20b7b7920a14118878e740e4c5dcd97",
-          "sizeBytes": 5365
+          "sha256": "10ed3f7b53b65d938a9fb975b69097078143d353a6a05efc4fd65435d8b211e4",
+          "sizeBytes": 5688
         },
         {
           "path": "com/wukong/manager/av.smali",
-          "sha256": "170921ccf1ab921f39669f0499d79d07157264404bbf63da3f047bb80751b6a9",
-          "sizeBytes": 5364
+          "sha256": "be972b7d14b1fea68778a68101b6133c67114f63f715d9bc7b33238c9519c26e",
+          "sizeBytes": 5687
         },
         {
           "path": "com/wukong/manager/aw.smali",
-          "sha256": "9b8727ca5459092cafe111fa189d99b77d4a489efad27eb70495e08e7a6600a0",
-          "sizeBytes": 5557
+          "sha256": "238d3e3a978d4b6192de4ff06b57d6e9c3322c83f55182acabbca5adb612e978",
+          "sizeBytes": 5911
         },
         {
           "path": "com/wukong/manager/ax.smali",
-          "sha256": "365b7427040e8d73e2bd0d158b83eb68684c68bf69d61f241d4dc9b45b36633b",
-          "sizeBytes": 5579
+          "sha256": "183185e9854038e41fb65fcbff518b6a3e001a45175ace881e8c540eceee4a95",
+          "sizeBytes": 5933
         },
         {
           "path": "com/wukong/manager/ay.smali",
-          "sha256": "ee24124938d5c20b43b6a5118a828532c337033b1bb7679fa563fac95dc8d609",
-          "sizeBytes": 5200
+          "sha256": "562dfe8600ef0dcb77daf746e97dbe4bc9b1869c68af130f87ef90ee0ffc7e5f",
+          "sizeBytes": 5524
         },
         {
           "path": "com/wukong/manager/az.smali",
-          "sha256": "17f161042e53dad84e5fff750050b41fad7e28397616c7b6203d6c3d2a14b760",
-          "sizeBytes": 5261
+          "sha256": "a810c4051d2b120273ed9be995cad19d5039c19dd43db43ca512bac3f514079c",
+          "sizeBytes": 5584
         },
         {
           "path": "com/wukong/manager/b.smali",
-          "sha256": "cb9000123179b7bcacb0e95b23d047eff43a0af96445cbc3020bba815de5213c",
-          "sizeBytes": 5557
+          "sha256": "5797b903bbfb35c133eec3ea8dbdca4455fedadb9c82e0e6e60dacf93b51e771",
+          "sizeBytes": 5911
         },
         {
           "path": "com/wukong/manager/ba.smali",
-          "sha256": "8a2c10f3ab95b2dbbe1f440b54b834961b819e25de3884a2ad2b6480c52cb790",
-          "sizeBytes": 5337
+          "sha256": "1edfd922489661b66a42e6e8f8665ed0304acfdd1e8141e78eae36e90ac7eec7",
+          "sizeBytes": 5668
         },
         {
           "path": "com/wukong/manager/bb.smali",
-          "sha256": "a958a5cca12f240b72f4e9742da56220c62db6031da533fb49190563a5ee7ac6",
-          "sizeBytes": 5201
+          "sha256": "e4b515d08870a06392dce3ad9c9ffc86fb852380c12ae2be479fa89c5e025d15",
+          "sizeBytes": 5525
         },
         {
           "path": "com/wukong/manager/bc.smali",
-          "sha256": "72b64626a5207d42e0d19d9212e1c615cf1c326903397c8d04f53144771f2a7c",
-          "sizeBytes": 5242
+          "sha256": "204f72b5b6193858bd285870db0b0fa4642829f68870a00d4a1953236442438e",
+          "sizeBytes": 5565
         },
         {
           "path": "com/wukong/manager/bd.smali",
-          "sha256": "eae23f17215d3510100972366a0238d612a13700bccd2acb2a1342f452b322fc",
-          "sizeBytes": 5241
+          "sha256": "35e355ca5a446af6c3de71be051512f11b5cfe616fb998a3dff6c75c0513db28",
+          "sizeBytes": 5564
         },
         {
           "path": "com/wukong/manager/be.smali",
-          "sha256": "de71447873e27aaad17a82f768da007dd35ba027741a7347efd0cc09974122da",
-          "sizeBytes": 5242
+          "sha256": "d1b4df8df18b4d1e7436117157d008accf5f312126259bf2abc509b72956412b",
+          "sizeBytes": 5565
         },
         {
           "path": "com/wukong/manager/bf.smali",
-          "sha256": "7a53f953b1c11538035b2c209f83a59c7905ac31c34615c074c360bdd42197a8",
-          "sizeBytes": 5218
+          "sha256": "58eb42739fb8fdf56ecd17effcf4828a76340741ee8b8b6fca201b4779ef3aad",
+          "sizeBytes": 5542
         },
         {
           "path": "com/wukong/manager/bg.smali",
-          "sha256": "049409a2b93a1c01cd149e674a103507f86bb7664603de1d7a343129395f7593",
-          "sizeBytes": 5203
+          "sha256": "d304f8e60355a6e09ef4ed2e5a300e8728ff9f4462458ef2532556bbe87a41e1",
+          "sizeBytes": 5527
         },
         {
           "path": "com/wukong/manager/bh.smali",
-          "sha256": "5360dabd507bb8846857fc87560e1d6be2632a3fc82534e1f7c60d9ae91f29aa",
-          "sizeBytes": 5363
+          "sha256": "8a06ab703bc6267a0ca17d373d24e36650e9bc330b689f6c8cd0b26625b1b8e0",
+          "sizeBytes": 5686
         },
         {
           "path": "com/wukong/manager/bi.smali",
-          "sha256": "4a8fd4b63a298ab131ebf6214c2d7fae952d8c1f3e3dda212e65695483ecddb5",
-          "sizeBytes": 5350
+          "sha256": "a9f2cd6c044c345f96ebc73f14285644cd85af6539ac2c3e9aee58601aa2c985",
+          "sizeBytes": 5679
         },
         {
           "path": "com/wukong/manager/bj.smali",
-          "sha256": "dc9708cc5876e2e1c2774eaa3ceeacec452293a27a974a55177a15b015dc3b4b",
-          "sizeBytes": 5367
+          "sha256": "c949fb0b9bd6aa6f89428474caca60679d1f8a93ff85d19bbce37e01178ff332",
+          "sizeBytes": 5690
         },
         {
           "path": "com/wukong/manager/bk.smali",
-          "sha256": "a15100c721d116a7bbd38944022bf92942b2d647c80e3b340b69012988e22254",
-          "sizeBytes": 5573
+          "sha256": "1b7cd43f68e546881b8ed6a82d6c66df16b4f620c0990d1701755d4169a98a4c",
+          "sizeBytes": 5927
         },
         {
           "path": "com/wukong/manager/bl.smali",
-          "sha256": "c7de0adbc6f1f661aa822253246a9047efa5cf0f3baec9523d4c6d8850eef370",
-          "sizeBytes": 5365
+          "sha256": "0d45a4ec5c81d1a86f1cb5e68fa79aa8340d87c6c710921ac6592bc9e13dafa2",
+          "sizeBytes": 5688
         },
         {
           "path": "com/wukong/manager/bm.smali",
-          "sha256": "58a44f64ce7a1a2310cacc437a0bc1acc8e80ecc8b846d374e52ffe278d4d211",
-          "sizeBytes": 5202
+          "sha256": "9593260985c9c056be56b4156d11c4627d414e9d853d751b828d8b3526e6df31",
+          "sizeBytes": 5526
         },
         {
           "path": "com/wukong/manager/bn.smali",
-          "sha256": "805e70c9722b519cfb28179a7e7776f3677c389d09c46b301da3a3c3edc09a6e",
-          "sizeBytes": 5331
+          "sha256": "9170e3e6b6d98ec50dbd743b063c4e4b2329dc56b4ec2e81acdb53a8652a6711",
+          "sizeBytes": 5660
         },
         {
           "path": "com/wukong/manager/bo.smali",
-          "sha256": "d66ec83287d282630404d28334d8f5146ebbacee89c8289ce8061ad8b9e1adaf",
-          "sizeBytes": 5580
+          "sha256": "88c305de30bae03a8433250eeea280d470bf51f46187df3fc78867fdab0944ed",
+          "sizeBytes": 5934
         },
         {
           "path": "com/wukong/manager/bp.smali",
-          "sha256": "890708bc9ea98a2f348b630d6fe665c34b126dacb52e56984b5dda9ff7a9c37a",
-          "sizeBytes": 5203
+          "sha256": "c500ab95233377f5724e404c416460de3da3a524d80dc48d19c09159285690ad",
+          "sizeBytes": 5527
         },
         {
           "path": "com/wukong/manager/bq.smali",
-          "sha256": "e83baaeed7c82ab211acc82eae3fbf0b896dfdef7649fdbabee6352b041570bc",
-          "sizeBytes": 5362
+          "sha256": "99b32ac40e20da34f7de1d83abe62e1c7dca2e77cbbcc0edca1ecda95e13b5a6",
+          "sizeBytes": 5685
         },
         {
           "path": "com/wukong/manager/br.smali",
-          "sha256": "e843c2fa068557839c28933f42939e8df19062df1299e5cf8ac94fff7b573521",
-          "sizeBytes": 5214
+          "sha256": "cbc8369062dc70735bbe9bda22e01194b2d2fda7c937eb218a5ee41addeaef11",
+          "sizeBytes": 5538
         },
         {
           "path": "com/wukong/manager/bs.smali",
-          "sha256": "bf6d2a20ad257b5a7e0be33b853f01b3b9d4805aaafa01b3824ea9768cb1b691",
-          "sizeBytes": 5600
+          "sha256": "cb6c4fdf2abdbdfb60a9789236eff0bdad0d9b9f4f72eac449b718402046226b",
+          "sizeBytes": 5954
         },
         {
           "path": "com/wukong/manager/bt.smali",
-          "sha256": "ce8a56be054f7612d6bb2fa2fa9047e1c876c0a46f85894f5293056be44a003e",
-          "sizeBytes": 5242
+          "sha256": "1f2e668304ce71c642c0b3bbc6063688128424cea69f2c7a857aa9112b11f703",
+          "sizeBytes": 5565
         },
         {
           "path": "com/wukong/manager/bu.smali",
-          "sha256": "856558b8661350a758d0aae425281917315d6763f8715a9507f56de76222774a",
-          "sizeBytes": 5215
+          "sha256": "ecfd1132366ff21ae3854aa5974d1bede07d6c7e068029ace4e471f1ff5fea62",
+          "sizeBytes": 5539
         },
         {
           "path": "com/wukong/manager/bv.smali",
-          "sha256": "9d1eaa2ad9c682a9229abdb4fe0d357949da763703ae067b81ba5f56ab0bdd0b",
-          "sizeBytes": 5363
+          "sha256": "463c60362251191d4757af936c2e3e040f5fc2d07c6ef2d2e4f995ea97be0ae4",
+          "sizeBytes": 5686
         },
         {
           "path": "com/wukong/manager/bw.smali",
-          "sha256": "9b833a067a6a891cf0e9ed339782d9292b12633a713016099d303368723e3297",
-          "sizeBytes": 5236
+          "sha256": "4f3f3710d9d9f2e2c738e06a8ded0de0ac2a57c5fd0a5c63450b26a6b392756c",
+          "sizeBytes": 5559
         },
         {
           "path": "com/wukong/manager/bx.smali",
-          "sha256": "e262ae1bb0478b24f1aeb1da8a1436510072cd1c9cc325e9de8af3010553d212",
-          "sizeBytes": 5341
+          "sha256": "60bdc9fadf73fbb95643c7e7c45c7c6a4a689792ccd1e7ed34d95233a29773a9",
+          "sizeBytes": 5672
         },
         {
           "path": "com/wukong/manager/bz.smali",
-          "sha256": "8ac5ccafac20d5208661253ea4cc3daf8ba943c676aafc5221822bbbe9e15077",
-          "sizeBytes": 5273
+          "sha256": "de6a9bfba2bd81248f325c90ab825f0db44709928b8e882e404132730b6d3180",
+          "sizeBytes": 5596
         },
         {
           "path": "com/wukong/manager/c.smali",
-          "sha256": "74c295ac416ca804698406ecb18d4c21d2607c0bf99a66388b36e9851099b24b",
-          "sizeBytes": 5340
+          "sha256": "4e848d28a4787300b22955a0723a956c2302600b185bda4547b0307abda80630",
+          "sizeBytes": 5671
         },
         {
           "path": "com/wukong/manager/ca.smali",
-          "sha256": "36cde58fb1429dcc8398f956404ce35be3bfd8489281a505781d9d657f0c95b9",
-          "sizeBytes": 5353
+          "sha256": "957eaeb5db562a5c191a78a1d142895979970b010196fb88f02e92cd9ddfc271",
+          "sizeBytes": 5684
         },
         {
           "path": "com/wukong/manager/cb.smali",
-          "sha256": "67c7dc69ffac2501975e577e009886191e306508d70fb72bf81113f07dc21476",
-          "sizeBytes": 5579
+          "sha256": "0b67ae1a0b50538ad1c36eeaeb484508890017a568148a6f838be4532587b26f",
+          "sizeBytes": 5933
         },
         {
           "path": "com/wukong/manager/cc.smali",
-          "sha256": "32ae3076c2879fb168779026184022089f95621c43887a820e7c3f20b5d0aea1",
-          "sizeBytes": 5589
+          "sha256": "9d512d74ecc4065f0b78e9bf3abba362ec1cdc13b788ec23f4718df24dffaffd",
+          "sizeBytes": 5943
         },
         {
           "path": "com/wukong/manager/cd.smali",
-          "sha256": "5d8f8ab1607bd13bfcfa4a2cd855976ecbb2228f2b5653e493d761e18cfb36a9",
-          "sizeBytes": 5254
+          "sha256": "0413fbbf13123f01fe3b52743cbab4414757190d5ed053af7c377109672ca7c9",
+          "sizeBytes": 5577
         },
         {
           "path": "com/wukong/manager/ce.smali",
-          "sha256": "50ef45149660443a75272c04c8f313b8ac45be3ba3398de6498e1bca10032b19",
-          "sizeBytes": 5395
+          "sha256": "9fc6b2675239ee69a940ab272161f39f8ea33d6af4b63cc0d623f5e1ddc8273e",
+          "sizeBytes": 5718
         },
         {
           "path": "com/wukong/manager/cf.smali",
-          "sha256": "99657c954d333be8837727b351623376165d19d7ba3c2a9271fb6b9c588c2a30",
-          "sizeBytes": 5581
+          "sha256": "86f4e3c09c28cb9d83443a5b4b1ed9109e7287f32c514609f9b82d1f41cd8595",
+          "sizeBytes": 5935
         },
         {
           "path": "com/wukong/manager/cg.smali",
-          "sha256": "910288b788ceded646202ad61fe19ae37255b35b7f026ccb99497f819b601fe1",
-          "sizeBytes": 5201
+          "sha256": "d18f32e3143d9a41ce9cf7bef2ffa8c5cc6652efba1433a75947c3feb48f1d9a",
+          "sizeBytes": 5525
         },
         {
           "path": "com/wukong/manager/ch.smali",
-          "sha256": "c7367a3f3205e04053d05830bfbe50389d166761b74879660b7db91ef12e1ec4",
-          "sizeBytes": 5205
+          "sha256": "06d5ef2a44f4c8b382926b20743325d556fe4fa968ecda3260025bee07a3b982",
+          "sizeBytes": 5529
         },
         {
           "path": "com/wukong/manager/ci.smali",
-          "sha256": "7d02616abc5358803fcf79a3cd9ce4a622e475d228b46a59c99223601b17a11f",
-          "sizeBytes": 5365
+          "sha256": "92fbf2f71d1526210453e7e5ab6c633dc292d9adb2ca9657622eaad08448c729",
+          "sizeBytes": 5688
         },
         {
           "path": "com/wukong/manager/cj.smali",
-          "sha256": "30b107611fa87bdf9380fafe86d9de01924254d79134d64ae25465804bf426e4",
-          "sizeBytes": 5355
+          "sha256": "8b57f382c0430c3492a1c2f02cca642cf27138344b0535670d16a34f2b73b674",
+          "sizeBytes": 5678
         },
         {
           "path": "com/wukong/manager/ck.smali",
-          "sha256": "a4457a8d27dafeda4969e275664449df925b47c781e4763de6b33122ff643134",
-          "sizeBytes": 5344
+          "sha256": "2166aa17eb459848750c09116ffb74041098dc1aadda170835c4bd1cb62e2eef",
+          "sizeBytes": 5667
         },
         {
           "path": "com/wukong/manager/cl.smali",
-          "sha256": "190ed1b494638c1e5f7169109ca71cd486e95267c90a60b058011b7abf0f7f49",
-          "sizeBytes": 5340
+          "sha256": "4ddaecdd90de2c85fb881d00d7b026ea2c91d32973720cac8edac5dc67d0d6b3",
+          "sizeBytes": 5671
         },
         {
           "path": "com/wukong/manager/cm.smali",
-          "sha256": "34fecd03f1c783b1275b6e087efdb6cc41263842a73c886e0b8d16c7f80b8a5f",
-          "sizeBytes": 5612
+          "sha256": "e9a2e09e3d5e2274477e98563d759caa7304568b15ae048cba8881df00a82329",
+          "sizeBytes": 5966
         },
         {
           "path": "com/wukong/manager/cn.smali",
-          "sha256": "f0a0d2384121a01abb12a055d6a8744749e25b0036e18702cf91f3547b9ec63c",
-          "sizeBytes": 5343
+          "sha256": "6b1020493dba4f58a2563b3d0f6f5bbe72811a7960d79b9d0ffe0a9f8cfe5000",
+          "sizeBytes": 5666
         },
         {
           "path": "com/wukong/manager/co.smali",
-          "sha256": "661a2ce3eceaf061c71ff58391fd7373f9c5069802eef857ec76e5feba07a88f",
-          "sizeBytes": 5218
+          "sha256": "3a3949ebf5f1f24f1aaf96112ccc9f5d557c04231729580bc2d289a29d98f9e3",
+          "sizeBytes": 5541
         },
         {
           "path": "com/wukong/manager/cp.smali",
-          "sha256": "f08ef0cc4b391d735b8310d2843f623571994cb8d4821b6e5265df8cf98fbde0",
-          "sizeBytes": 5358
+          "sha256": "29ecccc60aa1049bf0ae2357ca44707bfaab571e5f1c09c395259bbd9518e831",
+          "sizeBytes": 5689
         },
         {
           "path": "com/wukong/manager/cq.smali",
-          "sha256": "e34e75c993267c1bc19b1cc49cf609e00492ae84301cf50bf3519bfc3f51a983",
-          "sizeBytes": 5179
+          "sha256": "0bfcdce4561761338706704d1587a5dc280fd13fabf9ef025859dcdc37999356",
+          "sizeBytes": 5503
         },
         {
           "path": "com/wukong/manager/cr.smali",
-          "sha256": "4d1d00cedea7cf98f3b792a52d5bff11b16132a644d812c03251126e92261c68",
-          "sizeBytes": 5378
+          "sha256": "79d7f7152ad9ad04dff501af3506ed86a08b5d598ced70e3f8b234f31a51a310",
+          "sizeBytes": 5701
         },
         {
           "path": "com/wukong/manager/cs.smali",
-          "sha256": "4425448c67f1bb6d979e4c58b046f1eeb25d75848026e6983db88044f7235190",
-          "sizeBytes": 5236
+          "sha256": "e2c9b6679aae5d7153f4ecfabec079c8028af833d2707c285a58038b6335ec47",
+          "sizeBytes": 5559
         },
         {
           "path": "com/wukong/manager/ct.smali",
-          "sha256": "4f3081058a385f3951bb69ae52fa563d119f2e6e624815cd2114042d5ec46abb",
-          "sizeBytes": 1417
+          "sha256": "8c0277d8e3bfbf4044b4016a5978b669165f34b7b9d53fdf8cbd7493bd542c36",
+          "sizeBytes": 1468
         },
         {
           "path": "com/wukong/manager/cu.smali",
-          "sha256": "84556266229941a6378419cb23e0048619778e8a8edc52446440d4f9d874c141",
-          "sizeBytes": 377
+          "sha256": "cadf9456de383725e8126a5236360776535e7e3f7058fcd26b7d0cea7294bf33",
+          "sizeBytes": 392
         },
         {
           "path": "com/wukong/manager/cv.smali",
-          "sha256": "a730897d4a7822a907c80a6c13a213b0d030c748bcd4c1ce8a707a91242371f6",
-          "sizeBytes": 937
+          "sha256": "6c83480b3c5fcb239d4c510e595a092971f515110dd538b7039b185ce205d780",
+          "sizeBytes": 988
         },
         {
           "path": "com/wukong/manager/cw.smali",
-          "sha256": "906eea158b7aa70e9a5b8e48d0c02781d5e24eb2d95f73ec54b7bad99569288f",
-          "sizeBytes": 970
+          "sha256": "4b01083efa3477e420a60697bb2bcef5f3491497dbf20e818a9b754f0c6dc0a9",
+          "sizeBytes": 1015
         },
         {
           "path": "com/wukong/manager/cx.smali",
-          "sha256": "5a58bf43e37b6f58aa02cd5a6d603cec76414d7092543217483d12f9afa97de3",
-          "sizeBytes": 941
+          "sha256": "814fd30597acfd0308ca8abce9be1d903c3b0cf2af41e5502612d7bdbaea0a8f",
+          "sizeBytes": 982
         },
         {
           "path": "com/wukong/manager/cy.smali",
-          "sha256": "3758b9eee4e79df253e692fe34c10474a7a1d2298021f3b171c0b22ea754eaa4",
-          "sizeBytes": 11616
+          "sha256": "319907c046615817a0bf6e8e473199f74f7f1a98d0eea12553516e79106bf352",
+          "sizeBytes": 12272
         },
         {
           "path": "com/wukong/manager/cz.smali",
-          "sha256": "e480c884371813b9a6d094538b8738715c08ffd6c58cd461ef12c4a21c697df2",
-          "sizeBytes": 3382
+          "sha256": "b4947a35236203cf256124fa708a5eb5e1cce268e45d565bb351ddf067255912",
+          "sizeBytes": 3586
         },
         {
           "path": "com/wukong/manager/d.smali",
-          "sha256": "9bda91cebe20b07ea7767b9dc361bd34bea02816f8851bbf762d2b1c456a0d90",
-          "sizeBytes": 5202
+          "sha256": "3693a7b8f4ef6143b8f0c43e2835032c5ae48e6cfe90be17c259fcdd19bb47de",
+          "sizeBytes": 5526
         },
         {
           "path": "com/wukong/manager/e.smali",
-          "sha256": "75d49ec2e9a537f4a3fa56f3dea9d62e578cc25fdf5f7d52d71bc3062b2e0964",
-          "sizeBytes": 5223
+          "sha256": "e408ae66838841c6d2007f2c8cc1e9825b7614c5c7c970abc3e2eadb74641eb2",
+          "sizeBytes": 5546
         },
         {
           "path": "com/wukong/manager/f.smali",
-          "sha256": "5247375f31e5151462fe1f16f5c112461605474d31764d485d27c4395cc8c736",
-          "sizeBytes": 5355
+          "sha256": "21e83cd495b4326a242f4d59a8efd0a5cc9ca3cd3f41c0a4f352a240fca5100a",
+          "sizeBytes": 5686
         },
         {
           "path": "com/wukong/manager/g.smali",
-          "sha256": "eef47ed35725e329674b1bd5b6dea4337a60e6dec79dfbdc71b4081d0ad6264e",
-          "sizeBytes": 5344
+          "sha256": "331d103023833ecb525809d0c599310826bc5e1ff7f92c4cfa37abc0faf8a45a",
+          "sizeBytes": 5667
         },
         {
           "path": "com/wukong/manager/h.smali",
-          "sha256": "d55791b648dd929ef16914eec17a2bd47031e5e9053f59d326c653270528af9f",
-          "sizeBytes": 5299
+          "sha256": "fd9c589c1e85ba19f44a45902e2b59de49f8cf78d2597f6dedd7dd2905a2313a",
+          "sizeBytes": 5628
         },
         {
           "path": "com/wukong/manager/i.smali",
-          "sha256": "788e4cfba02a437ead1435f2fa661e5d07581cdb2aff34381f18c9b3a2534fd2",
-          "sizeBytes": 5222
+          "sha256": "1c7608eeb22cb156bb9a3ed6449a4c781354974ffcbf7a04a4d0ac6d07073f26",
+          "sizeBytes": 5545
         },
         {
           "path": "com/wukong/manager/j.smali",
-          "sha256": "8789dbc39997407c4452bde481b1b0ea8fb449e81817878d26de2d84ae2f35e9",
-          "sizeBytes": 5563
+          "sha256": "392e6b763b2eecf4004a967d2ba35ee624cc35ccf3295b6560aec374620c13d1",
+          "sizeBytes": 5917
         },
         {
           "path": "com/wukong/manager/k.smali",
-          "sha256": "b68ca74c4cfb5e3e66b721b85e17f5ae0fe9bf36c9e396284d1132299b41ba51",
-          "sizeBytes": 5223
+          "sha256": "4c9590cae5fbc3b6b1b11590fffbd5a6d3b331bc818642611a8066d680eabfee",
+          "sizeBytes": 5546
         },
         {
           "path": "com/wukong/manager/l.smali",
-          "sha256": "4cff61877fd8ccec8ea27546d1dc25c6de03f88abf61a5e250b09225d4447eaf",
-          "sizeBytes": 5301
+          "sha256": "702e17951de1ff0ec9fcabbc6ddd31b6ec490f741b35bdf56246e2ee65de617e",
+          "sizeBytes": 5630
         },
         {
           "path": "com/wukong/manager/m.smali",
-          "sha256": "dbe79c0dde62e6bbefd35b3b12436c4442a1705246810682ed229bd49a5997dc",
-          "sizeBytes": 5578
+          "sha256": "4438f38013bf4b49667c05544a46008cc3954fc39d9c91c4f06cedfc2bbfaef7",
+          "sizeBytes": 5932
         },
         {
           "path": "com/wukong/manager/n.smali",
-          "sha256": "ae76a93567aba9e607b4381125cde5277f9ce96c9c434b2918c6a56592983577",
-          "sizeBytes": 5240
+          "sha256": "cd2f08e450077b28dbe842271c3350b60b4e3f0d2ce3e350752bc89dd0085053",
+          "sizeBytes": 5563
         },
         {
           "path": "com/wukong/manager/o.smali",
-          "sha256": "9d6e16f20604969d12cd4da2e3483d3c517cb34792b6898d7fab9120234949a1",
-          "sizeBytes": 5576
+          "sha256": "5908b352bcb6533d7aea26c5c04201fa26b66366ad26d43b51db66c861adb5de",
+          "sizeBytes": 5930
         },
         {
           "path": "com/wukong/manager/p.smali",
-          "sha256": "164b51970842c3b43e410eb2071cfd55aa471c0d1d7e76dd943ded48f25bcc9e",
-          "sizeBytes": 5223
+          "sha256": "ba13131dabf27dc8383b639e48445104e5dcd3ae1be50c047006c2c0fcb2c8ca",
+          "sizeBytes": 5546
         },
         {
           "path": "com/wukong/manager/q.smali",
-          "sha256": "a0a4076d66cc2b126b3a8a0485a082402253de2eb7cf071cfe8fd2f618912dc3",
-          "sizeBytes": 5343
+          "sha256": "79adb5205443b9753ed50de0e875d30dc51f7812247890bcb936a286ed030d02",
+          "sizeBytes": 5666
         },
         {
           "path": "com/wukong/manager/r.smali",
-          "sha256": "9faac08d5982d4533295eeaa8272988ee48848035a557a88f707988bdbaff9fb",
-          "sizeBytes": 5241
+          "sha256": "292acb51b4f2c765da5a9e7ba365b7814779a02cde6ec51f98312fee7d5be2c5",
+          "sizeBytes": 5564
         },
         {
           "path": "com/wukong/manager/s.smali",
-          "sha256": "26265937deda24e6072e1f95d193ad507f1c666ffb9e416e7a394db871f3cb94",
-          "sizeBytes": 5304
+          "sha256": "7300ed0cd71633461a01260dabf7e1593f98ba7735f97cc7ea37f42a5a0b13a6",
+          "sizeBytes": 5635
         },
         {
           "path": "com/wukong/manager/t.smali",
-          "sha256": "3da3e41a6c61761afbf5d6d01bcce57abdfed004d4808e290a745cb476ed8b2a",
-          "sizeBytes": 5560
+          "sha256": "a370a8a8c24fab641a8665ccc608a0709709036d402289a214eac77f539295d8",
+          "sizeBytes": 5914
         },
         {
           "path": "com/wukong/manager/u.smali",
-          "sha256": "a9099e6c65624b0333dcd8a0601c2687ea134a20c2cea55614e7c7963a2ed9b1",
-          "sizeBytes": 5362
+          "sha256": "8950436f96ffd6057adf942e72872138929ab6366f30ec73e2aabab272c01205",
+          "sizeBytes": 5685
         },
         {
           "path": "com/wukong/manager/v.smali",
-          "sha256": "69a1702e8a1ee4911dd58a85c54a86bf422c6a2bf5086552be8d673241654718",
-          "sizeBytes": 5360
+          "sha256": "d10b8dd7aa7c296b5d0e97110223ba45d0386bf5ffb86ce8449490dd727d87f7",
+          "sizeBytes": 5683
         },
         {
           "path": "com/wukong/manager/w.smali",
-          "sha256": "cbddb634e53737d9e986d2c23d4e616e5884069884648f4336e25bec185f05e2",
-          "sizeBytes": 5302
+          "sha256": "e4f8aa642a552ba749c697340474689c9eec13320f04b8b5591f12ee10a01be2",
+          "sizeBytes": 5631
         },
         {
           "path": "com/wukong/manager/x.smali",
-          "sha256": "a9bc6c8e2672861ba5cec4ca04b1a8e5377f37e544838607b036ea26366dcacb",
-          "sizeBytes": 5558
+          "sha256": "29358d08aa347c5131588e1a0863805a3edc5184b3a8081e7abfd211f285f10e",
+          "sizeBytes": 5912
         },
         {
           "path": "com/wukong/manager/y.smali",
-          "sha256": "2ad28b3d37c728d785bc00606cea2e36a6b0af2d2d3fcf3e6200a9dc44692448",
-          "sizeBytes": 5182
+          "sha256": "ad604bbb57c6f6bcc2c77d84801a55d55d582b7885ca1c65cd7f72fe911d44bc",
+          "sizeBytes": 5506
         },
         {
           "path": "com/wukong/manager/z.smali",
-          "sha256": "6637d7e5b358c7ec3615c99b52e6d934783af77b95eaaedfa00e25fd6d2e197f",
-          "sizeBytes": 5303
+          "sha256": "fea72a77d046e4366809c83b106604a85830f87657ffd4e7940e74285dbf046c",
+          "sizeBytes": 5632
         }
       ],
       "id": "STARK/common",
       "remote": "wukong-gdrive:WukongROM/content-packs/STARK/common",
-      "sizeBytes": 16903444,
+      "sizeBytes": 16955302,
       "target": "STARK"
     },
     {
