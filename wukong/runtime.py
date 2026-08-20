@@ -44,6 +44,35 @@ class HybridRuntime:
         )
         worker.start()
 
+    def resume_cloud_watchers(self) -> int:
+        """Resume cloud-state polling for jobs that survived a daemon restart."""
+        if not self.rclone_config:
+            return 0
+        resumed = 0
+        for manifest in self.store.list():
+            if manifest.runner == "windows" or manifest.status in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            }:
+                continue
+            recipe = self.store.recipe(manifest.job_id)
+            if not recipe:
+                continue
+            storage = RcloneStorageAdapter(
+                remote=recipe.storage.remote,
+                config_path=self.rclone_config,
+            )
+            watcher = threading.Thread(
+                target=self._watch_cloud_job,
+                args=(manifest.job_id, storage),
+                name=f"wukong-cloud-watch-{manifest.job_id[:8]}",
+                daemon=True,
+            )
+            watcher.start()
+            resumed += 1
+        return resumed
+
     def refresh(self, manifest: JobManifest) -> JobManifest:
         if manifest.runner == "windows" or not self.rclone_config:
             return self.store.get(manifest.job_id) or manifest
