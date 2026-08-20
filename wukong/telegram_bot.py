@@ -496,6 +496,20 @@ class TelegramBotController:
                 return self._cloud_menu(language)
             if action == "diagnostics":
                 return self._diagnostics_menu(language)
+            if action == "cache":
+                return BotResponse(
+                    self._render_details(self.cache_provider()),
+                    self._back_markup(language),
+                )
+            if action == "cache_clear":
+                if identity.role != "admin":
+                    raise PermissionError("Admin access is required to clear shared cache")
+                if not self.cache_clearer:
+                    raise ValueError("Cache clearing is not configured")
+                return BotResponse(
+                    self._render_details(self.cache_clearer()),
+                    self._back_markup(language),
+                )
             if action in {"job", "events", "artifact", "cancel", "resume"}:
                 job_id = str(request.get("jobId") or "").strip()
                 if not job_id:

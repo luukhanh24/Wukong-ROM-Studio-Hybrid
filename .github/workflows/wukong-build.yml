@@ -1,5 +1,5 @@
-name: Wukong Hybrid Build
-run-name: Wukong ${{ inputs.job_id }}
+name: Wukong ROM · Hybrid Build
+run-name: "${{ inputs.job_id }} · Wukong Hybrid"
 
 on:
   workflow_dispatch:
@@ -107,25 +107,28 @@ env:
 
 jobs:
   route:
+    name: "01–02 · Kiểm tra recipe & chọn runner"
     runs-on: ubuntu-24.04
     outputs:
       runner_kind: ${{ steps.route.outputs.runner_kind }}
       recipe_digest: ${{ steps.route.outputs.recipe_digest }}
       recipe_ref: ${{ steps.route.outputs.recipe_ref }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "01.1 · Lấy mã điều phối / Checkout orchestrator"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: "01.2 · Chuẩn bị Python / Set up Python"
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install router dependencies
+      - name: "01.3 · Cài bộ định tuyến / Install router"
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends rclone
           python -m pip install -r requirements.txt
-      - name: Restore private rclone configuration
+      - name: "01.4 · Mở khóa Drive riêng tư / Restore Drive access"
         env:
           RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
         shell: bash
@@ -135,7 +138,7 @@ jobs:
           mkdir -p "$(dirname "$WUKONG_RCLONE_CONFIG")"
           umask 077
           printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$WUKONG_RCLONE_CONFIG"
-      - name: Fetch and route recipe
+      - name: "02 · Kiểm tra recipe & chọn runner / Validate and route"
         id: route
         env:
           RECIPE_REF: ${{ inputs.recipe_ref }}
@@ -184,13 +187,31 @@ jobs:
           print(f"runner_kind={data['runner']['kind']}")
           print(f"recipe_digest={data['recipeDigest']}")
           PY
+          {
+            echo "## 01–02 · Recipe preflight & runner route"
+            echo ""
+            echo "| Mục / Field | Giá trị / Value |"
+            echo "|---|---|"
+            echo "| Job | \`$WUKONG_JOB_ID\` |"
+            python - <<'PY'
+          import json
+          data = json.load(open('.wkstudio/route.json', encoding='utf-8'))
+          recipe = json.load(open('.wkstudio/recipe.json', encoding='utf-8'))
+          print(f"| Device | `{recipe['device']}` |")
+          print(f"| Task | `{recipe['task']}` |")
+          print(f"| Requested route | `{recipe['execution']['target']}` |")
+          print(f"| Selected runner | **{data['runner']['kind']}** |")
+          print(f"| Recipe SHA-256 | `{data['recipeDigest']}` |")
+          PY
+          } >> "$GITHUB_STEP_SUMMARY"
 
   hosted:
+    name: "03–19 · Build trên GitHub Hosted"
     needs: route
     if: needs.route.outputs.runner_kind == 'github-hosted'
     runs-on: ubuntu-24.04
     steps:
-      - name: Prepare large hosted workspace
+      - name: "03 · Mở rộng workspace / Expand hosted disk"
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
           root-reserve-mb: 768
@@ -201,23 +222,26 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
           remove-docker-images: 'true'
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "03.1 · Lấy mã điều phối / Checkout orchestrator"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: "03.2 · Chuẩn bị Python / Set up Python"
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
           cache: pip
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+      - name: "03.3 · Chuẩn bị Java 17 / Set up Java"
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: "17"
-      - name: Restore pinned Linux tool cache
+      - name: "03.4 · Khôi phục toolchain cache / Restore tools"
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: bin/Linux
           key: wukong-linux-tools-${{ runner.os }}-${{ hashFiles('tools/linux-x86_64.json', 'tools/bootstrap_linux.py') }}
-      - name: Restore shared ROM content cache
+      - name: "04 · Khôi phục content cache / Restore shared content"
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
@@ -225,7 +249,7 @@ jobs:
             OFX
             TWRP
           key: wukong-common-content-${{ hashFiles('content-packs/index.json') }}
-      - name: Run hosted build
+      - name: "05–19 · Chạy pipeline ROM / Execute ROM pipeline"
         uses: ./.github/actions/run-hybrid
         with:
           recipe_ref: ${{ needs.route.outputs.recipe_ref }}
@@ -235,17 +259,19 @@ jobs:
           self_hosted: "false"
 
   self-hosted:
+    name: "03–19 · Build trên Wukong self-hosted"
     needs: route
     if: needs.route.outputs.runner_kind == 'self-hosted'
     runs-on: [self-hosted, linux, x64, wukong-rom]
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "03.1 · Lấy mã điều phối / Checkout orchestrator"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: false
           clean: true
-      - name: Verify self-hosted resources
+      - name: "03 · Kiểm tra CPU, RAM, disk / Runner preflight"
         run: python3 -m tools.runner_preflight
-      - name: Run self-hosted build
+      - name: "04–19 · Chạy pipeline ROM / Execute ROM pipeline"
         uses: ./.github/actions/run-hybrid
         with:
           recipe_ref: ${{ needs.route.outputs.recipe_ref }}

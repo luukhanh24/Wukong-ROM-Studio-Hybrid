@@ -3,153 +3,87 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f4f6f8">
+  <meta name="theme-color" content="#f1efe8">
   <title>Wukong ROM Studio</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <!--
-  THESIS: Build Flight Deck turns a complex ROM recipe into one inspectable launch path; it refuses a long generic settings form.
-  OWN-WORLD: Fluent graphite surfaces, precise blue state, thin dividers, compact SVG controls, and a single continuous flight plan.
-  STORY: Confirm source and runner, configure edition and MODs, inspect safety, then dispatch the authenticated recipe to the bot.
-  FIRST VIEWPORT: Brand and runner state sit above the ROM source and launch summary; the primary action remains reachable at the bottom.
-  FORM: Sixth grounded Operate structure, Build Flight Deck; seed key 5f844181.
+  THESIS: Wukong is a technical build dossier: every choice and stage stays inspectable; it refuses the soft SaaS dashboard.
+  OWN-WORLD: Warm stock paper, carbon ink, square rules, condensed editorial type, and one cobalt signal reserved for active work.
+  STORY: Choose a ROM, compose the exact build, verify the route, dispatch it, then control jobs, library, catalog, and system from one index.
+  FIRST VIEWPORT: A masthead and compact contents rail lead directly into Source / 01; the build docket stays pinned above mobile navigation.
+  FORM: Fourth grounded Operate direction, industrial parts catalogue; seed key 8d413335.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
-  <header class="app-bar">
-    <a class="brand" href="#build" aria-label="Wukong ROM Studio">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9l3.1 15L16 12l6.9 12L26 9M5 5h22"/></svg>
-      <span><strong>Wukong</strong><small>ROM Studio</small></span>
-    </a>
-    <div class="app-actions">
-      <span class="connection"><i></i><span data-i18n="connected">BOT CONNECTED</span></span>
-      <button id="language" class="icon-button text-button" type="button">VI / EN</button>
-    </div>
+  <header class="masthead">
+    <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 9h30M8 14l4 19 8-16 8 16 4-19"/></svg><span><strong>WUKONG</strong><small>ROM STUDIO / HYBRID</small></span></a>
+    <div class="masthead-meta"><span class="connection" id="telegram-state"><i></i><span data-i18n="previewMode">PREVIEW MODE</span></span><button id="language" class="language-button" type="button">VI / EN</button></div>
   </header>
+
+  <nav class="contents-rail" aria-label="Mini App navigation">
+    <button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="cloud"><b>03</b><span data-i18n="navCloud">Thư viện</span></button><button data-nav="catalog"><b>04</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>05</b><span data-i18n="navSystem">Hệ thống</span></button>
+  </nav>
 
   <main>
     <section class="view active" id="build" aria-labelledby="build-title">
-      <div class="flight-head">
-        <div>
-          <h1 id="build-title" data-i18n="buildTitle">Chuẩn bị chuyến build</h1>
-          <p data-i18n="buildIntro">Kiểm tra nguồn ROM, runner và đầu ra trước khi gửi recipe.</p>
-        </div>
-        <div class="route-state" id="route-state">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h4l3-10 3 10h6M5 21h14"/></svg>
-          <span><small data-i18n="routePolicy">ROUTING</small><strong id="route-label">GitHub Auto</strong></span>
-        </div>
-      </div>
-
+      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Lập hồ sơ build.</h1><p data-i18n="buildIntro">Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.</p></div><div class="route-stamp"><span data-i18n="routePolicy">RUNNER</span><strong id="route-label">GitHub Auto</strong></div></header>
       <form id="recipe-form">
-        <section class="flight-section source-section">
-          <div class="section-heading">
-            <span class="stage-mark">A</span>
-            <div><h2 data-i18n="sourceTitle">ROM nguồn</h2><p data-i18n="sourceHint">Dùng URL trực tiếp, trang build Daniel Springer hoặc đường dẫn Drive riêng tư.</p></div>
-          </div>
-          <div class="segmented" role="group" aria-label="Task">
-            <label><input type="radio" name="task" value="build" checked><span data-i18n="taskBuild">Build đầy đủ</span></label>
-            <label><input type="radio" name="task" value="source_mirror"><span data-i18n="taskMirror">Chỉ lưu ROM gốc</span></label>
-            <label><input type="radio" name="task" value="artifact_publish"><span data-i18n="taskPublish">Phát hành artifact</span></label>
-          </div>
-          <label class="field field-wide">
-            <span data-i18n="sourceUrl">URL hoặc Drive reference</span>
-            <textarea id="source-uri" rows="3" required placeholder="https://roms.danielspringer.at/index.php?view=ota&build=…"></textarea>
-            <small id="source-note" data-i18n="sourceSecure">URL ký tạm thời được che khỏi bản tóm tắt và log.</small>
-          </label>
-          <div class="field-grid">
-            <label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label>
-            <label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="8680370027"></label>
-          </div>
-          <label class="field field-wide"><span data-i18n="checksum">SHA-256 tùy chọn</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label>
+        <section class="dossier-section source-section">
+          <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2><p data-i18n="sourceHint">URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.</p></div></header>
+          <div class="task-tabs" role="group" aria-label="Task"><label><input type="radio" name="task" value="build" checked><span data-i18n="taskBuild">Build đầy đủ</span></label><label><input type="radio" name="task" value="source_mirror"><span data-i18n="taskMirror">Lưu ROM gốc</span></label><label><input type="radio" name="task" value="artifact_publish"><span data-i18n="taskPublish">Phát hành file</span></label></div>
+          <label class="field field-wide"><span data-i18n="sourceUrl">URL hoặc Drive reference</span><textarea id="source-uri" rows="3" required placeholder="https://roms.danielspringer.at/index.php?view=ota&build=…"></textarea><small data-i18n="sourceSecure">URL ký tạm thời được che khỏi tóm tắt và log.</small></label>
+          <div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="8680370027"></label></div>
+          <label class="field field-wide"><span data-i18n="checksum">SHA-256 — không bắt buộc</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label>
         </section>
 
-        <section class="flight-section build-options" id="build-options">
-          <div class="section-heading">
-            <span class="stage-mark">B</span>
-            <div><h2 data-i18n="recipeTitle">Cấu hình bản ROM</h2><p data-i18n="recipeHint">Preset đặt mặc định; bạn vẫn có thể chọn chính xác từng MOD và bước pipeline.</p></div>
-          </div>
-          <div class="field-grid three">
-            <label class="field"><span data-i18n="runner">Runner</span><select id="execution"><option value="github-auto">GitHub Auto</option><option value="github-hosted">GitHub Hosted</option><option value="self-hosted-linux">Self-hosted Linux</option></select></label>
-            <label class="field"><span data-i18n="edition">Phiên bản</span><select id="preset"><option value="lite">Lite</option><option value="plus" selected>Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label>
-            <label class="field"><span data-i18n="modPack">Bộ MOD</span><select id="mod-version"></select></label>
-          </div>
-
-          <div class="mod-toolbar">
-            <div><strong data-i18n="mods">MOD áp dụng</strong><small id="mod-count">0 selected</small></div>
-            <div><button class="quiet" id="select-defaults" type="button" data-i18n="defaults">Mặc định</button><button class="quiet" id="select-all" type="button" data-i18n="selectAll">Chọn tất cả</button><button class="quiet" id="clear-mods" type="button" data-i18n="clear">Bỏ chọn</button></div>
-          </div>
+        <section class="dossier-section build-options" id="build-options">
+          <header class="section-heading"><span>02</span><div><h2 data-i18n="recipeTitle">Cấu hình bản ROM</h2><p data-i18n="recipeHint">Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.</p></div></header>
+          <div class="field-grid three"><label class="field"><span data-i18n="runner">Nơi chạy</span><select id="execution"><option value="github-auto">GitHub Auto</option><option value="github-hosted">GitHub Hosted</option><option value="self-hosted-linux">Self-hosted Linux</option></select></label><label class="field"><span data-i18n="edition">Phiên bản</span><select id="preset"><option value="lite">Lite</option><option value="plus" selected>Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><label class="field"><span data-i18n="modPack">Nền MOD</span><select id="mod-version"></select></label></div>
+          <div class="selection-bar"><div><strong data-i18n="mods">MOD áp dụng</strong><small id="mod-count">0 đã chọn</small></div><div><button id="select-defaults" type="button" data-i18n="defaults">Mặc định</button><button id="select-all" type="button" data-i18n="selectAll">Tất cả</button><button id="clear-mods" type="button" data-i18n="clear">Bỏ chọn</button></div></div>
+          <label class="field mod-search"><span data-i18n="searchMods">Lọc MOD để chọn</span><input id="mod-search" type="search" placeholder="Gapps / Camera / WK…"></label>
           <div class="mod-list" id="mod-list" aria-live="polite"></div>
-
-          <details class="advanced">
-            <summary><span data-i18n="advanced">Thiết đặt pipeline nâng cao</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary>
-            <div class="advanced-body">
-              <div class="steps" id="steps"></div>
-              <label class="field field-wide"><span data-i18n="debloatPaths">Đường dẫn cần xóa (mỗi dòng một mục)</span><textarea id="debloat-paths" rows="4" placeholder="my_stock/app/Browser"></textarea></label>
-              <label class="field field-wide"><span data-i18n="workspaceEstimate">Ước lượng workspace (byte, để trống = tự động)</span><input id="workspace-estimate" inputmode="numeric"></label>
-            </div>
-          </details>
+          <details class="advanced"><summary><span data-i18n="advanced">Pipeline nâng cao</span><b id="pipeline-count">0/0</b></summary><div class="advanced-body"><div class="steps" id="steps"></div><label class="field field-wide"><span data-i18n="debloatPaths">Đường dẫn cần xóa — mỗi dòng một mục</span><textarea id="debloat-paths" rows="4" placeholder="my_stock/app/Browser"></textarea></label><label class="field field-wide"><span data-i18n="workspaceEstimate">Ước lượng workspace byte — để trống để tự tính</span><input id="workspace-estimate" inputmode="numeric"></label></div></details>
         </section>
 
-        <section class="flight-section launch-section">
-          <div class="section-heading">
-            <span class="stage-mark">C</span>
-            <div><h2 data-i18n="deliveryTitle">Đóng gói và phát hành</h2><p data-i18n="deliveryHint">Artifact thành công được kiểm checksum trước khi phát hành.</p></div>
-          </div>
-          <div class="switches">
-            <label><span><strong data-i18n="packageZip">Tạo ZIP flashable</strong><small data-i18n="packageHint">Đóng gói ROM sau khi repack</small></span><input id="package" type="checkbox" checked><i></i></label>
-            <label><span><strong data-i18n="publish">Upload lên Drive</strong><small data-i18n="publishHint">Tạo link tải artifact khi thành công</small></span><input id="publish" type="checkbox" checked><i></i></label>
-            <label><span><strong data-i18n="notify">Thông báo Telegram</strong><small data-i18n="notifyHint">Nhận trạng thái và link ngay trong chat</small></span><input id="notify" type="checkbox" checked><i></i></label>
-          </div>
+        <section class="dossier-section delivery-section">
+          <header class="section-heading"><span>03</span><div><h2 data-i18n="deliveryTitle">Đóng gói & phát hành</h2><p data-i18n="deliveryHint">Kiểm SHA-256 trước khi công bố artifact.</p></div></header>
+          <div class="switches"><label><input id="package" type="checkbox" checked><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><i></i></label><label><input id="publish" type="checkbox" checked><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><i></i></label><label><input id="notify" type="checkbox" checked><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><i></i></label></div>
         </section>
-
-        <aside class="launch-bar">
-          <div><small data-i18n="readyLabel">RECIPE READY</small><strong id="launch-summary">PKG110 · Plus · GitHub Auto</strong><span id="launch-warning" data-i18n="fallbackWarning">Nếu self-hosted offline, Auto sẽ thử runner GitHub Hosted đã mở rộng ổ đĩa.</span></div>
-          <button class="primary" type="submit"><span data-i18n="launch">Tạo job build</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
-        </aside>
+        <aside class="dispatch-docket"><div><small data-i18n="readyLabel">HỒ SƠ SẴN SÀNG</small><strong id="launch-summary">PKG110 / PLUS / GITHUB AUTO</strong><span id="launch-warning" data-i18n="fallbackWarning">Auto kiểm tra runner trước khi gửi; không để job treo khi runner offline.</span></div><button class="primary" type="submit"><span data-i18n="launch">Tạo job build</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></aside>
       </form>
     </section>
 
     <section class="view" id="jobs" aria-labelledby="jobs-title">
-      <header class="subpage-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Điều khiển job</h1><p data-i18n="jobsIntro">Các yêu cầu được xác thực bằng tài khoản Telegram đang mở Mini App.</p></div><button class="primary compact" data-action="jobs" data-i18n="myJobs">Mở danh sách trong chat</button></header>
-      <section class="job-control">
-        <label class="field"><span>Job ID</span><input id="job-id" placeholder="abc123…"></label>
-        <div class="action-matrix">
-          <button data-job-action="job"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2-5M4 4v5h5"/></svg><span data-i18n="refreshJob">Làm mới</span></button>
-          <button data-job-action="events"><svg viewBox="0 0 24 24"><path d="M6 5h12M6 12h12M6 19h8"/></svg><span data-i18n="events">Nhật ký</span></button>
-          <button data-job-action="artifact"><svg viewBox="0 0 24 24"><path d="M5 7h14v12H5zM8 4h8l2 3M9 12h6"/></svg><span data-i18n="artifact">Artifact</span></button>
-          <button data-job-action="resume"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 0 2-5M5 4v5h5"/></svg><span data-i18n="resume">Tiếp tục</span></button>
-          <button class="danger" data-job-action="cancel"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg><span data-i18n="cancel">Hủy job</span></button>
-        </div>
-      </section>
+      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Điều khiển job.</h1><p data-i18n="jobsIntro">Xem trạng thái, log, artifact, hủy hoặc tiếp tục từ checkpoint.</p></div><button class="primary compact" data-action="jobs" data-i18n="myJobs">Danh sách của tôi</button></header>
+      <section class="operator-sheet"><label class="field"><span>JOB ID</span><input id="job-id" placeholder="abc123…"><small data-i18n="jobActionHint">Nhập ID để mở tác vụ; bot sẽ kiểm tra quyền và trạng thái.</small></label><div class="action-ledger"><button data-job-action="job"><b>01</b><span data-i18n="refreshJob">Làm mới trạng thái</span></button><button data-job-action="events"><b>02</b><span data-i18n="events">Xem nhật ký</span></button><div class="state-actions" id="state-actions" hidden><button data-job-action="artifact"><b>03</b><span data-i18n="artifact">Mở artifact</span></button><button data-job-action="resume"><b>04</b><span data-i18n="resume">Tiếp tục checkpoint</span></button><button class="danger" data-job-action="cancel"><b>×</b><span data-i18n="cancel">Hủy job</span></button></div></div></section>
+      <aside class="process-key"><h2 data-i18n="stageKey">Các trạng thái chuẩn</h2><ol><li data-i18n="stageQueued">Chờ</li><li data-i18n="stagePreflight">Kiểm tra</li><li data-i18n="stageDownloading">Tải ROM</li><li data-i18n="stageRunning">Đang build</li><li data-i18n="stageUploading">Đang upload</li><li data-i18n="stageTerminal">Thành công / Lỗi</li></ol></aside>
     </section>
 
     <section class="view" id="cloud" aria-labelledby="cloud-title">
-      <header class="subpage-head"><div><h1 id="cloud-title" data-i18n="cloudTitle">Cloud library</h1><p data-i18n="cloudIntro">ROM nguồn, checkpoint và artifact vẫn riêng tư; chỉ artifact được phát hành mới có link chia sẻ.</p></div></header>
-      <div class="library-actions">
-        <button data-action="cloud"><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11-1A4.5 4.5 0 0 0 7 18Z"/></svg><span><strong data-i18n="browseCloud">Duyệt thư viện</strong><small data-i18n="browseCloudHint">Mở danh sách nguồn và artifact trong chat</small></span></button>
-        <button data-nav="build"><svg viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg><span><strong data-i18n="mirrorRom">Lưu ROM gốc</strong><small data-i18n="mirrorHint">Chọn “Chỉ lưu ROM gốc” trong màn hình Build</small></span></button>
-      </div>
+      <header class="page-head"><div><h1 id="cloud-title" data-i18n="cloudTitle">Thư viện ROM.</h1><p data-i18n="cloudIntro">Nguồn, checkpoint và recipe riêng tư. Chỉ artifact đã phát hành có link chia sẻ.</p></div></header>
+      <div class="library-index"><button data-action="cloud"><b>SRC</b><span><strong data-i18n="browseCloud">Duyệt nguồn & artifact</strong><small data-i18n="browseCloudHint">Mở thư viện đã xác thực trong chat</small></span></button><button data-nav="build" data-task="source_mirror"><b>GET</b><span><strong data-i18n="mirrorRom">Tải và lưu ROM gốc</strong><small data-i18n="mirrorHint">Điền URL rồi chỉ chạy tác vụ mirror</small></span></button><button data-nav="jobs"><b>CHK</b><span><strong data-i18n="checkpoints">Checkpoint & lịch sử</strong><small data-i18n="checkpointsHint">Dùng Job ID để xem và resume</small></span></button></div>
+      <div class="retention-note"><span>PRIVATE</span><p data-i18n="retention">Source và artifact giữ đến khi admin xóa · checkpoint 7 ngày · log 30 ngày.</p></div>
+    </section>
+
+    <section class="view" id="catalog" aria-labelledby="catalog-title">
+      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật.</h1><p data-i18n="catalogIntro">Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.</p></div><div class="catalog-total" id="catalog-total">—</div></header>
+      <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
+      <section class="catalog-sheet"><header><h2 data-i18n="devicesTitle">Thiết bị</h2><span id="device-count">0</span></header><div class="device-table" id="device-list"></div></section>
+      <section class="catalog-sheet"><header><h2 data-i18n="modsTitle">MOD trong pack</h2><span id="catalog-mod-count">0</span></header><div class="catalog-mods" id="catalog-mod-list"></div></section>
     </section>
 
     <section class="view" id="system" aria-labelledby="system-title">
-      <header class="subpage-head"><div><h1 id="system-title" data-i18n="systemTitle">Tình trạng hệ thống</h1><p data-i18n="systemIntro">Kiểm tra bot, Drive, runner và content-pack trước khi tạo job lớn.</p></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
-      <div class="system-map">
-        <div><i class="ok"></i><span><strong>Telegram</strong><small data-i18n="authenticated">Đã xác thực phiên hiện tại</small></span></div>
-        <div><i></i><span><strong>GitHub Actions</strong><small data-i18n="runnerChecked">Runner được kiểm tra khi submit</small></span></div>
-        <div><i></i><span><strong>Google Drive</strong><small data-i18n="driveChecked">Quyền truy cập được kiểm tra trước upload</small></span></div>
-        <div><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div>
-      </div>
+      <header class="page-head"><div><h1 id="system-title" data-i18n="systemTitle">Hệ thống.</h1><p data-i18n="systemIntro">Kiểm tra kết nối, content-pack và cache trước một job lớn.</p></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
+      <div class="system-ledger"><div><b>01</b><i id="telegram-health"></i><span><strong>Telegram</strong><small id="telegram-auth-state" data-i18n="authenticatedPreview">Chưa xác thực — mở từ nút Mini App trong bot</small></span></div><div><b>02</b><i></i><span><strong>GitHub Actions</strong><small data-i18n="runnerChecked">Kiểm runner ngay khi submit</small></span></div><div><b>03</b><i></i><span><strong>Google Drive</strong><small data-i18n="driveChecked">Kiểm quyền trước upload</small></span></div><div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div></div>
+      <section class="system-actions"><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div></section>
+      <section class="local-settings"><h2 data-i18n="miniSettings">Thiết đặt Mini App</h2><label><span data-i18n="defaultPreset">Preset mặc định</span><select id="default-preset"><option value="lite">Lite</option><option value="plus">Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><p data-i18n="secretBoundary">Token GitHub, Telegram và rclone không hiển thị ở đây. Quản lý chúng trong Windows app hoặc GitHub Secrets.</p></section>
     </section>
   </main>
 
-  <nav class="bottom-nav" aria-label="Mini App navigation">
-    <button class="active" data-nav="build"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span data-i18n="navBuild">Build</span></button>
-    <button data-nav="jobs"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 10h8M8 14h5"/></svg><span data-i18n="navJobs">Jobs</span></button>
-    <button data-nav="cloud"><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11-1A4.5 4.5 0 0 0 7 18Z"/></svg><span data-i18n="navCloud">Cloud</span></button>
-    <button data-nav="system"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg><span data-i18n="navSystem">System</span></button>
-  </nav>
-
+  <button class="mobile-dispatch" type="submit" form="recipe-form"><span><small id="mobile-launch-summary">PKG110 / PLUS / GITHUB AUTO</small><strong data-i18n="launch">Tạo job build</strong></span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+  <nav class="bottom-nav" aria-label="Mobile navigation"><button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="cloud"><b>03</b><span data-i18n="navCloud">Thư viện</span></button><button data-nav="catalog"><b>04</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>05</b><span data-i18n="navSystem">Hệ thống</span></button></nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./app.js" type="module"></script>
 </body>

@@ -49,9 +49,74 @@ const translations = {
   }
 };
 
+Object.assign(translations.vi, {
+  navBuild: "Studio", navCloud: "Thư viện", navCatalog: "Catalog", buildTitle: "Lập hồ sơ build.",
+  buildIntro: "Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.", routePolicy: "RUNNER",
+  sourceHint: "URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.", taskMirror: "Lưu ROM gốc", taskPublish: "Phát hành file",
+  recipeHint: "Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.", runner: "Nơi chạy", modPack: "Nền MOD",
+  deliveryTitle: "Đóng gói & phát hành", deliveryHint: "Kiểm SHA-256 trước khi công bố artifact.",
+  packageZip: "ZIP flashable", packageHint: "Đóng gói sau repack", publish: "Upload Drive", publishHint: "Tạo link tải khi thành công",
+  notify: "Báo qua Telegram", notifyHint: "Trạng thái và link trong chat", readyLabel: "HỒ SƠ SẴN SÀNG",
+  fallbackWarning: "Auto kiểm tra runner trước khi gửi; không để job treo khi runner offline.",
+  jobsTitle: "Điều khiển job.", jobsIntro: "Xem trạng thái, log, artifact, hủy hoặc tiếp tục từ checkpoint.", myJobs: "Danh sách của tôi",
+  refreshJob: "Làm mới trạng thái", events: "Xem nhật ký", artifact: "Mở artifact", resume: "Tiếp tục checkpoint",
+  stageKey: "Các trạng thái chuẩn", cloudTitle: "Thư viện ROM.", checkpoints: "Checkpoint & lịch sử", checkpointsHint: "Dùng Job ID để xem và resume",
+  retention: "Source và artifact giữ đến khi admin xóa · checkpoint 7 ngày · log 30 ngày.",
+  catalogTitle: "Catalog kỹ thuật.", catalogIntro: "Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.",
+  searchCatalog: "Tìm thiết bị hoặc MOD", catalogPack: "Content-pack", devicesTitle: "Thiết bị", modsTitle: "MOD trong pack",
+  systemTitle: "Hệ thống.", systemIntro: "Kiểm tra kết nối, content-pack và cache trước một job lớn.", maintenance: "Bảo trì & thiết đặt",
+  inspectCache: "Xem stage cache", inspectCacheHint: "Dung lượng và lượt tái sử dụng", clearCache: "Xóa cache", adminOnly: "Chỉ admin",
+  miniSettings: "Thiết đặt Mini App", defaultPreset: "Preset mặc định",
+  secretBoundary: "Token GitHub, Telegram và rclone không hiển thị ở đây. Quản lý chúng trong Windows app hoặc GitHub Secrets.",
+  catalogSummary: "{devices} thiết bị / {mods} MOD", noCatalogMatches: "Không có mục phù hợp. Hãy đổi từ khóa tìm kiếm.",
+  searchMods: "Lọc MOD để chọn", jobActionHint: "Nhập ID để mở tác vụ; bot sẽ kiểm tra quyền và trạng thái.",
+  stageQueued: "Chờ", stagePreflight: "Kiểm tra", stageDownloading: "Tải ROM", stageRunning: "Đang build", stageUploading: "Đang upload", stageTerminal: "Thành công / Lỗi",
+  previewMode: "CHẾ ĐỘ XEM TRƯỚC", authenticatedPreview: "Chưa xác thực — mở từ nút Mini App trong bot"
+});
+
+Object.assign(translations.en, {
+  navBuild: "Studio", navCloud: "Library", navCatalog: "Catalog", buildTitle: "Compose a build docket.",
+  buildIntro: "One recipe and one pipeline, with equivalent results on Windows and GitHub Actions.", routePolicy: "RUNNER",
+  sourceHint: "Use a direct URL, Daniel Springer OTA page, or private Drive reference.", taskMirror: "Mirror source", taskPublish: "Publish file",
+  recipeHint: "A preset is the starting point; every MOD and stage remains editable.", runner: "Run on", modPack: "MOD base",
+  deliveryTitle: "Package & publish", deliveryHint: "Verify SHA-256 before publishing an artifact.",
+  packageZip: "Flashable ZIP", packageHint: "Package after repacking", publish: "Upload to Drive", publishHint: "Create a link after success",
+  notify: "Telegram report", notifyHint: "Status and link in chat", readyLabel: "DOCKET READY",
+  fallbackWarning: "Auto checks runner availability before dispatch so a job never waits on an offline runner.",
+  jobsTitle: "Job control.", jobsIntro: "Inspect status, logs and artifacts, cancel work, or resume a checkpoint.", myJobs: "My job list",
+  refreshJob: "Refresh status", events: "View event log", artifact: "Open artifact", resume: "Resume checkpoint",
+  stageKey: "Canonical states", cloudTitle: "ROM library.", checkpoints: "Checkpoints & history", checkpointsHint: "Use a Job ID to inspect and resume",
+  retention: "Sources and artifacts remain until admin deletion · checkpoints 7 days · logs 30 days.",
+  catalogTitle: "Technical catalog.", catalogIntro: "The same device, content-pack and MOD catalog used by Windows and Actions.",
+  searchCatalog: "Find a device or MOD", catalogPack: "Content pack", devicesTitle: "Devices", modsTitle: "MODs in pack",
+  systemTitle: "System.", systemIntro: "Check connections, content packs and cache before a large job.", maintenance: "Maintenance & settings",
+  inspectCache: "Inspect stage cache", inspectCacheHint: "Usage and reuse count", clearCache: "Clear cache", adminOnly: "Admin only",
+  miniSettings: "Mini App settings", defaultPreset: "Default preset",
+  secretBoundary: "GitHub, Telegram and rclone credentials are never shown here. Manage them in the Windows app or GitHub Secrets.",
+  catalogSummary: "{devices} devices / {mods} MODs", noCatalogMatches: "No matching entries. Change the search term.",
+  searchMods: "Filter selectable MODs", jobActionHint: "Enter an ID to reveal actions; the bot verifies ownership and state.",
+  stageQueued: "Queued", stagePreflight: "Preflight", stageDownloading: "Downloading", stageRunning: "Running", stageUploading: "Uploading", stageTerminal: "Succeeded / Failed",
+  previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button"
+});
+
+const pipelineLabels = {
+  vi: {
+    inspect_rom: "Kiểm tra ROM", extract_payload: "Tách payload", unpack_partitions: "Giải nén partition",
+    debloat: "Gỡ ứng dụng thừa", apply_mod: "Áp dụng MOD", sync_configs: "Đồng bộ fs_config và SELinux",
+    repack_partitions: "Đóng gói partition", repack_super: "Tạo super.img", patch_vbmeta: "Vá vbmeta",
+    patch_vendor_boot: "Vá vendor_boot", package_zip: "Đóng gói ZIP", notify_telegram: "Báo Telegram"
+  },
+  en: {}
+};
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
-const state = { language: localStorage.getItem("wukong-language") || "vi", catalog: null, toastTimer: null };
+const state = {
+  language: localStorage.getItem("wukong-language") || "vi",
+  catalog: null,
+  toastTimer: null,
+  defaultPreset: localStorage.getItem("wukong-default-preset") || "plus"
+};
 
 function t(key, values = {}) {
   let value = translations[state.language][key] || translations.vi[key] || key;
@@ -64,7 +129,10 @@ function applyLanguage() {
   $$('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
   $("#language").textContent = state.language === "vi" ? "VI / EN" : "EN / VI";
   renderMods(false);
+  renderPipelineSteps(false);
+  renderCatalog();
   updateSummary();
+  updateTelegramState();
 }
 
 function toast(message, error = false) {
@@ -85,11 +153,12 @@ function send(action, extra = {}) {
   toast(t("sent"));
 }
 
-function navigate(name) {
+function navigate(name, smooth = true) {
+  if (!document.getElementById(name)) name = "build";
   $$(".view").forEach((node) => node.classList.toggle("active", node.id === name));
   $$(".bottom-nav [data-nav]").forEach((node) => node.classList.toggle("active", node.dataset.nav === name));
   history.replaceState(null, "", `#${name}`);
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
 }
 
 function options(select, entries, preferred) {
@@ -128,14 +197,70 @@ function renderMods(reset = true) {
   updateSummary();
 }
 
-function renderPipelineSteps() {
+function renderPipelineSteps(reset = true) {
   const container = $("#steps");
+  const current = new Set(reset ? [] : $$("#steps input:checked").map((input) => input.value));
   container.replaceChildren(...(state.catalog?.pipelineSteps || []).map((step) => {
     const label = document.createElement("label");
-    const input = document.createElement("input"); input.type = "checkbox"; input.value = step.id; input.checked = Boolean(step.default);
-    const span = document.createElement("span"); span.textContent = step.label;
+    const input = document.createElement("input"); input.type = "checkbox"; input.value = step.id; input.checked = reset ? Boolean(step.default) : current.has(step.id);
+    const span = document.createElement("span"); span.textContent = pipelineLabels[state.language][step.id] || step.label;
     label.append(input, span); return label;
   }));
+  updatePipelineCount();
+}
+
+function filterMods() {
+  const query = ($("#mod-search")?.value || "").trim().toLocaleLowerCase();
+  $$("#mod-list label").forEach((label) => {
+    label.hidden = Boolean(query) && !label.textContent.toLocaleLowerCase().includes(query);
+  });
+}
+
+function updateTelegramState() {
+  const authenticated = Boolean(TelegramApp?.initData);
+  const connection = $("#telegram-state");
+  const connectionText = connection?.querySelector("span");
+  if (connectionText) {
+    connectionText.dataset.i18n = authenticated ? "connected" : "previewMode";
+    connectionText.textContent = t(authenticated ? "connected" : "previewMode");
+  }
+  connection?.classList.toggle("preview", !authenticated);
+  $("#telegram-health")?.classList.toggle("ok", authenticated);
+  const authText = $("#telegram-auth-state");
+  if (authText) {
+    authText.dataset.i18n = authenticated ? "authenticated" : "authenticatedPreview";
+    authText.textContent = t(authenticated ? "authenticated" : "authenticatedPreview");
+  }
+}
+
+function updatePipelineCount() {
+  const all = $$("#steps input");
+  const selected = all.filter((input) => input.checked).length;
+  if ($("#pipeline-count")) $("#pipeline-count").textContent = `${selected}/${all.length}`;
+}
+
+function renderCatalog() {
+  if (!state.catalog || !$("#device-list")) return;
+  const query = ($("#catalog-search")?.value || "").trim().toLocaleLowerCase();
+  const version = $("#catalog-version")?.value || state.catalog.modVersions[0];
+  const devices = state.catalog.devices.filter((item) => `${item.product} ${item.name}`.toLocaleLowerCase().includes(query));
+  const mods = (state.catalog.modsByVersion[version] || []).filter((name) => name.toLocaleLowerCase().includes(query));
+  $("#device-list").replaceChildren(...devices.map((item) => {
+    const row = document.createElement("div"); row.className = "device-row";
+    const code = document.createElement("b"); code.textContent = item.product;
+    const name = document.createElement("span"); name.textContent = item.name;
+    row.append(code, name); return row;
+  }));
+  $("#catalog-mod-list").replaceChildren(...mods.map((name) => {
+    const item = document.createElement("span"); item.textContent = name; return item;
+  }));
+  if (!devices.length && !mods.length) {
+    const empty = document.createElement("span"); empty.textContent = t("noCatalogMatches"); $("#catalog-mod-list").append(empty);
+  }
+  $("#device-count").textContent = String(devices.length);
+  $("#catalog-mod-count").textContent = String(mods.length);
+  const totalMods = Object.values(state.catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
+  $("#catalog-total").textContent = t("catalogSummary", { devices: state.catalog.devices.length, mods: totalMods });
 }
 
 function setMods(mode) {
@@ -155,7 +280,9 @@ function updateSummary() {
   const runner = runnerLabel($("#execution")?.value || "github-auto");
   $("#route-label").textContent = runner;
   const simpleTask = task === "source_mirror" ? t("taskMirrorShort") : t("taskPublishShort");
-  $("#launch-summary").textContent = task !== "build" ? `${device} · ${simpleTask} · ${runner}` : `${device} · ${preset === "custom" ? t("custom") : preset[0].toUpperCase() + preset.slice(1)} · ${runner}`;
+  const summary = task !== "build" ? `${device} / ${simpleTask} / ${runner}` : `${device} / ${preset === "custom" ? t("custom") : preset.toUpperCase()} / ${runner}`;
+  $("#launch-summary").textContent = summary;
+  $("#mobile-launch-summary").textContent = summary;
   $("#mod-count").textContent = `${selectedMods().length} ${t("selected")}`;
   $("#build-options").hidden = task !== "build";
   $("#package").disabled = task !== "build";
@@ -212,11 +339,13 @@ async function loadCatalog() {
     state.catalog = catalog;
     options($("#device"), catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` })), "PKG110");
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
+    options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     const count = Object.values(catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
     $("#catalog-status").textContent = t("catalogReady", { mods: count, versions: catalog.modVersions.length });
     $("#catalog-status").closest("div").querySelector("i").classList.add("ok");
     renderPipelineSteps();
     renderMods();
+    renderCatalog();
   } catch (error) {
     $("#catalog-status").textContent = t("catalogFailed");
     toast(t("catalogFailed"), true);
@@ -225,7 +354,13 @@ async function loadCatalog() {
 
 function bindEvents() {
   $("#language").addEventListener("click", () => { state.language = state.language === "vi" ? "en" : "vi"; localStorage.setItem("wukong-language", state.language); applyLanguage(); });
-  $$('[data-nav]').forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
+  $$('[data-nav]').forEach((button) => button.addEventListener("click", () => {
+    if (button.dataset.task) {
+      const task = $(`input[name="task"][value="${button.dataset.task}"]`);
+      if (task) { task.checked = true; updateSummary(); }
+    }
+    navigate(button.dataset.nav);
+  }));
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => { try { send(button.dataset.action); } catch (error) { toast(error.message, true); } }));
   $$('[data-job-action]').forEach((button) => button.addEventListener("click", () => {
     try { const jobId = $("#job-id").value.trim(); if (!jobId) throw new Error(t("jobRequired")); send(button.dataset.jobAction, { jobId }); } catch (error) { toast(error.message, true); }
@@ -239,6 +374,21 @@ function bindEvents() {
   $("#execution").addEventListener("change", updateSummary);
   $("#device").addEventListener("change", updateSummary);
   $("#mod-list").addEventListener("change", updateSummary);
+  $("#mod-search").addEventListener("input", filterMods);
+  $("#steps").addEventListener("change", updatePipelineCount);
+  $("#catalog-search").addEventListener("input", renderCatalog);
+  $("#catalog-version").addEventListener("change", renderCatalog);
+  $("#default-preset").value = state.defaultPreset;
+  $("#preset").value = state.defaultPreset;
+  $("#default-preset").addEventListener("change", (event) => {
+    state.defaultPreset = event.target.value;
+    localStorage.setItem("wukong-default-preset", state.defaultPreset);
+    $("#preset").value = state.defaultPreset;
+    renderMods();
+  });
+  $("#job-id").addEventListener("input", (event) => {
+    $("#state-actions").hidden = !event.target.value.trim();
+  });
   $$('input[name="task"]').forEach((input) => input.addEventListener("change", updateSummary));
 }
 
@@ -253,5 +403,5 @@ if (TelegramApp) {
 
 bindEvents();
 applyLanguage();
-navigate(location.hash.slice(1) || "build");
+navigate(location.hash.slice(1) || "build", false);
 loadCatalog();

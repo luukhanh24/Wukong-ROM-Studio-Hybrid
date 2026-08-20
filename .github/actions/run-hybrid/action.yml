@@ -1,4 +1,4 @@
-name: Run Wukong hybrid recipe
+name: Chạy Wukong hybrid recipe
 description: Materialize one private recipe and run the shared Wukong orchestrator
 inputs:
   recipe_ref:
@@ -14,14 +14,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install system dependencies
+    - name: "A · Công cụ hệ thống / System tools"
       shell: bash
       run: |
         set -euo pipefail
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends cpio p7zip-full brotli zstd rclone e2fsprogs lz4 zip unzip
         python3 -m pip install --user -r requirements.txt
-    - name: Restore rclone configuration
+    - name: "B · Quyền truy cập Drive / Private Drive access"
       shell: bash
       env:
         RCLONE_CONFIG_B64: ${{ inputs.rclone_config_b64 }}
@@ -30,7 +30,7 @@ runs:
         mkdir -p .wkstudio/secrets
         umask 077
         printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > .wkstudio/secrets/rclone.conf
-    - name: Fetch recipe and content-packs
+    - name: "C · Recipe & content-pack / Fetch private build content"
       shell: bash
       env:
         RECIPE_REF: ${{ inputs.recipe_ref }}
@@ -56,13 +56,13 @@ runs:
         if [ '${{ inputs.self_hosted }}' != true ]; then
           python3 -m tools.runner_preflight --recipe .wkstudio/recipe.json --reserve-gib 4 --min-disk-gib 4 --min-memory-gib 0 --min-cpus 0
         fi
-    - name: Bootstrap and smoke-test Linux toolchain
+    - name: "D · Toolchain Linux / Bootstrap & smoke test"
       shell: bash
       run: |
         set -euo pipefail
         python3 -m tools.bootstrap_linux
         python3 -m tools.smoke_linux
-    - name: Execute shared recipe
+    - name: "E · Pipeline 05–19 / Execute staged ROM build"
       id: execute
       shell: bash
       env:
@@ -82,7 +82,7 @@ runs:
         result=$?
         set -e
         echo "result=$result" >> "$GITHUB_OUTPUT"
-    - name: Sync terminal job manifest to Google Drive
+    - name: "F · Đồng bộ manifest & log / Sync result to Drive"
       if: always()
       shell: bash
       env:
@@ -93,7 +93,7 @@ runs:
         python3 -m tools.sync_job "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
         # Pre-execute failures have no local job store yet; do not fail the workflow twice.
         exit 0
-    - name: Fail workflow when recipe failed
+    - name: "G · Xác nhận kết quả / Enforce terminal status"
       if: always() && steps.execute.outputs.result != '0'
       shell: bash
       run: exit 1
