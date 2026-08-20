@@ -159,7 +159,20 @@ class HybridRuntime:
                 recipe_ref=recipe_ref,
                 job_id=job_id,
             )
-            run_id = github.find_run("wukong-build.yml", job_id)
+            # The dispatch request is the point of no return: once GitHub has
+            # accepted it, a temporary failure while looking the run back up
+            # must not mark the local job as failed.  The workflow may already
+            # be building (and will keep publishing its state through Drive),
+            # so retain a truthful queued state and let refresh/cancel retry.
+            try:
+                run_id = github.find_run("wukong-build.yml", job_id)
+            except Exception as exc:
+                run_id = None
+                self.store.append_event(
+                    job_id,
+                    "warning",
+                    warning=f"Workflow was dispatched but its run ID is not available yet: {exc}",
+                )
             self.store.update(
                 job_id,
                 status=JobStatus.QUEUED,

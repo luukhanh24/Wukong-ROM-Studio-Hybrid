@@ -549,6 +549,62 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertEqual("token-from-keyring", token)
         self.assertEqual(["gh", "auth", "token"], run.call_args.args[0])
 
+    def test_dispatched_job_stays_queued_when_run_lookup_temporarily_fails(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        store = InMemoryJobStore()
+        orchestrator = HybridOrchestrator(
+            store=store,
+            workspace_root=root / "jobs",
+            inventory_provider=lambda: RunnerInventory(False),
+            access_validator=lambda _recipe, _identity: None,
+        )
+        source = "https://downloads.example/rom.zip"
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "PKG110",
+            "source": {"kind": "https", "uri": source},
+            "execution": {"target": "github-auto"},
+            "storage": {"remote": "wukong-gdrive"},
+        })
+        job = orchestrator.submit(recipe, Identity("telegram", "42", "user"))
+        runtime = HybridRuntime(
+            orchestrator=orchestrator,
+            store=store,
+            workspace_root=root / "runtime",
+            data_root=root / "data",
+        )
+        runtime.rclone_config = root / "rclone.conf"
+        runtime.rclone_config.write_text("[wukong-gdrive]\n", encoding="utf-8")
+        storage = Mock()
+        storage.copy_file.return_value = "wukong-gdrive:WukongROM/recipes/job.json"
+        github = Mock()
+        github.find_run.side_effect = RuntimeError("temporary socket exhaustion")
+        cloud_sync = Mock()
+
+        with patch.dict(os.environ, {
+            "WUKONG_GITHUB_TOKEN": "test-token",
+            "WUKONG_GITHUB_REPOSITORY": "owner/repository",
+        }, clear=False), patch("wukong.runtime.RcloneStorageAdapter", return_value=storage), patch(
+            "wukong.runtime.GitHubActionsAdapter", return_value=github
+        ), patch("wukong.runtime.CloudJobSync", return_value=cloud_sync), patch(
+            "wukong.runtime.threading.Thread"
+        ) as thread:
+            runtime._dispatch_github(job.job_id)
+
+        refreshed = store.get(job.job_id)
+        self.assertIsNotNone(refreshed)
+        self.assertEqual(JobStatus.QUEUED, refreshed.status)
+        self.assertEqual("github-actions", refreshed.stage)
+        self.assertIsNone(refreshed.external_run_id)
+        github.dispatch.assert_called_once()
+        thread.return_value.start.assert_called_once()
+        warnings = [event for event in store.events(job.job_id) if event.type == "warning"]
+        self.assertEqual(1, len(warnings))
+        self.assertIn("run ID is not available yet", str(warnings[0].payload.get("warning")))
+
     def test_registers_commands_and_handles_callback_queries(self) -> None:
         controller = Mock()
         controller.command_sets.return_value = {
