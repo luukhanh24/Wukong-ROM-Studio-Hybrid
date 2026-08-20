@@ -38,6 +38,7 @@ from wukong.telegram_bot import (
 )
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
+from wukong.source_probe import probe_http_source
 
 
 def _ids(value: str) -> set[str]:
@@ -139,6 +140,7 @@ def main() -> int:
         cache_provider=stage_cache_status,
         cache_clearer=None,
         cloud_provider=lambda category: runtime.cloud_library(category=category),
+        source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
         runtime=runtime,
         ui_state=TelegramUIStateStore(DATA_ROOT / "telegram-ui-state.json"),
     )

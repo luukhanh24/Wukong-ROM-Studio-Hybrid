@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -76,6 +78,16 @@ class TelegramBotUITests(unittest.TestCase):
                     }
                 ],
             },
+            source_probe_provider=lambda _uri: {
+                "provider": "oplus",
+                "filename": "PKG110.zip",
+                "sizeBytes": 8645349608,
+                "device": "OP5D2BL1",
+                "version": "PKG110_16.0.8.300(CN01)",
+                "securityPatch": "2026-06-01",
+                "otaType": "AB",
+                "deepInspected": True,
+            },
             ui_state=TelegramUIStateStore(self.root / "telegram-ui-state.json"),
         )
 
@@ -144,6 +156,17 @@ class TelegramBotUITests(unittest.TestCase):
         jobs = self.orchestrator.list(Identity("telegram", "42", "user"))
         self.assertEqual(1, len(jobs))
         self.assertEqual(jobs[0].owner.subject, "42")
+
+    def test_mini_app_can_probe_unresolved_oplus_source(self) -> None:
+        response = self.controller.handle_web_app_data(42, json.dumps({
+            "version": 1,
+            "action": "probe_source",
+            "uri": "https://component-ota-cn.allawntech.com/downloadCheck?c=abc",
+        }))
+
+        self.assertIn("Đã nhận diện ROM", response.text)
+        self.assertIn("PKG110_16.0.8.300(CN01)", response.text)
+        self.assertNotIn("Signature", response.text)
 
     def test_mini_app_quick_actions_reuse_chat_capabilities(self) -> None:
         jobs = self.controller.handle_web_app_data(42, '{"version":1,"action":"jobs"}')
@@ -563,6 +586,45 @@ class TelegramDaemonUITests(unittest.TestCase):
             42, '{"version":1,"action":"jobs"}'
         )
         self.assertTrue(http.post.call_args.args[0].endswith("/sendMessage"))
+
+    def test_source_probe_does_not_block_long_polling_loop(self) -> None:
+        started = threading.Event()
+        release = threading.Event()
+        controller = Mock()
+
+        def probe(_user_id, _raw_data):
+            started.set()
+            release.wait(2)
+            return BotResponse("Detected")
+
+        controller.handle_web_app_data.side_effect = probe
+        http = Mock()
+        session = Mock()
+        session.__enter__ = Mock(return_value=session)
+        session.__exit__ = Mock(return_value=False)
+        session.post.return_value.raise_for_status.return_value = None
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+        update = {
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 100},
+                "web_app_data": {"data": '{"version":1,"action":"probe_source","uri":"https://example.com/rom.zip"}'},
+            }
+        }
+
+        before = time.monotonic()
+        with patch("wukong.telegram_bot.requests.Session", return_value=session):
+            daemon.process_update(update)
+            elapsed = time.monotonic() - before
+            self.assertTrue(started.wait(1))
+            self.assertLess(elapsed, 0.2)
+            release.set()
+            for _ in range(50):
+                if session.post.called:
+                    break
+                time.sleep(0.01)
+
+        self.assertTrue(session.post.called)
 
     def test_reply_keyboard_callback_is_sent_as_a_new_message(self) -> None:
         controller = Mock()

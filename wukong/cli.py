@@ -16,6 +16,7 @@ from .orchestrator import FileJobStore, HybridOrchestrator, OrchestrationError
 from .routing import RunnerInventory, RunnerUnavailableError
 from .runtime import HybridRuntime
 from .security import validate_recipe_access
+from .source_probe import probe_http_source
 
 
 def configure_utf8_stdio() -> None:
@@ -61,6 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate")
     validate.add_argument("--recipe", required=True)
+
+    probe = subparsers.add_parser("probe-source")
+    probe.add_argument("uri")
 
     for name in ("submit",):
         command = subparsers.add_parser(name)
@@ -112,6 +116,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             recipe = _recipe(args.recipe)
             decision = orchestrator.validate(recipe)
             _json({"ok": True, "recipeDigest": recipe.digest, "runner": decision.to_dict()})
+        elif args.command == "probe-source":
+            _json(probe_http_source(args.uri).to_dict())
         elif args.command == "submit":
             _json(orchestrator.submit(_recipe(args.recipe), _identity(args), job_id=args.job_id).to_dict())
         elif args.command == "inspect":

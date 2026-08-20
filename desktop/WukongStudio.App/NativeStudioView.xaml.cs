@@ -83,6 +83,8 @@ public sealed partial class NativeStudioView : UserControl
     private string? _selectedDeviceOriginalProductName;
     private string? _layoutSourcePath;
     private DateTimeOffset _lastMetricsRefresh = DateTimeOffset.MinValue;
+    private CancellationTokenSource? _hybridSourceProbeCancellation;
+    private string? _hybridProbedDevice;
 
     public event Action<IReadOnlyList<StudioJob>>? JobsSnapshotChanged;
 
@@ -101,6 +103,7 @@ public sealed partial class NativeStudioView : UserControl
         PipelineStepsExpander.Expanding += (_, _) => ScheduleBuildSectionLayoutUpdate();
         PipelineStepsExpander.Collapsed += (_, _) => ScheduleBuildSectionLayoutUpdate();
         ActualThemeChanged += NativeStudioActualThemeChanged;
+        Unloaded += (_, _) => _hybridSourceProbeCancellation?.Cancel();
     }
 
     public async Task InitializeAsync(
@@ -2911,6 +2914,24 @@ public sealed partial class NativeStudioView : UserControl
             ["Mở workspace"] = "Open workspace",
             ["Mở log"] = "Open logs",
             ["Khởi động lại backend"] = "Restart backend",
+            ["Nguồn ROM thông minh"] = "Smart ROM source",
+            ["Dán URL trực tiếp, link OPlus downloadCheck, Daniel Springer hoặc Drive"] = "Paste a direct URL, OPlus downloadCheck link, Daniel Springer page, or Drive path",
+            ["Phân tích"] = "Analyze",
+            ["Thông tin tự nhận diện"] = "Auto-detected information",
+            ["Nhà cung cấp · thiết bị · phiên bản · loại OTA"] = "Provider · device · version · OTA type",
+            ["Dung lượng tự nhận diện (byte)"] = "Auto-detected size (bytes)",
+            ["Đang nhận diện ROM…"] = "Identifying ROM…",
+            ["Chỉ đọc header và metadata ZIP, không tải toàn bộ ROM."] = "Only ZIP headers and metadata are read; the full ROM is not downloaded.",
+            ["Đã nhận diện ROM"] = "ROM identified",
+            ["Đã nhận diện nguồn"] = "Source identified",
+            ["Không thể phân tích ROM"] = "Unable to analyze ROM",
+            ["Đã nhận diện nguồn Drive"] = "Drive source identified",
+            ["Nguồn local"] = "Local source",
+            ["Nguồn local hoặc Drive"] = "Local or Drive source",
+            ["Phân tích sâu tự động hiện áp dụng cho URL HTTP/HTTPS."] = "Automatic deep analysis currently applies to HTTP/HTTPS URLs.",
+            ["không rõ dung lượng"] = "unknown size",
+            ["Metadata sẽ được kiểm tra khi job preflight tải nguồn riêng tư."] = "Metadata will be checked when preflight fetches the private source.",
+            ["File local sẽ được kiểm tra quyền truy cập và checksum trước khi build."] = "The local file will be checked for access and checksum before building.",
         };
 
     private async void NavigationSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -2975,7 +2996,8 @@ public sealed partial class NativeStudioView : UserControl
             new HybridSourceSpec(
                 SelectedTag(HybridSourceKindCombo),
                 source,
-                string.IsNullOrWhiteSpace(checksum) ? null : checksum),
+                string.IsNullOrWhiteSpace(checksum) ? null : checksum,
+                long.TryParse(HybridSourceSizeBox.Text, out var sourceSize) && sourceSize > 0 ? sourceSize : null),
             new HybridBuildOptions(
                 SelectedTag(HybridPresetCombo),
                 mods,
@@ -2996,6 +3018,118 @@ public sealed partial class NativeStudioView : UserControl
         var authorized = await _api.AuthorizeRomAsync(file.Path);
         HybridSourceKindCombo.SelectedIndex = 0;
         HybridSourceBox.Text = authorized.Path ?? file.Path;
+    }
+
+    private async void HybridSourceTextChanged(object sender, TextChangedEventArgs e)
+    {
+        _hybridSourceProbeCancellation?.Cancel();
+        _hybridSourceProbeCancellation?.Dispose();
+        _hybridSourceProbeCancellation = new CancellationTokenSource();
+        var token = _hybridSourceProbeCancellation.Token;
+        var value = HybridSourceBox.Text.Trim();
+        HybridSourceDetailsBox.Text = string.Empty;
+        HybridSourceSizeBox.Text = string.Empty;
+        if (!string.IsNullOrWhiteSpace(_hybridProbedDevice)
+            && HybridDeviceBox.Text.Trim() == _hybridProbedDevice)
+        {
+            HybridDeviceBox.Text = string.Empty;
+        }
+        _hybridProbedDevice = null;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("http" or "https"))
+        {
+            var isWindowsPath = Regex.IsMatch(value, @"^(?:[A-Za-z]:[\\/]|\\\\)");
+            var isRclone = !isWindowsPath
+                && Regex.IsMatch(value, @"^[A-Za-z0-9][A-Za-z0-9_.-]*:(?!//).+");
+            HybridSourceKindCombo.SelectedIndex = isRclone ? 2 : 0;
+            HybridSourceProbeInfo.IsOpen = !string.IsNullOrWhiteSpace(value);
+            HybridSourceProbeInfo.Severity = InfoBarSeverity.Informational;
+            HybridSourceProbeInfo.Title = Localized(isRclone ? "Đã nhận diện nguồn Drive" : "Nguồn local");
+            HybridSourceProbeInfo.Message = Localized(isRclone
+                ? "Metadata sẽ được kiểm tra khi job preflight tải nguồn riêng tư."
+                : "File local sẽ được kiểm tra quyền truy cập và checksum trước khi build.");
+            return;
+        }
+        HybridSourceKindCombo.SelectedIndex = 1;
+        try
+        {
+            await Task.Delay(650, token);
+            await ProbeHybridSourceAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async void ProbeHybridSourceClick(object sender, RoutedEventArgs e)
+    {
+        _hybridSourceProbeCancellation?.Cancel();
+        _hybridSourceProbeCancellation?.Dispose();
+        _hybridSourceProbeCancellation = new CancellationTokenSource();
+        await ProbeHybridSourceAsync(_hybridSourceProbeCancellation.Token);
+    }
+
+    private async Task ProbeHybridSourceAsync(CancellationToken cancellationToken)
+    {
+        if (_api is null) return;
+        var source = HybridSourceBox.Text.Trim();
+        if (!Uri.TryCreate(source, UriKind.Absolute, out var uri)
+            || uri.Scheme is not ("http" or "https"))
+        {
+            HybridSourceProbeInfo.IsOpen = true;
+            HybridSourceProbeInfo.Severity = InfoBarSeverity.Informational;
+            HybridSourceProbeInfo.Title = Localized("Nguồn local hoặc Drive");
+            HybridSourceProbeInfo.Message = Localized("Phân tích sâu tự động hiện áp dụng cho URL HTTP/HTTPS.");
+            return;
+        }
+        HybridSourceProbeInfo.IsOpen = true;
+        HybridSourceProbeInfo.Severity = InfoBarSeverity.Informational;
+        HybridSourceProbeInfo.Title = Localized("Đang nhận diện ROM…");
+        HybridSourceProbeInfo.Message = Localized("Chỉ đọc header và metadata ZIP, không tải toàn bộ ROM.");
+        try
+        {
+            var result = await _api.ProbeHybridSourceAsync(source, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!string.Equals(HybridSourceBox.Text.Trim(), source, StringComparison.Ordinal))
+            {
+                return;
+            }
+            HybridSourceDetailsBox.Text = string.Join(" · ", new[]
+            {
+                result.Provider,
+                result.ProductName ?? result.Device,
+                result.Version,
+                result.OtaType,
+                result.SecurityPatch,
+            }.Where(value => !string.IsNullOrWhiteSpace(value)));
+            HybridSourceSizeBox.Text = result.SizeBytes?.ToString() ?? string.Empty;
+            var detectedDevice = result.ProductName ?? result.Device;
+            var catalogAcceptsDevice = _devices.Count == 0
+                || _devices.Any(device => string.Equals(
+                    device.ProductName,
+                    detectedDevice,
+                    StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(detectedDevice) && catalogAcceptsDevice)
+            {
+                HybridDeviceBox.Text = detectedDevice;
+                _hybridProbedDevice = detectedDevice;
+            }
+            HybridSourceProbeInfo.Severity = result.DeepInspected
+                ? InfoBarSeverity.Success
+                : InfoBarSeverity.Warning;
+            HybridSourceProbeInfo.Title = Localized(result.DeepInspected ? "Đã nhận diện ROM" : "Đã nhận diện nguồn");
+            HybridSourceProbeInfo.Message = result.Warning
+                ?? $"{result.Filename} · {(result.SizeBytes is long size ? FormatBytes(size) : Localized("không rõ dung lượng"))}";
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            HybridSourceProbeInfo.Severity = InfoBarSeverity.Error;
+            HybridSourceProbeInfo.Title = Localized("Không thể phân tích ROM");
+            HybridSourceProbeInfo.Message = exception.Message;
+        }
     }
 
     private async void ValidateHybridRecipeClick(object sender, RoutedEventArgs e)

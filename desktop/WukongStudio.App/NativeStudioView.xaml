@@ -614,7 +614,15 @@
                                     </ComboBox>
                                     <TextBox x:Name="HybridDeviceBox" Grid.Column="2" Header="Mã thiết bị" PlaceholderText="CPH2725" />
                                 </Grid>
-                                <TextBox x:Name="HybridSourceBox" Header="Đường dẫn / URL / rclone URI" PlaceholderText="C:\ROM\source.zip hoặc https://... hoặc wukong-gdrive:WukongROM/sources/..." />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBox x:Name="HybridSourceBox" Header="Nguồn ROM thông minh" PlaceholderText="Dán URL trực tiếp, link OPlus downloadCheck, Daniel Springer hoặc Drive" TextChanged="HybridSourceTextChanged" />
+                                    <Button Grid.Column="1" Content="Phân tích" Click="ProbeHybridSourceClick" VerticalAlignment="Bottom" />
+                                </Grid>
+                                <InfoBar x:Name="HybridSourceProbeInfo" IsOpen="False" IsClosable="False" />
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <TextBox x:Name="HybridSourceDetailsBox" Header="Thông tin tự nhận diện" IsReadOnly="True" PlaceholderText="Nhà cung cấp · thiết bị · phiên bản · loại OTA" />
+                                    <TextBox x:Name="HybridSourceSizeBox" Grid.Column="1" Header="Dung lượng tự nhận diện (byte)" IsReadOnly="True" />
+                                </Grid>
                                 <TextBox x:Name="HybridChecksumBox" Header="SHA-256 (khuyến nghị)" PlaceholderText="64 ký tự hex" />
                             </StackPanel>
                         </Border>

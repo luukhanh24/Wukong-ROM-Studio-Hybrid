@@ -127,6 +127,7 @@ TEXT = {
         "diagnostics_title": "Chẩn đoán hệ thống",
         "events_title": "Nhật ký gần nhất của {job_id}",
         "no_artifact": "Job chưa có artifact. Hãy thử lại khi build hoàn tất.",
+        "probe_result": "Đã nhận diện ROM\n\nNhà cung cấp: {provider}\nTệp: {filename}\nDung lượng: {size}\nThiết bị: {device}\nPhiên bản: {version}\nBản vá bảo mật: {security_patch}\nLoại OTA: {ota_type}\nPhân tích sâu: {deep}",
     },
     "en": {
         "welcome": "Wukong ROM Studio\n\nSelect “New build” to begin or “My jobs” to monitor progress. No commands or JSON are required.",
@@ -192,6 +193,7 @@ TEXT = {
         "diagnostics_title": "System diagnostics",
         "events_title": "Recent events for {job_id}",
         "no_artifact": "This job does not have an artifact yet. Try again after the build completes.",
+        "probe_result": "ROM identified\n\nProvider: {provider}\nFile: {filename}\nSize: {size}\nDevice: {device}\nVersion: {version}\nSecurity patch: {security_patch}\nOTA type: {ota_type}\nDeep inspection: {deep}",
     },
 }
 
@@ -374,6 +376,7 @@ class TelegramBotController:
         cache_provider: Callable[[], dict[str, object]] | None = None,
         cache_clearer: Callable[[], dict[str, object]] | None = None,
         cloud_provider: Callable[[str], dict[str, object]] | None = None,
+        source_probe_provider: Callable[[str], dict[str, object]] | None = None,
         runtime: HybridRuntime | None = None,
         ui_state: TelegramUIStateStore | None = None,
         storage_remote: str | None = None,
@@ -386,6 +389,7 @@ class TelegramBotController:
         self.cache_provider = cache_provider or (lambda: {})
         self.cache_clearer = cache_clearer
         self.cloud_provider = cloud_provider
+        self.source_probe_provider = source_probe_provider
         self.runtime = runtime
         self.ui_state = ui_state or TelegramUIStateStore()
         self.storage_remote = (storage_remote or os.environ.get("WUKONG_RCLONE_REMOTE", "wukong-gdrive")).rstrip(":")
@@ -510,6 +514,32 @@ class TelegramBotController:
                     self._render_details(self.cache_clearer()),
                     self._back_markup(language),
                 )
+            if action == "probe_source":
+                if not self.source_probe_provider:
+                    raise ValueError("ROM source analysis is not configured")
+                uri = str(request.get("uri") or "").strip()
+                if not uri or len(uri) > 8192:
+                    raise ValueError("A valid ROM source URL is required")
+                result = self.source_probe_provider(uri)
+                size = result.get("sizeBytes")
+                size_text = (
+                    f"{int(size) / (1024 ** 3):.2f} GiB ({int(size):,} bytes)"
+                    if isinstance(size, int) and size > 0
+                    else "—"
+                )
+                return BotResponse(
+                    TEXT[language]["probe_result"].format(
+                        provider=result.get("provider") or "—",
+                        filename=result.get("filename") or "—",
+                        size=size_text,
+                        device=result.get("device") or "—",
+                        version=result.get("version") or "—",
+                        security_patch=result.get("securityPatch") or "—",
+                        ota_type=result.get("otaType") or "—",
+                        deep="Có" if language == "vi" and result.get("deepInspected") else "Yes" if result.get("deepInspected") else "Không" if language == "vi" else "No",
+                    ),
+                    self._back_markup(language),
+                )
             if action in {"job", "events", "artifact", "cancel", "resume"}:
                 job_id = str(request.get("jobId") or "").strip()
                 if not job_id:
@@ -518,6 +548,8 @@ class TelegramBotController:
             raise ValueError("Unsupported Mini App action")
         except (
             json.JSONDecodeError,
+            OSError,
+            RuntimeError,
             TypeError,
             ValueError,
             RecipeValidationError,
@@ -1248,9 +1280,53 @@ class TelegramLongPollingDaemon:
         self.base_url = f"https://api.telegram.org/bot{token}"
         self._http = http if http is not None else requests.Session()
         self._stop = threading.Event()
+        self._probe_threads: set[threading.Thread] = set()
+        self._probe_threads_lock = threading.Lock()
 
     def stop(self) -> None:
         self._stop.set()
+
+    @staticmethod
+    def _is_probe_request(raw_data: str) -> bool:
+        try:
+            payload = json.loads(raw_data)
+            return isinstance(payload, dict) and str(payload.get("action") or "").casefold() == "probe_source"
+        except (json.JSONDecodeError, TypeError):
+            return False
+
+    def _complete_source_probe(self, user_id: int | str, chat_id: int | str, raw_data: str) -> None:
+        try:
+            response = self.controller.handle_web_app_data(user_id, raw_data)
+            with requests.Session() as session:
+                session.post(
+                    f"{self.base_url}/sendMessage",
+                    json={"chat_id": chat_id, **response.telegram_payload()},
+                    timeout=20,
+                ).raise_for_status()
+        except (OSError, RuntimeError, requests.RequestException):
+            pass
+        finally:
+            current = threading.current_thread()
+            with self._probe_threads_lock:
+                self._probe_threads.discard(current)
+
+    def _defer_source_probe(self, user_id: int | str, chat_id: int | str, raw_data: str) -> bool:
+        worker = threading.Thread(
+            target=self._complete_source_probe,
+            args=(user_id, chat_id, raw_data),
+            name="wukong-telegram-source-probe",
+            daemon=True,
+        )
+        with self._probe_threads_lock:
+            # Bound concurrent probes so untrusted users cannot create an
+            # unbounded number of network workers through the Mini App.
+            active = {thread for thread in self._probe_threads if thread.is_alive()}
+            self._probe_threads = active
+            if len(active) >= 2:
+                return False
+            active.add(worker)
+        worker.start()
+        return True
 
     def register_commands(self) -> None:
         command_sets = self.controller.command_sets()
@@ -1313,6 +1389,17 @@ class TelegramLongPollingDaemon:
             and isinstance(web_app_data, dict)
             and isinstance(web_app_data.get("data"), str)
         ):
+            if self._is_probe_request(web_app_data["data"]):
+                if not self._defer_source_probe(sender["id"], chat["id"], web_app_data["data"]):
+                    self._http.post(
+                        f"{self.base_url}/sendMessage",
+                        json={
+                            "chat_id": chat["id"],
+                            "text": "Hệ thống đang phân tích hai ROM khác. Hãy thử lại sau ít phút.\n\nTwo ROM analyses are already running. Please try again shortly.",
+                        },
+                        timeout=20,
+                    ).raise_for_status()
+                return
             response = self.controller.handle_web_app_data(sender["id"], web_app_data["data"])
             self._http.post(
                 f"{self.base_url}/sendMessage",
