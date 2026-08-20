@@ -22,6 +22,21 @@ LegacyBuild = Callable[[str, dict[str, Any], Path, Callable[[dict[str, Any]], No
 CHECKPOINT_STAGES = set(CHECKPOINT_PIPELINE_STEPS)
 
 
+def source_target_for(recipe: BuildRecipe, root: Path) -> Path:
+    source_name = recipe.source.uri.replace("\\", "/").rsplit("/", 1)[-1].split("?", 1)[0]
+    if ":" in source_name:
+        source_name = source_name.rsplit(":", 1)[-1]
+    source_name = "".join(
+        character for character in source_name if character.isalnum() or character in "._-"
+    )
+    target = root / "input" / (source_name or "rom.zip")
+    if recipe.task == "build" and target.suffix.casefold() != ".zip":
+        target = target.with_suffix(".zip")
+    elif not target.suffix:
+        target = target.with_suffix(".zip")
+    return target
+
+
 def run_legacy_build(
     job_id: str,
     legacy_spec: dict[str, Any],
@@ -77,13 +92,7 @@ class LocalJobExecutor:
         if manifest.status not in {JobStatus.QUEUED, JobStatus.FAILED, JobStatus.CANCELLED}:
             raise OrchestrationError(f"Job cannot execute from status {manifest.status.value}")
         root = self.workspace_root / job_id
-        source_name = recipe.source.uri.replace("\\", "/").rsplit("/", 1)[-1].split("?", 1)[0]
-        if ":" in source_name:
-            source_name = source_name.rsplit(":", 1)[-1]
-        source_name = "".join(character for character in source_name if character.isalnum() or character in "._-")
-        source_target = root / "input" / (source_name or "rom.zip")
-        if not source_target.suffix:
-            source_target = source_target.with_suffix(".zip")
+        source_target = source_target_for(recipe, root)
         try:
             self.store.update(job_id, status=JobStatus.PREFLIGHT, stage="preflight", progress=0.0, error=None)
             self.store.append_event(job_id, "state", status=JobStatus.PREFLIGHT.value, stage="preflight")
