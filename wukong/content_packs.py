@@ -360,7 +360,10 @@ def create_content_pack_archive(
             _validate_archive_members(archive, pack)
         if compressed:
             subprocess.run(
-                [_zstd_binary(), "-q", "-f", "-T1", "-3", str(temporary_tar), "-o", str(temporary_output)],
+                # Content packs can be multi-GB. zstd's automatic worker count
+                # keeps the archive format/checksum validation unchanged while
+                # avoiding a single-core bottleneck in the Windows sync flow.
+                [_zstd_binary(), "-q", "-f", "-T0", "-3", str(temporary_tar), "-o", str(temporary_output)],
                 check=True,
             )
             os.replace(temporary_output, output)

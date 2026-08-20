@@ -239,8 +239,21 @@ def sync_partition_configs(unpacked_dir: str | Path, part_name: str) -> dict[str
     fc_lines = _read_required_lines(file_contexts, "file_contexts")
     fc_entries = _parse_fc_entries(fc_lines)
     fc_index = _ContextIndex(fc_entries)
+    # Extracted partitions already have SELinux coverage for every path in their
+    # original fs_config (usually through broad file_contexts regexes).  Testing
+    # every one of those paths against every regex is quadratic on large ROMs
+    # and used to make this stage take many minutes.  Only paths newly added to
+    # fs_config can require a new file_contexts entry after applying MODs.
     added_fc_entries = []
-    for relative_path in sorted(actual_paths):
+    added_fs_paths = {
+        _normalized_path(line.split()[0])
+        for line in added_fs_entries
+        if line.split()
+    }
+    # Also preserve the historical root-coverage repair (for example /system)
+    # even when that root already existed in fs_config.
+    context_candidates = added_fs_paths | {_normalized_path(part_name)}
+    for relative_path in sorted(context_candidates):
         path = f"/{relative_path}"
         if fc_index.matches(path):
             continue

@@ -3698,6 +3698,7 @@ def _compress_prepared_package(
                     "a",
                     "-tzip",
                     f"-mx{ZIP_COMPRESSION_LEVEL}",
+                    "-mmt=on",
                     "-bsp1",
                     str(partial_path),
                     str(package_root / "*"),
