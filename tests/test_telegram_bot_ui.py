@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -646,6 +647,41 @@ class TelegramDaemonUITests(unittest.TestCase):
         )
         self.assertEqual(job.job_id, thread.call_args.kwargs["args"][0])
         thread.return_value.start.assert_called_once()
+
+    def test_runtime_does_not_resume_stale_cloud_watcher(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        store = InMemoryJobStore()
+        orchestrator = HybridOrchestrator(
+            store=store,
+            workspace_root=root / "jobs",
+            inventory_provider=lambda: RunnerInventory(False),
+            access_validator=lambda _recipe, _identity: None,
+        )
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "PKG110",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "execution": {"target": "github-auto"},
+        })
+        job = orchestrator.submit(recipe, Identity("telegram", "42", "user"))
+        stale = datetime.now(timezone.utc) - timedelta(hours=13)
+        store.update(job.job_id, status=JobStatus.RUNNING, created_at=stale.isoformat())
+        runtime = HybridRuntime(
+            orchestrator=orchestrator,
+            store=store,
+            workspace_root=root / "runtime",
+            data_root=root / "data",
+        )
+        runtime.rclone_config = root / "rclone.conf"
+
+        with patch("wukong.runtime.threading.Thread") as thread:
+            resumed = runtime.resume_cloud_watchers()
+
+        self.assertEqual(0, resumed)
+        thread.assert_not_called()
 
     def test_registers_commands_and_handles_callback_queries(self) -> None:
         controller = Mock()
