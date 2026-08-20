@@ -96,6 +96,64 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertIn("Công việc của tôi", labels)
         self.assertIn("English", labels)
 
+    def test_main_menu_exposes_configured_telegram_mini_app(self) -> None:
+        self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+
+        response = self.controller.handle_ui(42, "/start")
+
+        buttons = [button for row in response.reply_markup["inline_keyboard"] for button in row]
+        app_button = next(button for button in buttons if "Mini App" in button["text"])
+        self.assertEqual("v1:app", app_button["callback_data"])
+
+        launcher = self.controller.handle_callback(42, app_button["callback_data"])
+        keyboard_button = launcher.reply_markup["keyboard"][0][0]
+        self.assertEqual(
+            keyboard_button["web_app"]["url"],
+            "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/",
+        )
+
+    def test_app_command_uses_reply_keyboard_transport_required_by_send_data(self) -> None:
+        self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+
+        response = self.controller.handle_ui(42, "/app")
+
+        self.assertIn("keyboard", response.reply_markup)
+        self.assertNotIn("inline_keyboard", response.reply_markup)
+        self.assertTrue(response.reply_markup["one_time_keyboard"])
+
+    def test_mini_app_submits_recipe_under_authenticated_telegram_identity(self) -> None:
+        response = self.controller.handle_web_app_data(42, json.dumps({
+            "version": 1,
+            "action": "submit_recipe",
+            "recipe": {
+                "schemaVersion": 1,
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+                "execution": {"target": "github-auto"},
+                "build": {
+                    "preset": "plus",
+                    "modVersion": "ColorOS_16.0.8",
+                    "mods": ["Camera_mod"],
+                    "package": True,
+                },
+            },
+        }))
+
+        self.assertIn("Job", response.text)
+        jobs = self.orchestrator.list(Identity("telegram", "42", "user"))
+        self.assertEqual(1, len(jobs))
+        self.assertEqual(jobs[0].owner.subject, "42")
+
+    def test_mini_app_quick_actions_reuse_chat_capabilities(self) -> None:
+        jobs = self.controller.handle_web_app_data(42, '{"version":1,"action":"jobs"}')
+        diagnostics = self.controller.handle_web_app_data(
+            42, '{"version":1,"action":"diagnostics"}'
+        )
+
+        self.assertIn("chưa có job", jobs.text.casefold())
+        self.assertIn("Chẩn đoán", diagnostics.text)
+
     def test_language_callback_is_persisted_per_user(self) -> None:
         response = self.controller.handle_callback(42, "v1:lang:en")
         self.assertIn("New build", response.text)
@@ -131,6 +189,15 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual("PKG110", recipe.device)
         self.assertEqual("ColorOS_16.0.8", recipe.build.mod_version)
         self.assertEqual(("Fix_Metis", "WK_Installer"), recipe.build.mods)
+
+    def test_wizard_exposes_artifact_publish_task(self) -> None:
+        response = self.controller.handle_callback(42, "v1:new")
+        callbacks = [
+            button["callback_data"]
+            for row in response.reply_markup["inline_keyboard"]
+            for button in row
+        ]
+        self.assertIn("v1:task:publish", callbacks)
 
     def test_github_build_falls_back_to_hosted_when_self_hosted_is_offline(self) -> None:
         self.controller.ui_state.set_session(42, {
@@ -462,6 +529,53 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertTrue(any(value.endswith("/setMyCommands") for value in endpoints))
         self.assertTrue(any(value.endswith("/answerCallbackQuery") for value in endpoints))
         self.assertTrue(any(value.endswith("/editMessageText") for value in endpoints))
+
+    def test_processes_telegram_web_app_data(self) -> None:
+        controller = Mock()
+        controller.handle_web_app_data.return_value = BotResponse("Created")
+        success = Mock()
+        success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+
+        daemon.process_update({
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 100},
+                "web_app_data": {"data": '{"version":1,"action":"jobs"}'},
+            }
+        })
+
+        controller.handle_web_app_data.assert_called_once_with(
+            42, '{"version":1,"action":"jobs"}'
+        )
+        self.assertTrue(http.post.call_args.args[0].endswith("/sendMessage"))
+
+    def test_reply_keyboard_callback_is_sent_as_a_new_message(self) -> None:
+        controller = Mock()
+        controller.handle_callback.return_value = BotResponse(
+            "Open app",
+            {"keyboard": [[{"text": "Open", "web_app": {"url": "https://example.com"}}]]},
+        )
+        success = Mock()
+        success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+
+        daemon.process_update({
+            "callback_query": {
+                "id": "callback-app",
+                "from": {"id": 42},
+                "message": {"message_id": 99, "chat": {"id": 100}},
+                "data": "v1:app",
+            }
+        })
+
+        endpoints = [call.args[0] for call in http.post.call_args_list]
+        self.assertTrue(any(value.endswith("/sendMessage") for value in endpoints))
+        self.assertFalse(any(value.endswith("/editMessageText") for value in endpoints))
 
     def test_callback_edit_failure_falls_back_to_new_message(self) -> None:
         controller = Mock()

@@ -48,6 +48,29 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_executor_rejects_source_size_mismatch_before_upload_or_build(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.zip"
+            source.write_bytes(b"short-rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "task": "source_mirror",
+                    "device": "PKG110",
+                    "source": {"kind": "local", "uri": str(source), "sizeBytes": 999},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=root / "jobs")
+            job = orchestrator.submit(recipe, Identity("windows", "owner", "admin"))
+
+            with patch("wukong.executor.source_adapter_for", return_value=_FixtureSourceAdapter(source)):
+                result = LocalJobExecutor(store=store, workspace_root=root / "jobs").execute(job.job_id)
+
+        self.assertEqual(JobStatus.FAILED, result.status)
+        self.assertIn("ROM size mismatch", result.error or "")
+
     def test_checkpoint_policy_skips_read_only_and_terminal_stages(self) -> None:
         self.assertNotIn("inspect_rom", CHECKPOINT_STAGES)
         self.assertNotIn("package_zip", CHECKPOINT_STAGES)

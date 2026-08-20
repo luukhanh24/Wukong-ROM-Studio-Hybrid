@@ -1,0 +1,57 @@
+name: Telegram Mini App Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "telegram_mini_app/**"
+      - "tools/export_mini_app_catalog.py"
+      - "content-packs/index.json"
+      - "devices_sizes.json"
+      - "studio_core.py"
+      - ".github/workflows/telegram-mini-app-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: telegram-mini-app-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build public Mini App catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .pages
+          cp telegram_mini_app/index.html telegram_mini_app/styles.css telegram_mini_app/app.js .pages/
+          python -m tools.export_mini_app_catalog --output .pages/catalog.json
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v5.0.0
+      - name: Upload Mini App site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v4.0.0
+        with:
+          path: .pages
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - name: Deploy Telegram Mini App
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v4.0.5

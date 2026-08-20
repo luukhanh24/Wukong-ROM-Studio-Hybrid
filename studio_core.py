@@ -50,6 +50,7 @@ from studio_paths import (
     platform_tool_path,
 )
 from src.core.utils import gettype
+from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 
 
 ROOT_DIR = SCRIPT_ROOT
@@ -226,34 +227,10 @@ EXCLUDED_FIRMWARE = DYNAMIC_SOURCE_IMAGES | CORE_SOURCE_IMAGES | {
     "vendor_boot.img",
 }
 
-STEP_DEFINITIONS = [
-    ("inspect_rom", "Inspect ROM", True),
-    ("extract_payload", "Extract payload", True),
-    ("unpack_partitions", "Unpack partitions", True),
-    ("debloat", "Remove bloatware", False),
-    ("apply_mod", "Apply MOD", False),
-    ("sync_configs", "Sync fs_config and SELinux contexts", True),
-    ("repack_partitions", "Repack partitions", True),
-    ("repack_super", "Repack super.img", True),
-    ("patch_vbmeta", "Patch vbmeta", False),
-    ("patch_vendor_boot", "Patch vendor_boot", False),
-    ("package_zip", "Package ROM ZIP", True),
-    ("notify_telegram", "Send Telegram notification", False),
-]
+STEP_DEFINITIONS = list(PIPELINE_STEP_DEFINITIONS)
 STEP_ORDER = [step[0] for step in STEP_DEFINITIONS]
 STEP_LABELS = {step[0]: step[1] for step in STEP_DEFINITIONS}
-DEFAULT_STEPS = {
-    "inspect_rom",
-    "extract_payload",
-    "unpack_partitions",
-    "debloat",
-    "apply_mod",
-    "sync_configs",
-    "repack_partitions",
-    "repack_super",
-    "patch_vbmeta",
-    "package_zip",
-}
+DEFAULT_STEPS = set(DEFAULT_PIPELINE_STEPS)
 PLUS_DEFAULT_STEPS: set[str] = set()
 ZIP_COMPRESSION_LEVEL = "1"
 ZIP_COMPRESSION_LABEL = "fast"

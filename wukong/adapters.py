@@ -13,12 +13,15 @@ import uuid
 import zlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from html import unescape
+from html.parser import HTMLParser
+from http.cookiejar import CookieJar
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Any, Callable, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
+from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
 
 from .models import ArtifactRecord
 from .security import validate_http_url
@@ -27,6 +30,7 @@ from .security import validate_http_url
 CHUNK_SIZE = 4 * 1024 * 1024
 RESOLVER_SNIFF_SIZE = 64 * 1024
 MAX_RESOLVER_BYTES = 1024 * 1024
+MAX_CATALOG_PAGE_BYTES = 2 * 1024 * 1024
 DEFAULT_PARALLEL_THRESHOLD_BYTES = 512 * 1024 * 1024
 DEFAULT_MAX_CONNECTIONS = 16
 OPLUS_RESOLVER_USER_AGENT = "okhttp/3.12.12"
@@ -47,6 +51,24 @@ class SourceResolutionError(SourceError):
 
 class RangeProtocolError(SourceError):
     pass
+
+
+class _DanielOtaPageParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.result: dict[str, str] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.casefold() != "div":
+            return
+        values = {name.casefold(): value or "" for name, value in attrs}
+        if values.get("id") != "resultBox":
+            return
+        self.result = {
+            "url": unescape(values.get("data-url", "")).strip(),
+            "key": values.get("data-ota-key", "").strip(),
+            "csrf": values.get("data-csrf", "").strip(),
+        }
 
 
 @dataclass(frozen=True)
@@ -177,7 +199,9 @@ class HttpSourceAdapter:
     ) -> None:
         self.attempts = max(1, attempts)
         self.timeout = timeout
-        default_factory: HttpOpenerFactory = lambda: build_opener(_SafeRedirectHandler())
+        default_factory: HttpOpenerFactory = lambda: build_opener(
+            _SafeRedirectHandler(), HTTPCookieProcessor(CookieJar())
+        )
         self.opener = opener or default_factory()
         self.opener_factory = opener_factory or (default_factory if opener is None else None)
         self.max_connections = max(1, min(max_connections, DEFAULT_MAX_CONNECTIONS))
@@ -205,7 +229,17 @@ class HttpSourceAdapter:
     def _download(self, uri: str, temporary: Path) -> None:
         validate_http_url(uri, resolve_dns=True)
 
+        is_catalog_page = self._is_daniel_ota_page_url(uri)
+        if is_catalog_page:
+            uri = self._resolve_daniel_ota_page(uri)
+            validate_http_url(uri, resolve_dns=True)
+
         is_oplus_resolver = self._is_oplus_resolver_url(uri)
+        parallel_candidate = (
+            is_catalog_page
+            or is_oplus_resolver
+            or self._is_oplus_download_host(uri)
+        )
         offset = temporary.stat().st_size if temporary.is_file() else 0
         headers = self._request_headers(uri)
         if offset and not is_oplus_resolver:
@@ -231,7 +265,11 @@ class HttpSourceAdapter:
                     "OPlus OTA resolver did not redirect to a ROM download"
                 )
 
-            total_size = self._parallel_total_size(response) if is_oplus_resolver else None
+            total_size = (
+                self._parallel_total_size(response)
+                if parallel_candidate
+                else None
+            )
             identity = (
                 self._parallel_identity(response, final_url, total_size)
                 if total_size is not None
@@ -538,6 +576,88 @@ class HttpSourceAdapter:
     @staticmethod
     def _is_oplus_resolver_url(uri: str) -> bool:
         return urlparse(uri).path.rstrip("/").casefold().endswith("/downloadcheck")
+
+    @staticmethod
+    def _is_oplus_download_host(uri: str) -> bool:
+        host = (urlparse(uri).hostname or "").rstrip(".").casefold()
+        return host.endswith((".allawnfs.com", ".allawntech.com"))
+
+    @staticmethod
+    def _is_daniel_ota_page_url(uri: str) -> bool:
+        parsed = urlparse(uri)
+        if (parsed.hostname or "").rstrip(".").casefold() != "roms.danielspringer.at":
+            return False
+        if parsed.path.rstrip("/").casefold() != "/index.php":
+            return False
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        return query.get("view", [""])[0].casefold() == "ota" and bool(
+            query.get("build", [""])[0].strip()
+        )
+
+    def _resolve_daniel_ota_page(self, uri: str) -> str:
+        request = Request(
+            uri,
+            headers={
+                "User-Agent": "Wukong-ROM-Studio/1.0",
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Encoding": "identity",
+            },
+        )
+        with self.opener.open(request, timeout=self.timeout) as response:
+            page_url = response.geturl()
+            validate_http_url(page_url, resolve_dns=True)
+            payload = response.read(MAX_CATALOG_PAGE_BYTES + 1)
+        if len(payload) > MAX_CATALOG_PAGE_BYTES:
+            raise SourceResolutionError("Daniel Springer OTA page exceeds the resolver limit")
+        try:
+            page = payload.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise SourceResolutionError("Daniel Springer OTA page is not valid UTF-8") from exc
+
+        parser = _DanielOtaPageParser()
+        parser.feed(page)
+        resolved = parser.result.get("url", "")
+        if resolved:
+            validate_http_url(resolved, resolve_dns=True)
+            return resolved
+
+        ota_key = parser.result.get("key", "")
+        csrf = parser.result.get("csrf", "")
+        if not ota_key or not csrf:
+            raise SourceResolutionError(
+                "Daniel Springer OTA page does not contain resolver state; "
+                "the build page may be invalid or unavailable"
+            )
+        endpoint = urljoin(page_url, "/index.php?view=ota&ota_action=resolve_json")
+        validate_http_url(endpoint, resolve_dns=True)
+        body = urlencode({"k": ota_key, "csrf": csrf}).encode("ascii")
+        resolve_request = Request(
+            endpoint,
+            data=body,
+            headers={
+                "User-Agent": "Wukong-ROM-Studio/1.0",
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Origin": "https://roms.danielspringer.at",
+                "Referer": page_url,
+            },
+            method="POST",
+        )
+        with self.opener.open(resolve_request, timeout=self.timeout) as response:
+            validate_http_url(response.geturl(), resolve_dns=True)
+            raw = response.read(MAX_RESOLVER_BYTES + 1)
+        if len(raw) > MAX_RESOLVER_BYTES:
+            raise SourceResolutionError("Daniel Springer OTA resolver response is too large")
+        try:
+            data = json.loads(raw.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SourceResolutionError("Daniel Springer OTA resolver returned invalid JSON") from exc
+        resolved = str(data.get("url") or "") if isinstance(data, dict) else ""
+        if not isinstance(data, dict) or data.get("ok") is not True or not resolved:
+            message = str(data.get("message") or "OTA link could not be prepared") if isinstance(data, dict) else "OTA link could not be prepared"
+            raise SourceResolutionError(f"Daniel Springer OTA resolver failed: {message}")
+        validate_http_url(resolved, resolve_dns=True)
+        return resolved
 
     @staticmethod
     def _decode_resolver_payload(payload: bytes, encoding: str) -> bytes:

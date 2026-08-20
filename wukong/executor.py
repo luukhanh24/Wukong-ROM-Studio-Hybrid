@@ -10,6 +10,7 @@ from .cloud_sync import CloudJobSync
 from .content_packs import ContentPackManager, validate_content_index
 from .models import ArtifactRecord, BuildRecipe, JobManifest, JobStatus
 from .orchestrator import JobStore, OrchestrationError
+from .pipeline import CHECKPOINT_PIPELINE_STEPS
 from studio_paths import CONTENT_ROOT, SCRIPT_ROOT, WORKSPACE_ROOT
 
 
@@ -18,15 +19,7 @@ LegacyBuild = Callable[[str, dict[str, Any], Path, Callable[[dict[str, Any]], No
 # Checkpoint only after stages that materially advance the reusable workspace.
 # Read-only/preflight stages such as inspect_rom would upload the same multi-GB
 # tree again and can exhaust cloud API quotas without improving resumability.
-CHECKPOINT_STAGES = {
-    "extract_payload",
-    "unpack_partitions",
-    "sync_configs",
-    "repack_partitions",
-    "repack_super",
-    "patch_vbmeta",
-    "patch_vendor_boot",
-}
+CHECKPOINT_STAGES = set(CHECKPOINT_PIPELINE_STEPS)
 
 
 def run_legacy_build(
@@ -97,6 +90,11 @@ class LocalJobExecutor:
             self.store.update(job_id, status=JobStatus.DOWNLOADING, stage="download", progress=0.0)
             adapter = source_adapter_for(recipe.source.kind, config_path=self.rclone_config)
             source = adapter.materialize(recipe.source.uri, source_target, recipe.source.sha256)
+            if recipe.source.size_bytes is not None and source.size_bytes != recipe.source.size_bytes:
+                source.path.unlink(missing_ok=True)
+                raise SourceIntegrityError(
+                    f"ROM size mismatch: expected {recipe.source.size_bytes}, got {source.size_bytes}"
+                )
             self.store.append_event(
                 job_id,
                 "source",
