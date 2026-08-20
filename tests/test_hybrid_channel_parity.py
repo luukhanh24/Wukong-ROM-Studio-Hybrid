@@ -14,7 +14,7 @@ import studio_server
 from wukong.adapters import MaterializedSource, sha256_file
 from wukong.cli import main as cli_main
 from wukong.content_packs import build_content_index
-from wukong.executor import CHECKPOINT_STAGES, LocalJobExecutor
+from wukong.executor import CHECKPOINT_STAGES, LocalJobExecutor, source_target_for
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
 from wukong.orchestrator import FileJobStore, HybridOrchestrator, InMemoryJobStore, JobStore
 from wukong.routing import RunnerInventory
@@ -48,6 +48,22 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_daniel_build_page_materializes_to_zip_filename(self) -> None:
+        recipe = BuildRecipe.from_dict(
+            {
+                "task": "build",
+                "device": "PKG110",
+                "source": {
+                    "kind": "https",
+                    "uri": "https://roms.danielspringer.at/index.php?view=ota&build=fixture",
+                },
+            }
+        )
+
+        target = source_target_for(recipe, Path("workspace") / "job")
+
+        self.assertEqual("index.zip", target.name)
+
     def test_executor_rejects_source_size_mismatch_before_upload_or_build(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
