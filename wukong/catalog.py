@@ -13,3 +13,4 @@ LITE_DEFAULT_MODS: list[str] = [
     "WK_Installer",
 ]
 PLUS_DEFAULT_EXCLUDED_MODS: set[str] = {"Gallery_mod_CN"}
+SHARED_MOD_NAMES: frozenset[str] = frozenset({"WK_Manager", "WK_Installer"})

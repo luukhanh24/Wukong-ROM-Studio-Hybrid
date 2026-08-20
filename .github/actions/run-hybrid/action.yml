@@ -42,7 +42,7 @@ runs:
         if [ "$task" = build ]; then
           mod_version="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['build']['modVersion'])")"
           python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "MOD/$mod_version" --rclone-config "$WUKONG_RCLONE_CONFIG"
-          for pack in copy-image/v1 OFX/v1 TWRP/v1; do
+          for pack in STARK/common Flash_script/common copy-image/v1 OFX/v1 TWRP/v1; do
             python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "$pack" --rclone-config "$WUKONG_RCLONE_CONFIG"
           done
           # Validate before downloading the multi-GB ROM. Strict mode preserves

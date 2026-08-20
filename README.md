@@ -14,6 +14,8 @@ Core capabilities:
 - GitHub checkpoints are streamed as one TAR plus SHA-256 metadata, avoiding
   Google Drive's per-file throttling while preserving safe resume validation.
 - Native WinUI Hybrid Cloud page, headless CLI and Telegram admin/user bot.
+- Verified one-click content synchronization from Windows to Drive and the
+  public GitHub manifest, including shared `STARK` and flash-script packs.
 
 See [HYBRID_SETUP.md](HYBRID_SETUP.md) for setup and
 [LEGACY_PROVENANCE.md](LEGACY_PROVENANCE.md) for the legacy snapshot.
@@ -36,7 +38,7 @@ The dashboard binds to localhost. Runtime jobs, logs, generated ROMs, local cred
 ## Private content packs
 
 The public repository intentionally contains no ROM sources, build artifacts or
-Git LFS objects. Large `MOD`, `copy-image`, `OFX` and `TWRP` assets are stored as
+Git LFS objects. Large `MOD`, `STARK`, `Flash_script`, `copy-image`, `OFX` and `TWRP` assets are stored as
 private Google Drive content packs with a size and SHA-256 manifest.
 
 Configure the `wukong-gdrive:` rclone remote, then follow

@@ -71,6 +71,20 @@ Installation validates schema, target ownership, every file size/SHA-256,
 absolute/traversal paths, duplicate paths, and symbolic links before atomic
 activation. Previous pack content is backed up under `Backups\ContentPacks`.
 
+The Hybrid Cloud page also provides two operator actions:
+
+- **Sync binary to Drive** verifies and uploads only changed packs from
+  `Content`, `Runtime\STARK`, and `Runtime\Flash_script`.
+- **Publish manifest to GitHub** updates `content-packs/index.json` only after
+  every pack has a verified Drive archive. The GitHub token used for this
+  action needs Contents write permission.
+
+`WK_Manager` and `WK_Installer` live once in the shared `STARK/common` pack and
+are exposed in every MOD catalog version. The first Drive sync safely migrates
+matching version-local copies through a file-by-file SHA-256 verification.
+Credentials remain DPAPI-protected; temporary rclone configuration files are
+hidden and deleted after each operation.
+
 ## Runtime Layout
 
 Desktop mode is enabled only when the WinUI host passes

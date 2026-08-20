@@ -50,7 +50,7 @@ from studio_paths import (
     platform_tool_path,
 )
 from src.core.utils import gettype
-from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS
+from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS, SHARED_MOD_NAMES
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 
 
@@ -1293,33 +1293,45 @@ def _mod_collection_dir(mod_version: str | None = None, *, mod_root: Path | None
 
 def list_mods(mod_version: str | None = None, *, mod_root: Path | None = None) -> list[dict[str, Any]]:
     root = (mod_root or MOD_DIR).resolve()
+    shared_root = (
+        ((CONTENT_ROOT / "STARK").resolve() if (CONTENT_ROOT / "STARK").is_dir() else STARK_ROOT.resolve())
+        if mod_root is None
+        else root.parent / "STARK"
+    )
     version = normalize_mod_version(mod_version, mod_root=root)
     collection_dir = _mod_collection_dir(version, mod_root=root)
     results = []
     seen = set()
-    if collection_dir.is_dir():
-        for mod_dir in sorted(path for path in collection_dir.iterdir() if path.is_dir()):
-            patch_only = mod_dir.name in PATCH_ONLY_MODS
-            directories = sorted(path.name for path in mod_dir.iterdir() if path.is_dir())
-            compatible = [name for name in directories if name in MOD_PARTITIONS]
-            skipped = [name for name in directories if name not in MOD_PARTITIONS]
-            root_files = sorted(path.name for path in mod_dir.iterdir() if path.is_file())
-            blocked_reason = BLOCKED_MODS.get(mod_dir.name)
-            results.append(
-                {
-                    "name": mod_dir.name,
-                    "version": version,
-                    "valid": bool(compatible) or patch_only,
-                    "ready": (bool(compatible) or patch_only) and not blocked_reason,
-                    "blockedReason": blocked_reason,
-                    "partitions": compatible,
-                    "patchOnly": patch_only,
-                    "skippedDirectories": skipped,
-                    "rootFiles": root_files,
-                    "specialActions": _mod_special_actions(mod_dir.name),
-                }
-            )
-            seen.add(mod_dir.name)
+    sources = [(collection_dir, False), (shared_root, True)]
+    for source_root, shared in sources:
+        if source_root.is_dir():
+            for mod_dir in sorted(path for path in source_root.iterdir() if path.is_dir()):
+                if shared and mod_dir.name not in SHARED_MOD_NAMES:
+                    continue
+                if mod_dir.name in seen:
+                    continue
+                patch_only = mod_dir.name in PATCH_ONLY_MODS
+                directories = sorted(path.name for path in mod_dir.iterdir() if path.is_dir())
+                compatible = [name for name in directories if name in MOD_PARTITIONS]
+                skipped = [name for name in directories if name not in MOD_PARTITIONS]
+                root_files = sorted(path.name for path in mod_dir.iterdir() if path.is_file())
+                blocked_reason = BLOCKED_MODS.get(mod_dir.name)
+                results.append(
+                    {
+                        "name": mod_dir.name,
+                        "version": version,
+                        "valid": bool(compatible) or patch_only,
+                        "ready": (bool(compatible) or patch_only) and not blocked_reason,
+                        "blockedReason": blocked_reason,
+                        "partitions": compatible,
+                        "patchOnly": patch_only,
+                        "shared": shared,
+                        "skippedDirectories": skipped,
+                        "rootFiles": root_files,
+                        "specialActions": _mod_special_actions(mod_dir.name),
+                    }
+                )
+                seen.add(mod_dir.name)
     for name in sorted(PATCH_ONLY_MODS):
         if name in seen:
             continue
@@ -1333,6 +1345,7 @@ def list_mods(mod_version: str | None = None, *, mod_root: Path | None = None) -
                 "blockedReason": blocked_reason,
                 "partitions": [],
                 "patchOnly": True,
+                "shared": False,
                 "skippedDirectories": [],
                 "rootFiles": [],
                 "specialActions": _mod_special_actions(name),
@@ -2691,7 +2704,7 @@ def apply_selected_mods(
     total_mods = max(1, len(mods))
     for index, mod in enumerate(mods, start=1):
         emit_progress(int((index - 1) * 35 / total_mods), f"MOD {index}/{len(mods)} · {mod['name']}")
-        mod_dir = _mod_collection_dir(version) / mod["name"]
+        mod_dir = (STARK_ROOT if mod.get("shared") else _mod_collection_dir(version)) / mod["name"]
         for partition in mod["partitions"]:
             destination_info = _partition_destination(rom_unpack, partition, device)
             if not destination_info:

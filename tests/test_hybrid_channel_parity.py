@@ -110,6 +110,8 @@ class HybridChannelParityContractTests(unittest.TestCase):
             packs = []
             for pack_id, target in (
                 ("MOD/ColorOS_16.0.8", "MOD/ColorOS_16.0.8"),
+                ("STARK/common", "STARK"),
+                ("Flash_script/common", "Flash_script"),
                 ("copy-image/v1", "copy-image"),
                 ("OFX/v1", "OFX"),
                 ("TWRP/v1", "TWRP"),
@@ -193,6 +195,8 @@ class HybridChannelParityContractTests(unittest.TestCase):
             packs = []
             for pack_id, target in (
                 ("MOD/ColorOS_16.0.8", "MOD/ColorOS_16.0.8"),
+                ("STARK/common", "STARK"),
+                ("Flash_script/common", "Flash_script"),
                 ("copy-image/v1", "copy-image"),
                 ("OFX/v1", "OFX"),
                 ("TWRP/v1", "TWRP"),
@@ -289,6 +293,8 @@ class HybridChannelParityContractTests(unittest.TestCase):
             packs = []
             for pack_id, target in (
                 ("MOD/ColorOS_16.0.8", "MOD/ColorOS_16.0.8"),
+                ("STARK/common", "STARK"),
+                ("Flash_script/common", "Flash_script"),
                 ("copy-image/v1", "copy-image"),
                 ("OFX/v1", "OFX"),
                 ("TWRP/v1", "TWRP"),
@@ -373,6 +379,8 @@ class HybridChannelParityContractTests(unittest.TestCase):
             content_root = root / "content"
             for target in (
                 content_root / "MOD" / "ColorOS_16.0.8",
+                content_root / "STARK",
+                content_root / "Flash_script",
                 content_root / "copy-image",
                 content_root / "OFX",
                 content_root / "TWRP",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-14T05:55:05.816768Z",
+  "generatedAt": "2026-08-20T14:50:41.628186Z",
   "packs": [
     {
       "archive": {
@@ -59,6 +59,255 @@
       "remote": "wukong-gdrive:WukongROM/content-packs/copy-image/v1",
       "sizeBytes": 325530152,
       "target": "copy-image"
+    },
+    {
+      "archive": {
+        "md5": "22f849b509ab99c1f53753d9ea72a955",
+        "sha256": "bc2c23ebe38a30d06d8d365fe60347243172cecc25e145e5bb10d44b568b3870",
+        "sizeBytes": 31864313,
+        "uri": "wukong-gdrive:WukongROM/content-packs/Flash_script/common.tar.zst"
+      },
+      "files": [
+        {
+          "path": "META-INF/com/arkt/bootctl",
+          "sha256": "adb16f0b42bbd1a01db6d961f4f1f1366ed5669a0662f28cad0eb6e1bc59a1e9",
+          "sizeBytes": 34112
+        },
+        {
+          "path": "META-INF/com/google/android/update-binary",
+          "sha256": "1c702afe7186afdc6f008462ec1776023dc93da2ff42946702332cd8fc7f09d0",
+          "sizeBytes": 5481
+        },
+        {
+          "path": "META-INF/com/google/android/updater-script",
+          "sha256": "30429ff2966e67ef9f14f5f85a12b98de497d27fb4103fcdac83647be8a5196d",
+          "sizeBytes": 10
+        },
+        {
+          "path": "Wukong_Flashing_Tool_Linux.sh",
+          "sha256": "ef73823afbdac8cf4c6e24ca0defb6787b15754136d01e20d1027897ed87f744",
+          "sizeBytes": 11018
+        },
+        {
+          "path": "Wukong_Flashing_Tool_MacOS.sh",
+          "sha256": "747d641da367de284c0688fb9f38d99ae5134694e620844a7e29c329b8d63f83",
+          "sizeBytes": 12344
+        },
+        {
+          "path": "Wukong_Flashing_Tool_Windows.bat",
+          "sha256": "deedb6a4cc0a5597934446abcb56920abbfd9dd4177a8c98bf26d9486ef351d1",
+          "sizeBytes": 9683
+        },
+        {
+          "path": "bin/linux/NOTICE.txt",
+          "sha256": "3aaf99086d24f1546b834697950a68ecefd110aa6a4a75bdefcb30906a66001b",
+          "sizeBytes": 1177384
+        },
+        {
+          "path": "bin/linux/adb",
+          "sha256": "00108217733707a40debfc92c86d4232fd6e68870be5966515d74c071193ea90",
+          "sizeBytes": 11150112
+        },
+        {
+          "path": "bin/linux/etc1tool",
+          "sha256": "3fef97c548a8ce3be19deda2fbcb3a4556598175ff9974ea6902f76437a8deff",
+          "sizeBytes": 297512
+        },
+        {
+          "path": "bin/linux/fastboot",
+          "sha256": "76dde33fee8b1fd00bcaf2e7f94ddef6407f0beb5bc3a98a3d4127307af23f3a",
+          "sizeBytes": 3005160
+        },
+        {
+          "path": "bin/linux/hprof-conv",
+          "sha256": "d26ab9cae125593b509947523c8e787a7c1d55e6f97bc38ec5f7440bb7788abf",
+          "sizeBytes": 13616
+        },
+        {
+          "path": "bin/linux/lib64/libc++.so",
+          "sha256": "9d4c9036e8eca07cb7cf161128c362e8e5550ede7cd7f99078d559c14a5fdf9a",
+          "sizeBytes": 1545448
+        },
+        {
+          "path": "bin/linux/make_f2fs",
+          "sha256": "16c11e21d3bb6e689e703271ad4201a6fbfb25cb4cec10687a4fcb6da84c3ba3",
+          "sizeBytes": 278408
+        },
+        {
+          "path": "bin/linux/make_f2fs_casefold",
+          "sha256": "cfabc70a577ccd947f25910bbca89a20e1a316933625e64bf1e6f05d01442d9c",
+          "sizeBytes": 278392
+        },
+        {
+          "path": "bin/linux/mke2fs",
+          "sha256": "a1d1a328cfc5aff2d879a850935d917ea2014623ab1a634b4b9049419858c0b3",
+          "sizeBytes": 1003912
+        },
+        {
+          "path": "bin/linux/mke2fs.conf",
+          "sha256": "ad58a58dcdd24d85055814ca9cac67db89d4e67c434e96774bdce0d0a007d067",
+          "sizeBytes": 1157
+        },
+        {
+          "path": "bin/linux/source.properties",
+          "sha256": "fbd87c8567afbc6dc78e140097fcde234f4a61fa7065e85081d43e442ccd3d24",
+          "sizeBytes": 38
+        },
+        {
+          "path": "bin/linux/sqlite3",
+          "sha256": "f0728787228ee2548262c39ce900bcdd6709e9e183b03e1be2b72b9042475b82",
+          "sizeBytes": 3614232
+        },
+        {
+          "path": "bin/macos/NOTICE.txt",
+          "sha256": "f74735e1636534c2165b51815c4de870a2a06c24d8fe3e8c91149c841b81d33e",
+          "sizeBytes": 1153968
+        },
+        {
+          "path": "bin/macos/adb",
+          "sha256": "9fdf861259dc807937b13afdd5f053c7fda9f3b7726933fe0e0f45130ecb8dc7",
+          "sizeBytes": 19993936
+        },
+        {
+          "path": "bin/macos/etc1tool",
+          "sha256": "6d0ee40fe3c1f441e1dfb024ebc5f5274893fa348e1b53c3d86649142b523dbf",
+          "sizeBytes": 669872
+        },
+        {
+          "path": "bin/macos/fastboot",
+          "sha256": "549420b5b6b843efd78bfcd47765bb4b581fa23093693bb65648fab9eaa5de7a",
+          "sizeBytes": 5152256
+        },
+        {
+          "path": "bin/macos/hprof-conv",
+          "sha256": "ec15c2dad26d7128e168448a5d9dd30fba7791ae4d2ef547e631c4c2575b4e52",
+          "sizeBytes": 134624
+        },
+        {
+          "path": "bin/macos/lib64/libc++.dylib",
+          "sha256": "5c7d6309034f3b7b275241727d58902c57a66b518a85d2a32dd976b8fb7e9b34",
+          "sizeBytes": 2663184
+        },
+        {
+          "path": "bin/macos/make_f2fs",
+          "sha256": "9df870efffc16b8cddb3e7194b8b6b9bc8a88f3abf38809bf52b87cf8b608edc",
+          "sizeBytes": 595104
+        },
+        {
+          "path": "bin/macos/make_f2fs_casefold",
+          "sha256": "4ae2ddd0c7ebe69090067d3d3512d694e730c01048bbed9810798d7d1908ab99",
+          "sizeBytes": 595120
+        },
+        {
+          "path": "bin/macos/mke2fs",
+          "sha256": "e1cb9ae14ce0cee376e9237e9134387adea7e8c5f13d957752bbe18039d830b8",
+          "sizeBytes": 1815856
+        },
+        {
+          "path": "bin/macos/mke2fs.conf",
+          "sha256": "ad58a58dcdd24d85055814ca9cac67db89d4e67c434e96774bdce0d0a007d067",
+          "sizeBytes": 1157
+        },
+        {
+          "path": "bin/macos/source.properties",
+          "sha256": "fbd87c8567afbc6dc78e140097fcde234f4a61fa7065e85081d43e442ccd3d24",
+          "sizeBytes": 38
+        },
+        {
+          "path": "bin/macos/sqlite3",
+          "sha256": "a19e34cb08479c6207ed88d7fbd6b708a8880ed64a2e8811e87e9efb695d63c9",
+          "sizeBytes": 6606368
+        },
+        {
+          "path": "bin/windows/AdbWinApi.dll",
+          "sha256": "120bef587119c6cb926b86b9be90fdfbce38937588eae28cd91a94ce63c7b965",
+          "sizeBytes": 108184
+        },
+        {
+          "path": "bin/windows/AdbWinUsbApi.dll",
+          "sha256": "6ca69a2ca0e31309c087d288f058977d421ad03500e4c3e1dbd981241a069c60",
+          "sizeBytes": 73368
+        },
+        {
+          "path": "bin/windows/NOTICE.txt",
+          "sha256": "628f43e9c88e2bf5aee9fc4c1cb672bf3931ba12dd5ef75c8170678395f3ca23",
+          "sizeBytes": 1154858
+        },
+        {
+          "path": "bin/windows/adb.exe",
+          "sha256": "957e46b8615f7af5b7292a2ddabe98d2e61940c3fb2b0545756507f080613e71",
+          "sizeBytes": 8485016
+        },
+        {
+          "path": "bin/windows/etc1tool.exe",
+          "sha256": "6e4f7670d72e999aedc9900acdca373e8e7ae6fff858d19c2c6c005028292e3a",
+          "sizeBytes": 446104
+        },
+        {
+          "path": "bin/windows/fastboot.exe",
+          "sha256": "dd55fef77ab2753b6423f37f39d91cb00ce53ab4539a2431577f07c4abcaa32a",
+          "sizeBytes": 2199704
+        },
+        {
+          "path": "bin/windows/hprof-conv.exe",
+          "sha256": "33321e7d44be00a1023d24fe34702df13ed9e5ab9edae219fbd8cde37dd766a9",
+          "sizeBytes": 52888
+        },
+        {
+          "path": "bin/windows/libwinpthread-1.dll",
+          "sha256": "283a8c3f8d1542df333e0899757b00d484888978d62ccf8c99db662a95cce764",
+          "sizeBytes": 243016
+        },
+        {
+          "path": "bin/windows/make_f2fs.exe",
+          "sha256": "4b5f9fdd76a03a16788d3542b5445c70eee27f931d052973a881db420c975f2b",
+          "sizeBytes": 464024
+        },
+        {
+          "path": "bin/windows/make_f2fs_casefold.exe",
+          "sha256": "7878e842693bd1a9321fe5a0b55cfef4ddda3807bac55de38e177f134b29b01b",
+          "sizeBytes": 464024
+        },
+        {
+          "path": "bin/windows/mke2fs.conf",
+          "sha256": "ad58a58dcdd24d85055814ca9cac67db89d4e67c434e96774bdce0d0a007d067",
+          "sizeBytes": 1157
+        },
+        {
+          "path": "bin/windows/mke2fs.exe",
+          "sha256": "be42abb5d1651c8766e230e7af834bd8e0f2085857ccb483463f58ba5ad65e1a",
+          "sizeBytes": 753816
+        },
+        {
+          "path": "bin/windows/source.properties",
+          "sha256": "fbd87c8567afbc6dc78e140097fcde234f4a61fa7065e85081d43e442ccd3d24",
+          "sizeBytes": 38
+        },
+        {
+          "path": "bin/windows/sqlite3.exe",
+          "sha256": "413aacb98a96bd5316ff9865765b86bef548e57f7dc8f620ad33f509a64748c3",
+          "sizeBytes": 3028632
+        },
+        {
+          "path": "info.txt",
+          "sha256": "3cd586a0627612f2acd59e6f6a35e7aa3f03ef6f0de0260964f618c93bb68d13",
+          "sizeBytes": 63
+        },
+        {
+          "path": "tao_md5.bat",
+          "sha256": "53f0025a7886829b31b183a738611ef6ac596d72cdcaa788291905b8eb0e3232",
+          "sizeBytes": 1564
+        },
+        {
+          "path": "wukong_md5_hashes.txt",
+          "sha256": "574534b0352456f1b22a1b16369b6af9ce95d530571e355e4fd72b95239e6acc",
+          "sizeBytes": 1686
+        }
+      ],
+      "id": "Flash_script/common",
+      "remote": "wukong-gdrive:WukongROM/content-packs/Flash_script/common",
+      "sizeBytes": 79297644,
+      "target": "Flash_script"
     },
     {
       "archive": {
@@ -218,6 +467,645 @@
       "remote": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_15.0.1",
       "sizeBytes": 725095238,
       "target": "MOD/ColorOS_15.0.1"
+    },
+    {
+      "archive": {
+        "md5": "50c718972af846990060013abbc5c846",
+        "sha256": "45e189126e07468b848f2f5b6b650e225b688a78dd2a59dd0248d7ef4f6dd68b",
+        "sizeBytes": 1396526002,
+        "uri": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.10.tar.zst"
+      },
+      "files": [
+        {
+          "path": "Ai_global/my_region/etc/extension/com.oplus.app-features-ext-stark.xml",
+          "sha256": "1bd762cefca0a13679fd467c444e94286b13971f8877798a092d48b6acf7a1ef",
+          "sizeBytes": 4786
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/AIMemory.apk",
+          "sha256": "1853fe89f0a8474d131985b4e53ce62c3f00dba836af3ddb26250111e12b3578",
+          "sizeBytes": 101623106
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libnoise.so",
+          "sha256": "4c06c36cdbe4bf7f818b336a3da60eb38a652c1bf8894f76acee9fe244aed78f",
+          "sizeBytes": 14176
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libopluslog.so",
+          "sha256": "b67bd5c5ebe854a0a6bb0650a404e8c4bd1815fcf12ea1c97dd4a06c20cc2518",
+          "sizeBytes": 63408
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_decode.so",
+          "sha256": "076a9568df5de0d640fccabc7fc9eded4c866fab32a61839f47c2daa168d084f",
+          "sizeBytes": 3977360
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libscan_engine_detect.so",
+          "sha256": "57560fdf7aff4d1333f8b95d534b002fadd283a1eeaa09969bd65e519b0ad112",
+          "sizeBytes": 3037632
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libtensorflowlite.so",
+          "sha256": "492fe763d2118bd21b291bbc018dae52eab2b242561f2522b0c5ce3f5f68eb50",
+          "sizeBytes": 3139672
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwb_tables_549543368749780587_1.so",
+          "sha256": "7b712723f31823a1dcefa098e0a1b4fa202f70c70f2c1148558f1b6f3880c3bd",
+          "sizeBytes": 223056
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIMemory/lib/arm64/libwbkit-seckit3.so",
+          "sha256": "75514d570b92f06b27c01e49bd9b05fd8fb7fee5483623c7e2d2be18d63ee56a",
+          "sizeBytes": 146016
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/AIWriter.apk",
+          "sha256": "daf87a9ff34e8b4d3b0182e4ea9780789ce46bc29fb47a4449af1ae334b251c4",
+          "sizeBytes": 29369425
+        },
+        {
+          "path": "Ai_global/my_stock/app/AIWriter/oat/arm64/AIWriter.vdex",
+          "sha256": "954f854fd59462262d2246025ab9bf25c7df6049039359b78cbe09dfc22b4e5d",
+          "sizeBytes": 377736
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/ColorAccessibilityAssistant.apk",
+          "sha256": "10d11e217df83ab9c82e453543ff3e6d73771440638f088222a0ad32fc3ab510",
+          "sizeBytes": 55107284
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorAccessibilityAssistant/oat/arm64/ColorAccessibilityAssistant.vdex",
+          "sha256": "b7b1b6d843cb6dacbb2bb7645b6f3f6c4027f6633de5b452e9e40e6a27ffa1f5",
+          "sizeBytes": 464820
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/ColorDirectService.apk",
+          "sha256": "71aecb265a641daae730b0c9b66b13dbebbb8ae2f8e7674bd7dd59195b731410",
+          "sizeBytes": 66498603
+        },
+        {
+          "path": "Ai_global/my_stock/app/ColorDirectService/oat/arm64/ColorDirectService.vdex",
+          "sha256": "4e19c5779efe63d4a7fafadb585f8f1555c9b46a0165018350ee730a74771398",
+          "sizeBytes": 613484
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/AIUnit.apk",
+          "sha256": "b57a9e2980eb1f134c41022986543b33df1ec17bb48e8a26a84270f75af0c4bb",
+          "sizeBytes": 90812122
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework.so",
+          "sha256": "7d9ed9b3f901e18ca2b28e668fa35e7114daf624ad3411f8057b67e1c17002ed",
+          "sizeBytes": 1241256
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_framework_jni.so",
+          "sha256": "e34379eb860ef136426e17479e7d08f2d0c749265c64224948dce45ac73f8260",
+          "sizeBytes": 226592
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "99075cbf137fed45bd555468bd3c36af1bc66346a43fe40bacdbfd162ad611de",
+          "sizeBytes": 12816
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libc++_shared.so",
+          "sha256": "56f6d8405cb996826c1e06d38ca81830206a056d2ef22a0e3df6fac2be6d14ec",
+          "sizeBytes": 6934032
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libcore_tokenizers.so",
+          "sha256": "b5371c7163e0f5d31f6e6d20439973f08c9b4e5849fa159fbda91d8bce7712db",
+          "sizeBytes": 7662464
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdatastore_shared_counter.so",
+          "sha256": "d3e48717c9aa147e0ab21063ba0e8e0211cabf8bf40b222640829519edbf58e1",
+          "sizeBytes": 7112
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libdmabufheap.so",
+          "sha256": "ed208e1306fb901a873eae2b819b0bb828c3eb1ee9c43dfd40171f6f4217cc7b",
+          "sizeBytes": 139447
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/lib/arm64/libopencv_java4.so",
+          "sha256": "3f4cef5615b0d2896876b619c6d1bba7ccaf3599f41e99715961895761b53258",
+          "sizeBytes": 17822832
+        },
+        {
+          "path": "Ai_global/my_stock/priv-app/AIUnit/oat/arm64/AIUnit.vdex",
+          "sha256": "7c5bde5bb4519ced58431dc34b0c1add6296e04c0916c91376eb9498af9fb0bc",
+          "sizeBytes": 457576
+        },
+        {
+          "path": "Calendar_global/my_stock/del-app/Calendar/Calendar.apk",
+          "sha256": "b35ad4a97b3144cab384d54d779d8d2586a1d1f443744e4442aced4bd7a052b4",
+          "sizeBytes": 103473257
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk",
+          "sha256": "ea5bed5e3f1fd6997ab64e74a6883bea1534cdc0a0e65d0e8fec258628020ab8",
+          "sizeBytes": 59765402
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/Contacts.apk.prof",
+          "sha256": "7f39de124de3c1097e23b753e56f83f16d6cd17445dc1f31460f10276de2a89f",
+          "sizeBytes": 16590
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.art",
+          "sha256": "986594e6ce2de9e1f50aeb9f57692e3cb520856b01671fe178d962658050f5ac",
+          "sizeBytes": 1168304
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.odex",
+          "sha256": "a8e648b91b6bc1272a7eb4f8eea3e91f3ab389f95eb52bc1c8638eb1bce9341b",
+          "sizeBytes": 5502112
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Contacts/oat/arm64/Contacts.vdex",
+          "sha256": "fcbd7b0c47cc5582d7f1b9f39331c61783dd18be6d293d79bf702101034397b6",
+          "sizeBytes": 477492
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/InCallUI.apk",
+          "sha256": "2653b22f718feefc73bc8cd03b4669fc166111a7b86becb228117e1a4e2c5f49",
+          "sizeBytes": 22718434
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/InCallUI/oat/arm64/InCallUI.vdex",
+          "sha256": "6476f292fed53328125519706ed4ebcd9a93f1b2576a99d92c491509392896b4",
+          "sizeBytes": 242732
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk",
+          "sha256": "05d2e9c4fba418d348d26540d2b96521062f35b741df1f73ab60e0463f014a9c",
+          "sizeBytes": 79683195
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/Mms.apk.prof",
+          "sha256": "47642c14e1090b1311550c0cbeb17f8c7c03ff55014896449a38792cc4979e33",
+          "sizeBytes": 17336
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.art",
+          "sha256": "54a6a6cfc341944d2c3c1f6f998f39631e3cdfd541ab986244cbc2868b132c3f",
+          "sizeBytes": 451536
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.odex",
+          "sha256": "1ef13032116952187b6dfd71d9f5c3225e937a5f33814424960ef0614b0949d8",
+          "sizeBytes": 4370328
+        },
+        {
+          "path": "Call_mms_contacts/my_stock/priv-app/Mms/oat/arm64/Mms.vdex",
+          "sha256": "8dd9b26ce3c171286dc273667151283cce60de580a409d542bfadf85ddb5895c",
+          "sizeBytes": 704384
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/OplusCamera.apk",
+          "sha256": "a4d4927a24c40287cc267dd3c2c1ae4b6a41bcb76f732dd6c76e0ef507a7d480",
+          "sizeBytes": 171193226
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/OplusCamera.apk.prof",
+          "sha256": "d3392e6cdc89516d9c5635d17d88a383e37cd7a39d097fe17828a8bfb7e88c9f",
+          "sizeBytes": 16761
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.art",
+          "sha256": "78de6d8b0f0df52a5001b3e287d7cf337551d302aaeec9bda175364cb1a23c47",
+          "sizeBytes": 2728448
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.odex",
+          "sha256": "830cadc130a97d72690a240b849fa05c3d80c5e3df0e44f296fd041377733ba3",
+          "sizeBytes": 4265880
+        },
+        {
+          "path": "Camera_mod/my_product/app/OplusCamera/oat/arm64/OplusCamera.vdex",
+          "sha256": "caf0745a4259c258be0e24c2731675089461738d1f7999e6a212a9de52c2c5a6",
+          "sizeBytes": 568048
+        },
+        {
+          "path": "Camera_mod/my_product/stark_build.prop",
+          "sha256": "f9c383ce1fc954358b21543bb4ba0c6eb0fa3d76840c563cf669254311e55236",
+          "sizeBytes": 32
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/NotificationCenter.apk",
+          "sha256": "d78b629b9c4966a8bc60ba98b6f8796cf27c8a7c50554d68cbdc5d3596a9448a",
+          "sizeBytes": 34607135
+        },
+        {
+          "path": "Chat_bubbles/system_ext/app/NotificationCenter/oat/arm64/NotificationCenter.vdex",
+          "sha256": "38e5864d8305834474151900432c49fd331896d6effc0b5e407b74eb1dc7ad58",
+          "sizeBytes": 391368
+        },
+        {
+          "path": "Cts_Gemini/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk",
+          "sha256": "482f56a6774b29ff21d40bb823e4975221336f8894f18df19186b339348da395",
+          "sizeBytes": 109805538
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/SystemUI.apk.prof",
+          "sha256": "cb2a47335457329f0035f9497c513e726292af761aeeec742ecb394817fde9b4",
+          "sizeBytes": 22021
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.art",
+          "sha256": "8a231a50d73c75b334280d67c884e2069071e4ce9f41ed29bb7b833f890ab185",
+          "sizeBytes": 5752064
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.odex",
+          "sha256": "501b15700f3d73a4e61f8fab7dd799b4725114332984ba36380572465c02153a",
+          "sizeBytes": 3484928
+        },
+        {
+          "path": "Cts_Gemini/system_ext/priv-app/SystemUI/oat/arm64/SystemUI.vdex",
+          "sha256": "c72c08ed4691a93a443bb97a64fca2f2944a396cbddc93ac9d04830c4a2113a9",
+          "sizeBytes": 1554020
+        },
+        {
+          "path": "Fake_lock/system/system/bin/wk",
+          "sha256": "779eb01c1227adbeff9d0713e0fba5191e939c83833e0c422723fb5b46cf0f94",
+          "sizeBytes": 74720
+        },
+        {
+          "path": "Fake_lock/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "b6e17da8c39f24d303b92852dc9c24c5932bf1f3b39da13b570e6551e392003a",
+          "sizeBytes": 2581
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_file_contexts",
+          "sha256": "622598cf3902a0263d516dcf358ecfe5151151ad685ed904cb851f444db9b5e6",
+          "sizeBytes": 83
+        },
+        {
+          "path": "Fake_lock/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "5303ed7adf10ad85f8ba6aabf3586eb9abc3189face020247be7bbb0cd1e7572",
+          "sizeBytes": 261
+        },
+        {
+          "path": "Fix_noti/my_region/etc/battery/sys_deviceidle_whitelist.xml",
+          "sha256": "b525c6e06e39993549a7af36272773a71a7d8e7db27496d8488c3fe81e4fbbbb",
+          "sizeBytes": 2936
+        },
+        {
+          "path": "Fix_noti/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "05b342b79c3147913bf08a16cd360fd40ade83e5837e26f84a42a86b35080462",
+          "sizeBytes": 243
+        },
+        {
+          "path": "Fix_noti/my_region/etc/startup/safe_boot_whitelist.xml",
+          "sha256": "2f5e1d32c3e60001775d5a5b99b3a06909074b6be296824b2a1a4bd158a5c30c",
+          "sizeBytes": 15055
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/Athena.apk",
+          "sha256": "a5347245dde06e6cf587b5c1f70fe16b7aff4fe0d07209d019f7e66cc89026e5",
+          "sizeBytes": 2927258
+        },
+        {
+          "path": "Fix_noti/system_ext/app/Athena/oat/arm64/Athena.vdex",
+          "sha256": "d4fdb8ef16aefcd1b0c004672020fea4440e4f9d33f486fc39c3d60022e60871",
+          "sizeBytes": 52844
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "d4ffdaf958bc4d9ab2fe85fd3cbe0accf1e99a7b0e18c1cba5eac0614e26f4e4",
+          "sizeBytes": 343991213
+        },
+        {
+          "path": "Gallery_mod/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/OppoGallery2.apk",
+          "sha256": "64ebde6ae05fb011d549499199667246294eb532e2ef944cfb8a4e0261363c6d",
+          "sizeBytes": 339736691
+        },
+        {
+          "path": "Gallery_mod_CN/my_stock/priv-app/OppoGallery2/oat/arm64/OppoGallery2.vdex",
+          "sha256": "d4e033c128cab80fa91b00244e9a00e29ba03b609f8a4dd11d4d6166762bc61d",
+          "sizeBytes": 1694752
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleGemini/GoogleGemini.apk",
+          "sha256": "0bc7d4e3650ae8e592d1bfdc68a8be4eb6a6939c191142338e56dfc34eaf2ceb",
+          "sizeBytes": 5679466
+        },
+        {
+          "path": "Gapps/my_product/app/GoogleLocationHistory/GoogleLocationHistory.apk",
+          "sha256": "bca584aeeb3d1be4eacc8812c189bbb9ed0ba354bfa27ccfdae5695d4ccf1259",
+          "sizeBytes": 2720602
+        },
+        {
+          "path": "Gapps/my_product/app/LatinImeGoogle/LatinImeGoogle.apk",
+          "sha256": "1ff5cc10ec628347da45a8ffd59e6763e5fd2798365ec9fa71ac3c44bcaa1c85",
+          "sizeBytes": 77435723
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/SpeechServicesByGoogle.apk",
+          "sha256": "da255cc829117c5e029400df097436f354be569309965eed20b1718035de995d",
+          "sizeBytes": 77140139
+        },
+        {
+          "path": "Gapps/my_product/app/SpeechServicesByGoogle/oat/arm64/SpeechServicesByGoogle.vdex",
+          "sha256": "4157c5b0d2fa97a4ca8ce6e74dbd5e2b0ffafda5cf7b593a708229fb63fb4aab",
+          "sizeBytes": 291412
+        },
+        {
+          "path": "Gapps/my_product/etc/extension/feature_contextualsearch_navbarhidden.xml",
+          "sha256": "96315ab1befdcc8c1dc22491d7ea0aef53b2831278de7c072e3964160264a33f",
+          "sizeBytes": 145
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_contextualsearch.xml",
+          "sha256": "7a9cf003162c273c040873ea18ac2dc265917f532e4e146c11a21418f0ea83ec",
+          "sizeBytes": 212
+        },
+        {
+          "path": "Gapps/my_product/etc/permissions/feature_gemini_power_menu.xml",
+          "sha256": "3fa60edc6d6ee9eedc3855e27c74063dd0736aa55a0b89b8cb2c99b19c9da502",
+          "sizeBytes": 134
+        },
+        {
+          "path": "Gapps/my_product/overlay/GmsConfigOverlayGSA/GmsConfigOverlayGSA.apk",
+          "sha256": "6c5add710bc20263505756a97e5a0cdbd68b90240af95bf13c848d2dcec13292",
+          "sizeBytes": 8542
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCircleToSearch/OplusAiConfigOverlayCircleToSearch.apk",
+          "sha256": "05d0273dbd582f14c97e8e5457f9c99545fdecb6752b90799794436037d67947",
+          "sizeBytes": 12646
+        },
+        {
+          "path": "Gapps/my_product/overlay/OplusAiConfigOverlayCommon/OplusAiConfigOverlayCommon.apk",
+          "sha256": "e5b6aabd1f5b54835b1d605eb4f3ac5215eab40116d7a137cac7cbff08abcf04",
+          "sizeBytes": 8550
+        },
+        {
+          "path": "Gapps/my_product/overlay/WukongOTACard.apk",
+          "sha256": "c5dbac9a22128ce04471542f5cc4a00bd25a025517944b6086bb46117fd92182",
+          "sizeBytes": 20972389
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/GoogleVelvet_CTS.apk",
+          "sha256": "5ba6ce51eaf893ca2c61d2eacadbf66c4b87224408e3d317414b48b966d8fcdf",
+          "sizeBytes": 313071355
+        },
+        {
+          "path": "Gapps/my_product/priv-app/GoogleVelvet_CTS/oat/arm64/GoogleVelvet_CTS.vdex",
+          "sha256": "7f65258283fb5acccebca9de201abaeda81a28561b2b2529f1347b0236d9892a",
+          "sizeBytes": 3087384
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/Phonesky.apk",
+          "sha256": "8221f061f1bb387ca0e2bf4f3f7438326549191154470f6f04e15930b6c9dd67",
+          "sizeBytes": 104621875
+        },
+        {
+          "path": "Gapps/my_product/priv-app/Phonesky/oat/arm64/Phonesky.vdex",
+          "sha256": "053acc2d72b2e6ce69004f15eb757d890083b8dce69af8d50e0c1faee001d20e",
+          "sizeBytes": 1586852
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/GlobalSearch.apk",
+          "sha256": "08bd3a314e98a723527ad4594f137f75026672b08aca117fdf77632fa5a52733",
+          "sizeBytes": 77720139
+        },
+        {
+          "path": "GlobalSearch/my_stock/priv-app/GlobalSearch/oat/arm64/GlobalSearch.vdex",
+          "sha256": "ff886540e444d9936e6069547814f3dfe6cbc496dd834a0f4eff4a93e52e246b",
+          "sizeBytes": 1321920
+        },
+        {
+          "path": "Global_props/my_product/etc/extension/US/appfeature.country.dynamic_features.xml",
+          "sha256": "4dcc55e8dc44239a9c36c58530512b240475dc10ad182bf72d78d64e3119f287",
+          "sizeBytes": 852
+        },
+        {
+          "path": "Global_props/my_product/stark_build.prop",
+          "sha256": "eb5c53063376efdadb40b57f4fb91a3f0fbf763b5d2c28bf8c226d63615d584c",
+          "sizeBytes": 92
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/etc/permissions/com.oplus.camera.unit.sdk_product.xml",
+          "sha256": "fcde0d8a1595591d6dc679d2c3681b550e9e4609e9a65ab45733bd52ea694072",
+          "sizeBytes": 576
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/etc/permissions/oplus_camera_default_grant_permissions_list.xml",
+          "sha256": "2ac7990bc1ffe4e6e3d297fee772faa6365027c7dbe8df8ece466d51824fcc76",
+          "sizeBytes": 905
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.adapter.jar",
+          "sha256": "402363fd3c98905067793c69bbd8c9eedd86bc1d9315f57cbef5819684a8a6ba",
+          "sizeBytes": 2992483
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/framework/com.oplus.camera.unit.sdk.jar",
+          "sha256": "82a1a2a4d7b5c16a13eff098525309e1549032015536d17245da0a66ece7096c",
+          "sizeBytes": 5149867
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.odex",
+          "sha256": "c987c82f5c6a07776db505946c0bb969405d6e336f0cd88cf474bd397b8256a4",
+          "sizeBytes": 33712
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.adapter.vdex",
+          "sha256": "3e4a52e7fa2b7d639ce54ac746a1cc41e9505e83cd90ad1be11877987fd92291",
+          "sizeBytes": 33624
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.odex",
+          "sha256": "c2ecb4dd411f2ff31fce0635ec6c49672f41806e8edbbf057603619058d25670",
+          "sizeBytes": 50096
+        },
+        {
+          "path": "Hasselblad_filter/my_product/product_overlay/framework/oat/arm64/com.oplus.camera.unit.sdk.vdex",
+          "sha256": "8d6821fd9b849c2d345f11103965c308cbe3bd205f17d07c6193f4103129ae71",
+          "sizeBytes": 60620
+        },
+        {
+          "path": "Launcher_mod/my_region/etc/extension/stark_com.oplus.app-features.xml",
+          "sha256": "a7336567c8a579fb85c49c6342546dcf2bb28bf5129bd669e53e81340bd79138",
+          "sizeBytes": 130
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk",
+          "sha256": "fed83ae9653025ebcace427181362750b17b8d10c164433f5e0bcf8e33ffcd80",
+          "sizeBytes": 77599987
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/OplusLauncher.apk.prof",
+          "sha256": "81f3778fc96eed2b50c427ed47b76d17646cc6fd7d248406dae198256bc15a80",
+          "sizeBytes": 25493
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.art",
+          "sha256": "a83efd1a8e7ad7a7bfab21065d8d44b22d8ef566d3973ecec6f1e71f6280c623",
+          "sizeBytes": 484512
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.odex",
+          "sha256": "c9fa2f8f8bb3de47dcd596b391c2b4b459e2e252c5e229e6e8c2d550ac70cf28",
+          "sizeBytes": 10460248
+        },
+        {
+          "path": "Launcher_mod/system_ext/priv-app/OplusLauncher/oat/arm64/OplusLauncher.vdex",
+          "sha256": "c4eda6f561ec528ed96c4a724b26e52d36e7226416dd736c2c60d0f9a457ef1f",
+          "sizeBytes": 920488
+        },
+        {
+          "path": "Settings_mod/system_ext/priv-app/Settings/Settings.apk",
+          "sha256": "c8430483d0417f260cca4aa330febf36d3cfb632bdc2b5094a5295b3c66e6bc9",
+          "sizeBytes": 178322795
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/KeKeThemeSpace.apk",
+          "sha256": "5bc4d3e2586039ec909003cd41aef5e9851455f575a6eadda6575bb8c94edf38",
+          "sizeBytes": 120576228
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libPlatformJNI.so",
+          "sha256": "3073eba2f0d73cf21eb475b460fb27fae57e4cca4e4ccccbb6b6c6fa6865f150",
+          "sizeBytes": 3880
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-ac.so",
+          "sha256": "4ada48cdf529787f0c16a6ced4a361f048fc96345907925ee034d8e9406c49a0",
+          "sizeBytes": 10080
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libads-c.so",
+          "sha256": "018bdd3fb69ff1d430e902212ecf4a2a4b21da18e0d08f29efb74a17236e99df",
+          "sizeBytes": 14680
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libaiunit_sdk_core.so",
+          "sha256": "14001b26ef4283c303f71fbd22d7582d054888e2273559322127f4d905128255",
+          "sizeBytes": 14024
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libastcenc.so",
+          "sha256": "94e2548d0614216f40a865c1800759736b8eec1355acd967a36a6a45821a86b1",
+          "sizeBytes": 1350032
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libavif_android.so",
+          "sha256": "266aa7ace35971c883aebd7f7f0bd18aea8cced97b72203893145c0a04efa9a7",
+          "sizeBytes": 846840
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libbsdiffutils.so",
+          "sha256": "0a7f2d924a3115b9ca526afa4e52a2bc339c5a90abfd5cbab7696c02e63ea03d",
+          "sizeBytes": 287864
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libcomm-sign-lib.so",
+          "sha256": "cf653b19a2542a9c03310ff3f0c2e9aca5da6f9e3ddba372dc02db83c08f1b58",
+          "sizeBytes": 125096
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libconceal.so",
+          "sha256": "9bc3cc06192654d1377df0061e85b9c3abb993dcb85ae972edfec4ec9c296f59",
+          "sizeBytes": 267928
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpeg.so",
+          "sha256": "33b4540dbb53e851b164568bd7aa3a0c1b6b61b80b21f65c8ee7fae40830cb19",
+          "sizeBytes": 2853432
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libffmpegJNI.so",
+          "sha256": "5b44896e8c0aa6bd781b3863bc898d3c447bb5feaeef7fee054f67b558c984dd",
+          "sizeBytes": 991120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libgdx.so",
+          "sha256": "c273343772d2e8d365d106cb08278c9f649082d06f4dba7a5163222cdf2036eb",
+          "sizeBytes": 186280
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libheytaplog.so",
+          "sha256": "78aa65754011fb85730306ae060c9131ecbf1d680ef864bda2c0ca26e3a25c69",
+          "sizeBytes": 63416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libmmkv.so",
+          "sha256": "676e9c0530bea8f60aa04f0cd37ccceced732b16a6effca152bd9b21a1349f85",
+          "sizeBytes": 483120
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libocstool.so",
+          "sha256": "24c01b6789e5dc9fad043a4edd444b28d32ef2df7bf68ac4e98cfd80893aad40",
+          "sizeBytes": 18312
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_conscrypt_jni.so",
+          "sha256": "15e7dc0783d3fa70077480f02a76be19a700a11189063885ac2ab4eb2d48b2e0",
+          "sizeBytes": 2152832
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/liboplus_image_process.so",
+          "sha256": "4c13f304b83ef8a14ce20ba8873b93c0238af8ac535ad18617f0e12a6798f624",
+          "sizeBytes": 14064
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libopluslog.so",
+          "sha256": "0011664442dce59f78b532d892b69b5b420339a4c0136ec238cf73d5d691e5a4",
+          "sizeBytes": 63264
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libqcloud-avif.so",
+          "sha256": "99d2fa644db9fd3aa8df8cd38e1176f49976b67b4670e910bdb832195bdf680b",
+          "sizeBytes": 1282448
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/librtmp-jni.so",
+          "sha256": "0adc21a21aa9fb2477e63ec3843bc20f4e06ef95c21447539f9204f00c62a4ec",
+          "sizeBytes": 87912
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libscorpion.so",
+          "sha256": "54268e5c0f6ba16cbec6a6cb7891d13f31af429db530a2ddd512dc68b65335cf",
+          "sizeBytes": 502248
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libtbljniutils.so",
+          "sha256": "d1133e70d5a5fee7dce6e8cf70c468f3f9754b973c713e2d8661be600f405196",
+          "sizeBytes": 67416
+        },
+        {
+          "path": "Theme_cr/my_stock/priv-app/KeKeThemeSpace/lib/arm64/libvipfont.so",
+          "sha256": "8a12484848b1f9a59d2f1c8421511a15015ae4f3b46d3347bfd0cb0fb6a48f78",
+          "sizeBytes": 1200544
+        }
+      ],
+      "id": "MOD/ColorOS_16.0.10",
+      "remote": "wukong-gdrive:WukongROM/content-packs/MOD/ColorOS_16.0.10",
+      "sizeBytes": 2788443952,
+      "target": "MOD/ColorOS_16.0.10"
     },
     {
       "archive": {
@@ -3456,6 +4344,600 @@
       "remote": "wukong-gdrive:WukongROM/content-packs/OFX/v1",
       "sizeBytes": 314572800,
       "target": "OFX"
+    },
+    {
+      "archive": {
+        "md5": "862e3782af4e5a8e5328b1f78ba41f63",
+        "sha256": "99ac444b02b6430bc86712f4633ae10be2ff7a4ea2a87f810d359304492d7c19",
+        "sizeBytes": 10511965,
+        "uri": "wukong-gdrive:WukongROM/content-packs/STARK/common.tar.zst"
+      },
+      "files": [
+        {
+          "path": "WK_Installer/system_ext/priv-app/OppoPackageInstaller/OppoPackageInstaller.apk",
+          "sha256": "a46163d14b75133d9f0211330a1bfe7f13da962add7fffd35933be9dde2a8f5d",
+          "sizeBytes": 5148923
+        },
+        {
+          "path": "WK_Manager/my_region/etc/extension/stark_com.oplus.oplus-feature.xml",
+          "sha256": "baf2053bc6361ed3ce6c35bf1dd39a81fadc9a0af5832a571e40c2a2015cea16",
+          "sizeBytes": 66
+        },
+        {
+          "path": "WK_Manager/system/system/etc/init/hw/stark_init.rc",
+          "sha256": "ca6ef56067a406c22e0f1475d9800570c90889c326e1b3b74e09078106b2e66b",
+          "sizeBytes": 1881
+        },
+        {
+          "path": "WK_Manager/system/system/etc/permissions/privapp-permissions-wukong-manager.xml",
+          "sha256": "a533c7fc48d2ade5d11b4912813390fe255eefac765f3a943770eb9ae9f40b70",
+          "sizeBytes": 8386
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_seapp_contexts",
+          "sha256": "a75ad8e86601dff36b8035a357d321f8e5741ed4c85007db68bd10c8d8cb3650",
+          "sizeBytes": 113
+        },
+        {
+          "path": "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil",
+          "sha256": "3a76318a61158345edee1b527e34733f3cf8c699a4855331a84a9ca3ef12cae5",
+          "sizeBytes": 6412
+        },
+        {
+          "path": "WK_Manager/system/system/priv-app/WukongManager/WukongManager.apk",
+          "sha256": "4a6962b841492d5dc5d3714d78ac1ecb0e0cf8b02e42cd78a75202bc54c6b736",
+          "sizeBytes": 10805015
+        },
+        {
+          "path": "WK_Manager/system/system/stark_build.prop",
+          "sha256": "ab821871c0a1e152b84caf5d96e6a8e24db5588e823e265f0fb6d4ce47667711",
+          "sizeBytes": 25
+        },
+        {
+          "path": "android/preference/SettingsHelper.smali",
+          "sha256": "25b1c650904ee1b346262537fd3a858d18fd82df76f3cc9b9311ca13cd281f7d",
+          "sizeBytes": 14364
+        },
+        {
+          "path": "com/wukong/manager/WukongFrameworkBridge.smali",
+          "sha256": "20923491287c4af84399d626720cd2df279b9305c1f87b106af595aa7c72e2a3",
+          "sizeBytes": 121395
+        },
+        {
+          "path": "com/wukong/manager/WukongHmaPolicyBridge.smali",
+          "sha256": "47fb4fd0bd2bd54f9e0829cb21cda0ab27a1f2c2ebd0d5701dde830a3f96e53b",
+          "sizeBytes": 134683
+        },
+        {
+          "path": "com/wukong/manager/WukongInstrumentationHook.smali",
+          "sha256": "51ce29b7120603f8d4938ab19ee69a0372841e76c7c719f3d8fb1f72a127b132",
+          "sizeBytes": 101733
+        },
+        {
+          "path": "com/wukong/manager/WukongPackageManagerHook.smali",
+          "sha256": "1606ab03bbda45619cbf2cd2d1c7a9c68780800e87e448f8ad3c8f1d12cf9550",
+          "sizeBytes": 28157
+        },
+        {
+          "path": "com/wukong/manager/a.smali",
+          "sha256": "6b9df8ea4ebfc54777b7d3fea904baf24544b17d149834c42e5680340a831bf4",
+          "sizeBytes": 5560
+        },
+        {
+          "path": "com/wukong/manager/aa.smali",
+          "sha256": "99ffc872992c522a936be070c3efdddbc4fb29dc48c8cddc072aa40805183196",
+          "sizeBytes": 5239
+        },
+        {
+          "path": "com/wukong/manager/ab.smali",
+          "sha256": "dce001cd6f6a64e0edd9101b8f00e45bef03714b372cf6034409c108af3af743",
+          "sizeBytes": 5316
+        },
+        {
+          "path": "com/wukong/manager/ac.smali",
+          "sha256": "a1f1442430432c465906b1a3ba0b5438624e868ad7750b507699d72067063c7a",
+          "sizeBytes": 5218
+        },
+        {
+          "path": "com/wukong/manager/ad.smali",
+          "sha256": "7e78e7ca3ed60fef5d01995ec8fe5e0cb645d57877514377a24e7ee33129df67",
+          "sizeBytes": 5155
+        },
+        {
+          "path": "com/wukong/manager/ae.smali",
+          "sha256": "341ecaffc6439bdb7a5d50c8cd018dc06712870623ddd49e93763ef4d04dff83",
+          "sizeBytes": 5217
+        },
+        {
+          "path": "com/wukong/manager/af.smali",
+          "sha256": "956fb3090898b6ce5c3d4859370f572c98cb427cc834999a9bd0a6cca3315a89",
+          "sizeBytes": 5366
+        },
+        {
+          "path": "com/wukong/manager/ag.smali",
+          "sha256": "51f756a3d741f15d48d6e5317891d00dfc4e967c5ea7cfe5719d09e06ec59b38",
+          "sizeBytes": 5580
+        },
+        {
+          "path": "com/wukong/manager/ah.smali",
+          "sha256": "01bd3f82625d30f391649b5bcb2d6c80923a30fca21a87351dbebec2a0684754",
+          "sizeBytes": 5215
+        },
+        {
+          "path": "com/wukong/manager/ai.smali",
+          "sha256": "2c83ea7a2bd64ca34e0c507794eeb4f0f2715059364798d80355feae880a0e89",
+          "sizeBytes": 5311
+        },
+        {
+          "path": "com/wukong/manager/aj.smali",
+          "sha256": "a4c76fe411f082b26ce2e49995d7209b7aa94c6aa55ec2718c1f11654e1fd172",
+          "sizeBytes": 5341
+        },
+        {
+          "path": "com/wukong/manager/ak.smali",
+          "sha256": "593aed814a8040c36dd7693c6a7c17834f4eea8c500b997a79f015f8de102eaa",
+          "sizeBytes": 5191
+        },
+        {
+          "path": "com/wukong/manager/al.smali",
+          "sha256": "b5f0d8790bee3970132a0dc2cbd85e8a58d557fc7d72c6b12b41026afb49aac4",
+          "sizeBytes": 5216
+        },
+        {
+          "path": "com/wukong/manager/am.smali",
+          "sha256": "2a949e24f5c0a6f2d533769550bb66eea01dc87463ca5c46a644cbbea716c4d7",
+          "sizeBytes": 5202
+        },
+        {
+          "path": "com/wukong/manager/an.smali",
+          "sha256": "2e03319261623d043400b253be1cde3e8673f9913fec06566990e14b488c6a80",
+          "sizeBytes": 5254
+        },
+        {
+          "path": "com/wukong/manager/ao.smali",
+          "sha256": "dbcf73777c2d2961f50b7aab5d400022c979dc5dd8e74a014153648d74b48260",
+          "sizeBytes": 5581
+        },
+        {
+          "path": "com/wukong/manager/ap.smali",
+          "sha256": "e38b4ccc009a46771095af78381a151ebc9230380cbfe95f59a658f588b5960e",
+          "sizeBytes": 5598
+        },
+        {
+          "path": "com/wukong/manager/aq.smali",
+          "sha256": "aaa5a9a11a7fd2c7c4431419dc9c325d8736726aca6169f2b2fbd27b62bc9aec",
+          "sizeBytes": 5336
+        },
+        {
+          "path": "com/wukong/manager/ar.smali",
+          "sha256": "c39a39b9337f311cafce6ca50c852201b8a5fd9d822f0705bd230d7dc3f4390e",
+          "sizeBytes": 5355
+        },
+        {
+          "path": "com/wukong/manager/as.smali",
+          "sha256": "483a9965118e34743f40381ff973b05b5f37298ddab476efbf2ba01dba1cff74",
+          "sizeBytes": 5382
+        },
+        {
+          "path": "com/wukong/manager/at.smali",
+          "sha256": "418ab30429f6d95151c324f005d7c570e1ee5291e230de60059d0a3fde230865",
+          "sizeBytes": 5182
+        },
+        {
+          "path": "com/wukong/manager/au.smali",
+          "sha256": "acd0e843107ed75005163bc0d382270ff20b7b7920a14118878e740e4c5dcd97",
+          "sizeBytes": 5365
+        },
+        {
+          "path": "com/wukong/manager/av.smali",
+          "sha256": "170921ccf1ab921f39669f0499d79d07157264404bbf63da3f047bb80751b6a9",
+          "sizeBytes": 5364
+        },
+        {
+          "path": "com/wukong/manager/aw.smali",
+          "sha256": "9b8727ca5459092cafe111fa189d99b77d4a489efad27eb70495e08e7a6600a0",
+          "sizeBytes": 5557
+        },
+        {
+          "path": "com/wukong/manager/ax.smali",
+          "sha256": "365b7427040e8d73e2bd0d158b83eb68684c68bf69d61f241d4dc9b45b36633b",
+          "sizeBytes": 5579
+        },
+        {
+          "path": "com/wukong/manager/ay.smali",
+          "sha256": "ee24124938d5c20b43b6a5118a828532c337033b1bb7679fa563fac95dc8d609",
+          "sizeBytes": 5200
+        },
+        {
+          "path": "com/wukong/manager/az.smali",
+          "sha256": "17f161042e53dad84e5fff750050b41fad7e28397616c7b6203d6c3d2a14b760",
+          "sizeBytes": 5261
+        },
+        {
+          "path": "com/wukong/manager/b.smali",
+          "sha256": "cb9000123179b7bcacb0e95b23d047eff43a0af96445cbc3020bba815de5213c",
+          "sizeBytes": 5557
+        },
+        {
+          "path": "com/wukong/manager/ba.smali",
+          "sha256": "8a2c10f3ab95b2dbbe1f440b54b834961b819e25de3884a2ad2b6480c52cb790",
+          "sizeBytes": 5337
+        },
+        {
+          "path": "com/wukong/manager/bb.smali",
+          "sha256": "a958a5cca12f240b72f4e9742da56220c62db6031da533fb49190563a5ee7ac6",
+          "sizeBytes": 5201
+        },
+        {
+          "path": "com/wukong/manager/bc.smali",
+          "sha256": "72b64626a5207d42e0d19d9212e1c615cf1c326903397c8d04f53144771f2a7c",
+          "sizeBytes": 5242
+        },
+        {
+          "path": "com/wukong/manager/bd.smali",
+          "sha256": "eae23f17215d3510100972366a0238d612a13700bccd2acb2a1342f452b322fc",
+          "sizeBytes": 5241
+        },
+        {
+          "path": "com/wukong/manager/be.smali",
+          "sha256": "de71447873e27aaad17a82f768da007dd35ba027741a7347efd0cc09974122da",
+          "sizeBytes": 5242
+        },
+        {
+          "path": "com/wukong/manager/bf.smali",
+          "sha256": "7a53f953b1c11538035b2c209f83a59c7905ac31c34615c074c360bdd42197a8",
+          "sizeBytes": 5218
+        },
+        {
+          "path": "com/wukong/manager/bg.smali",
+          "sha256": "049409a2b93a1c01cd149e674a103507f86bb7664603de1d7a343129395f7593",
+          "sizeBytes": 5203
+        },
+        {
+          "path": "com/wukong/manager/bh.smali",
+          "sha256": "5360dabd507bb8846857fc87560e1d6be2632a3fc82534e1f7c60d9ae91f29aa",
+          "sizeBytes": 5363
+        },
+        {
+          "path": "com/wukong/manager/bi.smali",
+          "sha256": "4a8fd4b63a298ab131ebf6214c2d7fae952d8c1f3e3dda212e65695483ecddb5",
+          "sizeBytes": 5350
+        },
+        {
+          "path": "com/wukong/manager/bj.smali",
+          "sha256": "dc9708cc5876e2e1c2774eaa3ceeacec452293a27a974a55177a15b015dc3b4b",
+          "sizeBytes": 5367
+        },
+        {
+          "path": "com/wukong/manager/bk.smali",
+          "sha256": "a15100c721d116a7bbd38944022bf92942b2d647c80e3b340b69012988e22254",
+          "sizeBytes": 5573
+        },
+        {
+          "path": "com/wukong/manager/bl.smali",
+          "sha256": "c7de0adbc6f1f661aa822253246a9047efa5cf0f3baec9523d4c6d8850eef370",
+          "sizeBytes": 5365
+        },
+        {
+          "path": "com/wukong/manager/bm.smali",
+          "sha256": "58a44f64ce7a1a2310cacc437a0bc1acc8e80ecc8b846d374e52ffe278d4d211",
+          "sizeBytes": 5202
+        },
+        {
+          "path": "com/wukong/manager/bn.smali",
+          "sha256": "805e70c9722b519cfb28179a7e7776f3677c389d09c46b301da3a3c3edc09a6e",
+          "sizeBytes": 5331
+        },
+        {
+          "path": "com/wukong/manager/bo.smali",
+          "sha256": "d66ec83287d282630404d28334d8f5146ebbacee89c8289ce8061ad8b9e1adaf",
+          "sizeBytes": 5580
+        },
+        {
+          "path": "com/wukong/manager/bp.smali",
+          "sha256": "890708bc9ea98a2f348b630d6fe665c34b126dacb52e56984b5dda9ff7a9c37a",
+          "sizeBytes": 5203
+        },
+        {
+          "path": "com/wukong/manager/bq.smali",
+          "sha256": "e83baaeed7c82ab211acc82eae3fbf0b896dfdef7649fdbabee6352b041570bc",
+          "sizeBytes": 5362
+        },
+        {
+          "path": "com/wukong/manager/br.smali",
+          "sha256": "e843c2fa068557839c28933f42939e8df19062df1299e5cf8ac94fff7b573521",
+          "sizeBytes": 5214
+        },
+        {
+          "path": "com/wukong/manager/bs.smali",
+          "sha256": "bf6d2a20ad257b5a7e0be33b853f01b3b9d4805aaafa01b3824ea9768cb1b691",
+          "sizeBytes": 5600
+        },
+        {
+          "path": "com/wukong/manager/bt.smali",
+          "sha256": "ce8a56be054f7612d6bb2fa2fa9047e1c876c0a46f85894f5293056be44a003e",
+          "sizeBytes": 5242
+        },
+        {
+          "path": "com/wukong/manager/bu.smali",
+          "sha256": "856558b8661350a758d0aae425281917315d6763f8715a9507f56de76222774a",
+          "sizeBytes": 5215
+        },
+        {
+          "path": "com/wukong/manager/bv.smali",
+          "sha256": "9d1eaa2ad9c682a9229abdb4fe0d357949da763703ae067b81ba5f56ab0bdd0b",
+          "sizeBytes": 5363
+        },
+        {
+          "path": "com/wukong/manager/bw.smali",
+          "sha256": "9b833a067a6a891cf0e9ed339782d9292b12633a713016099d303368723e3297",
+          "sizeBytes": 5236
+        },
+        {
+          "path": "com/wukong/manager/bx.smali",
+          "sha256": "e262ae1bb0478b24f1aeb1da8a1436510072cd1c9cc325e9de8af3010553d212",
+          "sizeBytes": 5341
+        },
+        {
+          "path": "com/wukong/manager/bz.smali",
+          "sha256": "8ac5ccafac20d5208661253ea4cc3daf8ba943c676aafc5221822bbbe9e15077",
+          "sizeBytes": 5273
+        },
+        {
+          "path": "com/wukong/manager/c.smali",
+          "sha256": "74c295ac416ca804698406ecb18d4c21d2607c0bf99a66388b36e9851099b24b",
+          "sizeBytes": 5340
+        },
+        {
+          "path": "com/wukong/manager/ca.smali",
+          "sha256": "36cde58fb1429dcc8398f956404ce35be3bfd8489281a505781d9d657f0c95b9",
+          "sizeBytes": 5353
+        },
+        {
+          "path": "com/wukong/manager/cb.smali",
+          "sha256": "67c7dc69ffac2501975e577e009886191e306508d70fb72bf81113f07dc21476",
+          "sizeBytes": 5579
+        },
+        {
+          "path": "com/wukong/manager/cc.smali",
+          "sha256": "32ae3076c2879fb168779026184022089f95621c43887a820e7c3f20b5d0aea1",
+          "sizeBytes": 5589
+        },
+        {
+          "path": "com/wukong/manager/cd.smali",
+          "sha256": "5d8f8ab1607bd13bfcfa4a2cd855976ecbb2228f2b5653e493d761e18cfb36a9",
+          "sizeBytes": 5254
+        },
+        {
+          "path": "com/wukong/manager/ce.smali",
+          "sha256": "50ef45149660443a75272c04c8f313b8ac45be3ba3398de6498e1bca10032b19",
+          "sizeBytes": 5395
+        },
+        {
+          "path": "com/wukong/manager/cf.smali",
+          "sha256": "99657c954d333be8837727b351623376165d19d7ba3c2a9271fb6b9c588c2a30",
+          "sizeBytes": 5581
+        },
+        {
+          "path": "com/wukong/manager/cg.smali",
+          "sha256": "910288b788ceded646202ad61fe19ae37255b35b7f026ccb99497f819b601fe1",
+          "sizeBytes": 5201
+        },
+        {
+          "path": "com/wukong/manager/ch.smali",
+          "sha256": "c7367a3f3205e04053d05830bfbe50389d166761b74879660b7db91ef12e1ec4",
+          "sizeBytes": 5205
+        },
+        {
+          "path": "com/wukong/manager/ci.smali",
+          "sha256": "7d02616abc5358803fcf79a3cd9ce4a622e475d228b46a59c99223601b17a11f",
+          "sizeBytes": 5365
+        },
+        {
+          "path": "com/wukong/manager/cj.smali",
+          "sha256": "30b107611fa87bdf9380fafe86d9de01924254d79134d64ae25465804bf426e4",
+          "sizeBytes": 5355
+        },
+        {
+          "path": "com/wukong/manager/ck.smali",
+          "sha256": "a4457a8d27dafeda4969e275664449df925b47c781e4763de6b33122ff643134",
+          "sizeBytes": 5344
+        },
+        {
+          "path": "com/wukong/manager/cl.smali",
+          "sha256": "190ed1b494638c1e5f7169109ca71cd486e95267c90a60b058011b7abf0f7f49",
+          "sizeBytes": 5340
+        },
+        {
+          "path": "com/wukong/manager/cm.smali",
+          "sha256": "34fecd03f1c783b1275b6e087efdb6cc41263842a73c886e0b8d16c7f80b8a5f",
+          "sizeBytes": 5612
+        },
+        {
+          "path": "com/wukong/manager/cn.smali",
+          "sha256": "f0a0d2384121a01abb12a055d6a8744749e25b0036e18702cf91f3547b9ec63c",
+          "sizeBytes": 5343
+        },
+        {
+          "path": "com/wukong/manager/co.smali",
+          "sha256": "661a2ce3eceaf061c71ff58391fd7373f9c5069802eef857ec76e5feba07a88f",
+          "sizeBytes": 5218
+        },
+        {
+          "path": "com/wukong/manager/cp.smali",
+          "sha256": "f08ef0cc4b391d735b8310d2843f623571994cb8d4821b6e5265df8cf98fbde0",
+          "sizeBytes": 5358
+        },
+        {
+          "path": "com/wukong/manager/cq.smali",
+          "sha256": "e34e75c993267c1bc19b1cc49cf609e00492ae84301cf50bf3519bfc3f51a983",
+          "sizeBytes": 5179
+        },
+        {
+          "path": "com/wukong/manager/cr.smali",
+          "sha256": "4d1d00cedea7cf98f3b792a52d5bff11b16132a644d812c03251126e92261c68",
+          "sizeBytes": 5378
+        },
+        {
+          "path": "com/wukong/manager/cs.smali",
+          "sha256": "4425448c67f1bb6d979e4c58b046f1eeb25d75848026e6983db88044f7235190",
+          "sizeBytes": 5236
+        },
+        {
+          "path": "com/wukong/manager/ct.smali",
+          "sha256": "4f3081058a385f3951bb69ae52fa563d119f2e6e624815cd2114042d5ec46abb",
+          "sizeBytes": 1417
+        },
+        {
+          "path": "com/wukong/manager/cu.smali",
+          "sha256": "84556266229941a6378419cb23e0048619778e8a8edc52446440d4f9d874c141",
+          "sizeBytes": 377
+        },
+        {
+          "path": "com/wukong/manager/cv.smali",
+          "sha256": "a730897d4a7822a907c80a6c13a213b0d030c748bcd4c1ce8a707a91242371f6",
+          "sizeBytes": 937
+        },
+        {
+          "path": "com/wukong/manager/cw.smali",
+          "sha256": "906eea158b7aa70e9a5b8e48d0c02781d5e24eb2d95f73ec54b7bad99569288f",
+          "sizeBytes": 970
+        },
+        {
+          "path": "com/wukong/manager/cx.smali",
+          "sha256": "5a58bf43e37b6f58aa02cd5a6d603cec76414d7092543217483d12f9afa97de3",
+          "sizeBytes": 941
+        },
+        {
+          "path": "com/wukong/manager/cy.smali",
+          "sha256": "3758b9eee4e79df253e692fe34c10474a7a1d2298021f3b171c0b22ea754eaa4",
+          "sizeBytes": 11616
+        },
+        {
+          "path": "com/wukong/manager/cz.smali",
+          "sha256": "e480c884371813b9a6d094538b8738715c08ffd6c58cd461ef12c4a21c697df2",
+          "sizeBytes": 3382
+        },
+        {
+          "path": "com/wukong/manager/d.smali",
+          "sha256": "9bda91cebe20b07ea7767b9dc361bd34bea02816f8851bbf762d2b1c456a0d90",
+          "sizeBytes": 5202
+        },
+        {
+          "path": "com/wukong/manager/e.smali",
+          "sha256": "75d49ec2e9a537f4a3fa56f3dea9d62e578cc25fdf5f7d52d71bc3062b2e0964",
+          "sizeBytes": 5223
+        },
+        {
+          "path": "com/wukong/manager/f.smali",
+          "sha256": "5247375f31e5151462fe1f16f5c112461605474d31764d485d27c4395cc8c736",
+          "sizeBytes": 5355
+        },
+        {
+          "path": "com/wukong/manager/g.smali",
+          "sha256": "eef47ed35725e329674b1bd5b6dea4337a60e6dec79dfbdc71b4081d0ad6264e",
+          "sizeBytes": 5344
+        },
+        {
+          "path": "com/wukong/manager/h.smali",
+          "sha256": "d55791b648dd929ef16914eec17a2bd47031e5e9053f59d326c653270528af9f",
+          "sizeBytes": 5299
+        },
+        {
+          "path": "com/wukong/manager/i.smali",
+          "sha256": "788e4cfba02a437ead1435f2fa661e5d07581cdb2aff34381f18c9b3a2534fd2",
+          "sizeBytes": 5222
+        },
+        {
+          "path": "com/wukong/manager/j.smali",
+          "sha256": "8789dbc39997407c4452bde481b1b0ea8fb449e81817878d26de2d84ae2f35e9",
+          "sizeBytes": 5563
+        },
+        {
+          "path": "com/wukong/manager/k.smali",
+          "sha256": "b68ca74c4cfb5e3e66b721b85e17f5ae0fe9bf36c9e396284d1132299b41ba51",
+          "sizeBytes": 5223
+        },
+        {
+          "path": "com/wukong/manager/l.smali",
+          "sha256": "4cff61877fd8ccec8ea27546d1dc25c6de03f88abf61a5e250b09225d4447eaf",
+          "sizeBytes": 5301
+        },
+        {
+          "path": "com/wukong/manager/m.smali",
+          "sha256": "dbe79c0dde62e6bbefd35b3b12436c4442a1705246810682ed229bd49a5997dc",
+          "sizeBytes": 5578
+        },
+        {
+          "path": "com/wukong/manager/n.smali",
+          "sha256": "ae76a93567aba9e607b4381125cde5277f9ce96c9c434b2918c6a56592983577",
+          "sizeBytes": 5240
+        },
+        {
+          "path": "com/wukong/manager/o.smali",
+          "sha256": "9d6e16f20604969d12cd4da2e3483d3c517cb34792b6898d7fab9120234949a1",
+          "sizeBytes": 5576
+        },
+        {
+          "path": "com/wukong/manager/p.smali",
+          "sha256": "164b51970842c3b43e410eb2071cfd55aa471c0d1d7e76dd943ded48f25bcc9e",
+          "sizeBytes": 5223
+        },
+        {
+          "path": "com/wukong/manager/q.smali",
+          "sha256": "a0a4076d66cc2b126b3a8a0485a082402253de2eb7cf071cfe8fd2f618912dc3",
+          "sizeBytes": 5343
+        },
+        {
+          "path": "com/wukong/manager/r.smali",
+          "sha256": "9faac08d5982d4533295eeaa8272988ee48848035a557a88f707988bdbaff9fb",
+          "sizeBytes": 5241
+        },
+        {
+          "path": "com/wukong/manager/s.smali",
+          "sha256": "26265937deda24e6072e1f95d193ad507f1c666ffb9e416e7a394db871f3cb94",
+          "sizeBytes": 5304
+        },
+        {
+          "path": "com/wukong/manager/t.smali",
+          "sha256": "3da3e41a6c61761afbf5d6d01bcce57abdfed004d4808e290a745cb476ed8b2a",
+          "sizeBytes": 5560
+        },
+        {
+          "path": "com/wukong/manager/u.smali",
+          "sha256": "a9099e6c65624b0333dcd8a0601c2687ea134a20c2cea55614e7c7963a2ed9b1",
+          "sizeBytes": 5362
+        },
+        {
+          "path": "com/wukong/manager/v.smali",
+          "sha256": "69a1702e8a1ee4911dd58a85c54a86bf422c6a2bf5086552be8d673241654718",
+          "sizeBytes": 5360
+        },
+        {
+          "path": "com/wukong/manager/w.smali",
+          "sha256": "cbddb634e53737d9e986d2c23d4e616e5884069884648f4336e25bec185f05e2",
+          "sizeBytes": 5302
+        },
+        {
+          "path": "com/wukong/manager/x.smali",
+          "sha256": "a9bc6c8e2672861ba5cec4ca04b1a8e5377f37e544838607b036ea26366dcacb",
+          "sizeBytes": 5558
+        },
+        {
+          "path": "com/wukong/manager/y.smali",
+          "sha256": "2ad28b3d37c728d785bc00606cea2e36a6b0af2d2d3fcf3e6200a9dc44692448",
+          "sizeBytes": 5182
+        },
+        {
+          "path": "com/wukong/manager/z.smali",
+          "sha256": "6637d7e5b358c7ec3615c99b52e6d934783af77b95eaaedfa00e25fd6d2e197f",
+          "sizeBytes": 5303
+        }
+      ],
+      "id": "STARK/common",
+      "remote": "wukong-gdrive:WukongROM/content-packs/STARK/common",
+      "sizeBytes": 16903444,
+      "target": "STARK"
     },
     {
       "archive": {

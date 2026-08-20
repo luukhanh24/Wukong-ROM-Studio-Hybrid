@@ -1473,6 +1473,22 @@ class StudioCoreTests(unittest.TestCase):
                 self.assertEqual(studio_core.default_debloat_paths(), [r"my_stock\app\Browser"])
                 self.assertEqual(studio_core.validate_debloat_paths(None), [r"my_stock\app\Browser"])
 
+    def test_shared_stark_mods_are_available_to_every_mod_version(self):
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root)
+            version = content / "MOD" / "ColorOS_Test"
+            (version / "Gapps" / "system").mkdir(parents=True)
+            shared = content / "STARK"
+            (shared / "WK_Manager" / "system").mkdir(parents=True)
+            (shared / "WK_Installer" / "system_ext").mkdir(parents=True)
+
+            mods = studio_core.list_mods("ColorOS_Test", mod_root=content / "MOD")
+
+        by_name = {item["name"]: item for item in mods}
+        self.assertTrue(by_name["WK_Manager"]["shared"])
+        self.assertTrue(by_name["WK_Installer"]["shared"])
+        self.assertFalse(by_name["Gapps"]["shared"])
+
     def test_refresh_plat_sepolicy_hash_repairs_bad_checksum_with_lf(self):
         with tempfile.TemporaryDirectory() as temp:
             unpack = Path(temp)

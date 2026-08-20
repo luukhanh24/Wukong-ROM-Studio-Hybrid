@@ -664,6 +664,17 @@
                                     <Button Content="Cloud artifact" Click="ShowHybridArtifactsClick" />
                                     <Button Content="Diagnostics" Click="ShowHybridDiagnosticsClick" />
                                 </StackPanel>
+                                <Border Style="{StaticResource SubtlePanelStyle}" Padding="14">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Text="Đồng bộ nội dung đa nền tảng" Style="{StaticResource SectionTitleStyle}" />
+                                        <TextBlock Text="Đóng gói các thay đổi trong Content, Runtime\STARK và Runtime\Flash_script; binary lên Drive, manifest/checksum lên GitHub. WK_Manager và WK_Installer được dùng chung cho mọi phiên bản MOD." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button x:Name="SyncContentDriveButton" Content="Đồng bộ binary lên Drive" Style="{StaticResource AccentButtonStyle}" Click="SyncContentToDriveClick" />
+                                            <Button x:Name="PublishContentManifestButton" Content="Công bố manifest lên GitHub" Click="PublishContentManifestClick" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="ContentSyncStatusText" Text="Chưa đồng bộ trong phiên này." Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
                                 <TextBox x:Name="HybridResultBox" Header="Kết quả / log / link artifact" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" FontFamily="Consolas" />
                             </StackPanel>
                         </Border>

@@ -4,15 +4,29 @@ import argparse
 import json
 from pathlib import Path
 
-from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS
+from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS, SHARED_MOD_NAMES
 from wukong.content_packs import validate_content_index
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 
 
-def export_catalog(index_path: Path, devices_path: Path, output: Path) -> dict[str, object]:
+DEFAULT_DEBLOAT_PATH = Path(__file__).resolve().parents[1] / "config" / "debloat.json"
+
+
+def export_catalog(
+    index_path: Path,
+    devices_path: Path,
+    output: Path,
+    debloat_path: Path = DEFAULT_DEBLOAT_PATH,
+) -> dict[str, object]:
     index = json.loads(index_path.read_text(encoding="utf-8"))
     validate_content_index(index)
     devices_payload = json.loads(devices_path.read_text(encoding="utf-8"))
+    debloat_payload = json.loads(debloat_path.read_text(encoding="utf-8"))
+    default_debloat_paths = [
+        str(value).strip()
+        for value in debloat_payload.get("default", [])
+        if str(value).strip()
+    ]
     devices = [
         {
             "product": str(item.get("product_name") or ""),
@@ -22,9 +36,18 @@ def export_catalog(index_path: Path, devices_path: Path, output: Path) -> dict[s
         if isinstance(item, dict) and str(item.get("product_name") or "")
     ]
     mods_by_version: dict[str, list[str]] = {}
+    shared_mods: set[str] = set()
     for pack in index["packs"]:
         pack_id = str(pack.get("id") or "")
         archive = pack.get("archive")
+        if pack_id == "STARK/common" and isinstance(archive, dict) and archive.get("sha256"):
+            shared_mods.update(
+                name
+                for item in pack.get("files", [])
+                if (name := str(item.get("path") or "").replace("\\", "/").split("/", 1)[0])
+                in SHARED_MOD_NAMES
+            )
+            continue
         if not pack_id.startswith("MOD/") or not isinstance(archive, dict) or not archive.get("sha256"):
             continue
         version = pack_id.split("/", 1)[1]
@@ -36,9 +59,13 @@ def export_catalog(index_path: Path, devices_path: Path, output: Path) -> dict[s
             },
             key=str.casefold,
         )
+    if shared_mods:
+        for version, mods in mods_by_version.items():
+            mods_by_version[version] = sorted(set(mods) | shared_mods, key=str.casefold)
     payload: dict[str, object] = {
         "schemaVersion": 1,
         "devices": devices,
+        "defaultDebloatPaths": default_debloat_paths,
         "modVersions": sorted(mods_by_version, key=str.casefold),
         "modsByVersion": mods_by_version,
         "pipelineSteps": [

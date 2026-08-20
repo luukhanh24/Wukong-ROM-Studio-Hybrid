@@ -123,10 +123,16 @@ Copy-Item -LiteralPath (Join-Path $source 'devices_sizes.json') -Destination $sc
 Copy-Item -LiteralPath (Join-Path $scriptDirectory 'desktop-updater.ps1') -Destination $scriptRoot -Force
 Copy-Tree (Join-Path $source 'src') (Join-Path $scriptRoot 'src')
 Copy-Tree (Join-Path $source 'platform_external_avb-master') (Join-Path $scriptRoot 'platform_external_avb-master')
-Copy-Tree (Join-Path $source 'bin') (Join-Path $destination 'Runtime\Bin')
+# The native installer executes only the Windows toolchain. Linux entries in
+# the Git checkout include POSIX symlinks (for example /usr/bin/cpio), which
+# cannot be hashed or installed as regular files on Windows. GitHub Actions
+# consumes the Linux tree directly from the repository instead.
+Copy-Tree (Join-Path $source 'bin\Windows') (Join-Path $destination 'Runtime\Bin\Windows')
 Copy-Tree (Join-Path $source 'config') (Join-Path $destination 'Runtime\Config')
 Copy-Tree (Join-Path $source 'Flash_script') (Join-Path $destination 'Runtime\Flash_script')
 Copy-Tree (Join-Path $source 'STARK') (Join-Path $destination 'Runtime\STARK')
+Copy-Tree (Join-Path $source 'Flash_script') (Join-Path $destination 'Content\Flash_script')
+Copy-Tree (Join-Path $source 'STARK') (Join-Path $destination 'Content\STARK')
 Copy-Tree (Join-Path $source 'studio_static') (Join-Path $destination 'Runtime\Web')
 Copy-Tree (Join-Path $source 'wukong') (Join-Path $scriptRoot 'wukong')
 Copy-Tree (Join-Path $source 'tools') (Join-Path $scriptRoot 'tools')

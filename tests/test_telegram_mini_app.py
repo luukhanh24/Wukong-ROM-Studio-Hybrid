@@ -46,6 +46,21 @@ class TelegramMiniAppTests(unittest.TestCase):
                                 "sizeBytes": 0,
                                 "files": [],
                             },
+                            {
+                                "id": "STARK/common",
+                                "target": "STARK",
+                                "remote": "drive:STARK/common",
+                                "sizeBytes": 1,
+                                "archive": {
+                                    "uri": "drive:STARK/common.tar.zst",
+                                    "sha256": "e" * 64,
+                                    "md5": "f" * 32,
+                                    "sizeBytes": 1,
+                                },
+                                "files": [
+                                    {"path": "WK_Installer/system_ext/app.apk", "sha256": "1" * 64, "sizeBytes": 1},
+                                ],
+                            },
                         ],
                     }
                 ),
@@ -61,8 +76,8 @@ class TelegramMiniAppTests(unittest.TestCase):
             exported = output.read_text(encoding="utf-8")
 
         self.assertEqual(["ColorOS_16.0.9"], payload["modVersions"])
-        self.assertEqual(["Gapps", "WK_Manager"], payload["modsByVersion"]["ColorOS_16.0.9"])
-        self.assertEqual(["Gapps", "WK_Manager"], payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"])
+        self.assertEqual(["Gapps", "WK_Installer", "WK_Manager"], payload["modsByVersion"]["ColorOS_16.0.9"])
+        self.assertEqual(["Gapps", "WK_Installer", "WK_Manager"], payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"])
         self.assertIn("sync_configs", [item["id"] for item in payload["pipelineSteps"]])
         self.assertNotIn("sync_metadata", [item["id"] for item in payload["pipelineSteps"]])
         self.assertEqual("PKG110", payload["devices"][0]["product"])
@@ -144,9 +159,24 @@ class TelegramMiniAppTests(unittest.TestCase):
         for element_id in ("source-state", "source-facts", "probe-source", "source-provider"):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("downloadcheck", script.casefold())
-        self.assertIn('send("probe_source"', script)
+        self.assertIn("probeSourceInPlace", script)
+        self.assertIn("fetch(uri", script)
+        self.assertNotIn('send("probe_source"', script)
         self.assertNotIn("resolvedUrl", html + script)
         self.assertNotIn("Signature=signed", html + script)
+
+    def test_default_debloat_list_is_embedded_for_recipe_parity(self) -> None:
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+        config = json.loads((ROOT / "config" / "debloat.json").read_text(encoding="utf-8"))
+
+        self.assertIn("defaultDebloatPaths", script)
+        for path in (
+            r"my_stock\priv-app\CodeBook",
+            r"my_stock\app\AIWriter",
+            r"my_stock\app\ColorDirectService",
+            r"my_stock\app\AIMemory",
+        ):
+            self.assertIn(path, config["default"])
 
 
 if __name__ == "__main__":
