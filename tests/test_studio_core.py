@@ -3505,6 +3505,34 @@ class StudioCoreTests(unittest.TestCase):
             with mock.patch.object(batch_unpack.subprocess, "run", side_effect=fake_run):
                 self.assertTrue(batch_unpack.batch_unpack(str(source), str(target)))
 
+    def test_partition_sync_only_regex_checks_new_paths(self):
+        with tempfile.TemporaryDirectory() as temp:
+            unpacked = Path(temp) / "system_unpacked"
+            data = unpacked / "system"
+            config = unpacked / "config"
+            (data / "app" / "Existing").mkdir(parents=True)
+            (data / "app" / "Existing" / "base.apk").write_bytes(b"old")
+            (data / "app" / "NewMod").mkdir(parents=True)
+            (data / "app" / "NewMod" / "base.apk").write_bytes(b"new")
+            config.mkdir()
+            (config / "system_fs_config").write_text(
+                "system 0 0 0755\nsystem/app 0 0 0755\n"
+                "system/app/Existing 0 0 0755\nsystem/app/Existing/base.apk 0 0 0644\n",
+                encoding="utf-8",
+            )
+            (config / "system_file_contexts").write_text(
+                "/system/app/Existing(/.*)? u:object_r:system_file:s0\n",
+                encoding="utf-8",
+            )
+
+            report = sync_partition_configs(unpacked, "system")
+
+            self.assertEqual(report["addedFs"], 2)
+            self.assertEqual(report["addedFileContexts"], 3)
+            contexts = (config / "system_file_contexts").read_text(encoding="utf-8")
+            self.assertIn("/system/app/NewMod", contexts)
+            self.assertNotIn("/system/app/Existing/base\\.apk", contexts)
+
     def test_rom_sha256_memo_reuses_unchanged_file_without_reopening(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

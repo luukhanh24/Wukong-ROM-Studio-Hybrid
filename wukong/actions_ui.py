@@ -61,6 +61,7 @@ class GitHubActionsUI:
         raw_summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
         self.summary_path = summary_path or (Path(raw_summary) if raw_summary else None)
         self._active_stage: str | None = None
+        self._stage_results: list[tuple[str, float]] = []
 
     def begin(self, stage: str) -> None:
         if not self.enabled or stage == self._active_stage:
@@ -86,6 +87,8 @@ class GitHubActionsUI:
         if status == "success":
             details = event.get("details") if isinstance(event.get("details"), Mapping) else {}
             duration = details.get("durationSeconds")
+            if isinstance(duration, (int, float)):
+                self._stage_results.append((stage, float(duration)))
             suffix = f" · {duration}s" if duration is not None else ""
             _emit(f"::notice title={_command_text(title)}::Hoàn thành / Completed{suffix}")
             self.close_group()
@@ -117,13 +120,36 @@ class GitHubActionsUI:
             f"| Recipe SHA-256 | `{manifest.recipe_digest}` |",
         ]
         if recipe.task == "build":
+            mod_list = ", ".join(mods) if mods else "—"
+            steps = list(recipe.build.enabled_steps)
+            step_list = ", ".join(steps) if steps else "Toàn bộ pipeline / Full pipeline"
+            debloat_count = (
+                len(recipe.build.debloat_paths)
+                if recipe.build.debloat_paths is not None
+                else "mặc định / default"
+            )
             lines.extend(
                 [
                     f"| Nền MOD / MOD pack | `{recipe.build.mod_version}` |",
                     f"| Preset | `{recipe.build.preset}` |",
                     f"| MOD đã chọn / Selected | {len(mods)} |",
+                    f"| Danh sách MOD / MOD list | {mod_list} |",
+                    f"| Bước build / Build steps | {step_list} |",
+                    f"| Debloat paths | {debloat_count} |",
                 ]
             )
+        if self._stage_results:
+            lines.extend(
+                [
+                    "",
+                    "### Thời gian từng giai đoạn / Stage timings",
+                    "",
+                    "| Giai đoạn / Stage | Giây / Seconds |",
+                    "|---|---:|",
+                ]
+            )
+            for stage, duration in self._stage_results:
+                lines.append(f"| {STAGE_TITLES.get(stage, stage)} | {duration:.1f} |")
         lines.extend(["", "### Artifact", ""])
         if manifest.artifacts:
             lines.extend(

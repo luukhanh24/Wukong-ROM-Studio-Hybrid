@@ -3242,14 +3242,24 @@ public sealed partial class NativeStudioView : UserControl
     {
         await RunBusyActionAsync(async () =>
         {
-            ContentSyncStatusText.Text = "Đang kiểm kê, đóng gói và xác minh tải lại từ Drive…";
-            var output = await RunPlatformContentSyncAsync("drive");
-            HybridResultBox.Text = output;
-            ContentSyncStatusText.Text = "Drive đã đồng bộ và checksum đã được xác minh.";
-            ShowMessage(
-                "Đã đồng bộ content-pack",
-                "Binary mới đã lên Drive. Bạn có thể công bố manifest lên GitHub.",
-                InfoBarSeverity.Success);
+            ContentSyncStatusText.Text = "Đang đồng bộ Drive, xác minh checksum và công bố manifest GitHub…";
+            try
+            {
+                var driveOutput = await RunPlatformContentSyncAsync("drive");
+                var githubOutput = await RunPlatformContentSyncAsync("github");
+                HybridResultBox.Text = $"{driveOutput.TrimEnd()}\n{githubOutput.TrimEnd()}";
+                ContentSyncStatusText.Text = "Drive và manifest GitHub đã đồng bộ; checksum đã được xác minh.";
+                ShowMessage(
+                    "Đã đồng bộ content-pack",
+                    "Binary và manifest đã được công bố liền mạch; Actions và Telegram đã sẵn sàng.",
+                    InfoBarSeverity.Success);
+            }
+            catch (Exception exception)
+            {
+                ContentSyncStatusText.Text = "Đồng bộ content-pack thất bại — xem lỗi chi tiết bên dưới.";
+                HybridResultBox.Text = exception.Message;
+                throw;
+            }
         });
     }
 
@@ -3258,13 +3268,22 @@ public sealed partial class NativeStudioView : UserControl
         await RunBusyActionAsync(async () =>
         {
             ContentSyncStatusText.Text = "Đang kiểm tra archive và công bố manifest lên GitHub…";
-            var output = await RunPlatformContentSyncAsync("github");
-            HybridResultBox.Text = output;
-            ContentSyncStatusText.Text = "Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới.";
-            ShowMessage(
-                "Đã công bố manifest",
-                "GitHub Actions và catalog Telegram đã nhận mốc content-pack mới.",
-                InfoBarSeverity.Success);
+            try
+            {
+                var output = await RunPlatformContentSyncAsync("github");
+                HybridResultBox.Text = output;
+                ContentSyncStatusText.Text = "Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới.";
+                ShowMessage(
+                    "Đã công bố manifest",
+                    "GitHub Actions và catalog Telegram đã nhận mốc content-pack mới.",
+                    InfoBarSeverity.Success);
+            }
+            catch (Exception exception)
+            {
+                ContentSyncStatusText.Text = "Công bố manifest thất bại — xem lỗi chi tiết bên dưới.";
+                HybridResultBox.Text = exception.Message;
+                throw;
+            }
         });
     }
 

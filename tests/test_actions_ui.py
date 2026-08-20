@@ -63,6 +63,47 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("a" * 64, summary)
         self.assertIn("123 B", summary)
 
+    def test_build_summary_lists_mod_parameters_and_stage_timings(self) -> None:
+        recipe = BuildRecipe.from_dict(
+            {
+                "schemaVersion": 1,
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://example.test/rom.zip"},
+                "build": {
+                    "preset": "plus",
+                    "modVersion": "ColorOS_16.0.9",
+                    "mods": ["Fix_noti", "WK_Manager"],
+                    "enabledSteps": ["extract_payload", "package_zip"],
+                    "debloatPaths": ["system/app/Demo"],
+                },
+            }
+        )
+        manifest = JobManifest(
+            job_id="job-build",
+            owner=Identity("actions", "1", "user"),
+            recipe_digest=recipe.digest,
+            status=JobStatus.SUCCEEDED,
+        )
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root, "summary.md")
+            reporter = GitHubActionsUI(enabled=True, summary_path=path)
+            reporter.event(
+                {
+                    "type": "step",
+                    "step": "extract_payload",
+                    "status": "success",
+                    "details": {"durationSeconds": 42.25},
+                }
+            )
+            reporter.write_summary(manifest, recipe)
+            summary = path.read_text(encoding="utf-8")
+
+        self.assertIn("Fix_noti, WK_Manager", summary)
+        self.assertIn("ColorOS_16.0.9", summary)
+        self.assertIn("extract_payload, package_zip", summary)
+        self.assertIn("42.2", summary)
+
     def test_workflow_exposes_numbered_jobs_and_step_summary(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "wukong-build.yml").read_text(
             encoding="utf-8"

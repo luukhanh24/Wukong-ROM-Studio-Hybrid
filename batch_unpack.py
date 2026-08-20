@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,6 +40,17 @@ PASSTHROUGH_PARTITIONS = {
 }
 MUTABLE_PARTITIONS = [part for part in PARTITIONS if part not in PASSTHROUGH_PARTITIONS]
 
+
+def _partition_workers(task_count):
+    configured = os.environ.get("WUKONG_PARTITION_WORKERS", "").strip()
+    if configured:
+        try:
+            return max(1, min(int(configured), task_count))
+        except ValueError:
+            print(f"[!] Invalid WUKONG_PARTITION_WORKERS={configured!r}; using automatic value.")
+    return max(1, min(2, os.cpu_count() or 1, task_count))
+
+
 def batch_unpack(source_rom_dir, target_unpack_dir):
     source_rom_dir = os.path.abspath(source_rom_dir)
     target_unpack_dir = os.path.abspath(target_unpack_dir)
@@ -53,9 +65,7 @@ def batch_unpack(source_rom_dir, target_unpack_dir):
     print(f"[*] Starting batch unpack from '{source_rom_dir}' to '{target_unpack_dir}'...")
     start_time = time.time()
     
-    success_count = 0
-    fail_count = 0
-
+    tasks = []
     for part in MUTABLE_PARTITIONS:
         img_path = os.path.join(source_rom_dir, f"{part}.img")
         
@@ -66,29 +76,42 @@ def batch_unpack(source_rom_dir, target_unpack_dir):
             if os.path.exists(out_subdir):
                 shutil.rmtree(out_subdir)
             
-            print(f"\n[>>>] Unpacking partition: {part}")
-            
-            # Call img_tool.py for each image
-            cmd = [
-                sys.executable, 
-                os.path.join(SCRIPT_DIR, "img_tool.py"),
-                "unpack", 
-                img_path, 
-                out_subdir
-            ]
-            
-            try:
-                result = subprocess.run(cmd, cwd=SCRIPT_DIR, check=False)
-                if result.returncode == 0:
-                    success_count += 1
-                else:
-                    print(f"[!] img_tool.py failed for {part}")
-                    fail_count += 1
-            except Exception as e:
-                print(f"[!] Error running img_tool.py for {part}: {e}")
-                fail_count += 1
+            tasks.append((part, img_path, out_subdir))
         else:
             print(f"[-] Skip: {part}.img not found.")
+
+    def unpack_one(task):
+        part, img_path, out_subdir = task
+        started = time.perf_counter()
+        print(f"\n[>>>] Unpacking partition: {part}", flush=True)
+        cmd = [
+            sys.executable,
+            os.path.join(SCRIPT_DIR, "img_tool.py"),
+            "unpack",
+            img_path,
+            out_subdir,
+        ]
+        try:
+            result = subprocess.run(cmd, cwd=SCRIPT_DIR, check=False)
+            return part, result.returncode == 0, time.perf_counter() - started, None
+        except Exception as exc:
+            return part, False, time.perf_counter() - started, exc
+
+    success_count = 0
+    fail_count = 0
+    workers = _partition_workers(len(tasks)) if tasks else 1
+    print(f"[*] Partition workers: {workers} (override: WUKONG_PARTITION_WORKERS)", flush=True)
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="wukong-unpack") as pool:
+        futures = [pool.submit(unpack_one, task) for task in tasks]
+        for future in as_completed(futures):
+            part, success, elapsed, error = future.result()
+            if success:
+                success_count += 1
+                print(f"    [OK] {part}: {elapsed:.1f}s", flush=True)
+            else:
+                fail_count += 1
+                detail = f": {error}" if error else ""
+                print(f"[!] img_tool.py failed for {part}{detail} ({elapsed:.1f}s)", flush=True)
 
     end_time = time.time()
     print(f"\n{'='*50}")
