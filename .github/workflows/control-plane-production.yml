@@ -106,15 +106,21 @@ jobs:
           staging="/tmp/wukong-control-plane-${GITHUB_SHA}"
           ssh_options=(-i "$key" -p "$VPS_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$known_hosts" -o ConnectTimeout=15)
           scp_options=(-i "$key" -P "$VPS_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$known_hosts" -o ConnectTimeout=15)
-          ssh "${ssh_options[@]}" "$remote" "install -d -m 0700 '$staging'"
+          ssh "${ssh_options[@]}" "$remote" bash -s -- "$staging" <<'REMOTE'
+          set -euo pipefail
+          install -d -m 0700 "$1"
+          REMOTE
           scp "${scp_options[@]}" \
             "$RUNNER_TEMP/wukong-control-plane/release.tar.gz" \
             "$RUNNER_TEMP/wukong-control-plane/control-plane.env" \
             "$RUNNER_TEMP/wukong-control-plane/rclone.conf" \
             "$RUNNER_TEMP/wukong-control-plane/deploy_remote.sh" \
             "$remote:$staging/"
-          ssh "${ssh_options[@]}" "$remote" \
-            "chmod 0700 '$staging/deploy_remote.sh' && '$staging/deploy_remote.sh' '$GITHUB_SHA'"
+          ssh "${ssh_options[@]}" "$remote" bash -s -- "$staging" "$GITHUB_SHA" <<'REMOTE'
+          set -euo pipefail
+          chmod 0700 "$1/deploy_remote.sh"
+          "$1/deploy_remote.sh" "$2"
+          REMOTE
       - name: Verify public HTTPS release
         id: release
         shell: bash
@@ -197,7 +203,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in {1..24}; do
+          for _attempt in {1..24}; do
             if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "${PAGE_URL}?release=${GITHUB_SHA}")" \
               && grep -Fq "$API_URL" <<< "$page" \
               && grep -Fq "app.js?v=${GITHUB_SHA}" <<< "$page"; then
