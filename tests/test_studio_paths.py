@@ -123,6 +123,7 @@ class StudioPathsTests(unittest.TestCase):
             self.assertTrue(paths.desktop_mode)
             self.assertEqual(paths.script_root, (runtime / "Scripts").resolve())
             self.assertEqual(paths.bin_root, (runtime / "Bin").resolve())
+            self.assertEqual(paths.config_root, (runtime / "Config").resolve())
             self.assertEqual(paths.mod_root, (install / "Content" / "MOD").resolve())
             for path in (
                 paths.data_root,

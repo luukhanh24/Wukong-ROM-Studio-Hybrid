@@ -138,7 +138,7 @@ WK_MANAGER_METRICS_INIT_BLOCK_END = "# WK_STUDIO_WK_MANAGER_METRICS_END"
 WK_MANAGER_POWER_RELATIVE_ROOT = Path("WK_Manager/system/system")
 WK_MANAGER_POWER_DAEMON_RELATIVE = Path("bin/wukong-system-powerd")
 WK_MANAGER_POWER_RC_RELATIVE = Path("etc/init/wukong-system-powerd.rc")
-WK_MANAGER_SYSTEM_POLICY_PATCH = SCRIPT_ROOT / "config" / "wk_manager_system_policy.cil"
+WK_MANAGER_SYSTEM_POLICY_PATCH = CONFIG_ROOT / "wk_manager_system_policy.cil"
 WK_MANAGER_CONTEXT_REQUIRED_POLICY_TYPES = {"privapp_data_file", "system_file"}
 WK_MANAGER_ART_RUNTIME_POLICY_RULES = (
     "(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)",
