@@ -57,18 +57,66 @@ class _DanielOtaPageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.result: dict[str, str] = {}
+        self.metadata: dict[str, str] = {}
+        self._capture: str | None = None
+        self._capture_depth = 0
+        self._text: list[str] = []
+        self._version_parts: list[str] = []
+        self._detail_label = ""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag.casefold() != "div":
-            return
         values = {name.casefold(): value or "" for name, value in attrs}
-        if values.get("id") != "resultBox":
+        classes = {item.casefold() for item in values.get("class", "").split()}
+        normalized_tag = tag.casefold()
+        if normalized_tag == "div" and values.get("id") == "resultBox":
+            self.result = {
+                "url": unescape(values.get("data-url", "")).strip(),
+                "key": values.get("data-ota-key", "").strip(),
+                "csrf": values.get("data-csrf", "").strip(),
+            }
+        if self._capture is not None:
+            self._capture_depth += 1
             return
-        self.result = {
-            "url": unescape(values.get("data-url", "")).strip(),
-            "key": values.get("data-ota-key", "").strip(),
-            "csrf": values.get("data-csrf", "").strip(),
-        }
+        capture = None
+        if normalized_tag == "p" and "ota-version-name" in classes:
+            capture = "version"
+        elif normalized_tag == "span" and "ota-chip" in classes:
+            capture = "chip"
+        elif normalized_tag == "h3" and "ota-package-title" in classes:
+            capture = "product-label"
+        elif normalized_tag == "dt":
+            capture = "detail-label"
+        elif normalized_tag == "dd":
+            capture = "detail-value"
+        if capture:
+            self._capture = capture
+            self._capture_depth = 1
+            self._text = []
+
+    def handle_data(self, data: str) -> None:
+        if self._capture is not None:
+            self._text.append(data)
+
+    def handle_endtag(self, _tag: str) -> None:
+        if self._capture is None:
+            return
+        self._capture_depth -= 1
+        if self._capture_depth > 0:
+            return
+        capture = self._capture
+        value = " ".join("".join(self._text).split())
+        self._capture = None
+        self._text = []
+        if capture == "version":
+            self.metadata["version"] = value.replace(" ", "")
+        elif capture == "chip" and value.casefold().startswith("patch:"):
+            self.metadata["securityPatch"] = value.split(":", 1)[1].strip()
+        elif capture == "product-label" and value:
+            self.metadata["productLabel"] = value
+        elif capture == "detail-label":
+            self._detail_label = value
+        elif capture == "detail-value" and self._detail_label.casefold() == "ota build":
+            self.metadata["otaBuild"] = value
 
 
 @dataclass(frozen=True)
@@ -595,6 +643,10 @@ class HttpSourceAdapter:
         )
 
     def _resolve_daniel_ota_page(self, uri: str) -> str:
+        resolved, _metadata = self._resolve_daniel_ota_page_details(uri)
+        return resolved
+
+    def _resolve_daniel_ota_page_details(self, uri: str) -> tuple[str, dict[str, str]]:
         request = Request(
             uri,
             headers={
@@ -616,10 +668,11 @@ class HttpSourceAdapter:
 
         parser = _DanielOtaPageParser()
         parser.feed(page)
+        page_metadata = dict(parser.metadata)
         resolved = parser.result.get("url", "")
         if resolved:
             validate_http_url(resolved, resolve_dns=True)
-            return resolved
+            return resolved, page_metadata
 
         ota_key = parser.result.get("key", "")
         csrf = parser.result.get("csrf", "")
@@ -657,7 +710,7 @@ class HttpSourceAdapter:
             message = str(data.get("message") or "OTA link could not be prepared") if isinstance(data, dict) else "OTA link could not be prepared"
             raise SourceResolutionError(f"Daniel Springer OTA resolver failed: {message}")
         validate_http_url(resolved, resolve_dns=True)
-        return resolved
+        return resolved, page_metadata
 
     @staticmethod
     def _decode_resolver_payload(payload: bytes, encoding: str) -> bytes:

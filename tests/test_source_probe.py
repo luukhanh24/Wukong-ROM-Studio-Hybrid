@@ -96,6 +96,8 @@ def _fixture_zip() -> bytes:
                 [
                     "oplus_product_name=PKG110",
                     "oplus_version_name=PKG110_16.0.9.400",
+                    "post-sdk-level=36",
+                    "post-timestamp=1786441098",
                     "post-security-patch-level=2026-06-01",
                     "ota-type=AB",
                 ]
@@ -127,6 +129,8 @@ class SourceProbeTests(unittest.TestCase):
         self.assertEqual("PKG110", result.device)
         self.assertEqual("PKG110", result.product_name)
         self.assertEqual("PKG110_16.0.9.400", result.version)
+        self.assertEqual("16", result.android_version)
+        self.assertEqual("2026-08-11 09:38:18", result.build_date)
         self.assertEqual("2026-06-01", result.security_patch)
         self.assertEqual("AB", result.ota_type)
         self.assertTrue(result.deep_inspected)
@@ -134,6 +138,8 @@ class SourceProbeTests(unittest.TestCase):
         public = result.to_dict()
         self.assertNotIn("resolvedUrl", public)
         self.assertNotIn("Signature=signed", json.dumps(public))
+        self.assertEqual("16", public["androidVersion"])
+        self.assertEqual("2026-08-11 09:38:18", public["buildDate"])
 
     def test_probe_reports_headers_when_remote_zip_metadata_is_unavailable(self) -> None:
         payload = b"not-a-zip"

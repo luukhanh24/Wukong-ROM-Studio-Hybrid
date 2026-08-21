@@ -72,8 +72,8 @@ def validate_recipe_access(
     if recipe.source.kind == "local":
         if identity.channel == "actions":
             raise RecipeValidationError("GitHub Actions recipes cannot reference a local file")
-        if identity.channel == "telegram" and identity.role != "admin":
-            raise RecipeValidationError("Telegram users cannot reference arbitrary local files")
+        if identity.channel == "telegram":
+            raise RecipeValidationError("Telegram jobs cannot reference local files")
         source = Path(recipe.source.uri).expanduser().resolve()
         roots = list(local_roots)
         if roots and not path_is_under(source, roots):
@@ -82,3 +82,8 @@ def validate_recipe_access(
         validate_http_url(recipe.source.uri)
     elif recipe.source.kind == "rclone":
         validate_rclone_source(recipe.source.uri, allowed_remote=allowed_remote or recipe.storage.remote)
+    if identity.channel == "telegram" and recipe.execution.target == "local-windows":
+        raise RecipeValidationError(
+            "Telegram jobs cannot target a local Windows runner; use github-auto, "
+            "github-hosted or self-hosted-linux"
+        )

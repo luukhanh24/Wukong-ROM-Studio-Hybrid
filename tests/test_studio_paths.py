@@ -160,6 +160,29 @@ class StudioPathsTests(unittest.TestCase):
             self.assertEqual(paths.content_root, content.resolve())
             self.assertEqual(paths.mod_root, (content / "MOD").resolve())
 
+    def test_source_mode_can_persist_control_plane_state_outside_checkout(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source"
+            state = root / "persistent"
+            paths = build_paths(
+                {
+                    "WUKONG_STUDIO_DATA_ROOT": str(state / "Data"),
+                    "WUKONG_STUDIO_WORKSPACE_ROOT": str(state / "Workspace"),
+                    "WUKONG_STUDIO_OUTPUT_ROOT": str(state / "Output"),
+                    "WUKONG_STUDIO_TEMP_ROOT": str(state / "Temp"),
+                    "WUKONG_STUDIO_LOG_ROOT": str(state / "Logs"),
+                },
+                source_root=source,
+            )
+
+            self.assertEqual((state / "Data").resolve(), paths.data_root)
+            self.assertEqual((state / "Workspace").resolve(), paths.workspace_root)
+            self.assertEqual((state / "Output").resolve(), paths.output_root)
+            self.assertEqual((state / "Temp").resolve(), paths.temp_root)
+            self.assertEqual((state / "Logs").resolve(), paths.log_root)
+            self.assertEqual((state / "Temp" / "packages").resolve(), paths.package_staging_root)
+
     def test_linux_tool_paths_are_platform_specific_and_not_windows_hard_coded(self):
         root = Path("tool-root").resolve()
         self.assertEqual(

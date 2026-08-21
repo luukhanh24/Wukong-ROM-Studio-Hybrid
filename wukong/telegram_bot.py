@@ -70,7 +70,7 @@ TEXT = {
         "library": "Kho ROM",
         "diagnostics": "Chẩn đoán",
         "mini_app": "Mở Wukong Mini App",
-        "mini_app_prompt": "Chạm nút bên dưới để mở Wukong Mini App. Telegram sẽ xác thực tài khoản của bạn và gửi kết quả trở lại cuộc trò chuyện này.",
+        "mini_app_prompt": "Chạm nút bên dưới để mở Wukong Mini App. Telegram xác thực tài khoản; cấu hình, tiến trình, lịch sử và link tải tiếp tục hiển thị ngay trong Mini App.",
         "language": "English",
         "back": "Quay lại menu",
         "refresh": "Làm mới",
@@ -127,7 +127,7 @@ TEXT = {
         "diagnostics_title": "Chẩn đoán hệ thống",
         "events_title": "Nhật ký gần nhất của {job_id}",
         "no_artifact": "Job chưa có artifact. Hãy thử lại khi build hoàn tất.",
-        "probe_result": "Đã nhận diện ROM\n\nNhà cung cấp: {provider}\nTệp: {filename}\nDung lượng: {size}\nThiết bị: {device}\nPhiên bản: {version}\nBản vá bảo mật: {security_patch}\nLoại OTA: {ota_type}\nPhân tích sâu: {deep}",
+        "probe_result": "Đã nhận diện ROM\n\nNhà cung cấp: {provider}\nTệp: {filename}\nDung lượng: {size}\nProduct: {product}\nThiết bị: {device}\nPhiên bản: {version}\nAndroid: {android_version}\nBản vá bảo mật: {security_patch}\nNgày build: {build_date}\nLoại OTA: {ota_type}\nPhân tích sâu: {deep}",
     },
     "en": {
         "welcome": "Wukong ROM Studio\n\nSelect “New build” to begin or “My jobs” to monitor progress. No commands or JSON are required.",
@@ -136,7 +136,7 @@ TEXT = {
         "library": "ROM library",
         "diagnostics": "Diagnostics",
         "mini_app": "Open Wukong Mini App",
-        "mini_app_prompt": "Tap the button below to open Wukong Mini App. Telegram authenticates your account and returns results to this chat.",
+        "mini_app_prompt": "Tap below to open Wukong Mini App. Telegram authenticates your account; configuration, progress, history and download links remain inside the Mini App.",
         "language": "Tiếng Việt",
         "back": "Back to menu",
         "refresh": "Refresh",
@@ -193,7 +193,7 @@ TEXT = {
         "diagnostics_title": "System diagnostics",
         "events_title": "Recent events for {job_id}",
         "no_artifact": "This job does not have an artifact yet. Try again after the build completes.",
-        "probe_result": "ROM identified\n\nProvider: {provider}\nFile: {filename}\nSize: {size}\nDevice: {device}\nVersion: {version}\nSecurity patch: {security_patch}\nOTA type: {ota_type}\nDeep inspection: {deep}",
+        "probe_result": "ROM identified\n\nProvider: {provider}\nFile: {filename}\nSize: {size}\nProduct: {product}\nDevice: {device}\nVersion: {version}\nAndroid: {android_version}\nSecurity patch: {security_patch}\nBuild date: {build_date}\nOTA type: {ota_type}\nDeep inspection: {deep}",
     },
 }
 
@@ -532,9 +532,12 @@ class TelegramBotController:
                         provider=result.get("provider") or "—",
                         filename=result.get("filename") or "—",
                         size=size_text,
+                        product=result.get("productName") or "—",
                         device=result.get("device") or "—",
                         version=result.get("version") or "—",
+                        android_version=result.get("androidVersion") or "—",
                         security_patch=result.get("securityPatch") or "—",
+                        build_date=result.get("buildDate") or "—",
                         ota_type=result.get("otaType") or "—",
                         deep="Có" if language == "vi" and result.get("deepInspected") else "Yes" if result.get("deepInspected") else "Không" if language == "vi" else "No",
                     ),
@@ -846,7 +849,6 @@ class TelegramBotController:
     def _run_picker(self, language: str) -> BotResponse:
         return BotResponse(TEXT[language]["choose_run"], self._inline([
             [(TEXT[language]["run_github"], "v1:run:github")],
-            [(TEXT[language]["run_windows"], "v1:run:local")],
             [(TEXT[language]["back"], "v1:menu")],
         ]))
 
@@ -890,9 +892,15 @@ class TelegramBotController:
         raw_by_version = catalog.get("modsByVersion", catalog.get("mods", {}))
         raw_mods = raw_by_version.get(version, []) if isinstance(raw_by_version, dict) else []
         options = [
-            str(item.get("name") or "")
+            str(item.get("name") or "") if isinstance(item, dict) else str(item).strip()
             for item in raw_mods
-            if isinstance(item, dict) and item.get("ready") and str(item.get("name") or "")
+            if (
+                isinstance(item, str) and item.strip()
+            ) or (
+                isinstance(item, dict)
+                and item.get("ready")
+                and str(item.get("name") or "")
+            )
         ]
         defaults_by_version = catalog.get("presetDefaultsByVersion", {})
         version_defaults = defaults_by_version.get(version, {}) if isinstance(defaults_by_version, dict) else {}
@@ -1037,6 +1045,7 @@ class TelegramBotController:
                 job = self.orchestrator.cancel(job_id, identity)
                 if self.runtime:
                     self.runtime.cancel_external(current)
+                    self.runtime.notify_terminal(job)
                 return BotResponse(self._render_job(job, language), self._job_markup(job, language, identity.subject))
             if action == "resume":
                 job = self.runtime.resume(job_id, identity) if self.runtime else self.orchestrator.resume(job_id, identity)
@@ -1116,6 +1125,7 @@ class TelegramBotController:
             cancelled = self.orchestrator.cancel(job_id, identity)
             if self.runtime:
                 self.runtime.cancel_external(current)
+                self.runtime.notify_terminal(cancelled)
             return self._render_json(cancelled.to_dict())
         if command == "/resume":
             resumed = self.runtime.resume(job_id, identity) if self.runtime else self.orchestrator.resume(job_id, identity)
@@ -1135,7 +1145,13 @@ class TelegramBotController:
         for item in raw:
             if not isinstance(item, dict):
                 continue
-            product = str(item.get("product_name") or item.get("productName") or item.get("device") or "").strip()
+            product = str(
+                item.get("product_name")
+                or item.get("productName")
+                or item.get("product")
+                or item.get("device")
+                or ""
+            ).strip()
             if product:
                 devices.append((product, str(item.get("name") or product).strip()))
         if not devices:

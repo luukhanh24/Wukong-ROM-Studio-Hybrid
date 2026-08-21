@@ -68,6 +68,17 @@ TASKS = {"source_mirror", "build", "artifact_publish"}
 SOURCE_KINDS = {"local", "http", "https", "rclone"}
 EXECUTION_TARGETS = {"local-windows", "github-auto", "github-hosted", "self-hosted-linux"}
 ROLES = {"admin", "user"}
+SOURCE_METADATA_KEYS = {
+    "provider",
+    "filename",
+    "productName",
+    "device",
+    "version",
+    "androidVersion",
+    "securityPatch",
+    "buildDate",
+    "otaType",
+}
 
 
 def _host_allows_signed_ota(hostname: str | None) -> bool:
@@ -143,6 +154,7 @@ class SourceSpec:
     uri: str
     sha256: str | None = None
     size_bytes: int | None = None
+    metadata: Mapping[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "SourceSpec":
@@ -151,6 +163,21 @@ class SourceSpec:
         sha256 = str(payload.get("sha256") or "").strip().casefold() or None
         raw_size = payload.get("sizeBytes")
         size_bytes = int(raw_size) if raw_size is not None else None
+        raw_metadata = payload.get("metadata", {})
+        if not isinstance(raw_metadata, Mapping):
+            raise RecipeValidationError("ROM source metadata must be an object")
+        metadata: dict[str, str] = {}
+        for key, raw_value in raw_metadata.items():
+            name = str(key)
+            if name not in SOURCE_METADATA_KEYS:
+                raise RecipeValidationError(f"Unsupported ROM source metadata field: {name}")
+            if not isinstance(raw_value, str):
+                raise RecipeValidationError(f"ROM source metadata {name} must be text")
+            value = raw_value.strip()
+            if value:
+                if len(value) > 1024 or any(ord(character) < 32 for character in value):
+                    raise RecipeValidationError(f"ROM source metadata {name} is invalid")
+                metadata[name] = value
         if kind not in SOURCE_KINDS:
             raise RecipeValidationError(f"Unsupported ROM source kind: {kind or '<empty>'}")
         if not uri:
@@ -178,7 +205,13 @@ class SourceSpec:
             raise RecipeValidationError("ROM SHA-256 must contain exactly 64 hexadecimal characters")
         if size_bytes is not None and size_bytes <= 0:
             raise RecipeValidationError("ROM source size must be positive")
-        return cls(kind=kind, uri=uri, sha256=sha256, size_bytes=size_bytes)
+        return cls(
+            kind=kind,
+            uri=uri,
+            sha256=sha256,
+            size_bytes=size_bytes,
+            metadata=metadata,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {"kind": self.kind, "uri": self.uri}
@@ -186,6 +219,8 @@ class SourceSpec:
             result["sha256"] = self.sha256
         if self.size_bytes is not None:
             result["sizeBytes"] = self.size_bytes
+        if self.metadata:
+            result["metadata"] = dict(self.metadata)
         return result
 
 

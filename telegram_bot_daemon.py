@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 
+from tools.export_mini_app_catalog import export_catalog
+
 
 def _bootstrap_content_root() -> None:
     if os.environ.get("WUKONG_STUDIO_CONTENT_ROOT", "").strip():
@@ -35,6 +37,11 @@ from wukong.telegram_bot import (
     TelegramBotController,
     TelegramLongPollingDaemon,
     TelegramUIStateStore,
+)
+from wukong.telegram_mini_api import (
+    TelegramJobNotifier,
+    TelegramMiniAppAPI,
+    TelegramMiniAppAPIServer,
 )
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
@@ -101,6 +108,15 @@ def build_telegram_catalog(content_root: Path, index_path: Path) -> dict[str, ob
         },
     }
 
+def build_control_plane_catalog(index_path: Path) -> dict[str, object]:
+    """Build a catalog from the public manifest without installing private MOD files."""
+    output = DATA_ROOT / "telegram-mini-catalog.json"
+    return export_catalog(
+        index_path,
+        Path(__file__).resolve().parent / "devices_sizes.json",
+        output,
+    )
+
 
 def main() -> int:
     load_local_env()
@@ -110,6 +126,7 @@ def main() -> int:
         print("Missing WUKONG_TELEGRAM_BOT_TOKEN or WUKONG_TELEGRAM_ADMIN_IDS")
         return 2
     store = FileJobStore(JOBS_ROOT / "hybrid")
+    access = TelegramAccessStore(DATA_ROOT / "telegram-access.json", admin_ids=admins)
     orchestrator = HybridOrchestrator(
         store=store,
         workspace_root=WORKSPACE_ROOT / ".wkstudio" / "hybrid",
@@ -130,16 +147,22 @@ def main() -> int:
         data_root=DATA_ROOT,
         content_root=content_root,
         content_index=index_path,
+        terminal_notifier=TelegramJobNotifier(token),
     )
     resumed_watchers = runtime.resume_cloud_watchers()
     if resumed_watchers:
         print(f"Resumed {resumed_watchers} cloud job watcher(s).", flush=True)
-    access = TelegramAccessStore(DATA_ROOT / "telegram-access.json", admin_ids=admins)
+    if (content_root / "MOD").is_dir():
+        catalog_provider = lambda: build_telegram_catalog(content_root, index_path)
+    else:
+        control_plane_catalog = build_control_plane_catalog(index_path)
+        catalog_provider = lambda: control_plane_catalog
+    diagnostics_provider = lambda: {"system": diagnostics(), "cache": stage_cache_status()}
     controller = TelegramBotController(
         access=access,
         orchestrator=orchestrator,
-        catalog_provider=lambda: build_telegram_catalog(content_root, index_path),
-        diagnostics_provider=lambda: {"system": diagnostics(), "cache": stage_cache_status()},
+        catalog_provider=catalog_provider,
+        diagnostics_provider=diagnostics_provider,
         cache_provider=stage_cache_status,
         cache_clearer=None,
         cloud_provider=lambda category: runtime.cloud_library(category=category),
@@ -147,7 +170,44 @@ def main() -> int:
         runtime=runtime,
         ui_state=TelegramUIStateStore(DATA_ROOT / "telegram-ui-state.json"),
     )
-    TelegramLongPollingDaemon(token, controller).run()
+    mini_api_server: TelegramMiniAppAPIServer | None = None
+    web_app_url = os.environ.get("WUKONG_TELEGRAM_WEB_APP_URL", "").strip()
+    if web_app_url:
+        try:
+            mini_api = TelegramMiniAppAPI(
+                bot_token=token,
+                allowed_origin=web_app_url,
+                access=access,
+                orchestrator=orchestrator,
+                runtime=runtime,
+                catalog_provider=catalog_provider,
+                diagnostics_provider=diagnostics_provider,
+                source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
+                cloud_provider=lambda category: runtime.cloud_library(category=category),
+                cache_provider=stage_cache_status,
+                max_init_data_age_seconds=int(
+                    os.environ.get("WUKONG_TELEGRAM_MINI_APP_MAX_AUTH_AGE", "3600")
+                ),
+            )
+            mini_api_server = TelegramMiniAppAPIServer(
+                mini_api,
+                host=os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_BIND", "127.0.0.1"),
+                port=int(os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_PORT", "8766")),
+            )
+            mini_api_server.start()
+            print(
+                "Telegram Mini App API listening on "
+                f"{mini_api_server.host}:{mini_api_server.port}",
+                flush=True,
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            print(f"Telegram Mini App API could not start: {exc}", flush=True)
+            return 2
+    try:
+        TelegramLongPollingDaemon(token, controller).run()
+    finally:
+        if mini_api_server:
+            mini_api_server.stop()
     return 0
 
 

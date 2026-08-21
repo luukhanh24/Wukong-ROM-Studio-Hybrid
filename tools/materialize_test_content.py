@@ -19,6 +19,9 @@ TEXT_FIXTURES = {
 +(typetransition wukong_manager_app wukong_manager_app anon_inode \"[userfaultfd]\" wukong_manager_app_userfaultfd)
 +(allow wukong_manager_app wukong_manager_app_userfaultfd (anon_inode (ioctl read create)))
 +(allow wukong_manager_app wukong_manager_app (anon_inode (ioctl read create)))
++(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)
++(allow wukong_manager_app appdomain_tmpfs (file (ioctl read write getattr map execute)))
++(allowx wukong_manager_app appdomain_tmpfs (ioctl file ((range 0x7701 0x770b))))
 +(allow priv_app proc_stat (file (ioctl read getattr lock map open watch watch_reads)))
 +(allow priv_app vendor_sysfs_kgsl_gpubusy (file (ioctl read getattr lock map open watch watch_reads)))
 """,
@@ -73,6 +76,9 @@ on property:sys.boot_completed=1
         "+(type wukong_system_powerd)\n"
         "+(type wukong_system_powerd_exec)\n"
         "+(type wukong_system_power_socket)\n"
+        "+(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)\n"
+        "+(allow wukong_manager_app appdomain_tmpfs (file (ioctl read write getattr map execute)))\n"
+        "+(allowx wukong_manager_app appdomain_tmpfs (ioctl file ((range 0x7701 0x770b))))\n"
         "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))\n"
     ),
 }

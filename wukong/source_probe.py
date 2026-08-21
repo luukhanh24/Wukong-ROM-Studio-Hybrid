@@ -5,6 +5,7 @@ import re
 import time
 import zipfile
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
 from urllib.parse import unquote, urlparse
 from urllib.request import Request
@@ -48,7 +49,9 @@ class SourceProbeResult:
     product_name: str | None = None
     device: str | None = None
     version: str | None = None
+    android_version: str | None = None
     security_patch: str | None = None
+    build_date: str | None = None
     ota_type: str | None = None
     deep_inspected: bool = False
     warning: str | None = None
@@ -69,7 +72,9 @@ class SourceProbeResult:
             "productName": self.product_name,
             "device": self.device,
             "version": self.version,
+            "androidVersion": self.android_version,
             "securityPatch": self.security_patch,
+            "buildDate": self.build_date,
             "otaType": self.ota_type,
             "deepInspected": self.deep_inspected,
             "warning": self.warning,
@@ -181,12 +186,13 @@ def _provider_for(uri: str, original_uri: str) -> str:
         (urlparse(uri).hostname or "").casefold(),
         (urlparse(original_uri).hostname or "").casefold(),
     }
+    original_host = (urlparse(original_uri).hostname or "").casefold()
+    if original_host == "roms.danielspringer.at":
+        return "daniel-springer"
     if any("allawn" in host or "oppo" in host or "coloros" in host for host in hosts):
         return "oplus"
     if urlparse(original_uri).path.casefold().rstrip("/").endswith("/downloadcheck"):
         return "oplus"
-    if "roms.danielspringer.at" in hosts:
-        return "daniel-springer"
     return "http"
 
 
@@ -258,6 +264,57 @@ def _first(values: Mapping[str, str], *keys: str) -> str | None:
             return value
     return None
 
+def _android_version(values: Mapping[str, str], version: str | None) -> str | None:
+    explicit = _first(
+        values,
+        "android-version",
+        "post-android-version",
+    )
+    if explicit:
+        return explicit
+    sdk = _first(values, "post-sdk-level", "sdk-level")
+    sdk_versions = {
+        "36": "16",
+        "35": "15",
+        "34": "14",
+        "33": "13",
+        "32": "12L",
+        "31": "12",
+        "30": "11",
+        "29": "10",
+    }
+    if sdk in sdk_versions:
+        return sdk_versions[sdk]
+    match = re.search(r"(?:^|_)(\d{2})(?:\.|_)", version or "")
+    return match.group(1) if match else None
+
+def _build_date(values: Mapping[str, str]) -> str | None:
+    explicit = _first(values, "build-date", "post-build-date", "build-timestamp")
+    if explicit:
+        try:
+            parsed = datetime.fromisoformat(explicit.replace("Z", "+00:00"))
+            return parsed.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?", explicit):
+                return explicit.replace("T", " ")
+    timestamp = _first(values, "post-timestamp", "timestamp")
+    if timestamp:
+        try:
+            numeric = int(timestamp)
+            if numeric > 10_000_000_000:
+                numeric //= 1000
+            return datetime.fromtimestamp(numeric, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        except (OSError, OverflowError, ValueError):
+            pass
+    ota_build = _first(values, "ota-build")
+    match = re.search(r"_(\d{12})(?:\D|$)", ota_build or "")
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%Y%m%d%H%M").strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            pass
+    return None
+
 
 def probe_http_source(
     uri: str,
@@ -275,8 +332,9 @@ def probe_http_source(
         opener_factory=opener_factory,
     )
     resolved_input = uri
+    page_metadata: dict[str, str] = {}
     if adapter._is_daniel_ota_page_url(uri):
-        resolved_input = adapter._resolve_daniel_ota_page(uri)
+        resolved_input, page_metadata = adapter._resolve_daniel_ota_page_details(uri)
         validate_http_url(resolved_input, resolve_dns=True)
     is_oplus_resolver = adapter._is_oplus_resolver_url(resolved_input)
     headers = adapter._request_headers(resolved_input)
@@ -300,7 +358,13 @@ def probe_http_source(
         last_modified = str(response_headers.get("Last-Modified", "")) or None
         md5 = str(response_headers.get("x-amz-meta-filemd5", "")) or None
 
-    metadata: dict[str, str] = {}
+    metadata: dict[str, str] = {
+        "product-name": str(page_metadata.get("version") or "").split("_", 1)[0],
+        "version-name": str(page_metadata.get("version") or ""),
+        "post-security-patch-level": str(page_metadata.get("securityPatch") or ""),
+        "ota-build": str(page_metadata.get("otaBuild") or ""),
+    }
+    metadata = {key: value for key, value in metadata.items() if value}
     deep_inspected = False
     warning: str | None = None
     range_factory = opener_factory or adapter.opener_factory
@@ -313,9 +377,10 @@ def probe_http_source(
             validator=etag or last_modified,
         )
         try:
-            metadata = _read_zip_metadata(reader)
-            deep_inspected = bool(metadata)
-            if not metadata:
+            zip_metadata = _read_zip_metadata(reader)
+            metadata.update(zip_metadata)
+            deep_inspected = bool(zip_metadata)
+            if not zip_metadata and not metadata:
                 warning = "ROM ZIP does not expose recognized metadata files"
         except (OSError, RuntimeError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile, SourceError) as exc:
             warning = f"Remote ZIP metadata is unavailable: {exc}"
@@ -342,7 +407,9 @@ def probe_http_source(
         product_name=product_name,
         device=device,
         version=version,
+        android_version=_android_version(metadata, version),
         security_patch=_first(metadata, "post-security-patch-level"),
+        build_date=_build_date(metadata),
         ota_type=_first(metadata, "ota-type"),
         deep_inspected=deep_inspected,
         warning=warning,

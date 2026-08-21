@@ -1,0 +1,45 @@
+services:
+  wukong-control-plane:
+    build:
+      context: ../..
+      dockerfile: deploy/control-plane/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ${WUKONG_CONTROL_PLANE_ENV_FILE:-.env}
+    volumes:
+      - wukong-state:/var/lib/wukong
+      - ./secrets/rclone.conf:/run/secrets/rclone.conf:ro
+    expose:
+      - "8766"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    depends_on:
+      wukong-control-plane:
+        condition: service_healthy
+    environment:
+      WUKONG_MINI_API_DOMAIN: ${WUKONG_MINI_API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  wukong-state:
+  caddy-data:
+  caddy-config:

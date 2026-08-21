@@ -99,15 +99,15 @@ def build_paths(
     else:
         install = source
         app = source
-        data = source / ".wkstudio"
+        data = _env_path(values, "WUKONG_STUDIO_DATA_ROOT", source / ".wkstudio")
         content = _env_path(values, "WUKONG_STUDIO_CONTENT_ROOT", source)
-        workspace = source
-        output = source / "ROM_BUILD_DONE"
-        temp = data
-        logs = data
+        workspace = _env_path(values, "WUKONG_STUDIO_WORKSPACE_ROOT", source)
+        output = _env_path(values, "WUKONG_STUDIO_OUTPUT_ROOT", source / "ROM_BUILD_DONE")
+        temp = _env_path(values, "WUKONG_STUDIO_TEMP_ROOT", data)
+        logs = _env_path(values, "WUKONG_STUDIO_LOG_ROOT", data)
         script_root = source
         jobs_root = data / "jobs"
-        package_root = data / "packages"
+        package_root = temp / "packages"
         bin_root = source / "bin"
         config_root = source / "config"
         flash_root = source / "Flash_script"
