@@ -1473,6 +1473,23 @@ class StudioCoreTests(unittest.TestCase):
                 self.assertEqual(studio_core.default_debloat_paths(), [r"my_stock\app\Browser"])
                 self.assertEqual(studio_core.validate_debloat_paths(None), [r"my_stock\app\Browser"])
 
+    def test_delete_bloatware_resolves_catalog_paths_on_posix(self):
+        with tempfile.TemporaryDirectory() as temp:
+            rom_unpack = Path(temp) / "rom-unpack"
+            browser = rom_unpack / "my_stock_unpacked" / "my_stock" / "app" / "Browser"
+            browser.mkdir(parents=True)
+            (browser / "Browser.apk").write_bytes(b"apk")
+
+            result = studio_core.delete_bloatware(
+                rom_unpack,
+                [r"my_stock\app\Browser"],
+            )
+
+            self.assertFalse(browser.exists())
+            self.assertEqual(result["deleted"], 1)
+            self.assertEqual(result["skipped"], 0)
+            self.assertEqual(result["deletedPaths"], [r"my_stock\app\Browser"])
+
     def test_shared_stark_mods_are_available_to_every_mod_version(self):
         with tempfile.TemporaryDirectory() as root:
             content = Path(root)

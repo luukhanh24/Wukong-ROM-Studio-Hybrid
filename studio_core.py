@@ -2820,26 +2820,37 @@ def apply_selected_mods(
 
 def delete_bloatware(rom_unpack: Path, paths: Iterable[str] | None) -> dict[str, Any]:
     deleted = skipped = 0
+    deleted_paths: list[str] = []
+    skipped_paths: list[str] = []
     modified_partitions: set[str] = set()
     for relative in validate_debloat_paths(paths):
         partition, inner = relative.split("\\", 1)
-        target = rom_unpack / f"{partition}_unpacked" / partition / Path(inner)
+        # Catalog paths are platform-neutral and normalized with backslashes.
+        # Passing ``inner`` to Path directly works on Windows, but POSIX treats
+        # the backslashes as literal filename characters. Join normalized path
+        # components explicitly so hosted Linux builds resolve the same target.
+        inner_parts = [part for part in inner.split("\\") if part]
+        target = (rom_unpack / f"{partition}_unpacked" / partition).joinpath(*inner_parts)
         unpacked_partition = (rom_unpack / f"{partition}_unpacked" / partition).resolve()
         resolved = target.resolve()
         if unpacked_partition not in resolved.parents:
             raise StudioError(f"Debloat target escaped partition workspace: {relative}")
         if not resolved.exists():
             skipped += 1
+            skipped_paths.append(relative)
             continue
         if resolved.is_dir():
             shutil.rmtree(resolved)
         else:
             resolved.unlink()
         deleted += 1
+        deleted_paths.append(relative)
         modified_partitions.add(partition)
     return {
         "deleted": deleted,
         "skipped": skipped,
+        "deletedPaths": deleted_paths,
+        "skippedPaths": skipped_paths,
         "modifiedPartitions": sorted(modified_partitions),
     }
 
