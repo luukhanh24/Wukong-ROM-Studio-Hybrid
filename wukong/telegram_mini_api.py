@@ -41,6 +41,7 @@ SOURCE_METADATA_KEYS = (
     "warning",
 )
 RELEASE_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
+ACTIONS_CALLBACK_MAX_AGE_SECONDS = 5 * 60
 
 
 class TelegramInitDataError(PermissionError):
@@ -130,6 +131,7 @@ class TelegramMiniAppAPI:
         cache_clearer: Callable[[], dict[str, object]] | None = None,
         telegram_update_handler: Callable[[dict[str, object]], None] | None = None,
         telegram_webhook_secret: str | None = None,
+        actions_callback_secret: str | None = None,
         readiness_provider: Callable[[], bool] | None = None,
         max_init_data_age_seconds: int = 3600,
         probe_cache_seconds: int = 15 * 60,
@@ -147,6 +149,7 @@ class TelegramMiniAppAPI:
         self.cache_clearer = cache_clearer
         self.telegram_update_handler = telegram_update_handler
         self.telegram_webhook_secret = (telegram_webhook_secret or "").strip()
+        self.actions_callback_secret = (actions_callback_secret or "").strip()
         if bool(self.telegram_update_handler) != bool(self.telegram_webhook_secret):
             raise ValueError("Telegram webhook handler and secret must be configured together")
         self.readiness_provider = readiness_provider or (lambda: True)
@@ -164,6 +167,31 @@ class TelegramMiniAppAPI:
         @app.before_request
         def authenticate() -> Response | None:
             if request.path == "/healthz":
+                return None
+            if request.path == "/internal/actions/callback":
+                if len(self.actions_callback_secret) < 20:
+                    return jsonify({"error": "Actions callback is not configured"}), 503
+                timestamp = request.headers.get("X-Wukong-Timestamp", "")
+                signature = request.headers.get("X-Wukong-Signature", "").casefold()
+                try:
+                    issued_at = int(timestamp)
+                except ValueError:
+                    return jsonify({"error": "Actions callback authentication failed"}), 403
+                if abs(int(time.time()) - issued_at) > ACTIONS_CALLBACK_MAX_AGE_SECONDS:
+                    return jsonify({"error": "Actions callback authentication failed"}), 403
+                body = request.get_data(cache=True)
+                key = hmac.new(
+                    b"WukongActionsCallback\0",
+                    self.actions_callback_secret.encode("utf-8"),
+                    hashlib.sha256,
+                ).digest()
+                expected = hmac.new(
+                    key,
+                    timestamp.encode("ascii") + b"." + body,
+                    hashlib.sha256,
+                ).hexdigest()
+                if len(signature) != 64 or not hmac.compare_digest(signature, expected):
+                    return jsonify({"error": "Actions callback authentication failed"}), 403
                 return None
             if request.path == "/telegram/webhook":
                 supplied = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
@@ -234,6 +262,25 @@ class TelegramMiniAppAPI:
                 return jsonify({"error": "Telegram update must be an object"}), 400
             self.telegram_update_handler(payload)
             return Response(status=204)
+
+        @app.post("/internal/actions/callback")
+        def actions_callback() -> Response:
+            payload = request.get_json(force=True)
+            job_id = str(payload.get("jobId") or "") if isinstance(payload, dict) else ""
+            if not job_id.isascii() or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,63}", job_id):
+                return jsonify({"error": "Actions callback job is invalid"}), 400
+            manifest = self.orchestrator.store.get(job_id)
+            if manifest is None:
+                return jsonify({"error": "Job not found"}), 404
+            refreshed = self.runtime.refresh(manifest)
+            self.runtime.notify_terminal(refreshed)
+            return jsonify(
+                {
+                    "jobId": refreshed.job_id,
+                    "status": refreshed.status.value,
+                    "terminal": refreshed.status in TERMINAL_STATUSES,
+                }
+            )
 
         @app.post("/v1/sources/probe")
         def probe_source() -> Response:

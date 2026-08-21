@@ -5,15 +5,22 @@ import os
 import tempfile
 import threading
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .models import Identity
 
 
 class TelegramAccessStore:
-    def __init__(self, path: Path, *, admin_ids: Iterable[int | str] = ()) -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        admin_ids: Iterable[int | str] = (),
+        on_change: Callable[[], None] | None = None,
+    ) -> None:
         self.path = path.resolve()
         self._configured_admins = {str(value).strip() for value in admin_ids if str(value).strip()}
+        self.on_change = on_change
         self._lock = threading.RLock()
 
     def identity(self, user_id: int | str) -> Identity | None:
@@ -82,4 +89,5 @@ class TelegramAccessStore:
                 os.replace(temporary_name, self.path)
             finally:
                 Path(temporary_name).unlink(missing_ok=True)
-
+            if self.on_change:
+                self.on_change()

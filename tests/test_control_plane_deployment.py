@@ -124,6 +124,31 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("**/.env", dockerignore)
         self.assertIn("**/secrets", dockerignore)
 
+    def test_render_free_blueprint_uses_docker_generated_tls_and_ephemeral_state_backup(self) -> None:
+        root = Path(__file__).parents[1]
+        blueprint = (root / "render.yaml").read_text(encoding="utf-8")
+        entrypoint = (root / "deploy/control-plane/entrypoint.sh").read_text(encoding="utf-8")
+        binder = (root / ".github/workflows/bind-render-control-plane.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("runtime: docker", blueprint)
+        self.assertIn("plan: free", blueprint)
+        self.assertIn("healthCheckPath: /healthz", blueprint)
+        self.assertIn("WUKONG_CONTROL_PLANE_STATE_BACKUP_ENABLED", blueprint)
+        self.assertIn("WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS", blueprint)
+        self.assertIn("WUKONG_CONTROL_PLANE_ONLINE_PREFLIGHT", blueprint)
+        self.assertIn("WUKONG_RCLONE_CONFIG_CONTENT_B64", blueprint)
+        self.assertNotIn("github_pat_", blueprint)
+        self.assertIn("RENDER_EXTERNAL_URL", entrypoint)
+        self.assertIn('WUKONG_TELEGRAM_MINI_APP_API_PORT', entrypoint)
+        self.assertIn("WukongTelegramWebhook", entrypoint)
+        self.assertIn("control_plane_preflight --online", entrypoint)
+        self.assertNotIn("WUKONG_TELEGRAM_WEBHOOK_SECRET\n        generateValue", blueprint)
+        self.assertIn("api_url", binder)
+        self.assertIn("/healthz", binder)
+        self.assertIn("WUKONG_TELEGRAM_MINI_APP_API_URL", binder)
+
 
 if __name__ == "__main__":
     unittest.main()

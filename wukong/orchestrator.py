@@ -122,9 +122,10 @@ class InMemoryJobStore:
 
 
 class FileJobStore(InMemoryJobStore):
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, on_change: Callable[[], None] | None = None) -> None:
         super().__init__()
         self.root = root.resolve()
+        self.on_change = on_change
         self.root.mkdir(parents=True, exist_ok=True)
         self._load()
 
@@ -171,6 +172,8 @@ class FileJobStore(InMemoryJobStore):
         self._write_text_atomic(directory / "events.jsonl",
             "".join(json.dumps(event.to_dict(), ensure_ascii=False, sort_keys=True) + "\n" for event in events),
         )
+        if self.on_change:
+            self.on_change()
 
     @staticmethod
     def _write_text_atomic(path: Path, content: str) -> None:

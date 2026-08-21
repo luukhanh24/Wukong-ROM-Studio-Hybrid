@@ -551,7 +551,9 @@ async function probeSourceInPlace() {
   state.sourceProbeController = controller;
   const requestId = ++state.sourceProbeRequestId;
   let timedOut = false;
-  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 50000);
+  // Free control-plane hosts can require close to a minute to wake from an
+  // idle cold start before the remote ZIP probe itself begins.
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 110000);
   button.disabled = true;
   button.textContent = t("probeAnalyzing");
   setProbePresentation("probing", "probeAnalyzing");

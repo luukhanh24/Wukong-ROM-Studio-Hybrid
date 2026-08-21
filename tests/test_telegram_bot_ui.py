@@ -749,6 +749,39 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertEqual(0, resumed)
         thread.assert_not_called()
 
+    def test_free_control_plane_disables_background_drive_watchers(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        store = InMemoryJobStore()
+        orchestrator = HybridOrchestrator(
+            store=store,
+            workspace_root=root / "jobs",
+            inventory_provider=lambda: RunnerInventory(False),
+            access_validator=lambda _recipe, _identity: None,
+        )
+        runtime = HybridRuntime(
+            orchestrator=orchestrator,
+            store=store,
+            workspace_root=root / "runtime",
+            data_root=root / "data",
+        )
+        runtime.rclone_config = root / "rclone.conf"
+
+        with patch.dict(
+            os.environ,
+            {"WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS": "false"},
+        ):
+            runtime = HybridRuntime(
+                orchestrator=orchestrator,
+                store=store,
+                workspace_root=root / "runtime",
+                data_root=root / "data",
+            )
+
+        self.assertFalse(runtime.cloud_watchers_enabled)
+        self.assertEqual(0, runtime.resume_cloud_watchers())
+
     def test_registers_commands_and_handles_callback_queries(self) -> None:
         controller = Mock()
         controller.command_sets.return_value = {

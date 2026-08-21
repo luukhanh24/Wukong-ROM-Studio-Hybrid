@@ -1,0 +1,61 @@
+name: Bind Render Free Control Plane
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: Public Render URL, for example https://wukong-mini-api.onrender.com
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: bind-render-control-plane
+  cancel-in-progress: false
+
+jobs:
+  verify-and-bind:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify Render API and release
+        env:
+          API_URL_INPUT: ${{ inputs.api_url }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_url="${API_URL_INPUT%/}"
+          if [[ ! "$api_url" =~ ^https://[a-z0-9-]+\.onrender\.com$ ]]; then
+            echo "api_url must be an HTTPS onrender.com service origin." >&2
+            exit 2
+          fi
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+              "$api_url/healthz" > "$RUNNER_TEMP/render-health.json"; then
+              if python - "$GITHUB_SHA" "$RUNNER_TEMP/render-health.json" <<'PY'
+          import json
+          import sys
+
+          expected, path = sys.argv[1:]
+          payload = json.load(open(path, encoding="utf-8"))
+          if payload.get("status") != "ready" or payload.get("release") != expected:
+              raise SystemExit(1)
+          PY
+              then
+                gh variable set WUKONG_TELEGRAM_MINI_APP_API_URL \
+                  --repo "$GITHUB_REPOSITORY" --body "$api_url"
+                gh workflow run telegram-mini-app-pages.yml \
+                  --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_SHA"
+                echo "Verified and bound Render API: $api_url"
+                exit 0
+              fi
+            fi
+            if (( attempt == 30 )); then
+              echo "Render API did not report the expected healthy release." >&2
+              exit 1
+            fi
+            sleep 10
+          done
