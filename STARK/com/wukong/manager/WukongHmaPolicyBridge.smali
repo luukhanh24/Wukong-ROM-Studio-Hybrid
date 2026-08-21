@@ -77,16 +77,18 @@
 .method static constructor <clinit>()V
     .registers 9
 
-    const/16 v0, 0xf
+    const/4 v0, 0x4
 
     .line 24
-    new-array v1, v0, [I
+    new-array v1, v0, [J
 
     fill-array-data v1, :array_1ac
 
-    const v2, 0x6d8fe96b
+    const v2, 0x3a7f2cf8
 
-    invoke-static {v1, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    const/16 v3, 0xf
+
+    invoke-static {v1, v2, v3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v1
 
@@ -97,11 +99,11 @@
     .line 25
     new-array v2, v1, [I
 
-    fill-array-data v2, :array_1ce
+    fill-array-data v2, :array_1c0
 
-    const v3, 0x5e61522e
+    const v4, 0x2da6e61f
 
-    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v2, v4}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v2
 
@@ -112,288 +114,286 @@
     .line 26
     new-array v2, v2, [I
 
-    fill-array-data v2, :array_1f6
+    fill-array-data v2, :array_1e8
 
-    const v3, 0x3497de52
+    const v4, 0x3be8fbe4
 
-    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v2, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v2
 
     sput-object v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->g:Ljava/lang/String;
 
-    const/16 v2, 0x20
+    const/16 v2, 0x8
 
     .line 27
-    new-array v2, v2, [I
+    new-array v4, v2, [J
 
-    fill-array-data v2, :array_236
+    fill-array-data v4, :array_228
 
-    const v3, 0x7ae41af8
+    const v5, 0x4f7f783f
 
-    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
-
-    move-result-object v2
-
-    sput-object v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->h:Ljava/lang/String;
-
-    const/16 v2, 0x9
-
-    .line 28
-    new-array v3, v2, [J
-
-    fill-array-data v3, :array_27a
-
-    const v4, 0x201cc0a
-
-    const/16 v5, 0x24
-
-    invoke-static {v3, v4, v5}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object v3
-
-    sput-object v3, Lcom/wukong/manager/WukongHmaPolicyBridge;->i:Ljava/lang/String;
-
-    const/4 v3, 0x6
-
-    .line 29
-    new-array v4, v3, [J
-
-    fill-array-data v4, :array_2a2
-
-    const v5, 0x79de6df3
-
-    const/16 v6, 0x15
+    const/16 v6, 0x20
 
     invoke-static {v4, v5, v6}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v4
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->a:Ljava/lang/String;
+    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->h:Ljava/lang/String;
+
+    const/16 v4, 0x24
+
+    .line 28
+    new-array v4, v4, [I
+
+    fill-array-data v4, :array_24c
+
+    const v5, 0x5cb83bd0
+
+    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object v4
+
+    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->i:Ljava/lang/String;
+
+    const/16 v4, 0x15
+
+    .line 29
+    new-array v5, v4, [I
+
+    fill-array-data v5, :array_298
+
+    const v6, 0x5f2c75b
+
+    invoke-static {v5, v6}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object v5
+
+    sput-object v5, Lcom/wukong/manager/WukongHmaPolicyBridge;->a:Ljava/lang/String;
 
     .line 30
     new-array v1, v1, [I
 
-    fill-array-data v1, :array_2be
+    fill-array-data v1, :array_2c6
 
-    const v4, 0x185df522
+    const v5, 0xfd5af03
 
-    invoke-static {v1, v4}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v1, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v1
 
     sput-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->b:Ljava/lang/String;
 
-    const/4 v1, 0x4
+    const/16 v1, 0xd
 
     .line 31
-    new-array v4, v1, [J
+    new-array v5, v1, [I
 
-    fill-array-data v4, :array_2e6
+    fill-array-data v5, :array_2ee
 
-    const v5, 0x43647e78
+    const v6, 0x24f72314
 
-    const/16 v7, 0xd
+    invoke-static {v5, v6}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
-    invoke-static {v4, v5, v7}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    move-result-object v5
 
-    move-result-object v4
+    sput-object v5, Lcom/wukong/manager/WukongHmaPolicyBridge;->c:Ljava/lang/String;
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->c:Ljava/lang/String;
-
-    const/16 v4, 0xa
+    const/16 v5, 0xa
 
     .line 32
-    new-array v4, v4, [I
+    new-array v5, v5, [I
 
-    fill-array-data v4, :array_2fa
+    fill-array-data v5, :array_30c
 
-    const v5, 0x2206b3ba
+    const v6, 0x7646955e
 
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v5, v6}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
-    move-result-object v4
+    move-result-object v5
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->d:Ljava/lang/String;
+    sput-object v5, Lcom/wukong/manager/WukongHmaPolicyBridge;->d:Ljava/lang/String;
 
-    const/16 v4, 0xb
+    const/4 v5, 0x3
 
     .line 33
-    new-array v4, v4, [I
+    new-array v6, v5, [J
 
-    fill-array-data v4, :array_312
+    fill-array-data v6, :array_324
 
-    const v5, 0x77bcbb61
+    const v7, 0x6ab6d320
 
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    const/16 v8, 0xb
 
-    move-result-object v4
+    invoke-static {v6, v7, v8}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->j:Ljava/lang/String;
+    move-result-object v6
 
-    const/16 v4, 0x13
+    sput-object v6, Lcom/wukong/manager/WukongHmaPolicyBridge;->j:Ljava/lang/String;
+
+    const/16 v6, 0x13
 
     .line 34
-    new-array v4, v4, [I
+    new-array v6, v6, [I
 
-    fill-array-data v4, :array_32c
+    fill-array-data v6, :array_334
 
-    const v5, 0x6bf94ea0
+    const v7, 0x3fc98385
 
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v6, v7}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
-    move-result-object v4
+    move-result-object v6
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->k:Ljava/lang/String;
+    sput-object v6, Lcom/wukong/manager/WukongHmaPolicyBridge;->k:Ljava/lang/String;
 
     .line 35
-    new-array v1, v1, [J
+    new-array v6, v0, [J
 
-    fill-array-data v1, :array_356
+    fill-array-data v6, :array_35e
 
-    const v4, 0x7d4329b8
+    const v7, 0x2d9ef539
 
-    const/16 v5, 0xe
+    const/16 v8, 0xe
 
-    invoke-static {v1, v4, v5}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v6, v7, v8}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
-    move-result-object v1
+    move-result-object v6
 
-    sput-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->l:Ljava/lang/String;
+    sput-object v6, Lcom/wukong/manager/WukongHmaPolicyBridge;->l:Ljava/lang/String;
 
-    const/16 v1, 0x16
+    const/16 v6, 0x16
 
     .line 36
-    new-array v4, v1, [I
+    new-array v7, v6, [I
 
-    fill-array-data v4, :array_36a
+    fill-array-data v7, :array_372
 
-    const v5, 0x52c203d6
+    const v8, 0x64445cd0
 
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v7, v8}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
-    move-result-object v4
+    move-result-object v7
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->m:Ljava/lang/String;
+    sput-object v7, Lcom/wukong/manager/WukongHmaPolicyBridge;->m:Ljava/lang/String;
+
+    const/16 v7, 0x17
 
     .line 37
-    new-array v4, v3, [J
+    new-array v7, v7, [I
 
-    fill-array-data v4, :array_39a
+    fill-array-data v7, :array_3a2
 
-    const v5, 0x55460b3
+    const v8, 0x37e7a7c7
 
-    const/16 v8, 0x17
+    invoke-static {v7, v8}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
-    invoke-static {v4, v5, v8}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    move-result-object v7
 
-    move-result-object v4
-
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->n:Ljava/lang/String;
+    sput-object v7, Lcom/wukong/manager/WukongHmaPolicyBridge;->n:Ljava/lang/String;
 
     .line 38
-    new-array v4, v7, [I
+    new-array v0, v0, [J
 
-    fill-array-data v4, :array_3b6
+    fill-array-data v0, :array_3d4
 
-    const v5, 0x481f4f20  # 163132.5f
+    const v7, 0x35da5096
 
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v7, v1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
-    move-result-object v4
+    move-result-object v0
 
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->o:Ljava/lang/String;
+    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->o:Ljava/lang/String;
 
-    const/16 v4, 0x10
+    const/16 v0, 0x10
 
     .line 39
-    new-array v4, v4, [I
-
-    fill-array-data v4, :array_3d4
-
-    const v5, 0x2fd46f9c
-
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object v4
-
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->p:Ljava/lang/String;
-
-    .line 40
     new-array v0, v0, [I
 
-    fill-array-data v0, :array_3f8
+    fill-array-data v0, :array_3e8
 
-    const v4, 0x2a80d330
+    const v1, 0x62cdba15
 
-    invoke-static {v0, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object v0
+
+    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->p:Ljava/lang/String;
+
+    .line 40
+    new-array v0, v3, [I
+
+    fill-array-data v0, :array_40c
+
+    const v1, 0x36a2923c  # 4.845E-6f
+
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v0
 
     sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->q:Ljava/lang/String;
 
-    const/4 v0, 0x3
-
     .line 41
-    new-array v4, v0, [J
+    new-array v0, v5, [J
 
-    fill-array-data v4, :array_41a
+    fill-array-data v0, :array_42e
 
-    const v5, 0x1f5b41b5
+    const v1, 0x631e870e
 
-    const/16 v7, 0xc
+    const/16 v3, 0xc
 
-    invoke-static {v4, v5, v7}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object v4
-
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->r:Ljava/lang/String;
-
-    .line 42
-    new-array v4, v6, [I
-
-    fill-array-data v4, :array_42a
-
-    const v5, 0x65a816d3
-
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
-
-    move-result-object v4
-
-    sput-object v4, Lcom/wukong/manager/WukongHmaPolicyBridge;->s:Ljava/lang/String;
-
-    .line 43
-    new-array v4, v3, [J
-
-    fill-array-data v4, :array_458
-
-    const v5, 0x7a75b26d
-
-    invoke-static {v4, v5, v1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object v1
-
-    sput-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->t:Ljava/lang/String;
-
-    .line 44
-    new-array v0, v0, [J
-
-    fill-array-data v0, :array_474
-
-    const v1, 0x28ed89c1
-
-    invoke-static {v0, v1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v0, v1, v3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v0
 
-    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->u:Ljava/lang/String;
+    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->r:Ljava/lang/String;
+
+    .line 42
+    new-array v0, v4, [I
+
+    fill-array-data v0, :array_43e
+
+    const v1, 0x2021d787
+
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object v0
+
+    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->s:Ljava/lang/String;
+
+    .line 43
+    new-array v0, v6, [I
+
+    fill-array-data v0, :array_46c
+
+    const v1, 0x57353848
+
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object v0
+
+    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->t:Ljava/lang/String;
+
+    const/16 v0, 0x9
+
+    .line 44
+    new-array v1, v0, [I
+
+    fill-array-data v1, :array_49c
+
+    const v3, 0x43898c69
+
+    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object v1
+
+    sput-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->u:Ljava/lang/String;
 
     .line 45
-    new-array v0, v2, [I
+    new-array v0, v0, [I
 
-    fill-array-data v0, :array_484
+    fill-array-data v0, :array_4b2
 
-    const v1, 0x49665640  # 943460.0f
+    const v1, 0x14c27381
 
     invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -401,57 +401,57 @@
 
     sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->v:Ljava/lang/String;
 
-    const/16 v0, 0x8
-
-    .line 46
-    new-array v0, v0, [I
-
-    fill-array-data v0, :array_49a
-
-    const v1, 0x64416b54
-
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
-
-    move-result-object v0
-
-    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->w:Ljava/lang/String;
-
-    .line 55
-    new-array v0, v3, [I
-
-    fill-array-data v0, :array_4ae
-
-    const v1, 0x10ab46e5
-
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object v0
-
-    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->x:Ljava/lang/String;
-
     const/4 v0, 0x2
 
+    .line 46
+    new-array v1, v0, [J
+
+    fill-array-data v1, :array_4c8
+
+    const v3, 0x53b24cc9
+
+    invoke-static {v1, v3, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+
+    move-result-object v1
+
+    sput-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->w:Ljava/lang/String;
+
+    const/4 v1, 0x6
+
+    .line 55
+    new-array v2, v1, [I
+
+    fill-array-data v2, :array_4d4
+
+    const v3, 0xf13e647
+
+    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object v2
+
+    sput-object v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->x:Ljava/lang/String;
+
     .line 56
-    new-array v0, v0, [J
+    new-array v2, v1, [I
 
-    fill-array-data v0, :array_4be
+    fill-array-data v2, :array_4e4
 
-    const v1, 0x69373879
+    const v3, 0x3a2b710c
 
-    invoke-static {v0, v1, v3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
-    move-result-object v0
+    move-result-object v2
 
-    sput-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->y:Ljava/lang/String;
+    sput-object v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->y:Ljava/lang/String;
 
     .line 57
-    new-array v0, v3, [I
+    new-array v0, v0, [J
 
-    fill-array-data v0, :array_4ca
+    fill-array-data v0, :array_4f4
 
-    const v1, 0x29e0a659
+    const v2, 0x30508b84
 
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v0, v2, v1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v0
 
@@ -488,419 +488,451 @@
     return-void
 
     :array_1ac
-    .array-data 4
-        -0x169435b9
-        -0x16832853
-        -0x167204cf
-        -0x1661188b
-        -0x1650bcdc
-        -0x163ff065
-        -0x162e8118
-        -0x161d3e58
-        -0x160c9acc
-        -0x15fbba2b
-        -0x15ea8096
-        -0x15d98c49
-        -0x15c8896a
-        -0x15b79e78
-        -0x15a6a20f
-    .end array-data
-
-    :array_1ce
-    .array-data 4
-        0x534f981d
-        0x533efb33
-        0x532d8ce9
-        0x531c42c6
-        0x530b1bfe
-        0x52faaa1b
-        0x52e91f9b
-        0x52d83ee9
-        0x52c7e636
-        0x52b64f34
-        0x52a52cbe
-        0x5294a7d0
-        0x52832ef0
-        0x5272a06c
-        0x5261a8ed
-        0x52504a4f
-        0x523f8063
-        0x522e56af
-    .end array-data
-
-    :array_1f6
-    .array-data 4
-        -0x21adea18
-        -0x219ce19c
-        -0x218bbbd5
-        -0x217abbed
-        -0x2169782c
-        -0x2158d7e1
-        -0x21479aef
-        -0x2136ca37
-        -0x2125cbc8
-        -0x21140783
-        -0x21038839
-        -0x20f26574
-        -0x20e104cc
-        -0x20d0847d
-        -0x20bfb4a4
-        -0x20aefc9f
-        -0x209db0ab
-        -0x208c224d
-        -0x207b4f7f
-        -0x206ad275
-        -0x2059232a
-        -0x204855a2
-        -0x2037a41a
-        -0x202640b0
-        -0x2015ac2c
-        -0x2004e5ed
-        -0x1ff3c8d2
-        -0x1fe25c4b
-        -0x1fd1296e
-        -0x1fc0d5c3
-    .end array-data
-
-    :array_236
-    .array-data 4
-        0x1af8f31f
-        0x1b09a770
-        0x1b1ae139
-        0x1b2b7bf4
-        0x1b3cb709
-        0x1b4d49c6
-        0x1b5eb9e5
-        0x1b6ff17d
-        0x1b804679
-        0x1b91e8e0
-        0x1ba20a29
-        0x1bb3ece5
-        0x1bc4d66e
-        0x1bd590ef
-        0x1be6abd6
-        0x1bf7b159
-        0x1c085653
-        0x1c19a55d
-        0x1c2afab3
-        0x1c3ba131
-        0x1c4ca511
-        0x1c5d3dbe
-        0x1c6e38a1
-        0x1c7f69b1
-        0x1c90c101
-        0x1ca184ea
-        0x1cb2efc9
-        0x1cc36d42
-        0x1cd4efa3
-        0x1ce5c0fd
-        0x1cf65e27
-        0x1d070ad3
-    .end array-data
-
-    :array_27a
     .array-data 8
-        0x53734bf4c12dL
-        0x2a9245540d2cL
-        0x4cfce79652f1L
-        0x67cd4477ff6cL
-        0x253685d3e9c8L
-        0x2d5d0c2b168L
-        0x123975f8cf65L  # 9.9000882394866E-311
-        0x5f006deb8f3cL
-        0x72faf552be13L
+        0x381e5aa43cfL
+        0x6a5e94fa6007L
+        0x22beadfb4b74L
+        0x2b6400a076a1L
     .end array-data
 
-    :array_2a2
+    :array_1c0
+    .array-data 4
+        -0x19e09495
+        -0x19cf3232
+        -0x19becd28
+        -0x19aded5c
+        -0x199cef5d
+        -0x198be97d
+        -0x197a4f5e
+        -0x1969fe5b
+        -0x1958659e
+        -0x194729d6
+        -0x1936cadd
+        -0x192521cd
+        -0x1914b81f
+        -0x190379aa
+        -0x18f2375c
+        -0x18e1f109
+        -0x18d0c964
+        -0x18bf5ae9
+    .end array-data
+
+    :array_1e8
+    .array-data 4
+        -0x22e7c70
+        -0x23f5fa4
+        -0x2507d81
+        -0x261b031
+        -0x27225db
+        -0x28376d5
+        -0x294a39f
+        -0x2a50df9
+        -0x2b6864f
+        -0x2c74e46
+        -0x2d8e925
+        -0x2e98564
+        -0x2faea18
+        -0x30b72fe
+        -0x31cb717
+        -0x32d69e4
+        -0x33e710c
+        -0x34fabcf
+        -0x360f1e1
+        -0x3711642
+        -0x3828a5a
+        -0x393f7d4
+        -0x3a442cd
+        -0x3b53386
+        -0x3c66e05
+        -0x3d7f4c7
+        -0x3e86392
+        -0x3f91300
+        -0x40a70c0
+        -0x41b074a
+    .end array-data
+
+    :array_228
     .array-data 8
-        0x36c8cde0d116L
-        0x7411efada5b8L
-        0x60f81ba8ce3fL
-        0x371a16480e95L
-        0x42e2f460c5fdL
-        0x26e200000046L
+        0x6f7a641739faL
+        0x34d5fa3b792cL
+        0x64fbb81c387eL
+        0x64ebd8a7e649L
+        0x2598ada5d216L
+        0x71060e3cc064L
+        0x1b15e63fc806L
+        0x42c49fcfd608L
     .end array-data
 
-    :array_2be
+    :array_24c
     .array-data 4
-        -0xaddabc2
-        -0xacc9aab
-        -0xabb4962
-        -0xaaa9075
-        -0xa99873f
-        -0xa8847b3
-        -0xa77cb4f
-        -0xa66a7e5
-        -0xa55b344
-        -0xa44fc55
-        -0xa337a01
-        -0xa2274a1
-        -0xa11fe06
-        -0xa00172e
-        -0x9ef9496
-        -0x9de16ba
-        -0x9cda98f
-        -0x9bce7fa
+        0x3e2387cb
+        0x3e12e7bc
+        0x3e01c1e5
+        0x3df0b917
+        0x3ddfca12
+        0x3dceb928
+        0x3dbd3f0d
+        0x3dac3348
+        0x3d9b7e9f
+        0x3d8ae0c8
+        0x3d799778
+        0x3d688cf3
+        0x3d577cbb
+        0x3d467b9b
+        0x3d35e278
+        0x3d24b4cf
+        0x3d13bdd8
+        0x3d02cfee
+        0x3cf1ec58
+        0x3ce06dc3
+        0x3ccf64e9
+        0x3cbe7fc8
+        0x3cad14a0
+        0x3c9c7551
+        0x3c8b9ba7
+        0x3c7aaa47
+        0x3c69c354
+        0x3c587d8c
+        0x3c474b88
+        0x3c36ac14
+        0x3c251e4f
+        0x3c148775
+        0x3c033161
+        0x3bf2b721
+        0x3be18048
+        0x3bd0d4e8
     .end array-data
 
-    :array_2e6
+    :array_298
+    .array-data 4
+        -0x3750bf51
+        -0x37611d88  # -325395.75f
+        -0x377250c1
+        -0x3783a304
+        -0x379484b7
+        -0x37a54289
+        -0x37b6f71f
+        -0x37c7ad1e
+        -0x37d813c0  # -171953.0f
+        -0x37e9b194
+        -0x37fa1a7f
+        -0x380b6adc
+        -0x381cdb48
+        -0x382d9913
+        -0x383e67a4
+        -0x384fb325
+        -0x3860a78f
+        -0x3871f7e4
+        -0x38822bf3
+        -0x3893b373
+        -0x38a4e1a6
+    .end array-data
+
+    :array_2c6
+    .array-data 4
+        -0x4fdb3f76
+        -0x4fec1909
+        -0x4ffd2f4d
+        -0x500e3d44
+        -0x501fee42
+        -0x5030a325
+        -0x50413b30
+        -0x5052067a
+        -0x5063f1c0
+        -0x50745744
+        -0x50851a22
+        -0x50966f44
+        -0x50a7f40c
+        -0x50b842f4
+        -0x50c9f7ab
+        -0x50dafbb8
+        -0x50ebaaf9
+        -0x50fc9252
+    .end array-data
+
+    :array_2ee
+    .array-data 4
+        0x23e075d9
+        0x23cf9752
+        0x23beb40b
+        0x23ad885f
+        0x239cb731
+        0x238bee63
+        0x237ae41f
+        0x23695fd8
+        0x23587989
+        0x234701ec
+        0x2336bf2e
+        0x2325b957
+        0x23142129
+    .end array-data
+
+    :array_30c
+    .array-data 4
+        -0x6a088b23
+        -0x6a1956bb
+        -0x6a2a062a
+        -0x6a3b099f
+        -0x6a4c0a8b
+        -0x6a5dd64d
+        -0x6a6eabaf
+        -0x6a7f27cf
+        -0x6a901446
+        -0x6aa1c196
+    .end array-data
+
+    :array_324
     .array-data 8
-        0x7aa83450201dL
-        0x3ec13e162878L
-        0x73c21e396ef4L
-        0x2b670000008fL
+        0x47012087621eL
+        0x284817cd05c6L
+        0x1d500852bc8L
     .end array-data
 
-    :array_2fa
+    :array_334
     .array-data 4
-        -0x4bacaaa1
-        -0x4bbd63ca
-        -0x4bced0fa
-        -0x4bdf01e5
-        -0x4bf09600
-        -0x4c018d81
-        -0x4c12d1a4
-        -0x4c2326b5
-        -0x4c3450c1
-        -0x4c45f74a
+        -0x7b482c3e
+        -0x7b599e3e
+        -0x7b6a7e26
+        -0x7b7bd586
+        -0x7b8ccd8c
+        -0x7b9db693
+        -0x7baef49d
+        -0x7bbfde59
+        -0x7bd089f6
+        -0x7be19a9c
+        -0x7bf27e46
+        -0x7c03f16d
+        -0x7c14178b
+        -0x7c25d22a
+        -0x7c368ff6
+        -0x7c47e191
+        -0x7c58311e
+        -0x7c696d7f
+        -0x7c7aa591  # -7.8378E-37f
     .end array-data
 
-    :array_312
-    .array-data 4
-        -0x43f4dd4c
-        -0x4405e829
-        -0x4416e834
-        -0x442752e9
-        -0x4438281c
-        -0x4449455e
-        -0x445a9f2d
-        -0x446b9780
-        -0x447c5f7b
-        -0x448d7cc0
-        -0x449e8217
-    .end array-data
-
-    :array_32c
-    .array-data 4
-        0x4ea06ebb
-        0x4eb1c6cf
-        0x4ec2d4d4
-        0x4ed33a5a
-        0x4ee4d509  # 1.9195834E9f
-        0x4ef57dcf
-        0x4f06600d
-        0x4f172c18
-        0x4f28afdc
-        0x4f396472
-        0x4f4a9645
-        0x4f5b2a38
-        0x4f6c4db9
-        0x4f7d9757
-        0x4f8e1314
-        0x4f9f5e7e
-        0x4fb026d9
-        0x4fc13a12
-        0x4fd2649d
-    .end array-data
-
-    :array_356
+    :array_35e
     .array-data 8
-        0x7ae309da37b1L
-        0x380df0f0e49cL
-        0x226b8c88dbdfL
-        0x23f50000b164L
+        0x29f1764d5cc4L
+        0x4ad32a6d54a3L
+        0x10ba1f86b223L
+        0x5f4700006855L
     .end array-data
 
-    :array_36a
+    :array_372
     .array-data 4
-        0x3d6f5a1
-        0x3e7da81
-        0x3f82864
-        0x409d05f
-        0x41a20e4
-        0x42b57e1
-        0x43ce603
-        0x44dfb36
-        0x45eab01
-        0x46f5816
-        0x480a0ab
-        0x491d963
-        0x4a28907
-        0x4b38eaa
-        0x4c4b93b
-        0x4d5729a
-        0x4e6b266
-        0x4f77fa9
-        0x5088395
-        0x5198a39
-        0x52a243a
-        0x53b4dc1
+        0x5cd0e2d1
+        0x5ce162f9
+        0x5cf2570b
+        0x5d030f25
+        0x5d14756b
+        0x5d258025
+        0x5d36dfcf
+        0x5d47e4f4
+        0x5d58be88
+        0x5d696bfa
+        0x5d7ac448
+        0x5d8b4229  # 1.2543285E18f
+        0x5d9c61b3
+        0x5dadee1c  # 1.5666232E18f
+        0x5dbed585
+        0x5dcf7fb3
+        0x5de0c212
+        0x5df1d1d4
+        0x5e02ca26
+        0x5e13033e
+        0x5e241204
+        0x5e356570
     .end array-data
 
-    :array_39a
-    .array-data 8
-        0x252bbbe51378L
-        0xca2d386ac59L
-        0x6eb5fc4aa88dL
-        0x535135b48d6aL
-        0x3c33c293988bL
-        0x2b71004bdb7bL
-    .end array-data
-
-    :array_3b6
+    :array_3a2
     .array-data 4
-        0x4fec3188
-        0x4fdb523b  # 7.3591987E9f
-        0x4fca6a00
-        0x4fb9503f
-        0x4fa88710
-        0x4f9793d1
-        0x4f8677db
-        0x4f75d290
-        0x4f6465be
-        0x4f539b2f
-        0x4f42671d
-        0x4f310693  # 2.969998E9f
-        0x4f20843c
+        -0x56c2431f
+        -0x56d356fb
+        -0x56e4da1f
+        -0x56f5969b
+        -0x57067f9d
+        -0x571734d3
+        -0x5728a0af
+        -0x573994c4
+        -0x574a9615
+        -0x575b0262
+        -0x576cd731
+        -0x577d410e
+        -0x578ee0ef
+        -0x579fa972
+        -0x57b0f2a5
+        -0x57c17349
+        -0x57d2f5c5
+        -0x57e3b839
+        -0x57f44f9c
+        -0x58054d08
+        -0x5816f4bc
+        -0x5827ae4c
+        -0x583808b7
     .end array-data
 
     :array_3d4
-    .array-data 4
-        0x709b6b7a
-        0x708ab70f
-        0x70798334
-        0x7068bd52
-        0x7057c4ef
-        0x7046c32d
-        0x70351b34
-        0x7024090b
-        0x7013a9d5
-        0x7002d0ef
-        0x6ff1ac09
-        0x6fe0868a
-        0x6fcf07c4
-        0x6fbe7948
-        0x6fad417f
-        0x6f9c837f
-    .end array-data
-
-    :array_3f8
-    .array-data 4
-        -0x2be1519e
-        -0x2bf257df
-        -0x2c03c7c0
-        -0x2c14da31
-        -0x2c259692
-        -0x2c361674
-        -0x2c47e039
-        -0x2c58f6e9
-        -0x2c694f80
-        -0x2c7ad932
-        -0x2c8b788c
-        -0x2c9c1a61
-        -0x2cadf9fc
-        -0x2cbe0976
-        -0x2ccf1673
-    .end array-data
-
-    :array_41a
     .array-data 8
-        0x7798ccc2cf04L
-        0x7a7dc94b9823L
-        0x4ca1a20605deL
+        0x6a2179f77ee3L
+        0x6923788b86c0L
+        0x27a8f7b6e978L
+        0x79b30000004bL
     .end array-data
 
-    :array_42a
+    :array_3e8
     .array-data 4
-        0x16d3177c
-        0x16e4498e
-        0x16f5c0eb
-        0x17067fd1
-        0x1717dafd
-        0x17280d1f
-        0x1739717a
-        0x174a5968
-        0x175b25b2
-        0x176c1868
-        0x177d1248
-        0x178e3db0
-        0x179fd43a
-        0x17b0b6c3
-        0x17c1a20a
-        0x17d247de
-        0x17e34eda
-        0x17f49805
-        0x18059e08
-        0x1816bb4c
-        0x1827130b
+        -0x45ea8252
+        -0x45d90e73
+        -0x45c867af
+        -0x45b7aeb6
+        -0x45a634b3
+        -0x4595a3e4
+        -0x4584880b
+        -0x45739ab3
+        -0x45620e8a
+        -0x4551f3d2
+        -0x4540a54d
+        -0x452f2807
+        -0x451e9d87
+        -0x450d38b8
+        -0x44fce7cb  # -0.0020003442f
+        -0x44eb9fc1
     .end array-data
 
-    :array_458
+    :array_40c
+    .array-data 4
+        -0x6cd5c1d1
+        -0x6ce60746
+        -0x6cf735f6
+        -0x6d084cfb
+        -0x6d194380
+        -0x6d2a4bc0
+        -0x6d3b933c
+        -0x6d4c4f44
+        -0x6d5d47e8
+        -0x6d6e3713
+        -0x6d7f5482
+        -0x6d900749
+        -0x6da1eef5
+        -0x6db288b8
+        -0x6dc35cd9
+    .end array-data
+
+    :array_42e
     .array-data 8
-        0x61a616418a9aL
-        0x65c65950f732L
-        0x5ab708d44877L
-        0x4dece228b624L
-        0x63ca9ad29a0aL
-        0x3d300005a4aL
+        0x666c890091e6L
+        0x433c915e202fL
+        0x24b6644f8f1L
     .end array-data
 
-    :array_474
+    :array_43e
+    .array-data 4
+        -0x28786ea4
+        -0x28671e48
+        -0x285641eb
+        -0x284559ac
+        -0x28344f4f
+        -0x28238744
+        -0x28126911
+        -0x28015c02
+        -0x27f07816
+        -0x27df8c61
+        -0x27ce9ac6
+        -0x27bd76fc
+        -0x27ac4b99
+        -0x279b34e9
+        -0x278a928a
+        -0x277937cc
+        -0x2768ca16
+        -0x27571cf9
+        -0x27461cbe
+        -0x2735e4c1
+        -0x27245c18
+    .end array-data
+
+    :array_46c
+    .array-data 4
+        0x39adf83c
+        0x399cfaef
+        0x398be18d
+        0x397a3594
+        0x39699b71
+        0x39581e2b
+        0x39474b8a
+        0x3936d94d
+        0x39256868
+        0x3914859e
+        0x39030e6e
+        0x38f268b5
+        0x38e1e759
+        0x38d0f473
+        0x38bf1769
+        0x38ae054f
+        0x389df394
+        0x388c1abe
+        0x387b15f8
+        0x386a42f2
+        0x38593970
+        0x3848948d
+    .end array-data
+
+    :array_49c
+    .array-data 4
+        -0x730e2814
+        -0x731fa747
+        -0x733020ab
+        -0x734168a8
+        -0x73525d39
+        -0x7363dffe
+        -0x7374dade
+        -0x73857314
+        -0x73961d3b
+    .end array-data
+
+    :array_4b2
+    .array-data 4
+        0x7409aab5
+        0x73f8cd37
+        0x73e743be
+        0x73d6f9be
+        0x73c58687
+        0x73b43dfd
+        0x73a3997d
+        0x7392fb1c
+        0x7381049b
+    .end array-data
+
+    :array_4c8
     .array-data 8
-        0x5dde7f8af6c9L
-        0x7e7ae090f13fL
-        0x40ba0000006aL
+        0x429e24d5a075L
+        0x6a04dc1433beL
     .end array-data
 
-    :array_484
+    :array_4d4
     .array-data 4
-        0x56c86400
-        0x56b7e964
-        0x56a6108d
-        0x5695135e
-        0x568497c4
-        0x5673584a
-        0x56620274
-        0x56516f73
-        0x5640d3bc
+        -0x19631193
+        -0x1974fe2e
+        -0x19857034
+        -0x19969379
+        -0x19a77fe0
+        -0x19b89bd1
     .end array-data
 
-    :array_49a
+    :array_4e4
     .array-data 4
-        0x6b5434f1
-        0x6b659ba9
-        0x6b762b21
-        0x6b87a122
-        0x6b985c8f
-        0x6ba9f95e
-        0x6bba0f2b
-        0x6bcb1ba4
+        0x710c5cef
+        0x711d44be
+        0x712e3d0e
+        0x713fb20c
+        0x71503848
+        0x7161496c
     .end array-data
 
-    :array_4ae
-    .array-data 4
-        0x473afccc
-        0x4729b34a
-        0x4718267a
-        0x47077197
-        0x46f6a93a
-        0x46e55212
-    .end array-data
-
-    :array_4be
+    :array_4f4
     .array-data 8
-        0x2b27418c10c6L
-        0x1ffc00000208L
-    .end array-data
-
-    :array_4ca
-    .array-data 4
-        -0x59a64b75
-        -0x59951ebd
-        -0x59849cfa
-        -0x5973778b
-        -0x5962735b
-        -0x5951da64
+        0x42aa331afdfbL
+        0x5f77000073d7L
     .end array-data
 .end method
 
@@ -989,212 +1021,312 @@
     throw p0
 .end method
 
-.method private static aa(Ljava/lang/String;Ljava/lang/String;Z)Z
-    .registers 5
+.method private static aa(Landroid/util/ArrayMap;)Landroid/util/ArrayMap;
+    .registers 10
 
-    const v0, 0x37612dc9
-
-    const/4 v1, 0x0
-
-    .line 185
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 186
-    invoke-static {p0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
-
-    move-result v0
-
-    if-eqz v0, :cond_f
-
-    const/4 p0, 0x0
-
-    return p0
-
-    .line 189
-    :cond_f
-    filled-new-array {p0}, [Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldHidePackage([Ljava/lang/String;Ljava/lang/String;Z)Z
-
-    move-result p0
-
-    return p0
-.end method
-
-.method private static ab(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-    .registers 7
-
-    const v0, 0x7c998481
+    const v0, 0x58bf5f8e
 
     const/4 v1, 0x0
 
-    .line 294
+    .line 309
     invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
 
-    .line 557
-    invoke-static {p0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+    if-nez p0, :cond_a
+
+    return-object v1
+
+    .line 313
+    :cond_a
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
 
     move-result v0
 
-    if-nez v0, :cond_27
+    .line 314
+    invoke-static {v0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
 
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->g()Z
+    move-result v2
 
-    move-result v0
+    if-eqz v2, :cond_aa
 
-    if-nez v0, :cond_14
-
-    goto :goto_27
-
-    .line 560
-    :cond_14
-    sget-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->aa:Ljava/lang/Object;
-
-    monitor-enter v0
-
-    .line 561
-    :try_start_17
-    sget-boolean v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->ag:Z
-
-    if-nez v2, :cond_1f
-
-    .line 562
-    monitor-exit v0
-
-    goto :goto_27
-
-    :catchall_1d
-    move-exception p0
-
-    goto :goto_25
-
-    .line 564
-    :cond_1f
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->t(Ljava/lang/String;)Lcom/wukong/manager/cv;
-
-    move-result-object v1
-
-    monitor-exit v0
-
-    goto :goto_27
-
-    .line 565
-    :goto_25
-    monitor-exit v0
-    :try_end_26
-    .catchall {:try_start_17 .. :try_end_26} :catchall_1d
-
-    throw p0
-
-    .line 299
-    :cond_27
-    :goto_27
-    invoke-static {v1, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->r(Lcom/wukong/manager/cv;Ljava/lang/String;Ljava/lang/String;)Lcom/wukong/manager/cx;
-
-    move-result-object p0
-
-    if-nez p0, :cond_2e
-
-    return-object p3
-
-    .line 300
-    :cond_2e
-    iget-object p0, p0, Lcom/wukong/manager/cx;->f:Ljava/io/Serializable;
-
-    check-cast p0, Ljava/lang/String;
-
-    return-object p0
-.end method
-
-.method private static ac(ILjava/lang/String;Z)Z
-    .registers 4
-
-    const p2, 0x2a2e7882
-
-    const/4 v0, 0x0
-
-    .line 110
-    invoke-static {p2, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 112
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
-
-    move-result p2
-
-    if-eqz p2, :cond_2d
-
-    .line 113
-    invoke-static {p1}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
-
-    move-result p2
-
-    if-nez p2, :cond_2d
-
-    .line 114
-    invoke-static {p1}, Lcom/wukong/manager/WukongHmaPolicyBridge;->d(Ljava/lang/String;)Z
-
-    move-result p2
-
-    if-nez p2, :cond_2d
-
-    .line 115
     invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->c()Z
 
-    move-result p2
+    move-result v2
 
-    if-nez p2, :cond_20
+    if-nez v2, :cond_1c
 
-    goto :goto_2d
+    goto/16 :goto_aa
 
-    .line 118
-    :cond_20
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
+    .line 317
+    :cond_1c
+    invoke-static {v0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
 
-    move-result-object p0
+    move-result-object v0
 
-    .line 119
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->a([Ljava/lang/String;)Lcom/wukong/manager/cv;
+    .line 318
+    invoke-static {v0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->a([Ljava/lang/String;)Lcom/wukong/manager/cv;
 
-    move-result-object p2
+    move-result-object v2
 
-    .line 120
-    invoke-static {p2, p0, p1}, Lcom/wukong/manager/WukongHmaPolicyBridge;->u(Lcom/wukong/manager/cv;[Ljava/lang/String;Ljava/lang/String;)Z
+    if-eqz v2, :cond_aa
 
-    move-result p0
+    .line 967
+    iget v3, v2, Lcom/wukong/manager/cv;->e:I
 
-    return p0
+    and-int/lit8 v3, v3, 0x1
 
-    :cond_2d
-    :goto_2d
-    const/4 p0, 0x0
+    if-eqz v3, :cond_aa
 
-    return p0
+    .line 323
+    invoke-virtual {p0}, Landroid/util/ArrayMap;->size()I
+
+    move-result v3
+
+    add-int/lit8 v3, v3, -0x1
+
+    move-object v4, v1
+
+    :goto_33
+    if-ltz v3, :cond_a6
+
+    .line 324
+    invoke-virtual {p0, v3}, Landroid/util/ArrayMap;->keyAt(I)Ljava/lang/Object;
+
+    move-result-object v5
+
+    .line 325
+    invoke-virtual {p0, v3}, Landroid/util/ArrayMap;->valueAt(I)Ljava/lang/Object;
+
+    move-result-object v6
+
+    .line 326
+    instance-of v7, v5, Ljava/lang/String;
+
+    if-eqz v7, :cond_44
+
+    check-cast v5, Ljava/lang/String;
+
+    goto :goto_6c
+
+    :cond_44
+    if-nez v6, :cond_48
+
+    :catchall_46
+    :cond_46
+    move-object v5, v1
+
+    goto :goto_6c
+
+    .line 707
+    :cond_48
+    :try_start_48
+    invoke-virtual {v6}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+
+    move-result-object v5
+
+    const/16 v7, 0xe
+
+    new-array v7, v7, [I
+
+    fill-array-data v7, :array_ac
+
+    const v8, 0x47444d7f
+
+    invoke-static {v7, v8}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object v7
+
+    invoke-virtual {v5, v7, v1}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
+
+    move-result-object v5
+
+    .line 708
+    invoke-virtual {v5, v6, v1}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v5
+
+    .line 709
+    instance-of v7, v5, Ljava/lang/String;
+
+    if-eqz v7, :cond_46
+
+    check-cast v5, Ljava/lang/String;
+
+    invoke-static {v5}, Lcom/wukong/manager/WukongHmaPolicyBridge;->x(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v5
+    :try_end_6c
+    .catchall {:try_start_48 .. :try_end_6c} :catchall_46
+
+    :goto_6c
+    const/16 v7, 0x8
+
+    .line 327
+    new-array v7, v7, [I
+
+    fill-array-data v7, :array_cc
+
+    const v8, 0x104c6629
+
+    invoke-static {v7, v8}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object v7
+
+    if-nez v6, :cond_7d
+
+    goto :goto_93
+
+    .line 720
+    :cond_7d
+    :try_start_7d
+    invoke-virtual {v6}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+
+    move-result-object v8
+
+    invoke-virtual {v8, v7, v1}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
+
+    move-result-object v7
+
+    .line 721
+    invoke-virtual {v7, v6, v1}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v6
+
+    .line 722
+    instance-of v7, v6, Ljava/lang/Boolean;
+
+    if-eqz v7, :cond_93
+
+    check-cast v6, Ljava/lang/Boolean;
+
+    invoke-virtual {v6}, Ljava/lang/Boolean;->booleanValue()Z
+
+    move-result v6
+    :try_end_93
+    .catchall {:try_start_7d .. :try_end_93} :catchall_93
+
+    .line 328
+    :catchall_93
+    :cond_93
+    :goto_93
+    invoke-static {v2, v0, v5}, Lcom/wukong/manager/WukongHmaPolicyBridge;->u(Lcom/wukong/manager/cv;[Ljava/lang/String;Ljava/lang/String;)Z
+
+    move-result v5
+
+    if-eqz v5, :cond_a3
+
+    if-nez v4, :cond_a0
+
+    .line 330
+    new-instance v4, Landroid/util/ArrayMap;
+
+    invoke-direct {v4, p0}, Landroid/util/ArrayMap;-><init>(Landroid/util/ArrayMap;)V
+
+    .line 332
+    :cond_a0
+    invoke-virtual {v4, v3}, Landroid/util/ArrayMap;->removeAt(I)Ljava/lang/Object;
+
+    :cond_a3
+    add-int/lit8 v3, v3, -0x1
+
+    goto :goto_33
+
+    :cond_a6
+    if-nez v4, :cond_a9
+
+    goto :goto_aa
+
+    :cond_a9
+    move-object p0, v4
+
+    :cond_aa
+    :goto_aa
+    return-object p0
+
+    nop
+
+    :array_ac
+    .array-data 4
+        0x4d7f37b5  # 2.6761506E8f
+        0x4d90061a  # 3.0203987E8f
+        0x4da1485e  # 3.382343E8f
+        0x4db26143  # 3.7408982E8f
+        0x4dc34586
+        0x4dd4f451  # 4.4659766E8f
+        0x4de52b17  # 4.806008E8f
+        0x4df6e0a7  # 5.1773974E8f
+        0x4e0749ac  # 5.674381E8f
+        0x4e188e93  # 6.3987014E8f
+        0x4e2972e6  # 7.107199E8f
+        0x4e3a40b9  # 7.8120096E8f
+        0x4e4bb440  # 8.543969E8f
+        0x4e5c810a  # 9.2486106E8f
+    .end array-data
+
+    :array_cc
+    .array-data 4
+        0x66a02b1b
+        0x668fc817
+        0x667e3f84
+        0x666dd345
+        0x665ceda4
+        0x664b3818
+        0x663a0c0e
+        0x6629d78c
+    .end array-data
 .end method
 
-.method private static ad(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)Z
+.method private static ab(Landroid/content/ContentInterface;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    .registers 6
+
+    const p0, 0x40b166ed
+
+    const/4 p1, 0x0
+
+    .line 171
+    invoke-static {p0, p1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    return-object p1
+.end method
+
+.method private static ac(Ljava/lang/Object;Ljava/lang/String;Z)Z
     .registers 5
 
-    const v0, 0x4665715f
+    const v0, 0x570b9b0c
 
     const/4 v1, 0x0
 
-    .line 132
+    .line 176
     invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
 
-    .line 133
-    invoke-static {p0, p1, p2, v1}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldExecuteSettingsCallAsManager(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
+    .line 177
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
+
+    move-result v0
+
+    if-nez v0, :cond_f
+
+    const/4 p0, 0x0
+
+    return p0
+
+    .line 180
+    :cond_f
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->p(Ljava/lang/Object;)Ljava/lang/String;
+
+    move-result-object p0
+
+    .line 181
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldHidePackage(Ljava/lang/String;Ljava/lang/String;Z)Z
 
     move-result p0
 
     return p0
 .end method
 
-.method private static ae(Landroid/content/Context;)V
+.method private static ad(Landroid/content/Context;)V
     .registers 7
 
-    const v0, 0xb1006a6
+    const v0, 0x106666a0
 
     const/4 v1, 0x0
 
@@ -1249,7 +1381,7 @@
     :catchall_22
     move-exception p0
 
-    goto :goto_7d
+    goto :goto_7f
 
     :cond_24
     move v2, v4
@@ -1326,7 +1458,7 @@
     .line 104
     monitor-exit v1
     :try_end_53
-    .catchall {:try_start_50 .. :try_end_53} :catchall_7a
+    .catchall {:try_start_50 .. :try_end_53} :catchall_7c
 
     .line 105
     sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->e:Ljava/lang/String;
@@ -1335,15 +1467,17 @@
 
     invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
 
-    const/16 v3, 0x27
+    const/16 v3, 0xa
 
-    new-array v3, v3, [I
+    new-array v3, v3, [J
 
-    fill-array-data v3, :array_80
+    fill-array-data v3, :array_82
 
-    const v4, 0x5d69b190
+    const v4, 0x181a65aa
 
-    invoke-static {v3, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    const/16 v5, 0x27
+
+    invoke-static {v3, v4, v5}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v3
 
@@ -1363,111 +1497,1038 @@
 
     return-void
 
-    :catchall_7a
+    :catchall_7c
     move-exception p0
 
     .line 104
-    :try_start_7b
+    :try_start_7d
     monitor-exit v1
-    :try_end_7c
-    .catchall {:try_start_7b .. :try_end_7c} :catchall_7a
+    :try_end_7e
+    .catchall {:try_start_7d .. :try_end_7e} :catchall_7c
 
     throw p0
 
     .line 83
-    :goto_7d
-    :try_start_7d
+    :goto_7f
+    :try_start_7f
     monitor-exit v0
-    :try_end_7e
-    .catchall {:try_start_7d .. :try_end_7e} :catchall_22
+    :try_end_80
+    .catchall {:try_start_7f .. :try_end_80} :catchall_22
 
     throw p0
 
     nop
 
-    :array_80
-    .array-data 4
-        -0x4be9ed97
-        -0x4bfa1136
-        -0x4c0bfbe8
-        -0x4c1c6cce
-        -0x4c2d986f
-        -0x4c3ed3f0
-        -0x4c4f241a
-        -0x4c604fd9
-        -0x4c71cca7
-        -0x4c823f6f
-        -0x4c931249
-        -0x4ca499fe
-        -0x4cb58ea2
-        -0x4cc6d856
-        -0x4cd79805
-        -0x4ce8c8fe
-        -0x4cf91674
-        -0x4d0a5eda
-        -0x4d1b12dd
-        -0x4d2cf87f
-        -0x4d3dd001
-        -0x4d4e1a1b
-        -0x4d5f8246
-        -0x4d7077b3
-        -0x4d8132f7
-        -0x4d92ee6a
-        -0x4da31974
-        -0x4db4b7a8
-        -0x4dc5c107
-        -0x4dd62d81
-        -0x4de79137
-        -0x4df816bd
-        -0x4e099fa2
-        -0x4e1ad1de
-        -0x4e2b4a9c
-        -0x4e3cf12c
-        -0x4e4d4fae
-        -0x4e5e6e12
-        -0x4e6ff587
+    :array_82
+    .array-data 8
+        0x1af26acd9fc9L
+        0x58ad7aa13fafL
+        0xfe8ce1eaef0L
+        0x46ecbcffafacL
+        0x2648c816c2cL
+        0x4f6e6fcb22eeL
+        0x4c2563843fb7L
+        0x41c9cca56369L
+        0xd9b15fde92aL
+        0x3a660020520eL
     .end array-data
 .end method
 
-.method private static af(Ljava/lang/Object;Ljava/lang/String;Z)Z
+.method private static ae(Ljava/lang/String;Ljava/lang/String;Z)Z
     .registers 5
 
-    const v0, 0x42cdc6af
+    const v0, 0x667d1f72
 
     const/4 v1, 0x0
 
-    .line 176
+    .line 185
     invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
 
-    .line 177
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
+    .line 186
+    invoke-static {p0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
 
     move-result v0
 
-    if-nez v0, :cond_f
+    if-eqz v0, :cond_f
 
     const/4 p0, 0x0
 
     return p0
 
-    .line 180
+    .line 189
     :cond_f
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->p(Ljava/lang/Object;)Ljava/lang/String;
+    filled-new-array {p0}, [Ljava/lang/String;
 
     move-result-object p0
 
-    .line 181
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldHidePackage(Ljava/lang/String;Ljava/lang/String;Z)Z
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldHidePackage([Ljava/lang/String;Ljava/lang/String;Z)Z
 
     move-result p0
 
     return p0
 .end method
 
-.method private static ag(Ljava/lang/Object;Landroid/net/Uri;Landroid/database/Cursor;)Landroid/database/Cursor;
+.method private static af(IJ)J
+    .registers 5
+
+    const v0, 0x4d58af89  # 2.2721141E8f
+
+    const/4 v1, 0x0
+
+    .line 304
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 305
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldHideAccessibilityForUid(I)Z
+
+    move-result p0
+
+    if-eqz p0, :cond_10
+
+    const-wide/16 p0, 0x0
+
+    return-wide p0
+
+    :cond_10
+    return-wide p1
+.end method
+
+.method private static ag(I)Z
+    .registers 3
+
+    const v0, 0x4c97b58f  # 7.953932E7f
+
+    const/4 v1, 0x0
+
+    .line 124
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 125
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->j([Ljava/lang/String;)Z
+
+    move-result p0
+
+    return p0
+.end method
+
+.method private static ah(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
+    .registers 6
+
+    const v0, 0x11c9d858
+
+    const/4 v1, 0x0
+
+    .line 141
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    const/4 v0, 0x0
+
+    .line 143
+    :try_start_8
+    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->w:Ljava/lang/String;
+
+    invoke-virtual {v1, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p1
+
+    if-eqz p1, :cond_a1
+
+    invoke-static {p2}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result p1
+
+    if-nez p1, :cond_a1
+
+    invoke-static {p3}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result p1
+
+    if-eqz p1, :cond_1e
+
+    goto/16 :goto_a1
+
+    .line 146
+    :cond_1e
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->p(Ljava/lang/Object;)Ljava/lang/String;
+
+    move-result-object p0
+
+    .line 147
+    sget-object p1, Lcom/wukong/manager/WukongHmaPolicyBridge;->f:Ljava/lang/String;
+
+    invoke-virtual {p1, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p0
+
+    if-nez p0, :cond_3b
+
+    .line 148
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
+
+    move-result p0
+
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->j([Ljava/lang/String;)Z
+
+    move-result p0
+
+    if-nez p0, :cond_3b
+
+    return v0
+
+    :catchall_39
+    move-exception p0
+
+    goto :goto_a2
+
+    :cond_3b
+    const/16 p0, 0xa
+
+    .line 151
+    new-array p1, p0, [I
+
+    fill-array-data p1, :array_b6
+
+    const v1, 0x69a75f17
+
+    invoke-static {p1, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p1
+
+    if-eqz p1, :cond_7b
+
+    const/16 p0, 0xb
+
+    .line 152
+    new-array p0, p0, [I
+
+    fill-array-data p0, :array_ce
+
+    const p1, 0x73aef8d8
+
+    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-virtual {p0, p3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p0
+
+    if-nez p0, :cond_79
+
+    const/16 p0, 0x1c
+
+    new-array p0, p0, [I
+
+    fill-array-data p0, :array_e8
+
+    const p1, 0x1f41b01d
+
+    .line 153
+    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-virtual {p0, p3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p0
+
+    if-eqz p0, :cond_78
+
+    goto :goto_79
+
+    :cond_78
+    return v0
+
+    :cond_79
+    :goto_79
+    const/4 p0, 0x1
+
+    return p0
+
+    :cond_7b
+    const/4 p1, 0x3
+
+    .line 155
+    new-array p1, p1, [J
+
+    fill-array-data p1, :array_124
+
+    const v1, 0x6814916
+
+    invoke-static {p1, v1, p0}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-virtual {p0, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p0
+
+    if-eqz p0, :cond_b5
+
+    const/16 p0, 0x19
+
+    .line 156
+    new-array p0, p0, [I
+
+    fill-array-data p0, :array_134
+
+    const p1, 0x21899a48
+
+    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-virtual {p0, p3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p0
+    :try_end_a0
+    .catchall {:try_start_8 .. :try_end_a0} :catchall_39
+
+    return p0
+
+    :cond_a1
+    :goto_a1
+    return v0
+
+    :goto_a2
+    const/16 p1, 0x29
+
+    .line 159
+    new-array p1, p1, [I
+
+    fill-array-data p1, :array_16a
+
+    const p2, 0x7c0e832
+
+    invoke-static {p1, p2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object p1
+
+    sget-object p2, Lcom/wukong/manager/WukongHmaPolicyBridge;->e:Ljava/lang/String;
+
+    invoke-static {p2, p1, p0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+
+    :cond_b5
+    return v0
+
+    :array_b6
+    .array-data 4
+        0x5f177a8f
+        0x5f28c293
+        0x5f39308c
+        0x5f4a2461
+        0x5f5bfcd6
+        0x5f6c76d7
+        0x5f7da823
+        0x5f8e604d
+        0x5f9f3756
+        0x5fb0aec7
+    .end array-data
+
+    :array_ce
+    .array-data 4
+        -0x67db586
+        -0x68e752c
+        -0x69f9dcf
+        -0x6b04c6a
+        -0x6c15d7f
+        -0x6d2d8fa
+        -0x6e3228a
+        -0x6f43a6f
+        -0x7055c17
+        -0x7164dcf
+        -0x72756bf
+    .end array-data
+
+    :array_e8
+    .array-data 4
+        -0x4e17fd2a
+        -0x4e2897cb
+        -0x4e391f19
+        -0x4e4a3405
+        -0x4e5b10bd
+        -0x4e6cfac6
+        -0x4e7d1954
+        -0x4e8e8ffd
+        -0x4e9fcfcd
+        -0x4eb0c6eb
+        -0x4ec18bc6
+        -0x4ed2e656
+        -0x4ee3c3b4
+        -0x4ef47ce8
+        -0x4f05eff2
+        -0x4f16e977
+        -0x4f2731ed
+        -0x4f38cbd2
+        -0x4f497820
+        -0x4f5a36d3
+        -0x4f6b9666
+        -0x4f7cbb31
+        -0x4f8d8598
+        -0x4f9ec2df
+        -0x4faf1bdf
+        -0x4fc0206d
+        -0x4fd10c05
+        -0x4fe2697c
+    .end array-data
+
+    :array_124
+    .array-data 8
+        0x63880b3c3477L
+        0xc6d23346011L
+        0x78bd000058c8L
+    .end array-data
+
+    :array_134
+    .array-data 4
+        -0x641ff0be
+        -0x64303823
+        -0x64416b9a
+        -0x6452b95b
+        -0x64635558
+        -0x6474fece
+        -0x6485b91d
+        -0x6496e569  # -1.92819E-22f
+        -0x64a7ae52
+        -0x64b813a4
+        -0x64c965f8
+        -0x64da9961
+        -0x64eb5df7
+        -0x64fc31e9
+        -0x650d4f86
+        -0x651e2c83
+        -0x652f81d3
+        -0x6540dcc6
+        -0x65518bd2
+        -0x656287c1
+        -0x657342f1
+        -0x65841318
+        -0x65955b07
+        -0x65a619bb
+        -0x65b7efda
+    .end array-data
+
+    :array_16a
+    .array-data 4
+        -0x17cd9cf5
+        -0x17bc3903
+        -0x17ab8ef4
+        -0x179aa315
+        -0x1789d797
+        -0x177807f0
+        -0x176779d4
+        -0x1756ff00
+        -0x1745b197
+        -0x1734c47c
+        -0x172312f4
+        -0x1712243d
+        -0x1701369b
+        -0x16f0dc6a
+        -0x16dfd535
+        -0x16ced565
+        -0x16bdaf8d
+        -0x16acb522
+        -0x169b8504
+        -0x168aad1a
+        -0x16793966
+        -0x1668a34a
+        -0x16576b6f
+        -0x1646b7bc  # -2.7999068E25f
+        -0x16350a7e
+        -0x16248394
+        -0x161335a7
+        -0x1602c094
+        -0x15f1deb5
+        -0x15e0dc52
+        -0x15cf5374
+        -0x15bec901
+        -0x15ad6584
+        -0x159c510b
+        -0x158b1d19
+        -0x157aac91
+        -0x15692188
+        -0x15586f79
+        -0x15478c73
+        -0x15369276
+        -0x1525e302
+    .end array-data
+.end method
+
+.method private static ai(I)Z
+    .registers 3
+
+    const v0, 0xed72160
+
+    const/4 v1, 0x0
+
+    .line 208
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 209
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
+
+    move-result v0
+
+    const/4 v1, 0x0
+
+    if-eqz v0, :cond_37
+
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
+
+    move-result v0
+
+    if-nez v0, :cond_15
+
+    goto :goto_37
+
+    .line 729
+    :cond_15
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
+
+    move-result v0
+
+    if-eqz v0, :cond_27
+
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
+
+    move-result v0
+
+    if-nez v0, :cond_22
+
+    goto :goto_27
+
+    .line 732
+    :cond_22
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
+
+    move-result-object p0
+
+    goto :goto_29
+
+    .line 730
+    :cond_27
+    :goto_27
+    new-array p0, v1, [Ljava/lang/String;
+
+    .line 212
+    :goto_29
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->i([Ljava/lang/String;)Lcom/wukong/manager/cv;
+
+    move-result-object p0
+
+    if-eqz p0, :cond_37
+
+    .line 975
+    iget p0, p0, Lcom/wukong/manager/cv;->e:I
+
+    and-int/lit8 p0, p0, 0x4
+
+    if-eqz p0, :cond_37
+
+    const/4 p0, 0x1
+
+    return p0
+
+    :cond_37
+    :goto_37
+    return v1
+.end method
+
+.method private static aj(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    .registers 7
+
+    const v0, 0x51080ea9
+
+    const/4 v1, 0x0
+
+    .line 294
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 557
+    invoke-static {p0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result v0
+
+    if-nez v0, :cond_27
+
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->g()Z
+
+    move-result v0
+
+    if-nez v0, :cond_14
+
+    goto :goto_27
+
+    .line 560
+    :cond_14
+    sget-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->aa:Ljava/lang/Object;
+
+    monitor-enter v0
+
+    .line 561
+    :try_start_17
+    sget-boolean v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->ag:Z
+
+    if-nez v2, :cond_1f
+
+    .line 562
+    monitor-exit v0
+
+    goto :goto_27
+
+    :catchall_1d
+    move-exception p0
+
+    goto :goto_25
+
+    .line 564
+    :cond_1f
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->t(Ljava/lang/String;)Lcom/wukong/manager/cv;
+
+    move-result-object v1
+
+    monitor-exit v0
+
+    goto :goto_27
+
+    .line 565
+    :goto_25
+    monitor-exit v0
+    :try_end_26
+    .catchall {:try_start_17 .. :try_end_26} :catchall_1d
+
+    throw p0
+
+    .line 299
+    :cond_27
+    :goto_27
+    invoke-static {v1, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->r(Lcom/wukong/manager/cv;Ljava/lang/String;Ljava/lang/String;)Lcom/wukong/manager/cx;
+
+    move-result-object p0
+
+    if-nez p0, :cond_2e
+
+    return-object p3
+
+    .line 300
+    :cond_2e
+    iget-object p0, p0, Lcom/wukong/manager/cx;->f:Ljava/lang/String;
+
+    return-object p0
+.end method
+
+.method private static ak(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    .registers 8
+
+    const v0, 0x4e767c55  # 1.03383584E9f
+
+    const/4 v1, 0x0
+
+    .line 266
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 268
+    :try_start_7
+    sget-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->w:Ljava/lang/String;
+
+    invoke-virtual {v0, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p1
+
+    if-eqz p1, :cond_9d
+
+    invoke-static {p2}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result p1
+
+    if-nez p1, :cond_9d
+
+    invoke-static {p3}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result p1
+
+    if-eqz p1, :cond_1d
+
+    goto/16 :goto_9d
+
+    .line 271
+    :cond_1d
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
+
+    move-result p1
+
+    if-nez p1, :cond_25
+
+    goto/16 :goto_9d
+
+    :cond_25
+    const/16 p1, 0xa
+
+    .line 478
+    new-array v0, p1, [I
+
+    fill-array-data v0, :array_b4
+
+    const v2, 0x2e1b5bc2
+
+    invoke-static {v0, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-virtual {v0, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v0
+
+    if-eqz v0, :cond_3c
+
+    .line 479
+    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->x:Ljava/lang/String;
+
+    goto :goto_66
+
+    :cond_3c
+    const/4 v0, 0x3
+
+    .line 481
+    new-array v0, v0, [J
+
+    fill-array-data v0, :array_cc
+
+    const v2, 0x4cfb1cd1  # 1.31655304E8f
+
+    invoke-static {v0, v2, p1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-virtual {v0, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v0
+
+    if-eqz v0, :cond_52
+
+    .line 482
+    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->y:Ljava/lang/String;
+
+    goto :goto_66
+
+    .line 484
+    :cond_52
+    new-array p1, p1, [I
+
+    fill-array-data p1, :array_dc
+
+    const v0, 0x6e40bb2c
+
+    invoke-static {p1, v0}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+
+    move-result-object p1
+
+    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result p1
+
+    if-eqz p1, :cond_66
+
+    .line 485
+    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->z:Ljava/lang/String;
+
+    :cond_66
+    :goto_66
+    if-nez v1, :cond_69
+
+    goto :goto_9d
+
+    .line 278
+    :cond_69
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
+
+    move-result p1
+
+    invoke-static {p1, p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->b(ILjava/lang/Object;)[Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->i([Ljava/lang/String;)Lcom/wukong/manager/cv;
+
+    move-result-object p0
+
+    .line 279
+    invoke-static {p0, v1, p3}, Lcom/wukong/manager/WukongHmaPolicyBridge;->r(Lcom/wukong/manager/cv;Ljava/lang/String;Ljava/lang/String;)Lcom/wukong/manager/cx;
+
+    move-result-object p0
+
+    if-nez p0, :cond_7c
+
+    goto :goto_9d
+
+    .line 283
+    :cond_7c
+    new-instance p1, Landroid/os/Bundle;
+
+    invoke-direct {p1}, Landroid/os/Bundle;-><init>()V
+
+    .line 284
+    const-string p2, "value"
+
+    iget-object p0, p0, Lcom/wukong/manager/cx;->f:Ljava/lang/String;
+
+    invoke-virtual {p1, p2, p0}, Landroid/os/BaseBundle;->putString(Ljava/lang/String;Ljava/lang/String;)V
+
+    const/16 p0, 0x11
+
+    .line 285
+    new-array p0, p0, [I
+
+    fill-array-data p0, :array_f4
+
+    const p2, 0x241f88c8
+
+    invoke-static {p0, p2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+
+    move-result-object p0
+
+    const/4 p2, -0x1
+
+    invoke-virtual {p1, p0, p2}, Landroid/os/BaseBundle;->putInt(Ljava/lang/String;I)V
+    :try_end_9a
+    .catchall {:try_start_7 .. :try_end_9a} :catchall_9b
+
+    return-object p1
+
+    :catchall_9b
+    move-exception p0
+
+    goto :goto_9e
+
+    :cond_9d
+    :goto_9d
+    return-object p4
+
+    :goto_9e
+    const/16 p1, 0x8
+
+    .line 288
+    new-array p1, p1, [J
+
+    fill-array-data p1, :array_11a
+
+    const p2, 0x69313ba1
+
+    const/16 p3, 0x1d
+
+    invoke-static {p1, p2, p3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+
+    move-result-object p1
+
+    sget-object p2, Lcom/wukong/manager/WukongHmaPolicyBridge;->e:Ljava/lang/String;
+
+    invoke-static {p2, p1, p0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+
+    return-object p4
+
+    :array_b4
+    .array-data 4
+        0x5bc25464
+        0x5bd39a1d
+        0x5be4eafc
+        0x5bf5ad43
+        0x5c0664b9
+        0x5c1759df
+        0x5c283f50
+        0x5c39c926
+        0x5c4a797c
+        0x5c5b805d
+    .end array-data
+
+    :array_cc
+    .array-data 8
+        0x11b7289fa495L
+        0xca43db169d7L
+        0x4a9b00004694L
+    .end array-data
+
+    :array_dc
+    .array-data 4
+        -0x44d31966
+        -0x44c21e6d
+        -0x44b1d6cf
+        -0x44a01fee
+        -0x448f1817
+        -0x447e9c33
+        -0x446d67d7
+        -0x445c1837
+        -0x444bd161
+        -0x443afe8f
+    .end array-data
+
+    :array_f4
+    .array-data 4
+        -0x7627d483
+        -0x7638722e
+        -0x7649484d
+        -0x765abe92
+        -0x766be451
+        -0x767cbf44
+        -0x768d2ae1
+        -0x769eb5f2
+        -0x76af419c
+        -0x76c02924
+        -0x76d1f1ab
+        -0x76e2c9fe
+        -0x76f3070d
+        -0x770407cf
+        -0x77150530
+        -0x77264859
+        -0x77375037
+    .end array-data
+
+    :array_11a
+    .array-data 8
+        0x555a50878691L
+        0x2e7b648ecc8eL
+        0x673876468b0bL
+        0x7ce835839f2L
+        0x502a5a67b0e2L
+        0x6e966b929f63L
+        0x130c955c4816L
+        0x6e1e00000006L
+    .end array-data
+.end method
+
+.method private static al(Ljava/lang/Object;)Z
+    .registers 3
+
+    const v0, 0x5968ad6c
+
+    const/4 v1, 0x0
+
+    .line 217
+    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 218
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
+
+    move-result v0
+
+    const/4 v1, 0x0
+
+    if-nez v0, :cond_f
+
+    goto :goto_25
+
+    .line 221
+    :cond_f
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
+
+    move-result v0
+
+    invoke-static {v0, p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->b(ILjava/lang/Object;)[Ljava/lang/String;
+
+    move-result-object p0
+
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->i([Ljava/lang/String;)Lcom/wukong/manager/cv;
+
+    move-result-object p0
+
+    if-eqz p0, :cond_25
+
+    .line 975
+    iget p0, p0, Lcom/wukong/manager/cv;->e:I
+
+    and-int/lit8 p0, p0, 0x4
+
+    if-eqz p0, :cond_25
+
+    const/4 p0, 0x1
+
+    return p0
+
+    :cond_25
+    :goto_25
+    return v1
+.end method
+
+.method private static am(ILjava/lang/String;Z)Z
+    .registers 4
+
+    const p2, 0x41db3585
+
+    const/4 v0, 0x0
+
+    .line 110
+    invoke-static {p2, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
+
+    .line 112
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
+
+    move-result p2
+
+    if-eqz p2, :cond_2d
+
+    .line 113
+    invoke-static {p1}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result p2
+
+    if-nez p2, :cond_2d
+
+    .line 114
+    invoke-static {p1}, Lcom/wukong/manager/WukongHmaPolicyBridge;->d(Ljava/lang/String;)Z
+
+    move-result p2
+
+    if-nez p2, :cond_2d
+
+    .line 115
+    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->c()Z
+
+    move-result p2
+
+    if-nez p2, :cond_20
+
+    goto :goto_2d
+
+    .line 118
+    :cond_20
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
+
+    move-result-object p0
+
+    .line 119
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->a([Ljava/lang/String;)Lcom/wukong/manager/cv;
+
+    move-result-object p2
+
+    .line 120
+    invoke-static {p2, p0, p1}, Lcom/wukong/manager/WukongHmaPolicyBridge;->u(Lcom/wukong/manager/cv;[Ljava/lang/String;Ljava/lang/String;)Z
+
+    move-result p0
+
+    return p0
+
+    :cond_2d
+    :goto_2d
+    const/4 p0, 0x0
+
+    return p0
+.end method
+
+.method private static an(Ljava/lang/Object;Landroid/net/Uri;Landroid/database/Cursor;)Landroid/database/Cursor;
     .registers 10
 
-    const v0, 0x30bb43dc
+    const v0, 0x58a664c8
 
     const/4 v1, 0x0
 
@@ -1554,7 +2615,7 @@
 
     const/4 v3, 0x2
 
-    if-lt v2, v3, :cond_9d
+    if-lt v2, v3, :cond_9b
 
     const/4 v2, 0x1
 
@@ -1580,11 +2641,11 @@
 
     new-array v1, v2, [J
 
-    const-wide v3, 0x2d1cd3d57fd3L
+    const-wide v3, 0x4cb14d78d029L
 
     aput-wide v3, v1, v0
 
-    const v0, 0x47848c46
+    const v0, 0x67150047
 
     const/4 v3, 0x4
 
@@ -1592,23 +2653,23 @@
 
     move-result-object v0
 
-    const v1, -0x197753cb
+    const v1, -0x669c3c10
 
-    const v3, -0x1988e387
+    const v3, -0x668baab3
 
-    const v4, -0x1944a4ac
+    const v4, -0x66cf5518
 
-    const v5, -0x1955154f
+    const v5, -0x66beaa1c
 
-    const v6, -0x1966f48c
+    const v6, -0x66ad6c52
 
     filled-new-array {v4, v5, v6, v1, v3}, [I
 
     move-result-object v1
 
-    const v3, 0x2c9e677
+    const v3, 0x48429930  # 199268.75f
 
-    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v1
 
@@ -1621,9 +2682,7 @@
     .line 250
     iget-object v0, p0, Lcom/wukong/manager/cx;->e:Ljava/lang/String;
 
-    iget-object p0, p0, Lcom/wukong/manager/cx;->f:Ljava/io/Serializable;
-
-    check-cast p0, Ljava/lang/String;
+    iget-object p0, p0, Lcom/wukong/manager/cx;->f:Ljava/lang/String;
 
     filled-new-array {v0, p0}, [Ljava/lang/Object;
 
@@ -1633,32 +2692,34 @@
 
     return-object p1
 
-    :catchall_9b
+    :catchall_99
     move-exception p0
 
-    goto :goto_a2
+    goto :goto_a0
 
     .line 253
-    :cond_9d
+    :cond_9b
     invoke-static {p0, v1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->v(Lcom/wukong/manager/cv;Ljava/lang/String;Landroid/database/Cursor;)Landroid/database/Cursor;
 
     move-result-object p0
-    :try_end_a1
-    .catchall {:try_start_9 .. :try_end_a1} :catchall_9b
+    :try_end_9f
+    .catchall {:try_start_9 .. :try_end_9f} :catchall_99
 
     return-object p0
 
-    :goto_a2
-    const/16 p1, 0x1e
+    :goto_a0
+    const/16 p1, 0x8
 
     .line 255
-    new-array p1, p1, [I
+    new-array p1, p1, [J
 
     fill-array-data p1, :array_b6
 
-    const v0, 0x7a432412
+    const v0, 0x4eb11646
 
-    invoke-static {p1, v0}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    const/16 v1, 0x1e
+
+    invoke-static {p1, v0, v1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object p1
 
@@ -1671,157 +2732,22 @@
     return-object p2
 
     :array_b6
-    .array-data 4
-        0x24129c43
-        0x24236414
-        0x2434d1cd
-        0x24452970
-        0x2456faa5
-        0x2467a80d
-        0x24785e8f
-        0x2489a32f
-        0x249a2f98
-        0x24abe83c
-        0x24bc96a8
-        0x24cd0f37
-        0x24dec9e8
-        0x24ef315a
-        0x2500ea18
-        0x25116d51
-        0x25225b88
-        0x25330b89
-        0x254445d7
-        0x25551767
-        0x256632eb
-        0x2577c43b
-        0x25885d39
-        0x2599168c
-        0x25aa57e9
-        0x25bbe59b
-        0x25cc300a
-        0x25dd9655
-        0x25eefba6
-        0x25ffad21
+    .array-data 8
+        0x5eeef78b46a8L
+        0x449c09a3af30L
+        0x3712c7347a7L
+        0x1948e164b1e3L
+        0x14a336977f93L
+        0x32fe29e7e188L
+        0x552f69cd0be7L
+        0x172c0000c672L
     .end array-data
 .end method
 
-.method private static ah(IJ)J
-    .registers 5
-
-    const v0, 0x64ca1e95
-
-    const/4 v1, 0x0
-
-    .line 304
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 305
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldHideAccessibilityForUid(I)Z
-
-    move-result p0
-
-    if-eqz p0, :cond_10
-
-    const-wide/16 p0, 0x0
-
-    return-wide p0
-
-    :cond_10
-    return-wide p1
-.end method
-
-.method private static ai(Landroid/content/ContentInterface;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-    .registers 6
-
-    const p0, 0x27607fb0
-
-    const/4 p1, 0x0
-
-    .line 171
-    invoke-static {p0, p1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    return-object p1
-.end method
-
-.method private static aj(Ljava/lang/Object;)Z
-    .registers 3
-
-    const v0, 0xe99881f
-
-    const/4 v1, 0x0
-
-    .line 217
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 218
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
-
-    move-result v0
-
-    const/4 v1, 0x0
-
-    if-nez v0, :cond_f
-
-    goto :goto_25
-
-    .line 221
-    :cond_f
-    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
-
-    move-result v0
-
-    invoke-static {v0, p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->b(ILjava/lang/Object;)[Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->i([Ljava/lang/String;)Lcom/wukong/manager/cv;
-
-    move-result-object p0
-
-    if-eqz p0, :cond_25
-
-    .line 975
-    iget p0, p0, Lcom/wukong/manager/cv;->e:I
-
-    and-int/lit8 p0, p0, 0x4
-
-    if-eqz p0, :cond_25
-
-    const/4 p0, 0x1
-
-    return p0
-
-    :cond_25
-    :goto_25
-    return v1
-.end method
-
-.method private static ak(I)Z
-    .registers 3
-
-    const v0, 0xa7480fb
-
-    const/4 v1, 0x0
-
-    .line 124
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 125
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->j([Ljava/lang/String;)Z
-
-    move-result p0
-
-    return p0
-.end method
-
-.method private static al([Ljava/lang/String;Ljava/lang/String;Z)Z
+.method private static ao([Ljava/lang/String;Ljava/lang/String;Z)Z
     .registers 4
 
-    const p2, 0x1d114572
+    const p2, 0x48767b8d
 
     const/4 v0, 0x0
 
@@ -1871,627 +2797,6 @@
     const/4 p0, 0x0
 
     return p0
-.end method
-
-.method private static am(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-    .registers 8
-
-    const v0, 0x66ed598f
-
-    const/4 v1, 0x0
-
-    .line 266
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 268
-    :try_start_7
-    sget-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->w:Ljava/lang/String;
-
-    invoke-virtual {v0, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p1
-
-    if-eqz p1, :cond_9f
-
-    invoke-static {p2}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
-
-    move-result p1
-
-    if-nez p1, :cond_9f
-
-    invoke-static {p3}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
-
-    move-result p1
-
-    if-eqz p1, :cond_1d
-
-    goto/16 :goto_9f
-
-    .line 271
-    :cond_1d
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
-
-    move-result p1
-
-    if-nez p1, :cond_25
-
-    goto/16 :goto_9f
-
-    :cond_25
-    const/16 p1, 0xa
-
-    .line 478
-    new-array v0, p1, [I
-
-    fill-array-data v0, :array_b4
-
-    const v2, 0xd8e8a99
-
-    invoke-static {v0, v2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object v0
-
-    invoke-virtual {v0, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result v0
-
-    if-eqz v0, :cond_3c
-
-    .line 479
-    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->x:Ljava/lang/String;
-
-    goto :goto_66
-
-    .line 481
-    :cond_3c
-    new-array v0, p1, [I
-
-    fill-array-data v0, :array_cc
-
-    const v2, 0x6ca8a073
-
-    invoke-static {v0, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
-
-    move-result-object v0
-
-    invoke-virtual {v0, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result v0
-
-    if-eqz v0, :cond_51
-
-    .line 482
-    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->y:Ljava/lang/String;
-
-    goto :goto_66
-
-    :cond_51
-    const/4 v0, 0x3
-
-    .line 484
-    new-array v0, v0, [J
-
-    fill-array-data v0, :array_e4
-
-    const v2, 0x533113e8
-
-    invoke-static {v0, v2, p1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object p1
-
-    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p1
-
-    if-eqz p1, :cond_66
-
-    .line 485
-    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->z:Ljava/lang/String;
-
-    :cond_66
-    :goto_66
-    if-nez v1, :cond_69
-
-    goto :goto_9f
-
-    .line 278
-    :cond_69
-    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
-
-    move-result p1
-
-    invoke-static {p1, p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->b(ILjava/lang/Object;)[Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->i([Ljava/lang/String;)Lcom/wukong/manager/cv;
-
-    move-result-object p0
-
-    .line 279
-    invoke-static {p0, v1, p3}, Lcom/wukong/manager/WukongHmaPolicyBridge;->r(Lcom/wukong/manager/cv;Ljava/lang/String;Ljava/lang/String;)Lcom/wukong/manager/cx;
-
-    move-result-object p0
-
-    if-nez p0, :cond_7c
-
-    goto :goto_9f
-
-    .line 283
-    :cond_7c
-    new-instance p1, Landroid/os/Bundle;
-
-    invoke-direct {p1}, Landroid/os/Bundle;-><init>()V
-
-    .line 284
-    const-string p2, "value"
-
-    iget-object p0, p0, Lcom/wukong/manager/cx;->f:Ljava/io/Serializable;
-
-    check-cast p0, Ljava/lang/String;
-
-    invoke-virtual {p1, p2, p0}, Landroid/os/BaseBundle;->putString(Ljava/lang/String;Ljava/lang/String;)V
-
-    const/16 p0, 0x11
-
-    .line 285
-    new-array p0, p0, [I
-
-    fill-array-data p0, :array_f4
-
-    const p2, 0x50a3fe03
-
-    invoke-static {p0, p2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object p0
-
-    const/4 p2, -0x1
-
-    invoke-virtual {p1, p0, p2}, Landroid/os/BaseBundle;->putInt(Ljava/lang/String;I)V
-    :try_end_9c
-    .catchall {:try_start_7 .. :try_end_9c} :catchall_9d
-
-    return-object p1
-
-    :catchall_9d
-    move-exception p0
-
-    goto :goto_a0
-
-    :cond_9f
-    :goto_9f
-    return-object p4
-
-    :goto_a0
-    const/16 p1, 0x1d
-
-    .line 288
-    new-array p1, p1, [I
-
-    fill-array-data p1, :array_11a
-
-    const p2, 0x3f12c92c
-
-    invoke-static {p1, p2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object p1
-
-    sget-object p2, Lcom/wukong/manager/WukongHmaPolicyBridge;->e:Ljava/lang/String;
-
-    invoke-static {p2, p1, p0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
-
-    return-object p4
-
-    :array_b4
-    .array-data 4
-        -0x74cdc152
-        -0x74de747e
-        -0x74efd1cf
-        -0x750029fa
-        -0x7511c25a
-        -0x7522ecd3
-        -0x7533cfdb
-        -0x7544b47f
-        -0x75552a8b
-        -0x7566092b
-    .end array-data
-
-    :array_cc
-    .array-data 4
-        -0x5f8c3849
-        -0x5f7b974d
-        -0x5f6a940c
-        -0x5f59eacd
-        -0x5f486f5f
-        -0x5f37daf8
-        -0x5f262e85
-        -0x5f15e69b
-        -0x5f04499e
-        -0x5ef349e9
-    .end array-data
-
-    :array_e4
-    .array-data 8
-        0x2c4fde05da67L
-        0x2e5ab0d5aafL
-        0x7c580000a50eL
-    .end array-data
-
-    :array_f4
-    .array-data 4
-        -0xeca55e
-        -0xfd6f32
-        -0x10e2918
-        -0x11f6718
-        -0x1304690
-        -0x1419590
-        -0x152c7ad
-        -0x1634386
-        -0x1740a30
-        -0x185e72d
-        -0x196c1cc
-        -0x1a75ab8
-        -0x1b824ed
-        -0x1c9b393
-        -0x1dac387
-        -0x1eb4d25
-        -0x1fc9063
-    .end array-data
-
-    :array_11a
-    .array-data 4
-        -0x34f75d4b  # -8954549.0f
-        -0x35082a74  # -8121030.0f
-        -0x351923ad  # -7564841.5f
-        -0x352af407  # -6981116.5f
-        -0x353b281a  # -6450163.0f
-        -0x354cf85a  # -5866451.0f
-        -0x355d445c  # -5332434.0f
-        -0x356e2e2d  # -4778217.5f
-        -0x357fea64  # -4197070.0f
-        -0x359087fc  # -3923457.0f
-        -0x35a138e0  # -3649992.0f
-        -0x35b258fa  # -3369409.5f
-        -0x35c37fcb
-        -0x35d4b791
-        -0x35e567ce  # -2532876.5f
-        -0x35f64c13
-        -0x3607c69d
-        -0x3618a68f
-        -0x3629ac25
-        -0x363a4dd0  # -1619526.0f
-        -0x364b10f7
-        -0x365c2e38  # -1342009.0f
-        -0x366d7702
-        -0x367ede70  # -1057842.0f
-        -0x368fe429
-        -0x36a0784e
-        -0x36b1481f
-        -0x36c2c575
-        -0x36d3f3fa
-    .end array-data
-.end method
-
-.method private static an(I)Z
-    .registers 3
-
-    const v0, 0x4fccbbeb
-
-    const/4 v1, 0x0
-
-    .line 208
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    .line 209
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
-
-    move-result v0
-
-    const/4 v1, 0x0
-
-    if-eqz v0, :cond_37
-
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
-
-    move-result v0
-
-    if-nez v0, :cond_15
-
-    goto :goto_37
-
-    .line 729
-    :cond_15
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
-
-    move-result v0
-
-    if-eqz v0, :cond_27
-
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->k()Z
-
-    move-result v0
-
-    if-nez v0, :cond_22
-
-    goto :goto_27
-
-    .line 732
-    :cond_22
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
-
-    move-result-object p0
-
-    goto :goto_29
-
-    .line 730
-    :cond_27
-    :goto_27
-    new-array p0, v1, [Ljava/lang/String;
-
-    .line 212
-    :goto_29
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->i([Ljava/lang/String;)Lcom/wukong/manager/cv;
-
-    move-result-object p0
-
-    if-eqz p0, :cond_37
-
-    .line 975
-    iget p0, p0, Lcom/wukong/manager/cv;->e:I
-
-    and-int/lit8 p0, p0, 0x4
-
-    if-eqz p0, :cond_37
-
-    const/4 p0, 0x1
-
-    return p0
-
-    :cond_37
-    :goto_37
-    return v1
-.end method
-
-.method private static ao(Landroid/util/ArrayMap;)Landroid/util/ArrayMap;
-    .registers 11
-
-    const v0, 0x5de66133
-
-    const/4 v1, 0x0
-
-    .line 309
-    invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
-
-    if-nez p0, :cond_a
-
-    return-object v1
-
-    .line 313
-    :cond_a
-    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
-
-    move-result v0
-
-    .line 314
-    invoke-static {v0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->n(I)Z
-
-    move-result v2
-
-    if-eqz v2, :cond_ac
-
-    invoke-static {}, Lcom/wukong/manager/WukongHmaPolicyBridge;->c()Z
-
-    move-result v2
-
-    if-nez v2, :cond_1c
-
-    goto/16 :goto_ac
-
-    .line 317
-    :cond_1c
-    invoke-static {v0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
-
-    move-result-object v0
-
-    .line 318
-    invoke-static {v0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->a([Ljava/lang/String;)Lcom/wukong/manager/cv;
-
-    move-result-object v2
-
-    if-eqz v2, :cond_ac
-
-    .line 967
-    iget v3, v2, Lcom/wukong/manager/cv;->e:I
-
-    and-int/lit8 v3, v3, 0x1
-
-    if-eqz v3, :cond_ac
-
-    .line 323
-    invoke-virtual {p0}, Landroid/util/ArrayMap;->size()I
-
-    move-result v3
-
-    add-int/lit8 v3, v3, -0x1
-
-    move-object v4, v1
-
-    :goto_33
-    if-ltz v3, :cond_a8
-
-    .line 324
-    invoke-virtual {p0, v3}, Landroid/util/ArrayMap;->keyAt(I)Ljava/lang/Object;
-
-    move-result-object v5
-
-    .line 325
-    invoke-virtual {p0, v3}, Landroid/util/ArrayMap;->valueAt(I)Ljava/lang/Object;
-
-    move-result-object v6
-
-    .line 326
-    instance-of v7, v5, Ljava/lang/String;
-
-    if-eqz v7, :cond_44
-
-    check-cast v5, Ljava/lang/String;
-
-    goto :goto_6d
-
-    :cond_44
-    if-nez v6, :cond_48
-
-    :catchall_46
-    :cond_46
-    move-object v5, v1
-
-    goto :goto_6d
-
-    .line 707
-    :cond_48
-    :try_start_48
-    invoke-virtual {v6}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
-
-    move-result-object v5
-
-    const/4 v7, 0x4
-
-    new-array v7, v7, [J
-
-    fill-array-data v7, :array_ae
-
-    const v8, 0xcbb007c
-
-    const/16 v9, 0xe
-
-    invoke-static {v7, v8, v9}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object v7
-
-    invoke-virtual {v5, v7, v1}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
-
-    move-result-object v5
-
-    .line 708
-    invoke-virtual {v5, v6, v1}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
-
-    move-result-object v5
-
-    .line 709
-    instance-of v7, v5, Ljava/lang/String;
-
-    if-eqz v7, :cond_46
-
-    check-cast v5, Ljava/lang/String;
-
-    invoke-static {v5}, Lcom/wukong/manager/WukongHmaPolicyBridge;->x(Ljava/lang/String;)Ljava/lang/String;
-
-    move-result-object v5
-    :try_end_6d
-    .catchall {:try_start_48 .. :try_end_6d} :catchall_46
-
-    :goto_6d
-    const/4 v7, 0x2
-
-    .line 327
-    new-array v7, v7, [J
-
-    fill-array-data v7, :array_c2
-
-    const v8, 0x558b6119
-
-    const/16 v9, 0x8
-
-    invoke-static {v7, v8, v9}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object v7
-
-    if-nez v6, :cond_7f
-
-    goto :goto_95
-
-    .line 720
-    :cond_7f
-    :try_start_7f
-    invoke-virtual {v6}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
-
-    move-result-object v8
-
-    invoke-virtual {v8, v7, v1}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
-
-    move-result-object v7
-
-    .line 721
-    invoke-virtual {v7, v6, v1}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
-
-    move-result-object v6
-
-    .line 722
-    instance-of v7, v6, Ljava/lang/Boolean;
-
-    if-eqz v7, :cond_95
-
-    check-cast v6, Ljava/lang/Boolean;
-
-    invoke-virtual {v6}, Ljava/lang/Boolean;->booleanValue()Z
-
-    move-result v6
-    :try_end_95
-    .catchall {:try_start_7f .. :try_end_95} :catchall_95
-
-    .line 328
-    :catchall_95
-    :cond_95
-    :goto_95
-    invoke-static {v2, v0, v5}, Lcom/wukong/manager/WukongHmaPolicyBridge;->u(Lcom/wukong/manager/cv;[Ljava/lang/String;Ljava/lang/String;)Z
-
-    move-result v5
-
-    if-eqz v5, :cond_a5
-
-    if-nez v4, :cond_a2
-
-    .line 330
-    new-instance v4, Landroid/util/ArrayMap;
-
-    invoke-direct {v4, p0}, Landroid/util/ArrayMap;-><init>(Landroid/util/ArrayMap;)V
-
-    .line 332
-    :cond_a2
-    invoke-virtual {v4, v3}, Landroid/util/ArrayMap;->removeAt(I)Ljava/lang/Object;
-
-    :cond_a5
-    add-int/lit8 v3, v3, -0x1
-
-    goto :goto_33
-
-    :cond_a8
-    if-nez v4, :cond_ab
-
-    goto :goto_ac
-
-    :cond_ab
-    move-object p0, v4
-
-    :cond_ac
-    :goto_ac
-    return-object p0
-
-    nop
-
-    :array_ae
-    .array-data 8
-        0x56e5da12ebbdL
-        0x31745bad7106L
-        0x9756edcf64dL
-        0x33af00004560L
-    .end array-data
-
-    :array_c2
-    .array-data 8
-        0x13a94f3a66f0L
-        0x3f03f16fa781L
-    .end array-data
 .end method
 
 .method public static b(ILjava/lang/Object;)[Ljava/lang/String;
@@ -2631,41 +2936,41 @@
     const/4 v0, 0x7
 
     .line 911
-    new-array v1, v0, [I
+    new-array v0, v0, [I
 
-    fill-array-data v1, :array_8e
+    fill-array-data v0, :array_8e
 
-    const v2, 0x4a5e3e66  # 3641241.5f
+    const v1, 0x3facb81f
 
-    invoke-static {v1, v2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
-    move-result-object v1
+    move-result-object v0
 
-    invoke-virtual {v1, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
-    move-result v1
+    move-result v0
 
-    if-nez v1, :cond_8c
+    if-nez v0, :cond_8c
 
-    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->g:Ljava/lang/String;
+    sget-object v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->g:Ljava/lang/String;
 
     .line 912
-    invoke-virtual {v1, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
-    move-result v1
+    move-result v0
 
-    if-nez v1, :cond_8c
+    if-nez v0, :cond_8c
 
-    new-array v0, v0, [J
+    const/16 v0, 0x1b
+
+    new-array v0, v0, [I
 
     fill-array-data v0, :array_a0
 
-    const v1, 0x1971dffd
-
-    const/16 v2, 0x1b
+    const v1, 0x2d50b589
 
     .line 913
-    invoke-static {v0, v1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -2679,9 +2984,9 @@
 
     new-array v0, v0, [I
 
-    fill-array-data v0, :array_c0
+    fill-array-data v0, :array_da
 
-    const v1, 0x36d9bb9b
+    const v1, 0x6739291f
 
     .line 914
     invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
@@ -2694,18 +2999,16 @@
 
     if-nez v0, :cond_8c
 
-    const/16 v0, 0x8
+    const/16 v0, 0x20
 
-    new-array v0, v0, [J
+    new-array v0, v0, [I
 
-    fill-array-data v0, :array_102
+    fill-array-data v0, :array_11c
 
-    const v1, 0xf56b303
-
-    const/16 v2, 0x20
+    const v1, 0x3aaf82f4
 
     .line 915
-    invoke-static {v0, v1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -2715,16 +3018,18 @@
 
     if-nez v0, :cond_8c
 
-    const/16 v0, 0x27
+    const/16 v0, 0xa
 
-    new-array v0, v0, [I
+    new-array v0, v0, [J
 
-    fill-array-data v0, :array_126
+    fill-array-data v0, :array_160
 
-    const v1, 0x3ba71f5c
+    const v1, 0x44baed56
+
+    const/16 v2, 0x27
 
     .line 916
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v0, v1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v0
 
@@ -2738,9 +3043,9 @@
 
     new-array v0, v0, [I
 
-    fill-array-data v0, :array_178
+    fill-array-data v0, :array_18c
 
-    const v1, 0x46c79da1
+    const v1, 0x7a089bb7
 
     .line 917
     invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
@@ -2777,138 +3082,153 @@
 
     :array_8e
     .array-data 4
-        0x3ecc5353
-        0x3ebb4bb5
-        0x3eaa7ac7
-        0x3e999eee  # 0.30004066f
-        0x3e88cbff
-        0x3e779f76
-        0x3e66961a
+        -0x47e04af2
+        -0x47cf1630
+        -0x47bef7a3
+        -0x47ad5222
+        -0x479c751c
+        -0x478b86f5
+        -0x477aeebf
     .end array-data
 
     :array_a0
+    .array-data 4
+        -0x4a765fed
+        -0x4a654eb1
+        -0x4a54b0b8
+        -0x4a43134f
+        -0x4a32b981
+        -0x4a210985
+        -0x4a10841e
+        -0x49ffc0dc
+        -0x49ee66f0
+        -0x49dd5b3e
+        -0x49cc916c
+        -0x49bba80e
+        -0x49aa4166
+        -0x499942b1
+        -0x498896f4
+        -0x49776072
+        -0x49662839
+        -0x4955fd3a
+        -0x4944da86
+        -0x4933609e
+        -0x49225520
+        -0x49119ebd
+        -0x49005684
+        -0x48ef2be7
+        -0x48de7434
+        -0x48cdf638
+        -0x48bc7e59
+    .end array-data
+
+    :array_da
+    .array-data 4
+        0x2b1dd175
+        0x2b0c8d6f
+        0x2afbfb6c
+        0x2aea75b7
+        0x2ad910ac
+        0x2ac80761
+        0x2ab7f837
+        0x2aa611f9  # 2.9499995E-13f
+        0x2a95be62
+        0x2a847ecb
+        0x2a73fdba
+        0x2a621a96
+        0x2a513f2a
+        0x2a404087
+        0x2a2fd442
+        0x2a1e11ef
+        0x2a0dd3dc
+        0x29fcf557
+        0x29eb2c66
+        0x29da9d72
+        0x29c90e82
+        0x29b8b20e
+        0x29a777df
+        0x2996ead9
+        0x2985ba96
+        0x2974566d
+        0x296340fb
+        0x2952092f
+        0x29417975
+        0x29306208
+        0x291f3d8a
+    .end array-data
+
+    :array_11c
+    .array-data 4
+        -0x7afc9022
+        -0x7b0d38bd
+        -0x7b1ee8bc
+        -0x7b2f8d39
+        -0x7b401f04
+        -0x7b5150c0
+        -0x7b624999
+        -0x7b738f11
+        -0x7b847120
+        -0x7b95e567
+        -0x7ba67c34
+        -0x7bb7d9b8
+        -0x7bc879d4
+        -0x7bd9946f
+        -0x7beade05
+        -0x7bfb2b87
+        -0x7c0c3b03
+        -0x7c1d4877
+        -0x7c2eed84
+        -0x7c3faa16
+        -0x7c50ce6b
+        -0x7c613fb4
+        -0x7c72e0b0
+        -0x7c83e9e0
+        -0x7c94eda1
+        -0x7ca54571
+        -0x7cb647cc
+        -0x7cc7397d
+        -0x7cd80f77
+        -0x7ce96967
+        -0x7cfaa298
+        -0x7d0bbe2e
+    .end array-data
+
+    :array_160
     .array-data 8
-        0x3694111d1ba5L
-        0x59616b59431cL
-        0x231bc52efb57L
-        0x72a9c6cbd246L
-        0x2245056fee75L
-        0x40cf462b76e2L
-        0x25cf008f3ffaL
+        0x67c2fbc714aaL
+        0x3c0385c9856bL
+        0x5f0b50ebfd3bL
+        0x4f1d147b5523L
+        0x792f0e5bfca8L
+        0x235707871027L
+        0x3a7a99bf0b61L
+        0x16ea9c907a9bL
+        0x3faee64c4996L
+        0x4c8300d4c963L
     .end array-data
 
-    :array_c0
+    :array_18c
     .array-data 4
-        -0x4266fb0a
-        -0x4277e977
-        -0x428884dd
-        -0x42996dc5  # -0.0562918f
-        -0x42aa6a8d
-        -0x42bbe64f
-        -0x42cc6bf8
-        -0x42ddab1a
-        -0x42ee8ef0
-        -0x42ffdbb8
-        -0x4310065b
-        -0x4321ce47
-        -0x4332387b
-        -0x4343fd9d
-        -0x43549ef8
-        -0x4365456f
-        -0x4376e6e5
-        -0x43870c7c
-        -0x4398da94
-        -0x43a94ede
-        -0x43baddc1
-        -0x43cb42f5
-        -0x43dcf02a
-        -0x43edf9a2
-        -0x43fe7206
-        -0x440f143a
-        -0x442079bc
-        -0x44318d60
-        -0x4442da96
-        -0x445313b6
-        -0x4464333f
-    .end array-data
-
-    :array_102
-    .array-data 8
-        0x6fc721559e84L
-        0xb0a5b24f068L
-        0x3f607caf9137L
-        0x415bcb749aa3L
-        0x60ab967bca07L
-        0x5ac22ca344bdL
-        0x30aa1e5adec4L
-        0x5372757744cL
-    .end array-data
-
-    :array_126
-    .array-data 4
-        0x1f5c726d
-        0x1f6d39db
-        0x1f7e619e
-        0x1f8fa48d
-        0x1fa0b18f
-        0x1fb1e370
-        0x1fc22b92
-        0x1fd32c58
-        0x1fe48d56
-        0x1ff52751
-        0x2006bb39
-        0x2017a99a
-        0x202846bb
-        0x2039081b
-        0x204a76b1
-        0x205b059b
-        0x206ca9c1
-        0x207d9214
-        0x208e235b
-        0x209f304e
-        0x20b083b8
-        0x20c15776
-        0x20d2dbc2
-        0x20e39894
-        0x20f4e796
-        0x2105eaa1
-        0x2116e102
-        0x212738f2
-        0x213857df
-        0x21493fa7
-        0x215ac345
-        0x216ba7e4
-        0x217caae1
-        0x218d8f2f
-        0x219e9ce6
-        0x21afcc49
-        0x21c02c97
-        0x21d147b7
-        0x21e2d411
-    .end array-data
-
-    :array_178
-    .array-data 4
-        -0x611b3f6e
-        -0x612cbf0b
-        -0x613d08d0
-        -0x614e2444
-        -0x615fc9aa
-        -0x61703075
-        -0x618188d7
-        -0x6192f23d
-        -0x61a343e0
-        -0x61b4f368
-        -0x61c531ae
-        -0x61d6188e
-        -0x61e7b8f2
-        -0x61f85561
-        -0x6209e4ed
-        -0x621aa329
-        -0x622b3725
-        -0x623c438c
-        -0x624d3a90
-        -0x625efdab
+        -0x6305cbfc
+        -0x631616f2
+        -0x6327e075
+        -0x6338cba9
+        -0x63494b2e
+        -0x635a565b
+        -0x636bd4b5
+        -0x637cdf36
+        -0x638d8398
+        -0x639e5196
+        -0x63af57f8
+        -0x63c0fde5
+        -0x63d19e04
+        -0x63e2d9f0
+        -0x63f30a9c
+        -0x640410a5
+        -0x641580b4
+        -0x6426092f
+        -0x643743bc
+        -0x6448bdf6
     .end array-data
 .end method
 
@@ -3120,9 +3440,9 @@
     :try_start_3
     new-array v0, v0, [I
 
-    fill-array-data v0, :array_6c
+    fill-array-data v0, :array_6a
 
-    const v2, 0x2d10ea8b
+    const v2, 0x7ed7188e
 
     invoke-static {v0, v2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -3137,9 +3457,9 @@
     .line 769
     new-array v2, v2, [I
 
-    fill-array-data v2, :array_a4
+    fill-array-data v2, :array_a2
 
-    const v3, 0x9e06b0f
+    const v3, 0x98420f0
 
     invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -3165,18 +3485,16 @@
     return-object v2
 
     :cond_30
-    const/4 v2, 0x6
+    const/16 v2, 0x15
 
     .line 774
-    new-array v2, v2, [J
+    new-array v2, v2, [I
 
-    fill-array-data v2, :array_cc
+    fill-array-data v2, :array_ca
 
-    const v3, 0x19fd1f05
+    const v3, 0x694c8775
 
-    const/16 v4, 0x15
-
-    invoke-static {v2, v3, v4}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v2
 
@@ -3189,7 +3507,7 @@
 
     move-result-object v0
 
-    if-eqz v0, :cond_6a
+    if-eqz v0, :cond_69
 
     .line 777
     invoke-virtual {v0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
@@ -3200,9 +3518,9 @@
 
     new-array v3, v3, [I
 
-    fill-array-data v3, :array_e8
+    fill-array-data v3, :array_f8
 
-    const v4, 0x28cb0c89
+    const v4, 0x591a79cb  # 2.7175662E15f
 
     invoke-static {v3, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -3220,101 +3538,114 @@
     .line 779
     instance-of v2, v0, Landroid/content/Context;
 
-    if-eqz v2, :cond_6a
+    if-eqz v2, :cond_69
 
     .line 780
     check-cast v0, Landroid/content/Context;
-    :try_end_69
-    .catchall {:try_start_3 .. :try_end_69} :catchall_6a
+    :try_end_68
+    .catchall {:try_start_3 .. :try_end_68} :catchall_69
 
     return-object v0
 
-    :catchall_6a
-    :cond_6a
+    :catchall_69
+    :cond_69
     return-object v1
 
-    nop
-
-    :array_6c
+    :array_6a
     .array-data 4
-        -0x13cb8098
-        -0x13dc412c
-        -0x13ed8cd6
-        -0x13fe7dac
-        -0x140f5a5c
-        -0x1420c9df
-        -0x1431e229
-        -0x14421ab8
-        -0x14539804
-        -0x1464e7d8
-        -0x147597fe
-        -0x14865ddd
-        -0x14975cd4
-        -0x14a8b68b
-        -0x14b9e727
-        -0x14ca3d6a
-        -0x14db4638
-        -0x14ec4af3
-        -0x14fd75c2
-        -0x150e318e
-        -0x151f9aa7
-        -0x15304488
-        -0x1541f534
-        -0x1552ee03
-        -0x1563016d
-        -0x1574620e
+        0x1a378a5f
+        0x1a261d1d
+        0x1a15e8d2  # 3.100055E-23f
+        0x1a048b9f
+        0x19f32d0f
+        0x19e28b33
+        0x19d111f4
+        0x19c0d8d4
+        0x19afe426
+        0x199e1a0e
+        0x198d3a8c
+        0x197c6e82
+        0x196b5bcb
+        0x195a87d9
+        0x1949e72b
+        0x1938a927
+        0x1927b2c3
+        0x19166ba3
+        0x19058c6c
+        0x18f4f0b8
+        0x18e30a91
+        0x18d22346
+        0x18c17c1f
+        0x18b0f12e
+        0x189f8fb2
+        0x188e1cc2
     .end array-data
 
-    :array_a4
+    :array_a2
     .array-data 4
-        0x6c308ffc
-        0x6c1f6bf3
-        0x6c0e476f
-        0x6bfd6703
-        0x6bec3947
-        0x6bdb2189
-        0x6bcaad4f
-        0x6bb9ee93
-        0x6ba86af1
-        0x6b9777cb
-        0x6b86af45
-        0x6b7506a6
-        0x6b644d42  # 2.7599993E26f
-        0x6b53ab50
-        0x6b42bf38
-        0x6b313312
-        0x6b207be0
-        0x6b0fb8cb
+        0x2211bc88
+        0x2200b292
+        0x21ef0417
+        0x21de8b7d
+        0x21cd9319
+        0x21bcccf7
+        0x21ab5049
+        0x219a367d
+        0x2189f945
+        0x2178cf00
+        0x21679e89
+        0x2156ecb1
+        0x21454609
+        0x21347e1b
+        0x21233d06
+        0x21125ec0
+        0x2101fd26
+        0x20f0e20b
     .end array-data
 
-    :array_cc
-    .array-data 8
-        0x32283799435dL
-        0x124d3adc70adL
-        0x16f463ac7966L
-        0x17eeef843833L
-        0x640e2996711fL
-        0x458000000088L
+    :array_ca
+    .array-data 4
+        -0x77365c4d
+        -0x77472777
+        -0x7758b0df
+        -0x7769ec99
+        -0x777a29cb
+        -0x778bf2d5
+        -0x779c3cf3
+        -0x77ad9723
+        -0x77be6089
+        -0x77cf098b
+        -0x77e00592
+        -0x77f1edbe
+        -0x780287f3
+        -0x7813d502
+        -0x7824e2b1
+        -0x7835cc4b
+        -0x7846e86f
+        -0x78575164
+        -0x786826a3
+        -0x787971a0
+        -0x788ac7fd
     .end array-data
 
-    :array_e8
+    :array_f8
     .array-data 4
-        0xd88b52e
-        0xd7763a6
-        0xd6682d6
-        0xd55099e
-        0xd44237a
-        0xd333d6f
-        0xd22562f
-        0xd11faf3
-        0xd00cfdb
-        0xcef01cb
-        0xcde69b8
-        0xccd82d8  # 3.1664E-31f
-        0xcbc9b6d
-        0xcab29d0
-        0xc9a58de
-        0xc894216
+        0x7acae224
+        0x7ab9cbf6
+        0x7aa89f4f
+        0x7a97ab08
+        0x7a868adf
+        0x7a75e490
+        0x7a641ef5
+        0x7a53f200
+        0x7a42acea
+        0x7a314930
+        0x7a2020b9
+        0x7a0f43c2
+        0x79fee325
+        0x79ed63eb
+        0x79dcf02b
+        0x79cbb3b8
     .end array-data
 .end method
 
@@ -3415,7 +3746,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x40e87a3d
+    const v1, 0x78d48871
 
     .line 1011
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -3430,7 +3761,7 @@
     if-eqz v0, :cond_13
 
     .line 1013
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ak(I)Z
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ag(I)Z
 
     move-result p0
 
@@ -3529,9 +3860,9 @@
 
     fill-array-data v0, :array_40
 
-    const v1, 0x7d9bd627
+    const v1, 0x30c8211d
 
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -3549,10 +3880,10 @@
 
     fill-array-data v0, :array_68
 
-    const v2, 0x2a9c1901
+    const v2, 0x73537db9
 
     .line 805
-    invoke-static {v0, v2}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -3603,49 +3934,49 @@
 
     :array_40
     .array-data 4
-        -0x28b76ab2
-        -0x28c8b9d6
-        -0x28d99523
-        -0x28ea8da5
-        -0x28fb8473
-        -0x290c946b
-        -0x291dc25b
-        -0x292ee7fd
-        -0x293f60c1
-        -0x29505233
-        -0x296131fd
-        -0x2972175f
-        -0x2983c6bb
-        -0x2994f815
-        -0x29a50b7c
-        -0x29b6582f
-        -0x29c71e54
-        -0x29d8efd3
+        0x211d4856
+        0x212e5099
+        0x213f095a
+        0x215044de
+        0x2161bb01
+        0x2172f0a0
+        0x2183296b
+        0x21946ca6
+        0x21a5469f
+        0x21b638c3
+        0x21c760b5
+        0x21d8397e
+        0x21e982ae
+        0x21fa8163
+        0x220b048a
+        0x221c4f14
+        0x222dc78d
+        0x223e5910
     .end array-data
 
     :array_68
     .array-data 4
-        0x1a0063ba
-        0x19ef7aaf
-        0x19de5073
-        0x19cdb073
-        0x19bc0627
-        0x19ab3b96
-        0x199acbe1
-        0x1989eb1d
-        0x19782a0e
-        0x19674298
-        0x19560902
-        0x19459737
-        0x1934c877
-        0x1923df71
-        0x1912cd80
-        0x19013c34
+        0x7db9cf77
+        0x7dca254a
+        0x7ddbfa26
+        0x7dec52b6
+        0x7dfd855f
+        0x7e0e504d
+        0x7e1f1c4b
+        0x7e30accd
+        0x7e4110d4
+        0x7e523f05
+        0x7e632b53
+        0x7e748fd4
+        0x7e852acc
+        0x7e96da8a
+        0x7ea7d53e
+        0x7eb8a3fd
     .end array-data
 .end method
 
 .method public static m(Landroid/content/Context;)Z
-    .registers 4
+    .registers 3
 
     const/16 v0, 0x3e8
 
@@ -3654,20 +3985,18 @@
 
     move-result v1
 
-    if-ne v0, v1, :cond_22
+    if-ne v0, v1, :cond_21
 
-    const/4 v0, 0x2
+    const/4 v0, 0x7
 
-    new-array v0, v0, [J
+    new-array v0, v0, [I
 
     fill-array-data v0, :array_24
 
-    const v1, 0x2f724de
-
-    const/4 v2, 0x7
+    const v1, 0x43eebea3
 
     .line 800
-    invoke-static {v0, v1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -3679,28 +4008,35 @@
 
     move-result p0
 
-    if-eqz p0, :cond_22
+    if-eqz p0, :cond_21
 
     const/4 p0, 0x1
 
     return p0
 
-    :cond_22
+    :cond_21
     const/4 p0, 0x0
 
     return p0
 
+    nop
+
     :array_24
-    .array-data 8
-        0x4124a82cd12eL
-        0x5cfa00693241L
+    .array-data 4
+        -0x415c18df
+        -0x414b6ac9
+        -0x413afc84
+        -0x41292cca
+        -0x41187202
+        -0x41078b94
+        -0x40f6e3af
     .end array-data
 .end method
 
 .method public static maybeExecuteSettingsCallAsManager(Landroid/content/ContentInterface;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
     .registers 9
 
-    const v0, 0x203d46e8
+    const v0, 0x1648a689
 
     const/4 v1, 0x0
 
@@ -3717,7 +4053,7 @@
     if-eqz v0, :cond_13
 
     .line 1037
-    invoke-static/range {p0 .. p5}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ai(Landroid/content/ContentInterface;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    invoke-static/range {p0 .. p5}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ab(Landroid/content/ContentInterface;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
 
     move-result-object p0
 
@@ -3730,7 +4066,7 @@
 .method public static maybeFilterPackageStateMapForCallingUid(Landroid/util/ArrayMap;)Landroid/util/ArrayMap;
     .registers 4
 
-    const v0, 0x5ab767b8
+    const v0, 0x63588699
 
     const/4 v1, 0x0
 
@@ -3747,7 +4083,7 @@
     if-eqz v0, :cond_13
 
     .line 1117
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ao(Landroid/util/ArrayMap;)Landroid/util/ArrayMap;
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->aa(Landroid/util/ArrayMap;)Landroid/util/ArrayMap;
 
     move-result-object p0
 
@@ -3762,7 +4098,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0xa69c4fb
+    const v1, 0x43e7891e
 
     .line 1107
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -3777,7 +4113,7 @@
     if-eqz v0, :cond_13
 
     .line 1109
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ah(IJ)J
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->af(IJ)J
 
     move-result-wide p0
 
@@ -3792,7 +4128,7 @@
 .method public static maybeSpoofSetting(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     .registers 7
 
-    const v0, 0x5a5840b3
+    const v0, 0x2ea4d848
 
     const/4 v1, 0x0
 
@@ -3809,7 +4145,7 @@
     if-eqz v0, :cond_13
 
     .line 1101
-    invoke-static {p0, p1, p2, p3}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ab(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    invoke-static {p0, p1, p2, p3}, Lcom/wukong/manager/WukongHmaPolicyBridge;->aj(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object p0
 
@@ -3822,7 +4158,7 @@
 .method public static maybeSpoofSettingsCall(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
     .registers 8
 
-    const v0, 0x7b56ac7f
+    const v0, 0x1c0a7ec3
 
     const/4 v1, 0x0
 
@@ -3839,7 +4175,7 @@
     if-eqz v0, :cond_13
 
     .line 1093
-    invoke-static {p0, p1, p2, p3, p4}, Lcom/wukong/manager/WukongHmaPolicyBridge;->am(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    invoke-static {p0, p1, p2, p3, p4}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ak(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
 
     move-result-object p0
 
@@ -3852,7 +4188,7 @@
 .method public static maybeSpoofSettingsQuery(Ljava/lang/Object;Landroid/net/Uri;Landroid/database/Cursor;)Landroid/database/Cursor;
     .registers 6
 
-    const v0, 0x6e5b9621
+    const v0, 0x693da4c2
 
     const/4 v1, 0x0
 
@@ -3869,7 +4205,7 @@
     if-eqz v0, :cond_13
 
     .line 1085
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ag(Ljava/lang/Object;Landroid/net/Uri;Landroid/database/Cursor;)Landroid/database/Cursor;
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->an(Ljava/lang/Object;Landroid/net/Uri;Landroid/database/Cursor;)Landroid/database/Cursor;
 
     move-result-object p0
 
@@ -3916,7 +4252,7 @@
 
     if-nez v0, :cond_8
 
-    goto/16 :goto_99
+    goto/16 :goto_9a
 
     .line 376
     :cond_8
@@ -3943,7 +4279,7 @@
     :catchall_15
     move-exception p0
 
-    goto/16 :goto_a1
+    goto/16 :goto_a2
 
     :cond_18
     if-nez p1, :cond_2c
@@ -3995,7 +4331,7 @@
 
     if-nez p1, :cond_3c
 
-    goto :goto_91
+    goto :goto_92
 
     .line 403
     :cond_3c
@@ -4008,16 +4344,18 @@
 
     invoke-direct {v3}, Ljava/lang/StringBuilder;-><init>()V
 
-    const/16 v4, 0xa
+    const/4 v4, 0x3
 
-    new-array v4, v4, [I
+    new-array v4, v4, [J
 
     fill-array-data v4, :array_a4
 
-    const v5, 0x7f61f86e
+    const v5, 0x26a841c
+
+    const/16 v6, 0xa
 
     .line 404
-    invoke-static {v4, v5}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v4, v5, v6}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v4
 
@@ -4040,12 +4378,12 @@
     invoke-virtual {p1, v3, v4, v2, v2}, Landroid/content/ContentResolver;->call(Landroid/net/Uri;Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
 
     move-result-object v2
-    :try_end_69
-    .catchall {:try_start_3c .. :try_end_69} :catchall_6a
+    :try_end_6a
+    .catchall {:try_start_3c .. :try_end_6a} :catchall_6b
 
-    goto :goto_91
+    goto :goto_92
 
-    :catchall_6a
+    :catchall_6b
     move-exception p1
 
     .line 406
@@ -4059,9 +4397,9 @@
 
     new-array v5, v5, [I
 
-    fill-array-data v5, :array_bc
+    fill-array-data v5, :array_b4
 
-    const v6, 0x37b2b611
+    const v6, 0x4b0e56d6  # 9328342.0f
 
     invoke-static {v5, v6}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -4081,8 +4419,8 @@
 
     invoke-static {v3, p0, p1}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
 
-    :goto_91
-    if-nez v2, :cond_9d
+    :goto_92
+    if-nez v2, :cond_9e
 
     .line 389
     sget-object p0, Lcom/wukong/manager/WukongHmaPolicyBridge;->aa:Ljava/lang/Object;
@@ -4090,89 +4428,80 @@
     monitor-enter p0
 
     .line 390
-    :try_start_96
+    :try_start_97
     sput-wide v0, Lcom/wukong/manager/WukongHmaPolicyBridge;->ae:J
 
     .line 391
     monitor-exit p0
 
-    :goto_99
+    :goto_9a
     return-void
 
-    :catchall_9a
+    :catchall_9b
     move-exception p1
 
     monitor-exit p0
-    :try_end_9c
-    .catchall {:try_start_96 .. :try_end_9c} :catchall_9a
+    :try_end_9d
+    .catchall {:try_start_97 .. :try_end_9d} :catchall_9b
 
     throw p1
 
     .line 394
-    :cond_9d
+    :cond_9e
     invoke-static {v2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->e(Landroid/os/Bundle;)V
 
     return-void
 
     .line 386
-    :goto_a1
-    :try_start_a1
+    :goto_a2
+    :try_start_a2
     monitor-exit v2
-    :try_end_a2
-    .catchall {:try_start_a1 .. :try_end_a2} :catchall_15
+    :try_end_a3
+    .catchall {:try_start_a2 .. :try_end_a3} :catchall_15
 
     throw p0
 
-    nop
-
     :array_a4
-    .array-data 4
-        -0x6f8d863
-        -0x70983db  # -3.9994468E34f
-        -0x71a7997
-        -0x72b0126
-        -0x73c6d5f
-        -0x74d03d5
-        -0x75e6734
-        -0x76fdc04
-        -0x780bb42
-        -0x791d0c3
+    .array-data 8
+        0xaf843078b5bL
+        0x5ed4504833d7L
+        0x3d070000d40aL
     .end array-data
 
-    :array_bc
+    :array_b4
     .array-data 4
-        -0x47dfa1f4
-        -0x47f0bc23
-        -0x480168a5
-        -0x4812fce6
-        -0x4823a674
-        -0x4834e231
-        -0x4845350e
-        -0x48564120
-        -0x486730ee
-        -0x4878b107
-        -0x488943cd
-        -0x489a1179  # -1.3705E-5f
-        -0x48abaf5d
-        -0x48bcb0fb
-        -0x48cd7d0a
-        -0x48de3aae
-        -0x48ef958d
-        -0x490005db
-        -0x49115f86
-        -0x4922d5dc
-        -0x49337e06
-        -0x4944b686
-        -0x49558ede
-        -0x4966c804
-        -0x49774ddd
-        -0x4988a616
-        -0x49994030
-        -0x49aa4b79
-        -0x49bba87e
-        -0x49cc504c
-        -0x49ddbb13  # -2.4180001E-6f
-        -0x49ee0f40
+        0x58e5880a
+        0x58d488bc
+        0x58c38fe9
+        0x58b20ea5
+        0x58a138e6
+        0x589071ad
+        0x587fb55f
+        0x586ed7a3
+        0x585db89b
+        0x584c9dd8  # 8.999132E14f
+        0x583b835f
+        0x582a5cef
+        0x58197ed2
+        0x58081830
+        0x57f764e6
+        0x57e6f385
+        0x57d563e7
+        0x57c4b5a3
+        0x57b393bd
+        0x57a29305
+        0x57910e4f
+        0x5780cdc5
+        0x576f6109  # 2.6320004E14f
+        0x575e0c5e
+        0x574dc172
+        0x573cee76
+        0x572bde09
+        0x571aaae4
+        0x570942b6
+        0x56f85f10
+        0x56e7ecb8
+        0x56d6e2fd
     .end array-data
 .end method
 
@@ -4213,7 +4542,7 @@
 
     fill-array-data v2, :array_36
 
-    const v3, 0x2288d0a1
+    const v3, 0x174134c6
 
     invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -4251,20 +4580,20 @@
 
     :array_36
     .array-data 4
-        -0x2e818d30
-        -0x2e928fdd
-        -0x2ea31e53
-        -0x2eb4124d
-        -0x2ec52022
-        -0x2ed67088
-        -0x2ee7f80d
-        -0x2ef86e94
-        -0x2f09ab2e
-        -0x2f1a9ede
-        -0x2f2bbd94
-        -0x2f3c784c
-        -0x2f4d64e7
-        -0x2f5e0e3c
+        0x35a31237
+        0x3592152b
+        0x35816d22
+        0x357076e0
+        0x355f1b77
+        0x354e8346
+        0x353d1a74
+        0x352c9a4a
+        0x351b9b5e
+        0x350a2931
+        0x34f90116
+        0x34e8f437
+        0x34d762b8
+        0x34c63a12
     .end array-data
 .end method
 
@@ -4279,9 +4608,9 @@
 
     fill-array-data v0, :array_40
 
-    const v1, 0x4f1797f6
+    const v1, 0x51c99b53
 
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -4295,7 +4624,7 @@
 
     fill-array-data v1, :array_7a
 
-    const v2, 0x1bf80b49
+    const v2, 0x68321043
 
     .line 840
     invoke-static {v1, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
@@ -4344,52 +4673,52 @@
 
     :array_40
     .array-data 4
-        -0x664f3ea7
-        -0x6660158b
-        -0x66714154
-        -0x66824768
-        -0x66939eda
-        -0x66a44531
-        -0x66b54dae
-        -0x66c64d1e
-        -0x66d7115a
-        -0x66e8ad9d
-        -0x66f9b295
-        -0x670aa139
-        -0x671b5db2
-        -0x672c8d84
-        -0x673d9b54
-        -0x674ec8ea
-        -0x675f8d06
-        -0x6770e4e1
-        -0x67810afb
-        -0x67924798
-        -0x67a39377
-        -0x67b4bfcb
-        -0x67c56016
-        -0x67d6aefc
-        -0x67e71361
-        -0x67f8a2f6
-        -0x68095a63
+        -0x64ac9cf4
+        -0x649bae41
+        -0x648a451c
+        -0x64790ad0
+        -0x64685471
+        -0x64578437
+        -0x6446d71f  # -3.06321E-22f
+        -0x64353163
+        -0x64249a8c
+        -0x6413ea59
+        -0x6402014f
+        -0x63f17bcf
+        -0x63e03b28
+        -0x63cfe489
+        -0x63becaec
+        -0x63add616
+        -0x639cc5fb
+        -0x638bdb4b
+        -0x637aaa2f
+        -0x63694a19
+        -0x6358416d
+        -0x63479367
+        -0x63362b2f
+        -0x63258387
+        -0x6314a23d
+        -0x6303f867
+        -0x62f2f207
     .end array-data
 
     :array_7a
     .array-data 4
-        0xb4959ee
-        0xb5a3955
-        0xb6bb88f
-        0xb7c0ad8
-        0xb8d3252
-        0xb9e4eb3
-        0xbaf6a3b
-        0xbc00619
-        0xbd1aa91
-        0xbe21aff
+        0x1043a722
+        0x1054ab38
+        0x106560a8
+        0x1076ab9c
+        0x1087c33c
+        0x1098f562
+        0x10a9956e
+        0x10ba7dde
+        0x10cbd86d
+        0x10dc79ee
     .end array-data
 .end method
 
 .method public static r(Lcom/wukong/manager/cv;Ljava/lang/String;Ljava/lang/String;)Lcom/wukong/manager/cx;
-    .registers 9
+    .registers 8
 
     const/4 v0, 0x0
 
@@ -4415,12 +4744,10 @@
     :cond_13
     and-int/lit8 v1, p0, 0x2
 
-    const/4 v2, 0x0
-
     .line 971
-    sget-object v3, Lcom/wukong/manager/WukongHmaPolicyBridge;->y:Ljava/lang/String;
+    sget-object v2, Lcom/wukong/manager/WukongHmaPolicyBridge;->y:Ljava/lang/String;
 
-    if-eqz v1, :cond_d3
+    if-eqz v1, :cond_d0
 
     .line 451
     sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->x:Ljava/lang/String;
@@ -4429,18 +4756,20 @@
 
     move-result v1
 
-    if-eqz v1, :cond_91
+    if-eqz v1, :cond_8d
 
-    const/16 v1, 0xb
+    const/4 v1, 0x3
 
     .line 452
-    new-array v1, v1, [I
+    new-array v1, v1, [J
 
     fill-array-data v1, :array_12a
 
-    const v4, 0x4b52593a  # 1.3785402E7f
+    const v3, 0x6ddf6509
 
-    invoke-static {v1, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    const/16 v4, 0xb
+
+    invoke-static {v1, v3, v4}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4448,18 +4777,18 @@
 
     move-result v1
 
-    if-nez v1, :cond_7a
+    if-nez v1, :cond_79
 
     const/16 v1, 0x10
 
     new-array v1, v1, [I
 
-    fill-array-data v1, :array_144
+    fill-array-data v1, :array_13a
 
-    const v4, 0x27d6f4e6
+    const v3, 0x5955ebbf
 
     .line 453
-    invoke-static {v1, v4}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4467,20 +4796,18 @@
 
     move-result v1
 
-    if-nez v1, :cond_7a
+    if-nez v1, :cond_79
 
-    const/4 v1, 0x7
+    const/16 v1, 0x1c
 
-    new-array v1, v1, [J
+    new-array v1, v1, [I
 
-    fill-array-data v1, :array_168
+    fill-array-data v1, :array_15e
 
-    const v4, 0xd455aaf
-
-    const/16 v5, 0x1c
+    const v3, 0x7ff7d88d
 
     .line 454
-    invoke-static {v1, v4, v5}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4488,21 +4815,21 @@
 
     move-result v1
 
-    if-eqz v1, :cond_60
+    if-eqz v1, :cond_5f
 
-    goto :goto_7a
+    goto :goto_79
 
-    :cond_60
+    :cond_5f
     const/16 v1, 0x11
 
     .line 457
     new-array v1, v1, [I
 
-    fill-array-data v1, :array_188
+    fill-array-data v1, :array_19a
 
-    const v4, 0x47f314dc
+    const v3, 0x2bc82e8e
 
-    invoke-static {v1, v4}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4510,7 +4837,7 @@
 
     move-result v1
 
-    if-eqz v1, :cond_91
+    if-eqz v1, :cond_8d
 
     .line 458
     new-instance p0, Lcom/wukong/manager/cx;
@@ -4520,21 +4847,19 @@
     return-object p0
 
     .line 455
-    :cond_7a
-    :goto_7a
+    :cond_79
+    :goto_79
     new-instance p0, Lcom/wukong/manager/cx;
 
-    const/4 p1, 0x1
+    const p1, 0x4a3cb760  # 3091928.0f
 
-    new-array v0, p1, [J
+    filled-new-array {p1}, [I
 
-    const-wide v3, 0x3303000000a8L
+    move-result-object p1
 
-    aput-wide v3, v0, v2
+    const v0, 0x42ee4a3c
 
-    const v1, 0x7dcf3a2f
-
-    invoke-static {v0, v1, p1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {p1, v0}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object p1
 
@@ -4543,23 +4868,23 @@
     return-object p0
 
     .line 461
-    :cond_91
-    invoke-virtual {v3, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    :cond_8d
+    invoke-virtual {v2, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
     move-result v1
 
-    if-eqz v1, :cond_d3
+    if-eqz v1, :cond_d0
 
     const/16 v1, 0xd
 
     new-array v1, v1, [I
 
-    fill-array-data v1, :array_1ae
+    fill-array-data v1, :array_1c0
 
-    const v4, 0x7c6f804d
+    const v3, 0x51e14455
 
     .line 462
-    invoke-static {v1, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v1, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4567,17 +4892,19 @@
 
     move-result v1
 
-    if-nez v1, :cond_bf
+    if-nez v1, :cond_bc
 
-    const/16 v1, 0x13
+    const/4 v1, 0x5
 
-    new-array v1, v1, [I
+    new-array v1, v1, [J
 
-    fill-array-data v1, :array_1cc
+    fill-array-data v1, :array_1de
 
-    const v4, 0x7a8b541a
+    const v3, 0x5945c39
 
-    invoke-static {v1, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    const/16 v4, 0x13
+
+    invoke-static {v1, v3, v4}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4585,21 +4912,21 @@
 
     move-result v1
 
-    if-eqz v1, :cond_d3
+    if-eqz v1, :cond_d0
 
     .line 463
-    :cond_bf
+    :cond_bc
     new-instance p0, Lcom/wukong/manager/cx;
 
-    const p1, -0x5f141291
+    const p1, 0x6e3ea7e
 
     filled-new-array {p1}, [I
 
     move-result-object p1
 
-    const v0, 0x4b4ea0eb  # 1.3541611E7f
+    const v0, 0x290006e3
 
-    invoke-static {p1, v0}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {p1, v0}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object p1
 
@@ -4607,13 +4934,13 @@
 
     return-object p0
 
-    :cond_d3
+    :cond_d0
     and-int/lit8 p0, p0, 0x4
 
     if-eqz p0, :cond_128
 
     .line 466
-    invoke-virtual {v3, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    invoke-virtual {v2, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
     move-result p0
 
@@ -4626,7 +4953,7 @@
 
     fill-array-data p0, :array_1f6
 
-    const p1, 0x16018915
+    const p1, 0x194acad2
 
     invoke-static {p0, p1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
@@ -4636,18 +4963,18 @@
 
     move-result p0
 
-    if-eqz p0, :cond_105
+    if-eqz p0, :cond_102
 
     .line 468
     new-instance p0, Lcom/wukong/manager/cx;
 
-    const p1, -0x45696d05
+    const p1, -0x177fe880
 
     filled-new-array {p1}, [I
 
     move-result-object p1
 
-    const v0, 0x6c4fba96
+    const v0, 0x1b8ce880
 
     invoke-static {p1, v0}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
@@ -4657,17 +4984,19 @@
 
     return-object p0
 
-    :cond_105
-    const/16 p0, 0x1e
+    :cond_102
+    const/16 p0, 0x8
 
     .line 470
-    new-array p0, p0, [I
+    new-array p0, p0, [J
 
     fill-array-data p0, :array_224
 
-    const p1, 0x6e35777c
+    const p1, 0x43d8679d
 
-    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    const/16 v1, 0x1e
+
+    invoke-static {p0, p1, v1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object p0
 
@@ -4680,11 +5009,13 @@
     .line 471
     new-instance p0, Lcom/wukong/manager/cx;
 
-    new-array p1, v2, [I
+    const/4 p1, 0x0
 
-    const v0, 0xe068fbf
+    new-array v0, p1, [J
 
-    invoke-static {p1, v0}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    const v1, 0x78e9d27d
+
+    invoke-static {v0, v1, p1}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object p1
 
@@ -4699,169 +5030,146 @@
     nop
 
     :array_12a
-    .array-data 4
-        0x59e4445c
-        0x59d37bb6
-        0x59c2d197
-        0x59b1b850
-        0x59a04908
-        0x598f8eca
-        0x597e4594
-        0x596d3b7b
-        0x595c15ca
-        0x594bd06b
-        0x593a60d5
-    .end array-data
-
-    :array_144
-    .array-data 4
-        -0xb19a365
-        -0xb08e8cf
-        -0xaf79886
-        -0xae6df49
-        -0xad5f54b
-        -0xac4341a
-        -0xab3bb89
-        -0xaa27bd0
-        -0xa910cb3
-        -0xa807444
-        -0xa6fadd8
-        -0xa5e3f9a
-        -0xa4d2968
-        -0xa3c6ad6
-        -0xa2b888a
-        -0xa1abd55
-    .end array-data
-
-    :array_168
     .array-data 8
-        0x3bdd7787dca3L
-        0xe22bcbe42eeL
-        0x54a709128dbcL
-        0x3e59bd1cbdb0L
-        0x1cea2dddc468L
-        0x42a6bd57ec4eL
-        0x7ba9807e3fe3L
+        0x607da5b72880L
+        0x5045350f1b94L
+        0x4db300aab179L
     .end array-data
 
-    :array_188
+    :array_13a
     .array-data 4
-        0x14dc2637
-        0x14ed157b
-        0x14fe59d2
-        0x150f2449
-        0x1520ad38
-        0x15319c35
-        0x1542d8db
-        0x15530f88
-        0x1564cf3d
-        0x1575f36c
-        0x158652bd
-        0x15972b09
-        0x15a84fc1
-        0x15b9eee7
-        0x15ca8023
-        0x15dbf6e4
-        0x15ec71b8
+        -0x14401a03
+        -0x142ffca4
+        -0x141e470c
+        -0x140d46c5
+        -0x13fcd8f9
+        -0x13eb7b78
+        -0x13dab4d8
+        -0x13c9b750
+        -0x13b86ef7
+        -0x13a7f3fb
+        -0x13966aff
+        -0x1385a633
+        -0x13744f07
+        -0x136360bb
+        -0x1352db35
+        -0x1341c902
     .end array-data
 
-    :array_1ae
+    :array_15e
     .array-data 4
-        -0x7ee60739
-        -0x7ef706d1
-        -0x7f08c776
-        -0x7f1918a3
-        -0x7f2acb0d
-        -0x7f3ba8a5
-        -0x7f4c20f1
-        -0x7f5d2456
-        -0x7f6e1f8b
-        -0x7f7fd657
-        -0x7f90f15d
-        -0x7fa19660
-        -0x7fb2223e
+        -0x2772a1f0
+        -0x27616c56
+        -0x27503380
+        -0x273fb07c
+        -0x272ee001
+        -0x271de2a2
+        -0x270cb772
+        -0x26fbd4cd
+        -0x26ea6056
+        -0x26d91a91
+        -0x26c89d20
+        -0x26b7e017
+        -0x26a6f4bf
+        -0x26955998
+        -0x2684533f
+        -0x26731be1
+        -0x26620422
+        -0x2651c9bf
+        -0x2640703a
+        -0x262fa277
+        -0x261ed15e
+        -0x260dedb0
+        -0x25fc7ca0
+        -0x25eb5e6c
+        -0x25da4dcd
+        -0x25c996e2
+        -0x25b8a438
+        -0x25a7d2de
     .end array-data
 
-    :array_1cc
+    :array_19a
     .array-data 4
-        0x554c65c7
-        0x553b3e94
-        0x552a68c0
-        0x5519b35d
-        0x5508e7c9
-        0x54f7d936
-        0x54e66800
-        0x54d50c2e
-        0x54c4c89b
-        0x54b38356
-        0x54a2c91e
-        0x54917ee4  # 4.999193E12f
-        0x54802e55
-        0x546f4a94
-        0x545e060b
-        0x544d013b
-        0x543c8ada
-        0x542b6a34
-        0x541a9786
+        0x2f9e9049
+        0x2f8d3d03
+        0x2f7c1f74
+        0x2f6b3bce
+        0x2f5a9779
+        0x2f49e376
+        0x2f389b7a
+        0x2f277123
+        0x2f16fa1a
+        0x2f05e3b3
+        0x2ef46591
+        0x2ee3e4c4
+        0x2ed273d8
+        0x2ec10128
+        0x2eb0ede7
+        0x2e9fabe9
+        0x2e8ecadc
+    .end array-data
+
+    :array_1c0
+    .array-data 4
+        0x4521a511
+        0x4510a261
+        0x44ffe0f8
+        0x44ee4d42
+        0x44dd1148
+        0x44cc2b7c
+        0x44bb9bcc
+        0x44aab41e
+        0x4499c01b  # 1230.0033f
+        0x44881c04
+        0x4477a50e
+        0x4466d45a
+        0x44552ebb
+    .end array-data
+
+    :array_1de
+    .array-data 8
+        0x3ca678e2a0d6L
+        0x34faae2ebb34L
+        0x47365f3eeca0L
+        0x54f70c324853L
+        0x324a007716c6L
     .end array-data
 
     :array_1f6
     .array-data 4
-        -0x76ea33af
-        -0x76d932c8
-        -0x76c84037  # -2.2118E-33f
-        -0x76b709a3
-        -0x76a61ab0
-        -0x76953e4e
-        -0x76847585
-        -0x76738b1a
-        -0x7662ca00
-        -0x7651602e
-        -0x764075f3
-        -0x762fbd45
-        -0x761e7187
-        -0x760d42e7
-        -0x75fcee27
-        -0x75eb0d77
-        -0x75da6fa3
-        -0x75c912fb
-        -0x75b890b9
-        -0x75a79b2b
-        -0x7596964d
+        -0x352de04c  # -6885338.0f
+        -0x351c445d  # -7462353.5f
+        -0x350bc07c  # -8003522.0f
+        -0x34fa9708  # -8743160.0f
+        -0x34e9925c  # -9858468.0f
+        -0x34d87fbd  # -1.0977347E7f
+        -0x34c7451a  # -1.210647E7f
+        -0x34b6d84d  # -1.3182899E7f
+        -0x34a53634  # -1.4338508E7f
+        -0x34944e68  # -1.5446424E7f
+        -0x3483e0da
+        -0x34725099  # -1.8570958E7f
+        -0x3461109d  # -2.0831942E7f
+        -0x3450f014  # -2.2945752E7f
+        -0x343fef57  # -2.5174354E7f
+        -0x342e04eb  # -2.7522602E7f
+        -0x341dd065  # -2.9646646E7f
+        -0x340c2571  # -3.1962398E7f
+        -0x33fbaa00  # -3.469107E7f
+        -0x33eaa931  # -3.9148348E7f
+        -0x33d9efe5  # -4.3532396E7f
     .end array-data
 
     :array_224
-    .array-data 4
-        0x777c83bf
-        0x778dfe6a
-        0x779e46e6
-        0x77af5e66
-        0x77c0630b
-        0x77d1770a
-        0x77e21221
-        0x77f3432f
-        0x7804e695
-        0x78151ab2
-        0x78261b74
-        0x78377113
-        0x784826b3
-        0x785908ce
-        0x786af7e2
-        0x787b554d
-        0x788c4894
-        0x789d8d3d
-        0x78aebff2
-        0x78bfc268
-        0x78d071a5
-        0x78e1cc8e
-        0x78f259a5
-        0x7903a35e
-        0x79140637
-        0x79255d3a
-        0x79367e5c
-        0x7947c6df
-        0x7958bb4e
-        0x7969f307
+    .array-data 8
+        0xee1331e5124L
+        0x10b27876ebc8L
+        0x1f97c157fba4L
+        0x4e0b18865d7cL
+        0x58a563114fa9L
+        0x5b83aca474e9L
+        0x5769892f2ffbL
+        0xfd700002f1cL
     .end array-data
 .end method
 
@@ -4870,7 +5178,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0xcd2ad95
+    const v1, 0x2b5a9619
 
     .line 994
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -4885,14 +5193,14 @@
     if-eqz v0, :cond_11
 
     .line 996
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ae(Landroid/content/Context;)V
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ad(Landroid/content/Context;)V
 
     :cond_11
     return-void
 .end method
 
 .method public static s(I)[Ljava/lang/String;
-    .registers 6
+    .registers 7
 
     const/4 v0, 0x0
 
@@ -4904,17 +5212,19 @@
     return-object p0
 
     :cond_6
-    const/16 v1, 0x16
+    const/4 v1, 0x6
 
     .line 740
-    :try_start_8
-    new-array v1, v1, [I
+    :try_start_7
+    new-array v1, v1, [J
 
-    fill-array-data v1, :array_68
+    fill-array-data v1, :array_6a
 
-    const v2, 0x6eeb8fac
+    const v2, 0x7784fb57
 
-    invoke-static {v1, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    const/16 v3, 0x16
+
+    invoke-static {v1, v2, v3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v1
 
@@ -4925,30 +5235,30 @@
     const/4 v2, 0x5
 
     .line 741
-    new-array v2, v2, [J
+    new-array v3, v2, [J
 
-    fill-array-data v2, :array_98
+    fill-array-data v3, :array_86
 
-    const v3, 0x2dff41ed
+    const v4, 0x3c54c69e
 
-    const/16 v4, 0x11
+    const/16 v5, 0x11
 
-    invoke-static {v2, v3, v4}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v3, v4, v5}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
-    move-result-object v2
+    move-result-object v3
 
-    const/4 v3, 0x0
+    const/4 v4, 0x0
 
-    invoke-virtual {v1, v2, v3}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
+    invoke-virtual {v1, v3, v4}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
 
     move-result-object v1
 
     .line 742
-    invoke-virtual {v1, v3, v3}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
+    invoke-virtual {v1, v4, v4}, Ljava/lang/reflect/Method;->invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;
 
     move-result-object v1
 
-    if-nez v1, :cond_35
+    if-nez v1, :cond_36
 
     .line 744
     new-array p0, v0, [Ljava/lang/String;
@@ -4956,20 +5266,20 @@
     return-object p0
 
     .line 746
-    :cond_35
+    :cond_36
     invoke-virtual {v1}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
 
-    move-result-object v2
-
-    new-array v3, v4, [I
-
-    fill-array-data v3, :array_b0
-
-    const v4, 0x16ab8485
-
-    invoke-static {v3, v4}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
     move-result-object v3
+
+    new-array v2, v2, [J
+
+    fill-array-data v2, :array_9e
+
+    const v4, 0x16c4362a
+
+    invoke-static {v2, v4, v5}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+
+    move-result-object v2
 
     sget-object v4, Ljava/lang/Integer;->TYPE:Ljava/lang/Class;
 
@@ -4977,7 +5287,7 @@
 
     move-result-object v4
 
-    invoke-virtual {v2, v3, v4}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
+    invoke-virtual {v3, v2, v4}, Ljava/lang/Class;->getMethod(Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/reflect/Method;
 
     move-result-object v2
 
@@ -4997,79 +5307,53 @@
     .line 748
     instance-of v1, p0, [Ljava/lang/String;
 
-    if-eqz v1, :cond_62
+    if-eqz v1, :cond_63
 
     check-cast p0, [Ljava/lang/String;
 
     return-object p0
 
-    :cond_62
+    :cond_63
     new-array p0, v0, [Ljava/lang/String;
-    :try_end_64
-    .catchall {:try_start_8 .. :try_end_64} :catchall_65
+    :try_end_65
+    .catchall {:try_start_7 .. :try_end_65} :catchall_66
 
     return-object p0
 
     .line 750
-    :catchall_65
+    :catchall_66
     new-array p0, v0, [Ljava/lang/String;
 
     return-object p0
 
-    :array_68
-    .array-data 4
-        -0x7053ca9a
-        -0x70428792
-        -0x7031a2e0
-        -0x7020474d
-        -0x700fbafd
-        -0x6ffedc27
-        -0x6fedc9a9
-        -0x6fdc83ed
-        -0x6fcb89a1
-        -0x6fba3a6d
-        -0x6fa95f65
-        -0x6f984c12
-        -0x6f87f2a8
-        -0x6f763ae3
-        -0x6f65c678
-        -0x6f540afa
-        -0x6f431d4e
-        -0x6f32ab4e
-        -0x6f210d67
-        -0x6f10a441
-        -0x6eff8981
-        -0x6eee0276
-    .end array-data
+    nop
 
-    :array_98
+    :array_6a
     .array-data 8
-        0x293dae7b9ac9L
-        0x1693250b3d2fL
-        0x5d639c618e2cL
-        0x4995c0f51fefL
-        0x6c0c000000c6L
+        0x4d262feac1d1L
+        0x6d0d92f99dacL
+        0x28f14f89fde0L
+        0x721d1bb16ab4L
+        0x2db581860077L
+        0x65d200000b1fL
     .end array-data
 
-    :array_b0
-    .array-data 4
-        -0x7a6a23b2
-        -0x7a7b06eb
-        -0x7a8ca938
-        -0x7a9dc332
-        -0x7aae96ba
-        -0x7abf6e72
-        -0x7ad0d862
-        -0x7ae1b4b2
-        -0x7af21dfb
-        -0x7b03a3c5
-        -0x7b142861
-        -0x7b2515ff
-        -0x7b368317
-        -0x7b47192b
-        -0x7b5819f8
-        -0x7b691a65
-        -0x7b7aac4b
+    :array_86
+    .array-data 8
+        0x2be54ce4296aL
+        0x1135849c1ae8L
+        0x3c6b3774edc9L
+        0x1c4776fe06afL
+        0x28d20000005dL
+    .end array-data
+
+    :array_9e
+    .array-data 8
+        0x45d5b64c350eL
+        0x41980492a8f6L
+        0x154d7c11599L
+        0x3ef6e9f5818fL
+        0x31ee00000085L
     .end array-data
 .end method
 
@@ -5078,7 +5362,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x17977472
+    const v1, 0x2fe02527
 
     .line 1019
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5093,7 +5377,7 @@
     if-eqz v0, :cond_13
 
     .line 1021
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ad(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)Z
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->z(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)Z
 
     move-result p0
 
@@ -5110,7 +5394,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x5cf49443
+    const v1, 0x12e82c28
 
     .line 1027
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5125,7 +5409,7 @@
     if-eqz v0, :cond_13
 
     .line 1029
-    invoke-static {p0, p1, p2, p3}, Lcom/wukong/manager/WukongHmaPolicyBridge;->z(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
+    invoke-static {p0, p1, p2, p3}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ah(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
 
     move-result p0
 
@@ -5142,7 +5426,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x56a5ad8
+    const v1, 0x72c03296
 
     .line 1075
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5157,7 +5441,7 @@
     if-eqz v0, :cond_13
 
     .line 1077
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->aj(Ljava/lang/Object;)Z
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->al(Ljava/lang/Object;)Z
 
     move-result p0
 
@@ -5174,7 +5458,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x208c717e
+    const v1, 0x494537c9
 
     .line 1067
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5189,7 +5473,7 @@
     if-eqz v0, :cond_13
 
     .line 1069
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->an(I)Z
+    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ai(I)Z
 
     move-result p0
 
@@ -5206,7 +5490,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x5cbffd8b
+    const v1, 0x6b4a2726
 
     .line 1051
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5221,7 +5505,7 @@
     if-eqz v0, :cond_13
 
     .line 1053
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->aa(Ljava/lang/String;Ljava/lang/String;Z)Z
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ae(Ljava/lang/String;Ljava/lang/String;Z)Z
 
     move-result p0
 
@@ -5238,7 +5522,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x5132e19f
+    const v1, 0x61e176e6
 
     .line 1059
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5253,7 +5537,7 @@
     if-eqz v0, :cond_13
 
     .line 1061
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->al([Ljava/lang/String;Ljava/lang/String;Z)Z
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ao([Ljava/lang/String;Ljava/lang/String;Z)Z
 
     move-result p0
 
@@ -5270,7 +5554,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x6a050d52
+    const v1, 0x3ae2439e
 
     .line 1043
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5285,7 +5569,7 @@
     if-eqz v0, :cond_13
 
     .line 1045
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->af(Ljava/lang/Object;Ljava/lang/String;Z)Z
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ac(Ljava/lang/Object;Ljava/lang/String;Z)Z
 
     move-result p0
 
@@ -5302,7 +5586,7 @@
 
     const/4 v0, 0x0
 
-    const v1, 0x30e35b8a
+    const v1, 0x1aac782e
 
     .line 1003
     invoke-static {v1, v0}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
@@ -5317,7 +5601,7 @@
     if-eqz v0, :cond_13
 
     .line 1005
-    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->ac(ILjava/lang/String;Z)Z
+    invoke-static {p0, p1, p2}, Lcom/wukong/manager/WukongHmaPolicyBridge;->am(ILjava/lang/String;Z)Z
 
     move-result p0
 
@@ -5330,7 +5614,7 @@
 .end method
 
 .method public static t(Ljava/lang/String;)Lcom/wukong/manager/cv;
-    .registers 5
+    .registers 4
 
     .line 569
     invoke-static {p0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
@@ -5348,32 +5632,32 @@
 
     if-nez v0, :cond_3f
 
-    const/4 v0, 0x2
+    const/4 v0, 0x7
 
-    new-array v1, v0, [J
+    new-array v0, v0, [I
 
-    fill-array-data v1, :array_42
+    fill-array-data v0, :array_42
 
-    const v2, 0x253f467a
-
-    const/4 v3, 0x7
+    const v1, 0x33bca920
 
     .line 571
-    invoke-static {v1, v2, v3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
-    move-result-object v1
+    move-result-object v0
 
-    invoke-virtual {v1, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    invoke-virtual {v0, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
 
-    move-result v1
+    move-result v0
 
-    if-nez v1, :cond_3f
+    if-nez v0, :cond_3f
+
+    const/4 v0, 0x2
 
     new-array v0, v0, [J
 
-    fill-array-data v0, :array_4e
+    fill-array-data v0, :array_54
 
-    const v1, 0x764cfdda
+    const v1, 0x359b632a
 
     const/4 v2, 0x6
 
@@ -5411,15 +5695,20 @@
     nop
 
     :array_42
-    .array-data 8
-        0x798d4d23771bL
-        0x7ec20066a110L
+    .array-data 4
+        -0x56df2f82
+        -0x56cee2ba
+        -0x56bd5f47
+        -0x56ac6082
+        -0x569b1ee3
+        -0x568a794c
+        -0x567945b9
     .end array-data
 
-    :array_4e
+    :array_54
     .array-data 8
-        0x341e85016a08L
-        0x64ae0000401dL
+        0x69541e36d61cL
+        0x407a00001d42L
     .end array-data
 .end method
 
@@ -5583,22 +5872,22 @@
     return-object p0
 
     :cond_4
-    const v0, 0xf3f74cf
+    const v0, 0x4bb296c4  # 2.3408008E7f
 
-    const v1, 0xf2ea872
+    const v1, 0x4bc3ce03  # 2.5664518E7f
 
-    const v2, 0xf615a6b
+    const v2, 0x4b90188e  # 1.888694E7f
 
-    const v3, 0xf50f69f
+    const v3, 0x4ba15505  # 2.1146122E7f
 
     .line 424
     filled-new-array {v2, v3, v0, v1}, [I
 
     move-result-object v0
 
-    const v1, 0x55c40f2e
+    const v1, 0x1c2b4b90
 
-    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    invoke-static {v0, v1}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v0
 
@@ -5606,22 +5895,22 @@
 
     move-result v0
 
-    const v1, -0x2aae27be
+    const v1, 0x3b5b3617
 
-    const v2, -0x2a9d40e6
+    const v2, 0x3b6c6b46
 
-    const v3, -0x2ae14dad
+    const v3, 0x3b2874e8
 
-    const v4, -0x2ad0bfd9
+    const v4, 0x3b39f048
 
-    const v5, -0x2abfd0a9
+    const v5, 0x3b4a85e7
 
     .line 425
     filled-new-array {v3, v4, v5, v1, v2}, [I
 
     move-result-object v1
 
-    const v2, 0x11ecd51e
+    const v2, 0x74913b28
 
     invoke-static {v1, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
@@ -5631,11 +5920,11 @@
 
     move-result v1
 
-    if-ltz v0, :cond_76
+    if-ltz v0, :cond_74
 
     if-gez v1, :cond_42
 
-    goto :goto_76
+    goto :goto_74
 
     .line 429
     :cond_42
@@ -5654,7 +5943,7 @@
 
     move-result v4
 
-    if-eqz v4, :cond_75
+    if-eqz v4, :cond_73
 
     .line 432
     array-length v4, v2
@@ -5691,26 +5980,24 @@
 
     move-result-object v5
 
-    if-eqz v5, :cond_71
+    if-eqz v5, :cond_6f
 
     .line 439
-    iget-object v5, v5, Lcom/wukong/manager/cx;->f:Ljava/io/Serializable;
-
-    check-cast v5, Ljava/lang/String;
+    iget-object v5, v5, Lcom/wukong/manager/cx;->f:Ljava/lang/String;
 
     aput-object v5, v4, v1
 
     .line 441
-    :cond_71
+    :cond_6f
     invoke-virtual {v3, v4}, Landroid/database/MatrixCursor;->addRow([Ljava/lang/Object;)V
 
     goto :goto_4b
 
-    :cond_75
+    :cond_73
     return-object v3
 
-    :cond_76
-    :goto_76
+    :cond_74
+    :goto_74
     return-object p2
 .end method
 
@@ -6290,9 +6577,9 @@
 
     fill-array-data v2, :array_188
 
-    const v3, 0x367f2f42
+    const v3, 0x6bb76a71
 
-    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
+    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
 
     move-result-object v2
 
@@ -6302,15 +6589,17 @@
 
     invoke-virtual {v0, v2}, Ljava/lang/StringBuilder;->append(Z)Ljava/lang/StringBuilder;
 
-    move/from16 v2, v16
+    const/4 v2, 0x2
 
-    new-array v2, v2, [I
+    new-array v2, v2, [J
 
     fill-array-data v2, :array_1c2
 
-    const v3, 0x7cf8e74e
+    const v3, 0x6ce9df03
 
-    invoke-static {v2, v3}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
+    move/from16 v4, v16
+
+    invoke-static {v2, v3, v4}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
 
     move-result-object v2
 
@@ -6322,17 +6611,15 @@
 
     invoke-virtual {v0, v1}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
 
-    const/4 v1, 0x2
+    const/16 v1, 0x8
 
-    new-array v1, v1, [J
+    new-array v1, v1, [I
 
-    fill-array-data v1, :array_1d4
+    fill-array-data v1, :array_1ce
 
-    const v2, 0x12e00aaa
+    const v2, 0x30c49b78
 
-    const/16 v3, 0x8
-
-    invoke-static {v1, v2, v3}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
+    invoke-static {v1, v2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
 
     move-result-object v1
 
@@ -6356,393 +6643,68 @@
 
     :array_188
     .array-data 4
-        0x2f427191
-        0x2f535070
-        0x2f64acc9
-        0x2f759317
-        0x2f8627b2
-        0x2f97f5dc
-        0x2fa86102
-        0x2fb9c91a
-        0x2fcae523
-        0x2fdb9412
-        0x2fec17c8
-        0x2ffd5cac
-        0x300ea66f
-        0x301f64fc
-        0x3030f639
-        0x30415ba1
-        0x30520242
-        0x3063075e
-        0x3074869f
-        0x3085e414
-        0x30968bb8
-        0x30a77ec0
-        0x30b837ce
-        0x30c91bb1
-        0x30dae4e6
-        0x30ebc3b4
-        0x30fce21b
+        0x6c2b0bf8
+        0x6c1a9d54
+        0x6c0987cd
+        0x6bf8d6e3
+        0x6be7786e
+        0x6bd69770
+        0x6bc522e0
+        0x6bb4d117
+        0x6ba3020a
+        0x6b920beb
+        0x6b818c4a
+        0x6b703399
+        0x6b5f6c84
+        0x6b4e6c29
+        0x6b3d38c1
+        0x6b2c527f
+        0x6b1bc57a
+        0x6b0a379d
+        0x6af95829
+        0x6ae8d665
+        0x6ad7c867
+        0x6ac6a8d9
+        0x6ab5648f
+        0x6aa4f754
+        0x6a93c7fc
+        0x6a8242c6
+        0x6a719244
     .end array-data
 
     :array_1c2
-    .array-data 4
-        -0x184b3664  # -1.70749E24f
-        -0x185c9f94
-        -0x186d6174
-        -0x187e02e9
-        -0x188f13f2
-        -0x18a0df50
-        -0x18b12cb9
+    .array-data 8
+        0x5e824bfcc2faL
+        0xa5f00f55004L
     .end array-data
 
-    :array_1d4
-    .array-data 8
-        0x481f05331a5dL
-        0x606d28616ae3L
+    :array_1ce
+    .array-data 4
+        -0x6487dc08
+        -0x64762315
+        -0x64653bb1
+        -0x6454ed81
+        -0x6443eee8
+        -0x64324bf4
+        -0x64219678
+        -0x6410b9b2
     .end array-data
 .end method
 
-.method private static z(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
-    .registers 7
+.method private static z(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)Z
+    .registers 5
 
-    const v0, 0x5ae2eb4
+    const v0, 0xaecd441
 
     const/4 v1, 0x0
 
-    .line 141
+    .line 132
     invoke-static {v0, v1}, Lcom/wukong/manager/cy;->h(ILjava/lang/Object;)I
 
-    const/4 v0, 0x0
-
-    .line 143
-    :try_start_8
-    sget-object v1, Lcom/wukong/manager/WukongHmaPolicyBridge;->w:Ljava/lang/String;
-
-    invoke-virtual {v1, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p1
-
-    if-eqz p1, :cond_a1
-
-    invoke-static {p2}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
-
-    move-result p1
-
-    if-nez p1, :cond_a1
-
-    invoke-static {p3}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
-
-    move-result p1
-
-    if-eqz p1, :cond_1e
-
-    goto/16 :goto_a1
-
-    .line 146
-    :cond_1e
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->p(Ljava/lang/Object;)Ljava/lang/String;
-
-    move-result-object p0
-
-    .line 147
-    sget-object p1, Lcom/wukong/manager/WukongHmaPolicyBridge;->f:Ljava/lang/String;
-
-    invoke-virtual {p1, p0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    .line 133
+    invoke-static {p0, p1, p2, v1}, Lcom/wukong/manager/WukongHmaPolicyBridge;->shouldExecuteSettingsCallAsManager(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z
 
     move-result p0
-
-    if-nez p0, :cond_3b
-
-    .line 148
-    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
-
-    move-result p0
-
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->s(I)[Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-static {p0}, Lcom/wukong/manager/WukongHmaPolicyBridge;->j([Ljava/lang/String;)Z
-
-    move-result p0
-
-    if-nez p0, :cond_3b
-
-    return v0
-
-    :catchall_39
-    move-exception p0
-
-    goto :goto_a2
-
-    :cond_3b
-    const/4 p0, 0x3
-
-    .line 151
-    new-array p1, p0, [J
-
-    fill-array-data p1, :array_b6
-
-    const v1, 0x3ecc8047
-
-    const/16 v2, 0xa
-
-    invoke-static {p1, v1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object p1
-
-    invoke-virtual {p1, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p1
-
-    if-eqz p1, :cond_7c
-
-    const/16 p0, 0xb
-
-    .line 152
-    new-array p0, p0, [I
-
-    fill-array-data p0, :array_c6
-
-    const p1, 0x28f716cb
-
-    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-virtual {p0, p3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p0
-
-    if-nez p0, :cond_7a
-
-    const/16 p0, 0x1c
-
-    new-array p0, p0, [I
-
-    fill-array-data p0, :array_e0
-
-    const p1, 0x3d3fa15b
-
-    .line 153
-    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-virtual {p0, p3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p0
-
-    if-eqz p0, :cond_79
-
-    goto :goto_7a
-
-    :cond_79
-    return v0
-
-    :cond_7a
-    :goto_7a
-    const/4 p0, 0x1
 
     return p0
-
-    .line 155
-    :cond_7c
-    new-array p0, p0, [J
-
-    fill-array-data p0, :array_11c
-
-    const p1, 0x55d234c3
-
-    invoke-static {p0, p1, v2}, Lcom/wukong/manager/cz;->g([JII)Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-virtual {p0, p2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p0
-
-    if-eqz p0, :cond_b5
-
-    const/16 p0, 0x19
-
-    .line 156
-    new-array p0, p0, [I
-
-    fill-array-data p0, :array_12c
-
-    const p1, 0x6633656e
-
-    invoke-static {p0, p1}, Lcom/wukong/manager/cz;->h([II)Ljava/lang/String;
-
-    move-result-object p0
-
-    invoke-virtual {p0, p3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
-
-    move-result p0
-    :try_end_a0
-    .catchall {:try_start_8 .. :try_end_a0} :catchall_39
-
-    return p0
-
-    :cond_a1
-    :goto_a1
-    return v0
-
-    :goto_a2
-    const/16 p1, 0x29
-
-    .line 159
-    new-array p1, p1, [I
-
-    fill-array-data p1, :array_162
-
-    const p2, 0x67340468
-
-    invoke-static {p1, p2}, Lcom/wukong/manager/cz;->f([II)Ljava/lang/String;
-
-    move-result-object p1
-
-    sget-object p2, Lcom/wukong/manager/WukongHmaPolicyBridge;->e:Ljava/lang/String;
-
-    invoke-static {p2, p1, p0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
-
-    :cond_b5
-    return v0
-
-    :array_b6
-    .array-data 8
-        0x10f8ebf0fe0eL
-        0x2b680fc34c3eL
-        0x4aac0000bd8eL
-    .end array-data
-
-    :array_c6
-    .array-data 4
-        0x1775b1df
-        0x17648d27
-        0x17537bad
-        0x17422c48
-        0x17319e47
-        0x1720e913
-        0x170f3764
-        0x16feb4db
-        0x16edc47b
-        0x16dc2c0b
-        0x16cb710e
-    .end array-data
-
-    :array_e0
-    .array-data 4
-        -0x5cd9a867
-        -0x5ceabacb
-        -0x5cfb6b9e
-        -0x5d0c8dd8
-        -0x5d1da051
-        -0x5d2eadbd
-        -0x5d3ffba4
-        -0x5d50f8cc
-        -0x5d61bbc9
-        -0x5d728ecb
-        -0x5d83a6ee
-        -0x5d94791a
-        -0x5da5a777
-        -0x5db667d7
-        -0x5dc78f79
-        -0x5dd86e82
-        -0x5de9f26c
-        -0x5dfa70d0
-        -0x5e0b1887
-        -0x5e1cc85e
-        -0x5e2d2005
-        -0x5e3ea1a3
-        -0x5e4fa5b7
-        -0x5e603333
-        -0x5e71ed02
-        -0x5e82cab7
-        -0x5e937c48
-        -0x5ea44d53
-    .end array-data
-
-    :array_11c
-    .array-data 8
-        0x44a652784617L
-        0x4e4ea71ea0e2L
-        0x1afc00009245L
-    .end array-data
-
-    :array_12c
-    .array-data 4
-        0x670639fd
-        0x66f5df71
-        0x66e4af3f
-        0x66d3f64d
-        0x66c243f8
-        0x66b14ec6
-        0x66a0e6e2
-        0x668f6e53
-        0x667e1ce7  # 3.0000356E23f
-        0x666d22bb
-        0x665ca5db
-        0x664b4747
-        0x663a522b
-        0x6629c5f3
-        0x661823f0
-        0x6607b746
-        0x65f69c5c
-        0x65e58832
-        0x65d444ce
-        0x65c3e4cc
-        0x65b2f818
-        0x65a1e982
-        0x6590c627
-        0x657f60ef
-        0x656e2bfb
-    .end array-data
-
-    :array_162
-    .array-data 4
-        0x4685a16
-        0x479d94e
-        0x48ae72f
-        0x49bbc45
-        0x4ac5068
-        0x4bd8b5e
-        0x4cee511
-        0x4df38c6
-        0x4f0b00a
-        0x5015da5
-        0x512973a
-        0x523a526
-        0x534e76d
-        0x545f888
-        0x556eec4
-        0x5673e8d
-        0x578aa7e
-        0x5896ccc
-        0x59aec6c
-        0x5ab31e8
-        0x5bcebe9
-        0x5cd88d5
-        0x5deb1e0
-        0x5efebf4
-        0x6001413
-        0x611f1de
-        0x622e6dd
-        0x633b76a
-        0x6444e1a
-        0x6551a5e
-        0x6664f26
-        0x677ccfd
-        0x6887489
-        0x699fc8c
-        0x6aa8cbf
-        0x6bb93bd
-        0x6cc3462
-        0x6dd6566
-        0x6ee5514
-        0x6ffba45
-        0x7106ca2
-    .end array-data
 .end method

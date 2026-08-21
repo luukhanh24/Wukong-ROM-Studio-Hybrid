@@ -4,9 +4,9 @@
 
 
 # static fields
-.field private static e:I = 0x254eac42
+.field private static e:I = 0x3496472a
 
-.field private static f:I = 0x3d06e8
+.field private static f:I = 0x6cf3f152
 
 .field private static final g:[I
 
@@ -17,7 +17,7 @@
 
     const/4 v0, 0x7
 
-    .line 4381
+    .line 3905
     new-array v0, v0, [I
 
     fill-array-data v0, :array_a
@@ -30,13 +30,13 @@
 
     :array_a
     .array-data 4
-        0x26c4cb86
-        0x32052d83
-        0x52e6b831
-        0x7a1e39b1
-        0x3dee35a6
-        0x457f941
-        0x18092d46
+        0x264c283
+        0x3ce0c3af
+        0x5a67a202
+        0x35ca2407
+        0x501ca934
+        0x4a8fd60c  # 4713222.0f
+        0x69ba02ac
     .end array-data
 .end method
 
@@ -57,11 +57,11 @@
 
     and-int v0, p0, p1
 
-    const v1, 0x4379061a
+    const v1, 0x6f474040
 
     xor-int/2addr v1, p0
 
-    .line 4413
+    .line 3937
     sget-object v2, Lcom/wukong/manager/bq;->g:[I
 
     array-length v3, v2
@@ -72,7 +72,7 @@
 
     add-int/2addr v1, v0
 
-    const v0, 0x730fc2fb
+    const v0, 0x1181552d
 
     add-int/2addr v1, v0
 
@@ -80,7 +80,7 @@
 
     add-int/lit8 p0, p0, 0x1
 
-    .line 4414
+    .line 3938
     invoke-static {v1, p0}, Ljava/lang/Integer;->rotateLeft(II)I
 
     move-result p0
@@ -91,14 +91,14 @@
 
     and-int/2addr p1, p0
 
-    .line 4417
+    .line 3941
     array-length v0, v2
 
     rem-int/2addr p1, v0
 
     aget p1, v2, p1
 
-    const v0, 0x37b17634
+    const v0, 0x1af85bfe
 
     xor-int/2addr p1, v0
 
@@ -110,7 +110,7 @@
 
     add-int/lit8 p1, p1, 0x3
 
-    .line 4418
+    .line 3942
     invoke-static {p0, p1}, Ljava/lang/Integer;->rotateLeft(II)I
 
     move-result p0
@@ -125,7 +125,7 @@
 .method public static f(ILjava/lang/Object;)I
     .registers 3
 
-    .line 4385
+    .line 3909
     :try_start_0
     sget v0, Lcom/wukong/manager/bq;->e:I
 
@@ -151,7 +151,7 @@
     :goto_f
     if-eqz p1, :cond_1e
 
-    .line 4386
+    .line 3910
     invoke-virtual {p1}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
 
     move-result-object p1
@@ -166,7 +166,7 @@
 
     add-int/2addr p0, p1
 
-    .line 4387
+    .line 3911
     :cond_1e
     sget p1, Lcom/wukong/manager/bq;->f:I
 
@@ -180,7 +180,7 @@
 .method public static g(Ljava/lang/String;I)Z
     .registers 3
 
-    .line 4391
+    .line 3915
     sget v0, Lcom/wukong/manager/bq;->e:I
 
     xor-int/2addr p1, v0
@@ -191,16 +191,16 @@
 
     if-eqz p0, :cond_d
 
-    .line 4392
+    .line 3916
     invoke-virtual {p0}, Ljava/lang/String;->length()I
 
     move-result v0
 
     xor-int/2addr p1, v0
 
-    .line 4393
+    .line 3917
     :cond_d
-    invoke-static {p1, p0}, Lcom/wukong/manager/bi;->f(ILjava/lang/Object;)I
+    invoke-static {p1, p0}, Lcom/wukong/manager/ay;->f(ILjava/lang/Object;)I
 
     move-result p0
 
@@ -208,12 +208,12 @@
 
     and-int/lit8 p0, p0, 0x3
 
-    .line 4394
+    .line 3918
     sget-object p1, Lcom/wukong/manager/bq;->g:[I
 
     array-length p1, p1
 
-    add-int/lit8 p1, p1, 0x58
+    add-int/lit8 p1, p1, 0x4e
 
     and-int/lit8 p1, p1, 0x3
 
@@ -236,7 +236,7 @@
 
     goto :goto_1a
 
-    .line 4398
+    .line 3922
     :cond_3
     sget v0, Lcom/wukong/manager/bq;->e:I
 
@@ -244,18 +244,18 @@
 
     xor-int/2addr v0, v1
 
-    invoke-static {v0, p0}, Lcom/wukong/manager/e;->f(ILjava/lang/Object;)I
+    invoke-static {v0, p0}, Lcom/wukong/manager/h;->f(ILjava/lang/Object;)I
 
     move-result v0
 
-    .line 4399
-    invoke-static {v0, p1}, Lcom/wukong/manager/cc;->f(ILjava/lang/Object;)I
+    .line 3923
+    invoke-static {v0, p1}, Lcom/wukong/manager/cm;->f(ILjava/lang/Object;)I
 
     move-result v1
 
     xor-int/2addr v0, v1
 
-    .line 4400
+    .line 3924
     sget v1, Lcom/wukong/manager/bq;->e:I
 
     xor-int/2addr v1, v0
@@ -276,15 +276,15 @@
 .method public static i(ILjava/lang/Object;)I
     .registers 3
 
-    add-int/lit8 p0, p0, 0x58
+    add-int/lit8 p0, p0, 0x4e
 
-    .line 4404
+    .line 3928
     invoke-static {p0, p1}, Lcom/wukong/manager/bq;->f(ILjava/lang/Object;)I
 
     move-result p0
 
-    .line 4405
-    invoke-static {p0, p1}, Lcom/wukong/manager/bi;->f(ILjava/lang/Object;)I
+    .line 3929
+    invoke-static {p0, p1}, Lcom/wukong/manager/ay;->f(ILjava/lang/Object;)I
 
     move-result v0
 
@@ -294,18 +294,18 @@
 
     if-eqz v0, :cond_17
 
-    .line 4406
+    .line 3930
     sget v0, Lcom/wukong/manager/bq;->e:I
 
     xor-int/2addr v0, p0
 
-    invoke-static {v0, p1}, Lcom/wukong/manager/e;->f(ILjava/lang/Object;)I
+    invoke-static {v0, p1}, Lcom/wukong/manager/h;->f(ILjava/lang/Object;)I
 
     move-result p1
 
     xor-int/2addr p0, p1
 
-    .line 4407
+    .line 3931
     :cond_17
     sget p1, Lcom/wukong/manager/bq;->f:I
 
@@ -313,7 +313,7 @@
 
     const/4 v0, 0x0
 
-    invoke-static {p1, v0}, Lcom/wukong/manager/cc;->f(ILjava/lang/Object;)I
+    invoke-static {p1, v0}, Lcom/wukong/manager/cm;->f(ILjava/lang/Object;)I
 
     move-result p1
 

@@ -134,6 +134,30 @@ FAKE_LOCK_INIT_BLOCK_END = "    # WK_STUDIO_FAKE_LOCK_END"
 FAKE_LOCK_LEGACY_INIT_MARKER = "    # wk needs init context for readonly boot property updates; make sure"
 WK_MANAGER_METRICS_INIT_BLOCK_START = "# WK_STUDIO_WK_MANAGER_METRICS_BEGIN"
 WK_MANAGER_METRICS_INIT_BLOCK_END = "# WK_STUDIO_WK_MANAGER_METRICS_END"
+WK_MANAGER_POWER_RELATIVE_ROOT = Path("WK_Manager/system/system")
+WK_MANAGER_POWER_DAEMON_RELATIVE = Path("bin/wukong-system-powerd")
+WK_MANAGER_POWER_RC_RELATIVE = Path("etc/init/wukong-system-powerd.rc")
+WK_MANAGER_CONTEXT_REQUIRED_POLICY_TYPES = {"privapp_data_file", "system_file"}
+WK_MANAGER_POWER_FS_CONFIG = {
+    "system/bin/wukong-system-powerd": "system/bin/wukong-system-powerd 0 2000 0755",
+    "system/system/bin/wukong-system-powerd": "system/system/bin/wukong-system-powerd 0 2000 0755",
+    "system/etc/init/wukong-system-powerd.rc": "system/etc/init/wukong-system-powerd.rc 0 0 0644",
+    "system/system/etc/init/wukong-system-powerd.rc": "system/system/etc/init/wukong-system-powerd.rc 0 0 0644",
+}
+WK_MANAGER_POWER_FILE_CONTEXTS = {
+    "/system/bin/wukong-system-powerd": (
+        "/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0"
+    ),
+    "/system/system/bin/wukong-system-powerd": (
+        "/system/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0"
+    ),
+    "/system/etc/init/wukong-system-powerd\\.rc": (
+        "/system/etc/init/wukong-system-powerd\\.rc u:object_r:system_file:s0"
+    ),
+    "/system/system/etc/init/wukong-system-powerd\\.rc": (
+        "/system/system/etc/init/wukong-system-powerd\\.rc u:object_r:system_file:s0"
+    ),
+}
 FAKE_LOCK_FS_CONFIG = {
     "system/bin/wk": "system/bin/wk 0 2000 0755",
     "system/system/bin/wk": "system/system/bin/wk 0 2000 0755",
@@ -155,6 +179,11 @@ ANDROID_LF_TEXT_SUFFIXES = {
 UNSAFE_VENDOR_PRIV_APP_SYSFS_RE = re.compile(
     r"^\(allow\s+priv_app_34_0\s+vendor_sysfs_(?:kgsl|kgsl_gpuclk|graphics)\s+"
     r"\((?:dir|file|lnk_file)\s+\([^)]+\)\)\)$"
+)
+UNSAFE_PLATFORM_PRIV_APP_METRIC_RE = re.compile(
+    r"^\(allow\s+priv_app\s+(?:proc(?:_stat|_meminfo|_cpuinfo)?|"
+    r"sysfs(?:_type|_gpu|_thermal|_devfreq_cur|_devfreq_dir|_kgsl)?|"
+    r"vendor_sysfs_(?:kgsl(?:_gpuclk|_gpubusy|_gpu_model)?|graphics|devfreq|ddr|public))\s+"
 )
 
 PARTITIONS = [
@@ -1252,6 +1281,8 @@ def _mod_special_actions(name: str) -> list[str]:
         actions.append("Import STARK smali into framework.jar")
         actions.append("Inject read-only GPU metric chmod hooks into existing init.rc")
         actions.append("Allow WukongManager priv-app metric reads via platform SELinux")
+        actions.append("Install the isolated Wukong system-power daemon and init socket service")
+        actions.append("Assign the app and power daemon dedicated SELinux domains")
     if name == "Fake_lock":
         actions.append("Inject wk commands into init.rc on post-fs-data")
         actions.append("Force wk executable permission and SELinux repack context")
@@ -1513,6 +1544,12 @@ def inspect_rom(
         and not WK_MANAGER_STARK_DIR.is_dir()
     ):
         errors.append(f"Missing WK_Manager STARK smali directory: {WK_MANAGER_STARK_DIR}")
+    if "apply_mod" in requested_steps and "WK_Manager" in selected_mod_names:
+        power_root = STARK_ROOT / WK_MANAGER_POWER_RELATIVE_ROOT
+        for relative in (WK_MANAGER_POWER_DAEMON_RELATIVE, WK_MANAGER_POWER_RC_RELATIVE):
+            required = power_root / relative
+            if not required.is_file():
+                errors.append(f"Missing WK_Manager system-power asset: {required}")
 
     missing_bins = [str(path) for path in _required_binary_paths() if not path.is_file()]
     if missing_bins:
@@ -2096,9 +2133,16 @@ def apply_stark_patch(source: Path, destination: Path) -> dict[str, int]:
                 "Unsafe WK_Manager vendor SELinux rule blocked: priv_app_34_0 "
                 "must not be granted vendor_sysfs access from vendor sepolicy"
             )
+        if (
+            source.name == "stark_plat_sepolicy.cil"
+            and UNSAFE_PLATFORM_PRIV_APP_METRIC_RE.match(normalized)
+        ):
+            # WK Manager now runs in its own domain. Do not leak its proc/sysfs
+            # permissions to every privileged application on the device.
+            continue
         if operation == "+":
             if not any(line.strip() == normalized for line in lines):
-                insert_index = _stark_xml_insert_index(source.name, lines, normalized)
+                insert_index = _stark_insert_index(source.name, lines, normalized)
                 if insert_index is None:
                     lines.append(payload)
                 else:
@@ -2144,7 +2188,16 @@ def apply_stark_patch(source: Path, destination: Path) -> dict[str, int]:
     return {"added": added, "removed": removed, "replaced": replaced}
 
 
-def _stark_xml_insert_index(source_name: str, lines: list[str], normalized: str) -> int | None:
+def _stark_insert_index(source_name: str, lines: list[str], normalized: str) -> int | None:
+    if (
+        source_name == "stark_plat_seapp_contexts"
+        and "name=com.wukong.manager" in normalized
+        and "domain=wukong_manager_app" in normalized
+    ):
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if "isPrivApp=true" in stripped and "domain=priv_app" in stripped:
+                return index
     if not source_name.endswith(".xml") or not normalized.startswith("<oplus-feature "):
         return None
     for index, line in enumerate(lines):
@@ -2646,6 +2699,182 @@ def _sync_fake_lock_repack_configs(rom_unpack: Path) -> dict[str, int]:
     }
 
 
+def _validate_wk_manager_power_daemon(path: Path) -> None:
+    try:
+        header = path.read_bytes()[:64]
+    except OSError as exc:
+        raise StudioError(f"WK_Manager system-power daemon cannot be read: {path}") from exc
+    if (
+        len(header) < 20
+        or header[:4] != b"\x7fELF"
+        or header[4] != 2
+        or header[5] != 1
+        or int.from_bytes(header[18:20], "little") != 183
+    ):
+        raise StudioError(f"WK_Manager system-power daemon must be an ARM64 little-endian ELF: {path}")
+
+
+def _validate_wk_manager_power_rc(path: Path) -> None:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise StudioError(f"WK_Manager system-power init service cannot be read: {path}") from exc
+    required = (
+        "service wukong-system-powerd /system/bin/wukong-system-powerd",
+        "user system",
+        "socket wukong_system_power stream 0660 system everybody ",
+        "u:object_r:wukong_system_power_socket:s0",
+        "start wukong-system-powerd",
+    )
+    missing = [value for value in required if value not in content]
+    if missing or "user root" in content:
+        detail = ", ".join(missing) if missing else "service must not run as root"
+        raise StudioError(f"WK_Manager system-power init service is invalid: {detail}")
+
+
+def _copy_if_changed(source: Path, destination: Path) -> int:
+    payload = source.read_bytes()
+    if source.suffix.lower() in ANDROID_LF_TEXT_SUFFIXES or source.name == "build.prop":
+        payload = payload.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    if destination.is_file() and destination.read_bytes() == payload:
+        return 0
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(payload)
+    return 1
+
+
+def _wk_manager_patch_policy_symbols(
+    patch: Path,
+) -> tuple[set[str], set[str], set[str]]:
+    content = patch.read_text(encoding="utf-8", errors="replace")
+    declared_types: set[str] = set()
+    required_types = set(WK_MANAGER_CONTEXT_REQUIRED_POLICY_TYPES)
+    referenced_attributes: set[str] = set()
+    referenced_symbols: set[str] = set()
+    instructions: list[list[str]] = []
+    for raw in content.splitlines():
+        normalized = raw[1:].strip() if raw.startswith("+") else ""
+        if not normalized or UNSAFE_PLATFORM_PRIV_APP_METRIC_RE.match(normalized):
+            continue
+        tokens = re.findall(r'"[^"]*"|[^\s()]+', normalized)
+        if not tokens:
+            continue
+        instructions.append(tokens)
+        if tokens[0] == "type" and len(tokens) == 2:
+            declared_types.add(tokens[1])
+
+    for tokens in instructions:
+        statement = tokens[0]
+        if statement == "allow" and len(tokens) >= 3:
+            referenced_symbols.update(tokens[1:3])
+        elif statement == "typetransition" and len(tokens) >= 5:
+            referenced_symbols.update((tokens[1], tokens[2]))
+            required_types.add(tokens[-1])
+        elif statement == "roletype" and len(tokens) == 3:
+            required_types.add(tokens[2])
+        elif statement == "typeattributeset" and len(tokens) >= 3:
+            referenced_attributes.add(tokens[1])
+            referenced_symbols.update(tokens[2:])
+    return (
+        required_types - declared_types,
+        referenced_attributes,
+        referenced_symbols - declared_types,
+    )
+
+
+def _validate_wk_manager_power_policy_types(policy: Path, patch: Path) -> None:
+    if not policy.is_file():
+        raise StudioError(f"WK_Manager platform SELinux policy is missing: {policy}")
+    content = policy.read_text(encoding="utf-8", errors="replace")
+    required_types, required_attributes, required_symbols = _wk_manager_patch_policy_symbols(patch)
+    missing_types = sorted(
+        name
+        for name in required_types
+        if not re.search(rf"^\(type\s+{re.escape(name)}\)\s*$", content, flags=re.MULTILINE)
+    )
+    missing_attributes = sorted(
+        name
+        for name in required_attributes
+        if not re.search(
+            rf"^\(typeattribute\s+{re.escape(name)}\)\s*$", content, flags=re.MULTILINE
+        )
+    )
+    missing_symbols = sorted(
+        name
+        for name in required_symbols
+        if not re.search(
+            rf"^\(type(?:attribute)?\s+{re.escape(name)}\)\s*$",
+            content,
+            flags=re.MULTILINE,
+        )
+    )
+    if missing_types or missing_attributes or missing_symbols:
+        details = []
+        if missing_types:
+            details.append(f"types: {', '.join(missing_types)}")
+        if missing_attributes:
+            details.append(f"attributes: {', '.join(missing_attributes)}")
+        if missing_symbols:
+            details.append(f"types/attributes: {', '.join(missing_symbols)}")
+        raise StudioError(
+            "WK_Manager system-power policy is incompatible with this ROM; "
+            f"missing SELinux {'; '.join(details)}"
+        )
+
+
+def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) -> dict[str, Any]:
+    source_root = shared_mod_dir / "system" / "system"
+    source_daemon = source_root / WK_MANAGER_POWER_DAEMON_RELATIVE
+    source_rc = source_root / WK_MANAGER_POWER_RC_RELATIVE
+    source_selinux = source_root / "etc" / "selinux"
+    _validate_wk_manager_power_daemon(source_daemon)
+    _validate_wk_manager_power_rc(source_rc)
+
+    system = rom_unpack / "system_unpacked" / "system" / "system"
+    selinux = system / "etc" / "selinux"
+    policy = selinux / "plat_sepolicy.cil"
+    policy_patch = source_selinux / "stark_plat_sepolicy.cil"
+    if not policy_patch.is_file():
+        raise StudioError(f"WK_Manager system-power SELinux patch is missing: {policy_patch}")
+    _validate_wk_manager_power_policy_types(policy, policy_patch)
+
+    copied = 0
+    copied += _copy_if_changed(source_daemon, system / WK_MANAGER_POWER_DAEMON_RELATIVE)
+    copied += _copy_if_changed(source_rc, system / WK_MANAGER_POWER_RC_RELATIVE)
+
+    patch_targets = (
+        ("stark_plat_seapp_contexts", selinux / "plat_seapp_contexts"),
+        ("stark_plat_file_contexts", selinux / "plat_file_contexts"),
+        ("stark_plat_sepolicy.cil", policy),
+    )
+    patched = 0
+    for name, target in patch_targets:
+        source = source_selinux / name
+        if not source.is_file():
+            raise StudioError(f"WK_Manager system-power SELinux patch is missing: {source}")
+        patched += sum(apply_stark_patch(source, target).values())
+
+    config = rom_unpack / "system_unpacked" / "config"
+    metadata = {
+        "fsConfig": _upsert_config_entries(
+            config / "system_fs_config",
+            WK_MANAGER_POWER_FS_CONFIG,
+        ),
+        "fileContexts": _upsert_config_entries(
+            config / "system_file_contexts",
+            WK_MANAGER_POWER_FILE_CONTEXTS,
+        ),
+    }
+    return {
+        "copied": copied,
+        "copiedBytes": source_daemon.stat().st_size + source_rc.stat().st_size,
+        "patched": patched,
+        "metadata": metadata,
+        "daemon": str(system / WK_MANAGER_POWER_DAEMON_RELATIVE),
+        "service": str(system / WK_MANAGER_POWER_RC_RELATIVE),
+    }
+
+
 def _plat_sepolicy_paths(rom_unpack: Path) -> tuple[Path, Path, Path]:
     selinux = rom_unpack / "system_unpacked" / "system" / "system" / "etc" / "selinux"
     return selinux, selinux / "plat_sepolicy.cil", selinux / "plat_sepolicy_and_mapping.sha256"
@@ -2684,6 +2913,7 @@ def apply_selected_mods(
     theme_cr_removed = 0
     ai_global_aiunit_removed = 0
     jar_reports: list[dict[str, Any]] = []
+    system_power_report: dict[str, Any] | None = None
     modified_partitions: set[str] = set()
     fix_noti_selected = False
     wk_manager_mod_dir: Path | None = None
@@ -2795,6 +3025,13 @@ def apply_selected_mods(
         if combined_fix_noti:
             patched += 1
         patched += _patch_wk_manager_metrics_init_rc(rom_unpack, wk_manager_mod_dir)
+        system_power_report = _install_wk_manager_power_service(
+            rom_unpack,
+            STARK_ROOT / "WK_Manager",
+        )
+        copied += int(system_power_report["copied"])
+        copied_bytes += int(system_power_report["copiedBytes"])
+        patched += int(system_power_report["patched"])
         modified_partitions.add("system")
     sepolicy_hash = None
     if SELINUX_HASH_MODS.intersection(applied):
@@ -2813,6 +3050,7 @@ def apply_selected_mods(
         "themeCrRemoved": theme_cr_removed,
         "aiGlobalAiunitRemoved": ai_global_aiunit_removed,
         "jarReports": jar_reports,
+        "systemPower": system_power_report,
         "platSepolicyHash": sepolicy_hash,
         "modifiedPartitions": sorted(modified_partitions),
     }
