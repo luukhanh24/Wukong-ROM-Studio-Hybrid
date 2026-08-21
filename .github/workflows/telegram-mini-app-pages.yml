@@ -23,7 +23,6 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL != '' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,15 +37,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${MINI_APP_API_URL}" != https://* ]]; then
+          if [[ -n "${MINI_APP_API_URL}" && "${MINI_APP_API_URL}" != https://* ]]; then
             echo "Repository variable WUKONG_TELEGRAM_MINI_APP_API_URL must be a public HTTPS URL." >&2
             exit 1
           fi
+          api_url="${MINI_APP_API_URL%/}"
           mkdir -p .pages
           cp telegram_mini_app/index.html telegram_mini_app/styles.css telegram_mini_app/app.js .pages/
-          sed -i "s|__WUKONG_TELEGRAM_MINI_APP_API_URL__|${MINI_APP_API_URL%/}|g" .pages/index.html
+          sed -i "s|__WUKONG_TELEGRAM_MINI_APP_API_URL__|${api_url}|g" .pages/index.html
           sed -i "s#./styles.css#./styles.css?v=${GITHUB_SHA}#; s#./app.js#./app.js?v=${GITHUB_SHA}#" .pages/index.html
           python -m tools.export_mini_app_catalog --output .pages/catalog.json
+          ! grep -R '__WUKONG_TELEGRAM_MINI_APP_API_URL__' .pages
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v5.0.0
       - name: Upload Mini App site
