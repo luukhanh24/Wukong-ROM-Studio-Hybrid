@@ -4,7 +4,7 @@
 
 
 # static fields
-.field private static final e:I = 0x58
+.field private static final e:I = 0xaa
 
 
 # direct methods
@@ -28,7 +28,7 @@
 
     mul-int/lit8 v1, v1, 0x8
 
-    add-int/lit8 v2, p1, 0x58
+    add-int/lit16 v2, p1, 0xaa
 
     mul-int/lit8 p0, p0, 0x1f
 

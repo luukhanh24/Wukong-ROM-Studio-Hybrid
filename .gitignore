@@ -14,6 +14,8 @@ Auto_Build_WK_*.zip
 /Logs/
 /Data/
 /MOD/
+/STARK/WK_Manager/
+/STARK/WK_Installer/
 /copy-image/
 /OFX/
 /TWRP/

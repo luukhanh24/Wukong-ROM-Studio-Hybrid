@@ -7,7 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "content-packs" / "index.json"
 MOD_ROOT = ROOT / "MOD"
+STARK_ROOT = ROOT / "STARK"
 MARKER = MOD_ROOT / ".wukong-test-fixture"
+SHARED_WK_ROOT = STARK_ROOT / "WK_Manager"
+SHARED_WK_MARKER = SHARED_WK_ROOT / ".wukong-test-fixture"
 
 
 TEXT_FIXTURES = {
@@ -46,14 +49,54 @@ TEXT_FIXTURES = {
     "Global_props/my_product/stark_build.prop": "!persist.sys.timezone=America/New_York\n!persist.sys.oplus.region=US\n!ro.product.locale=en-US\n",
 }
 
+SHARED_WK_POWER_TEXT_FIXTURES = {
+    "system/system/etc/init/wukong-system-powerd.rc": """service wukong-system-powerd /system/bin/wukong-system-powerd
+    class late_start
+    disabled
+    user system
+    group system everybody
+    socket wukong_system_power stream 0660 system everybody u:object_r:wukong_system_power_socket:s0
+
+on property:sys.boot_completed=1
+    start wukong-system-powerd
+""",
+    "system/system/etc/selinux/stark_plat_seapp_contexts": (
+        "+user=_app isPrivApp=true name=com.wukong.manager "
+        "domain=wukong_manager_app type=privapp_data_file levelFrom=user\n"
+    ),
+    "system/system/etc/selinux/stark_plat_file_contexts": (
+        "+/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0\n"
+        "+/system/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0\n"
+        "+/dev/socket/wukong_system_power u:object_r:wukong_system_power_socket:s0\n"
+    ),
+    "system/system/etc/selinux/stark_plat_sepolicy.cil": (
+        "+(type wukong_system_powerd)\n"
+        "+(type wukong_system_powerd_exec)\n"
+        "+(type wukong_system_power_socket)\n"
+        "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))\n"
+    ),
+}
+SHARED_WK_POWER_TEXT_FIXTURES["system/system/etc/init/hw/stark_init.rc"] = TEXT_FIXTURES[
+    "WK_Manager/system/system/etc/init/hw/stark_init.rc"
+]
+
 
 def main() -> int:
     if MOD_ROOT.exists() and not MARKER.is_file():
         raise SystemExit(
             f"Refusing to modify an existing content directory without the fixture marker: {MOD_ROOT}"
         )
+    if SHARED_WK_ROOT.exists() and not SHARED_WK_MARKER.is_file():
+        raise SystemExit(
+            "Refusing to modify an existing shared content directory without the "
+            f"fixture marker: {SHARED_WK_ROOT}"
+        )
     MOD_ROOT.mkdir(parents=True, exist_ok=True)
     MARKER.write_text("Generated placeholders only; never use for ROM builds.\n", encoding="utf-8")
+    SHARED_WK_ROOT.mkdir(parents=True, exist_ok=True)
+    SHARED_WK_MARKER.write_text(
+        "Generated placeholders only; never use for ROM builds.\n", encoding="utf-8"
+    )
     payload = json.loads(INDEX.read_text(encoding="utf-8"))
     count = 0
     for pack in payload["packs"]:
@@ -71,6 +114,19 @@ def main() -> int:
             else:
                 path.write_text(text, encoding="utf-8", newline="\n")
             count += 1
+    shared = SHARED_WK_ROOT
+    for relative, text in SHARED_WK_POWER_TEXT_FIXTURES.items():
+        path = shared / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+        count += 1
+    daemon = shared / "system" / "system" / "bin" / "wukong-system-powerd"
+    daemon.parent.mkdir(parents=True, exist_ok=True)
+    elf = bytearray(64)
+    elf[:6] = b"\x7fELF\x02\x01"
+    elf[18:20] = (183).to_bytes(2, "little")
+    daemon.write_bytes(elf)
+    count += 1
     print(f"Materialized {count} private-content test placeholders under {MOD_ROOT}")
     return 0
 

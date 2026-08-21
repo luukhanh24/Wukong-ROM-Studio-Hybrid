@@ -961,6 +961,30 @@ class StudioCoreTests(unittest.TestCase):
                 "</oplus-config>\n",
             )
 
+    def test_stark_seapp_patch_inserts_wukong_domain_before_generic_priv_app(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "plat_seapp_contexts"
+            target.write_text(
+                "user=_app isPrivApp=true domain=priv_app type=privapp_data_file levelFrom=user\n",
+                encoding="utf-8",
+            )
+            patch = root / "stark_plat_seapp_contexts"
+            dedicated = (
+                "user=_app isPrivApp=true name=com.wukong.manager "
+                "domain=wukong_manager_app type=privapp_data_file levelFrom=user"
+            )
+            patch.write_text(f"+{dedicated}\n", encoding="utf-8")
+
+            first = studio_core.apply_stark_patch(patch, target)
+            second = studio_core.apply_stark_patch(patch, target)
+
+            content = target.read_text(encoding="utf-8")
+            self.assertEqual(first["added"], 1)
+            self.assertEqual(second["added"], 0)
+            self.assertEqual(content.count(dedicated), 1)
+            self.assertLess(content.index(dedicated), content.index("domain=priv_app"))
+
     def test_stark_vendor_sepolicy_blocks_priv_app_vendor_sysfs_rule(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -973,6 +997,24 @@ class StudioCoreTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(studio_core.StudioError, "Unsafe WK_Manager vendor SELinux rule"):
                 studio_core.apply_stark_patch(patch, target)
+
+    def test_stark_platform_policy_does_not_grant_wk_metrics_to_all_priv_apps(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "plat_sepolicy.cil"
+            target.write_text("(type wukong_manager_app)\n", encoding="utf-8")
+            patch = root / "stark_plat_sepolicy.cil"
+            patch.write_text(
+                "+(allow priv_app sysfs_kgsl (file (read getattr open map)))\n"
+                "+(allow wukong_manager_app sysfs_kgsl (file (read getattr open map)))\n",
+                encoding="utf-8",
+            )
+
+            studio_core.apply_stark_patch(patch, target)
+
+            content = target.read_text(encoding="utf-8")
+            self.assertNotIn("allow priv_app sysfs_kgsl", content)
+            self.assertIn("allow wukong_manager_app sysfs_kgsl", content)
 
     def test_vendor_sepolicy_guard_rejects_existing_unsafe_rule(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -987,15 +1029,20 @@ class StudioCoreTests(unittest.TestCase):
             with self.assertRaisesRegex(studio_core.StudioError, "Unsafe vendor SELinux rules"):
                 studio_core.validate_no_unsafe_vendor_priv_app_sysfs(root)
 
-    def test_wk_manager_metrics_policy_does_not_force_dedicated_domain_by_default(self):
+    def test_wk_manager_power_policy_uses_dedicated_domains(self):
         mod = Path("MOD/ColorOS_16.0.7/WK_Manager")
         policy = mod / "system/system/etc/selinux/stark_plat_sepolicy.cil"
         seapp = mod / "system/system/etc/selinux/stark_plat_seapp_contexts"
-        init_rc = mod / "system/system/etc/init/hw/stark_init.rc"
+        shared = Path("STARK/WK_Manager")
+        shared_policy = shared / "system/system/etc/selinux/stark_plat_sepolicy.cil"
+        shared_seapp = shared / "system/system/etc/selinux/stark_plat_seapp_contexts"
+        shared_contexts = shared / "system/system/etc/selinux/stark_plat_file_contexts"
+        init_rc = shared / "system/system/etc/init/hw/stark_init.rc"
 
         policy_text = policy.read_text(encoding="utf-8")
         seapp_text = seapp.read_text(encoding="utf-8")
         init_text = init_rc.read_text(encoding="utf-8")
+        power_policy_text = shared_policy.read_text(encoding="utf-8")
 
         self.assertIn("(type wukong_manager_app)", policy_text)
         self.assertIn("(type wukong_manager_app_userfaultfd)", policy_text)
@@ -1011,16 +1058,24 @@ class StudioCoreTests(unittest.TestCase):
             "(allow wukong_manager_app wukong_manager_app (anon_inode (ioctl read create)))",
             policy_text,
         )
-        self.assertIn(
-            "(allow priv_app proc_stat (file (ioctl read getattr lock map open watch watch_reads)))",
-            policy_text,
-        )
-        self.assertIn(
-            "(allow priv_app vendor_sysfs_kgsl_gpubusy (file (ioctl read getattr lock map open watch watch_reads)))",
-            policy_text,
-        )
         self.assertNotIn("+user=_app isPrivApp=true name=com.wukong.manager domain=wukong_manager_app", seapp_text)
         self.assertIn("-user=_app isPrivApp=true name=com.wukong.manager domain=wukong_manager_app", seapp_text)
+        self.assertIn(
+            "+user=_app isPrivApp=true name=com.wukong.manager "
+            "domain=wukong_manager_app type=privapp_data_file levelFrom=user",
+            shared_seapp.read_text(encoding="utf-8"),
+        )
+        self.assertIn("(type wukong_system_powerd)", power_policy_text)
+        self.assertIn(
+            "(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))",
+            power_policy_text,
+        )
+        self.assertIn(
+            "/dev/socket/wukong_system_power u:object_r:wukong_system_power_socket:s0",
+            shared_contexts.read_text(encoding="utf-8"),
+        )
+        self.assertTrue((shared / "system/system/bin/wukong-system-powerd").is_file())
+        self.assertTrue((shared / "system/system/etc/init/wukong-system-powerd.rc").is_file())
         self.assertNotIn("priv_app_34_0 vendor_sysfs_", policy_text)
         self.assertIn("chmod 0444 /sys/class/kgsl/kgsl-3d0/gpuclk", init_text)
         self.assertIn("chmod 0444 /sys/class/kgsl/kgsl-3d0/devfreq/cur_freq", init_text)
@@ -1065,6 +1120,156 @@ class StudioCoreTests(unittest.TestCase):
             )
             self.assertLess(content.index("write /dev/null boot"), content.index(studio_core.WK_MANAGER_METRICS_INIT_BLOCK_START))
             self.assertNotIn(b"\r", init.read_bytes())
+
+    def test_wk_manager_power_service_installs_payload_policy_and_repack_metadata(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            unpack = root / "rom-unpack"
+            system = unpack / "system_unpacked" / "system" / "system"
+            selinux = system / "etc" / "selinux"
+            config = unpack / "system_unpacked" / "config"
+            selinux.mkdir(parents=True)
+            config.mkdir(parents=True)
+            (selinux / "plat_sepolicy.cil").write_text(
+                "\n".join(
+                    f"(type {name})"
+                    for name in (
+                        "init",
+                        "wukong_manager_app",
+                        "privapp_data_file",
+                        "system_file",
+                        "sysfs",
+                        "sysfs_devices_system_cpu",
+                        "sysfs_kgsl",
+                        "vendor_sysfs_kgsl",
+                        "sysfs_thermal",
+                    )
+                )
+                + "\n(typeattribute domain)\n",
+                encoding="utf-8",
+            )
+            (selinux / "plat_file_contexts").write_text(
+                "/system/bin/sh u:object_r:shell_exec:s0\n",
+                encoding="utf-8",
+            )
+            (selinux / "plat_seapp_contexts").write_text(
+                "user=_app isPrivApp=true domain=priv_app type=privapp_data_file levelFrom=user\n",
+                encoding="utf-8",
+            )
+            (config / "system_fs_config").write_text("system 0 0 0755\n", encoding="utf-8")
+            (config / "system_file_contexts").write_text(
+                "/system u:object_r:system_file:s0\n",
+                encoding="utf-8",
+            )
+
+            source = root / "shared" / "WK_Manager"
+            source_bin = source / "system" / "system" / "bin" / "wukong-system-powerd"
+            source_rc = source / "system" / "system" / "etc" / "init" / "wukong-system-powerd.rc"
+            source_policy = source / "system" / "system" / "etc" / "selinux"
+            source_bin.parent.mkdir(parents=True)
+            source_rc.parent.mkdir(parents=True)
+            source_policy.mkdir(parents=True, exist_ok=True)
+            elf = bytearray(64)
+            elf[:6] = b"\x7fELF\x02\x01"
+            elf[18:20] = (183).to_bytes(2, "little")
+            source_bin.write_bytes(elf)
+            source_rc.write_text(
+                "service wukong-system-powerd /system/bin/wukong-system-powerd\n"
+                "    class late_start\n"
+                "    disabled\n"
+                "    user system\n"
+                "    group system everybody\n"
+                "    socket wukong_system_power stream 0660 system everybody "
+                "u:object_r:wukong_system_power_socket:s0\n"
+                "on property:sys.boot_completed=1\n"
+                "    start wukong-system-powerd\n",
+                encoding="utf-8",
+            )
+            (source_policy / "stark_plat_seapp_contexts").write_text(
+                "+user=_app isPrivApp=true name=com.wukong.manager "
+                "domain=wukong_manager_app type=privapp_data_file levelFrom=user\n",
+                encoding="utf-8",
+            )
+            (source_policy / "stark_plat_file_contexts").write_text(
+                "+/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0\n"
+                "+/system/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0\n"
+                "+/dev/socket/wukong_system_power u:object_r:wukong_system_power_socket:s0\n",
+                encoding="utf-8",
+            )
+            (source_policy / "stark_plat_sepolicy.cil").write_text(
+                "+(type wukong_system_powerd)\n"
+                "+(roletype object_r wukong_system_powerd)\n"
+                "+(type wukong_system_powerd_exec)\n"
+                "+(roletype object_r wukong_system_powerd_exec)\n"
+                "+(type wukong_system_power_socket)\n"
+                "+(roletype object_r wukong_system_power_socket)\n"
+                "+(typeattributeset domain (wukong_system_powerd))\n"
+                "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))\n",
+                encoding="utf-8",
+            )
+
+            first = studio_core._install_wk_manager_power_service(unpack, source)
+            second = studio_core._install_wk_manager_power_service(unpack, source)
+
+            daemon = system / "bin" / "wukong-system-powerd"
+            service = system / "etc" / "init" / "wukong-system-powerd.rc"
+            self.assertEqual(daemon.read_bytes(), bytes(elf))
+            self.assertIn("user system", service.read_text(encoding="utf-8"))
+            self.assertEqual(first["copied"], 2)
+            self.assertEqual(second["copied"], 0)
+            self.assertIn("wukong_system_powerd", (selinux / "plat_sepolicy.cil").read_text(encoding="utf-8"))
+            seapp = (selinux / "plat_seapp_contexts").read_text(encoding="utf-8")
+            self.assertLess(seapp.index("name=com.wukong.manager"), seapp.index("domain=priv_app"))
+            self.assertIn(
+                "/dev/socket/wukong_system_power u:object_r:wukong_system_power_socket:s0",
+                (selinux / "plat_file_contexts").read_text(encoding="utf-8"),
+            )
+            fs_config = (config / "system_fs_config").read_text(encoding="utf-8")
+            self.assertIn("system/bin/wukong-system-powerd 0 2000 0755", fs_config)
+            self.assertIn("system/etc/init/wukong-system-powerd.rc 0 0 0644", fs_config)
+            contexts = (config / "system_file_contexts").read_text(encoding="utf-8")
+            self.assertIn(
+                "/system/bin/wukong-system-powerd u:object_r:wukong_system_powerd_exec:s0",
+                contexts,
+            )
+
+    def test_wk_manager_power_policy_rejects_any_missing_patch_type(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            policy = root / "plat_sepolicy.cil"
+            patch = root / "stark_plat_sepolicy.cil"
+            policy.write_text(
+                "(type wukong_manager_app)\n"
+                "(type privapp_data_file)\n"
+                "(type system_file)\n",
+                encoding="utf-8",
+            )
+            patch.write_text(
+                "+(allow wukong_manager_app gpu_service (service_manager (find)))\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(studio_core.StudioError, "gpu_service"):
+                studio_core._validate_wk_manager_power_policy_types(policy, patch)
+
+    def test_wk_manager_power_policy_accepts_allow_target_typeattribute(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            policy = root / "plat_sepolicy.cil"
+            patch = root / "stark_plat_sepolicy.cil"
+            policy.write_text(
+                "(type wukong_manager_app)\n"
+                "(type privapp_data_file)\n"
+                "(type system_file)\n"
+                "(typeattribute sysfs_type)\n",
+                encoding="utf-8",
+            )
+            patch.write_text(
+                "+(allow wukong_manager_app sysfs_type (dir (read search)))\n",
+                encoding="utf-8",
+            )
+
+            studio_core._validate_wk_manager_power_policy_types(policy, patch)
 
     def test_wk_manager_gemini_patch_matches_register_settings_method_variants(self):
         method = (
@@ -1797,6 +2002,10 @@ class StudioCoreTests(unittest.TestCase):
                 studio_core, "_patch_jar_with_apktool", side_effect=fake_patch
             ), mock.patch.object(
                 studio_core, "_patch_wk_manager_metrics_init_rc", return_value=0
+            ), mock.patch.object(
+                studio_core,
+                "_install_wk_manager_power_service",
+                return_value={"copied": 0, "copiedBytes": 0, "patched": 0},
             ), mock.patch.object(
                 studio_core, "_refresh_plat_sepolicy_hash", return_value={"sha256": "fixture"}
             ):
