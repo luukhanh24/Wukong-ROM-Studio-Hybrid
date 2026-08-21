@@ -2782,10 +2782,17 @@ def _wk_manager_patch_policy_symbols(
     )
 
 
-def _validate_wk_manager_power_policy_types(policy: Path, patch: Path) -> None:
+def _validate_wk_manager_power_policy_types(
+    policy: Path,
+    patch: Path,
+    *,
+    additional_policies: Iterable[Path] = (),
+) -> None:
     if not policy.is_file():
         raise StudioError(f"WK_Manager platform SELinux policy is missing: {policy}")
-    content = policy.read_text(encoding="utf-8", errors="replace")
+    policy_paths = (policy, *tuple(additional_policies))
+    policy_contents = [path.read_text(encoding="utf-8", errors="replace") for path in policy_paths if path.is_file()]
+    content = "\n".join(policy_contents)
     required_types, required_attributes, required_symbols = _wk_manager_patch_policy_symbols(patch)
     missing_types = sorted(
         name
@@ -2836,7 +2843,19 @@ def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) ->
     policy_patch = source_selinux / "stark_plat_sepolicy.cil"
     if not policy_patch.is_file():
         raise StudioError(f"WK_Manager system-power SELinux patch is missing: {policy_patch}")
-    _validate_wk_manager_power_policy_types(policy, policy_patch)
+    vendor_policy = (
+        rom_unpack
+        / "vendor_unpacked"
+        / "vendor"
+        / "etc"
+        / "selinux"
+        / "vendor_sepolicy.cil"
+    )
+    _validate_wk_manager_power_policy_types(
+        policy,
+        policy_patch,
+        additional_policies=(vendor_policy,) if vendor_policy.is_file() else (),
+    )
 
     copied = 0
     copied += _copy_if_changed(source_daemon, system / WK_MANAGER_POWER_DAEMON_RELATIVE)

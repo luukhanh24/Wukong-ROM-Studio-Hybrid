@@ -1271,6 +1271,35 @@ class StudioCoreTests(unittest.TestCase):
 
             studio_core._validate_wk_manager_power_policy_types(policy, patch)
 
+    def test_wk_manager_power_policy_accepts_vendor_symbols_from_stock_vendor_policy(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            policy = root / "plat_sepolicy.cil"
+            vendor_policy = root / "vendor_sepolicy.cil"
+            patch = root / "stark_plat_sepolicy.cil"
+            policy.write_text(
+                "(type wukong_manager_app)\n"
+                "(type privapp_data_file)\n"
+                "(type system_file)\n",
+                encoding="utf-8",
+            )
+            vendor_policy.write_text(
+                "(type vendor_sysfs_kgsl)\n"
+                "(type vendor_sysfs_kgsl_gpuclk)\n",
+                encoding="utf-8",
+            )
+            patch.write_text(
+                "+(allow wukong_manager_app vendor_sysfs_kgsl (dir (read search)))\n"
+                "+(allow wukong_manager_app vendor_sysfs_kgsl_gpuclk (file (read)))\n",
+                encoding="utf-8",
+            )
+
+            studio_core._validate_wk_manager_power_policy_types(
+                policy,
+                patch,
+                additional_policies=(vendor_policy,),
+            )
+
     def test_wk_manager_gemini_patch_matches_register_settings_method_variants(self):
         method = (
             ".method private registerSettingsForOplusLocked(Landroid/content/ContentResolver;Landroid/database/ContentObserver;)V\n"
