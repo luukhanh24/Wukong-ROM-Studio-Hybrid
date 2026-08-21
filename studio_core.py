@@ -12,6 +12,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import zipfile
@@ -2829,6 +2830,65 @@ def _validate_wk_manager_power_policy_types(
         )
 
 
+def _stock_vendor_sepolicy_for_validation(
+    rom_unpack: Path,
+) -> tuple[Path | None, tempfile.TemporaryDirectory[str] | None]:
+    """Locate stock vendor policy without making vendor a mutable partition."""
+    unpacked_policy = (
+        rom_unpack
+        / "vendor_unpacked"
+        / "vendor"
+        / "etc"
+        / "selinux"
+        / "vendor_sepolicy.cil"
+    )
+    if unpacked_policy.is_file():
+        return unpacked_policy, None
+
+    vendor_image = rom_unpack.parent / "source_rom" / "vendor.img"
+    extractor = platform_tool_path("extract.erofs", BIN_ROOT)
+    if (
+        not vendor_image.is_file()
+        or not extractor.is_file()
+        or gettype(str(vendor_image)) != "erofs"
+    ):
+        return None, None
+
+    probe = tempfile.TemporaryDirectory(
+        prefix=".wkstudio-vendor-policy-",
+        dir=rom_unpack.parent,
+    )
+    command = [
+        str(extractor),
+        "-i",
+        str(vendor_image),
+        "-o",
+        probe.name,
+        "-X",
+        "/etc/selinux/vendor_sepolicy.cil",
+        "-s",
+    ]
+    result = subprocess.run(
+        command,
+        cwd=ROOT_DIR,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+    )
+    candidates = list(Path(probe.name).rglob("vendor_sepolicy.cil"))
+    if result.returncode != 0 or len(candidates) != 1:
+        probe.cleanup()
+        detail = (result.stdout or "").strip().splitlines()
+        suffix = f": {detail[-1]}" if detail else ""
+        raise StudioError(
+            "WK_Manager could not read stock vendor SELinux symbols "
+            f"from vendor.img{suffix}"
+        )
+    return candidates[0], probe
+
+
 def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) -> dict[str, Any]:
     source_root = shared_mod_dir / "system" / "system"
     source_daemon = source_root / WK_MANAGER_POWER_DAEMON_RELATIVE
@@ -2843,19 +2903,18 @@ def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) ->
     policy_patch = source_selinux / "stark_plat_sepolicy.cil"
     if not policy_patch.is_file():
         raise StudioError(f"WK_Manager system-power SELinux patch is missing: {policy_patch}")
-    vendor_policy = (
+    vendor_policy, vendor_policy_probe = _stock_vendor_sepolicy_for_validation(
         rom_unpack
-        / "vendor_unpacked"
-        / "vendor"
-        / "etc"
-        / "selinux"
-        / "vendor_sepolicy.cil"
     )
-    _validate_wk_manager_power_policy_types(
-        policy,
-        policy_patch,
-        additional_policies=(vendor_policy,) if vendor_policy.is_file() else (),
-    )
+    try:
+        _validate_wk_manager_power_policy_types(
+            policy,
+            policy_patch,
+            additional_policies=(vendor_policy,) if vendor_policy else (),
+        )
+    finally:
+        if vendor_policy_probe is not None:
+            vendor_policy_probe.cleanup()
 
     copied = 0
     copied += _copy_if_changed(source_daemon, system / WK_MANAGER_POWER_DAEMON_RELATIVE)
