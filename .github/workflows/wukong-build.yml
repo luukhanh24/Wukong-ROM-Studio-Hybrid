@@ -256,8 +256,6 @@ jobs:
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
-          telegram_bot_token: ${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}
-          telegram_chat_id: ${{ secrets.WUKONG_TELEGRAM_CHAT_ID }}
           self_hosted: "false"
 
   self-hosted:
@@ -280,6 +278,4 @@ jobs:
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
-          telegram_bot_token: ${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}
-          telegram_chat_id: ${{ secrets.WUKONG_TELEGRAM_CHAT_ID }}
           self_hosted: "true"

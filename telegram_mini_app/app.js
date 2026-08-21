@@ -1,5 +1,6 @@
 const TelegramApp = window.Telegram && window.Telegram.WebApp;
-const sourceProbeEndpoint = document.querySelector('meta[name="wukong-source-probe-endpoint"]')?.content?.trim() || "";
+const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
+const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
 
 const translations = {
   vi: {
@@ -91,6 +92,14 @@ Object.assign(translations.vi, {
   probeDeferredKicker: "SẴN SÀNG KIỂM TRA"
 });
 
+Object.assign(translations.vi, {
+  detectedProduct: "Product", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng",
+  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
+  noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
+  activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
+  retryJob: "Chạy lại", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API."
+});
+
 Object.assign(translations.en, {
   navBuild: "Studio", navCloud: "Library", navCatalog: "Catalog", buildTitle: "Compose a build docket.",
   buildIntro: "One recipe and one pipeline, with equivalent results on Windows and GitHub Actions.", routePolicy: "RUNNER",
@@ -122,6 +131,14 @@ Object.assign(translations.en, {
   probeDeferredKicker: "READY FOR PREFLIGHT"
 });
 
+Object.assign(translations.en, {
+  detectedProduct: "Product", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Size",
+  jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
+  noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
+  activeJob: "ACTIVE JOB", eventTimeline: "Live event log", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
+  retryJob: "Retry", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API."
+});
+
 const pipelineLabels = {
   vi: {
     inspect_rom: "Kiểm tra ROM", extract_payload: "Tách payload", unpack_partitions: "Giải nén partition",
@@ -142,7 +159,13 @@ const state = {
   sourceDetection: null,
   sourceAutoDevice: null,
   sourceProbe: null,
-  delivery: { package: "pending", publish: "pending", notify: "pending" }
+  delivery: { package: "pending", publish: "pending", notify: "pending" },
+  jobs: [],
+  activeJobId: localStorage.getItem("wukong-active-job") || "",
+  activeEvents: [],
+  jobsPollTimer: null,
+  jobsLoading: false,
+  sourceProbeTimer: null
 };
 
 function t(key, values = {}) {
@@ -160,6 +183,9 @@ function applyLanguage() {
   renderMods(false);
   renderPipelineSteps(false);
   renderCatalog();
+  renderJobHistory();
+  const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
+  if (activeJob) renderActiveJob(activeJob, state.activeEvents);
   updateSummary();
   updateTelegramState();
   updateSourceDetection();
@@ -183,6 +209,32 @@ function send(action, extra = {}) {
   toast(t("sent"));
 }
 
+function miniApiAvailable() {
+  return Boolean(miniApiEndpoint && TelegramApp?.initData);
+}
+
+async function apiRequest(path, options = {}) {
+  if (!miniApiEndpoint) throw new Error(t("apiRequired"));
+  if (!TelegramApp?.initData) throw new Error(t("telegramOnly"));
+  const headers = new Headers(options.headers || {});
+  headers.set("Authorization", `tma ${TelegramApp.initData}`);
+  if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  let response;
+  try {
+    response = await fetch(`${miniApiEndpoint}${path}`, { ...options, headers, cache: "no-store" });
+  } catch {
+    throw new Error(t("requestFailed"));
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error || `HTTP ${response.status}`);
+    error.status = response.status;
+    error.sourceRejected = response.status >= 400 && response.status < 500;
+    throw error;
+  }
+  return payload;
+}
+
 function telegramTransportAvailable() {
   return typeof TelegramApp?.sendData === "function" && Boolean(TelegramApp.platform) && TelegramApp.platform !== "unknown";
 }
@@ -194,6 +246,7 @@ function navigate(name, smooth = true) {
   $$(".contents-rail [data-nav]").forEach((node) => node.classList.toggle("active", node.dataset.nav === name));
   history.replaceState(null, "", `#${name}`);
   window.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+  if (name === "jobs") loadJobs({ force: true }).catch(() => {});
 }
 
 function options(select, entries, preferred) {
@@ -252,7 +305,7 @@ function updateSourceDetection() {
   const marker = node.querySelector(".source-state-mark span");
   const facts = $("#source-facts");
   const probe = $("#probe-source");
-  probe.textContent = t(sourceProbeEndpoint ? "analyzeSource" : "confirmSource");
+  probe.textContent = t(miniApiAvailable() ? "analyzeSource" : "confirmSource");
   if (!detection) {
     marker.textContent = "URL";
     $("#source-kicker").textContent = t("sourceIdleKicker");
@@ -272,9 +325,12 @@ function updateSourceDetection() {
   $("#source-state-title").textContent = `${detection.provider} · ${detection.type}`;
   $("#source-state-message").textContent = t("deepProbeHint");
   $("#source-provider").textContent = detection.provider;
-  $("#source-type").textContent = detection.type;
-  $("#source-device-detected").textContent = detection.device || "—";
+  $("#source-product-detected").textContent = detection.device || "—";
   $("#source-version-detected").textContent = detection.version || "—";
+  $("#source-android-version").textContent = "—";
+  $("#source-security-patch").textContent = "—";
+  $("#source-build-date").textContent = "—";
+  $("#source-size-detected").textContent = "—";
   $("#source-host").textContent = detection.kind === "rclone" ? "Google Drive" : new URL($("#source-uri").value.trim()).hostname;
   $("#source-filename").textContent = "—";
   facts.hidden = false;
@@ -299,23 +355,44 @@ function setProbePresentation(status, messageKey) {
 }
 
 async function probeSourceViaBackend(uri, signal) {
-  if (!sourceProbeEndpoint) return null;
-  const headers = { "Content-Type": "application/json" };
-  if (TelegramApp?.initData) headers.Authorization = `tma ${TelegramApp.initData}`;
-  const response = await fetch(sourceProbeEndpoint, {
+  return apiRequest("/v1/sources/probe", {
     method: "POST",
-    headers,
     body: JSON.stringify({ uri }),
-    cache: "no-store",
     signal
   });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload.error || `HTTP ${response.status}`);
-    error.sourceRejected = response.status >= 400 && response.status < 500;
-    throw error;
+}
+
+function normalizeDevice(value) {
+  return String(value || "").toLocaleUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function matchCatalogDevice(result, detected, inferred, filename) {
+  const versionProduct = String(result?.version || "").split("_", 1)[0];
+  const candidates = [result?.productName, versionProduct, filename, result?.device, detected?.device, inferred?.device]
+    .map(normalizeDevice).filter(Boolean);
+  return state.catalog?.devices?.find((item) => {
+    const product = normalizeDevice(item.product);
+    return candidates.some((candidate) => candidate === product || candidate.startsWith(product) || candidate.includes(product));
+  })?.product || "";
+}
+
+function selectModPackForVersion(version) {
+  const match = String(version || "").match(/_(\d+\.\d+\.\d+)/);
+  if (!match) return;
+  const preferred = `ColorOS_${match[1]}`;
+  if (state.catalog?.modVersions?.includes(preferred) && $("#mod-version").value !== preferred) {
+    $("#mod-version").value = preferred;
+    renderMods();
   }
-  return payload;
+}
+
+function formatBytes(value) {
+  let size = Number(value || 0);
+  if (!Number.isFinite(size) || size <= 0) return "—";
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
+  return `${size.toFixed(index ? 2 : 0)} ${units[index]}`;
 }
 
 function applyProbeResult(result, uri) {
@@ -324,22 +401,29 @@ function applyProbeResult(result, uri) {
   const rawFilename = url.pathname.split("/").filter(Boolean).at(-1) || "";
   const localFilename = /\.(?:zip|ozip|bin)$/i.test(rawFilename) ? decodeURIComponent(rawFilename) : "—";
   const filename = result?.filename || localFilename;
-  const host = result?.host || url.hostname;
+  const host = result?.resolvedHost || result?.host || url.hostname;
   const inferred = filename !== "—" ? classifySource(`https://${host}/${encodeURIComponent(filename)}`) : null;
-  const device = result?.device || detected.device || inferred?.device || "";
+  const device = matchCatalogDevice(result, detected, inferred, filename);
+  const product = result?.productName || String(result?.version || "").split("_", 1)[0] || device;
   const version = result?.version || detected.version || inferred?.version || "";
   const size = Number(result?.sizeBytes || 0);
   $("#source-provider").textContent = result?.provider || detected.provider;
-  $("#source-type").textContent = result?.type || detected.type;
   $("#source-host").textContent = host;
   $("#source-filename").textContent = filename;
-  $("#source-device-detected").textContent = device || "—";
+  $("#source-product-detected").textContent = product || "—";
   $("#source-version-detected").textContent = version || "—";
+  $("#source-android-version").textContent = result?.androidVersion || "—";
+  $("#source-security-patch").textContent = result?.securityPatch || "—";
+  $("#source-build-date").textContent = result?.buildDate || "—";
+  $("#source-size-detected").textContent = formatBytes(size);
   if (Number.isSafeInteger(size) && size > 0) $("#source-size").value = String(size);
   if (device && [...$("#device").options].some((option) => option.value === device)) {
     $("#device").value = device;
     state.sourceAutoDevice = device;
+    toast(t("autoSelected", { device }));
   }
+  selectModPackForVersion(version);
+  state.sourceProbe = { status: "analyzed", result };
   updateSummary();
 }
 
@@ -348,14 +432,14 @@ async function probeSourceInPlace() {
   const uri = $("#source-uri").value.trim();
   if (!state.sourceDetection?.valid || !/^https?:\/\//i.test(uri)) throw new Error(t("invalidUrl"));
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const timeout = setTimeout(() => controller.abort(), 50000);
   button.disabled = true;
   button.textContent = t("probeAnalyzing");
   setProbePresentation("probing", "probeAnalyzing");
   try {
     const result = await probeSourceViaBackend(uri, controller.signal);
     applyProbeResult(result, uri);
-    state.sourceProbe = { status: result ? "analyzed" : "deferred" };
+    state.sourceProbe = { status: result ? "analyzed" : "deferred", result };
     setProbePresentation(result ? "analyzed" : "probe-deferred", result ? "probeSuccess" : "probeDeferred");
   } catch (error) {
     const unavailable = error?.sourceRejected || navigator.onLine === false;
@@ -365,7 +449,7 @@ async function probeSourceInPlace() {
   } finally {
     clearTimeout(timeout);
     button.disabled = false;
-    button.textContent = t(sourceProbeEndpoint ? "analyzeSource" : "confirmSource");
+    button.textContent = t(miniApiAvailable() ? "analyzeSource" : "confirmSource");
   }
 }
 
@@ -645,6 +729,242 @@ function buildRecipe() {
   return recipe;
 }
 
+const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled"]);
+
+function statusLabel(status) {
+  return t({
+    queued: "stageQueued", preflight: "stagePreflight", downloading: "stageDownloading",
+    running: "stageRunning", uploading: "stageUploading", succeeded: "pipelineComplete",
+    failed: "pipelineFailed", cancelled: "cancel"
+  }[status] || status);
+}
+
+function jobMetadata(job) {
+  return job?.recipe?.source?.metadata || {};
+}
+
+function jobProgress(job) {
+  const value = Math.max(0, Math.min(1, Number(job?.progress || 0)));
+  return Math.round(value * 100);
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat(state.language === "vi" ? "vi-VN" : "en-GB", {
+    dateStyle: "medium", timeStyle: "short"
+  }).format(date);
+}
+
+function formatElapsed(job) {
+  const start = new Date(job.created_at || job.createdAt || 0).getTime();
+  const end = new Date(job.finished_at || job.finishedAt || Date.now()).getTime();
+  if (!start || Number.isNaN(start) || Number.isNaN(end)) return "—";
+  const seconds = Math.max(0, Math.floor((end - start) / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remaining).padStart(2, "0")}`;
+}
+
+function jobFact(label, value) {
+  const node = document.createElement("div");
+  const name = document.createElement("small"); name.textContent = label;
+  const content = document.createElement("strong"); content.textContent = value || "—";
+  node.append(name, content);
+  return node;
+}
+
+function renderArtifacts(job) {
+  const section = document.createElement("section"); section.className = "job-artifacts";
+  const title = document.createElement("h3"); title.textContent = t("artifactsReady"); section.append(title);
+  const artifacts = Array.isArray(job.artifacts) ? job.artifacts : [];
+  if (!artifacts.length) {
+    const empty = document.createElement("p"); empty.textContent = t("noArtifacts"); section.append(empty); return section;
+  }
+  artifacts.forEach((artifact) => {
+    const card = document.createElement("article");
+    const header = document.createElement("div");
+    const name = document.createElement("strong"); name.textContent = artifact.name || "Artifact";
+    const size = document.createElement("span"); size.textContent = formatBytes(artifact.size_bytes ?? artifact.sizeBytes);
+    header.append(name, size);
+    const sha = document.createElement("code"); sha.textContent = `SHA-256 ${artifact.sha256 || "—"}`;
+    const url = String(artifact.public_url || artifact.publicUrl || "");
+    if (/^https:\/\//i.test(url)) {
+      const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = t("artifact");
+      card.append(header, sha, link);
+    } else {
+      const uri = document.createElement("code"); uri.textContent = artifact.uri || "—";
+      card.append(header, sha, uri);
+    }
+    section.append(card);
+  });
+  return section;
+}
+
+function renderEvents(events) {
+  const section = document.createElement("section"); section.className = "job-events";
+  const title = document.createElement("h3"); title.textContent = t("eventTimeline"); section.append(title);
+  const list = document.createElement("ol");
+  if (!events.length) {
+    const empty = document.createElement("li"); empty.textContent = t("noEvents"); list.append(empty);
+  } else {
+    events.slice(-30).reverse().forEach((event) => {
+      const item = document.createElement("li");
+      const marker = document.createElement("b"); marker.textContent = String(event.sequence || "•").padStart(2, "0");
+      const content = document.createElement("span");
+      const eventTitle = document.createElement("strong"); eventTitle.textContent = event.type || "event";
+      const detail = document.createElement("small");
+      const visible = event.message || event.error || event.warning || event.stage || event.status || Object.entries(event)
+        .filter(([key]) => !["sequence", "jobId", "timestamp", "type", "traceback"].includes(key))
+        .map(([key, value]) => `${key}=${typeof value === "object" ? JSON.stringify(value) : value}`)
+        .join(" · ");
+      detail.textContent = `${formatDate(event.timestamp)}${visible ? ` · ${visible}` : ""}`;
+      content.append(eventTitle, detail); item.append(marker, content); list.append(item);
+    });
+  }
+  section.append(list); return section;
+}
+
+function jobAction(label, action, job, danger = false) {
+  const button = document.createElement("button"); button.type = "button"; button.textContent = label;
+  if (danger) button.classList.add("danger");
+  button.addEventListener("click", () => runJobAction(action, job.job_id || job.jobId).catch((error) => toast(error.message, true)));
+  return button;
+}
+
+function renderActiveJob(job, events) {
+  const root = $("#active-job");
+  if (!root) return;
+  if (!job) { root.hidden = true; root.replaceChildren(); return; }
+  root.hidden = false;
+  const metadata = jobMetadata(job);
+  const header = document.createElement("header");
+  const title = document.createElement("div");
+  const kicker = document.createElement("small"); kicker.textContent = t("activeJob");
+  const heading = document.createElement("h2"); heading.textContent = metadata.version || `${job.recipe?.device || "ROM"} · ${String(job.job_id || job.jobId).slice(0, 12)}`;
+  title.append(kicker, heading);
+  const badge = document.createElement("span"); badge.className = `job-status ${job.status}`; badge.textContent = statusLabel(job.status);
+  header.append(title, badge);
+  const progress = document.createElement("div"); progress.className = "job-progress";
+  const progressCopy = document.createElement("div");
+  const stage = document.createElement("strong"); stage.textContent = job.stage || statusLabel(job.status);
+  const percentage = document.createElement("b"); percentage.textContent = `${jobProgress(job)}%`;
+  progressCopy.append(stage, percentage);
+  const track = document.createElement("div"); const fill = document.createElement("i"); fill.style.width = `${jobProgress(job)}%`; track.append(fill);
+  progress.append(progressCopy, track);
+  const facts = document.createElement("div"); facts.className = "job-facts";
+  facts.append(
+    jobFact("Product", metadata.productName || job.recipe?.device),
+    jobFact(t("androidVersion"), metadata.androidVersion),
+    jobFact(t("securityPatch"), metadata.securityPatch),
+    jobFact(t("buildDate"), metadata.buildDate),
+    jobFact(t("runner"), job.runner),
+    jobFact(t("elapsed"), formatElapsed(job)),
+    jobFact(t("modConfiguration"), `${job.recipe?.build?.preset || "—"} / ${job.recipe?.build?.modVersion || "—"}`),
+    jobFact(t("sourceSizeDetected"), formatBytes(job.recipe?.source?.sizeBytes))
+  );
+  const actions = document.createElement("div"); actions.className = "job-controls";
+  if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
+  if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
+  root.replaceChildren(header, progress, facts, actions, renderEvents(events), renderArtifacts(job));
+}
+
+function renderJobHistory() {
+  const history = $("#job-history");
+  const jobs = state.jobs;
+  $("#job-history-count").textContent = String(jobs.length);
+  $("#job-empty").hidden = jobs.length > 0;
+  history.hidden = jobs.length === 0;
+  history.replaceChildren(...jobs.map((job) => {
+    const metadata = jobMetadata(job);
+    const card = document.createElement("button"); card.type = "button"; card.className = "job-history-card";
+    if ((job.job_id || job.jobId) === state.activeJobId) card.classList.add("selected");
+    const header = document.createElement("div");
+    const title = document.createElement("strong"); title.textContent = metadata.version || job.recipe?.device || "ROM build";
+    const status = document.createElement("span"); status.className = `job-status ${job.status}`; status.textContent = statusLabel(job.status);
+    header.append(title, status);
+    const details = document.createElement("p"); details.textContent = `${job.recipe?.device || "—"} · ${job.runner || "—"} · ${jobProgress(job)}%`;
+    const footer = document.createElement("small"); footer.textContent = `${String(job.job_id || job.jobId).slice(0, 12)} · ${formatDate(job.created_at || job.createdAt)}`;
+    card.append(header, details, footer);
+    card.addEventListener("click", () => {
+      state.activeJobId = job.job_id || job.jobId; localStorage.setItem("wukong-active-job", state.activeJobId);
+      loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true)); renderJobHistory();
+    });
+    return card;
+  }));
+}
+
+function setJobsConnection(key, error = false) {
+  const node = $("#jobs-connection"); if (!node) return;
+  node.classList.toggle("error", error); node.classList.toggle("online", !error);
+  node.querySelector("span").textContent = t(key);
+}
+
+async function loadJobDetail(jobId) {
+  if (!jobId) return;
+  const [job, eventsPayload] = await Promise.all([
+    apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}`),
+    apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/events?after=0`)
+  ]);
+  state.activeEvents = eventsPayload.events || [];
+  const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
+  if (index >= 0) state.jobs[index] = job;
+  renderActiveJob(job, state.activeEvents); renderJobHistory();
+}
+
+function scheduleJobsPoll(active) {
+  clearTimeout(state.jobsPollTimer);
+  if (document.hidden || !miniApiAvailable()) return;
+  state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), active ? 5000 : 30000);
+}
+
+async function loadJobs({ force = false } = {}) {
+  if (state.jobsLoading && !force) return;
+  if (!miniApiAvailable()) { setJobsConnection("apiRequired", true); return; }
+  state.jobsLoading = true;
+  try {
+    const payload = await apiRequest("/v1/jobs");
+    state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    const running = state.jobs.find((job) => !terminalJobStatuses.has(job.status));
+    const selectedExists = state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
+    if (running) state.activeJobId = running.job_id || running.jobId;
+    else if (!selectedExists) state.activeJobId = state.jobs[0]?.job_id || state.jobs[0]?.jobId || "";
+    if (state.activeJobId) localStorage.setItem("wukong-active-job", state.activeJobId);
+    else localStorage.removeItem("wukong-active-job");
+    renderJobHistory();
+    if (state.activeJobId) await loadJobDetail(state.activeJobId); else renderActiveJob(null, []);
+    setJobsConnection("jobsConnected");
+    scheduleJobsPoll(Boolean(running));
+  } catch (error) {
+    setJobsConnection("jobsOffline", true); scheduleJobsPoll(true); throw error;
+  } finally {
+    state.jobsLoading = false;
+  }
+}
+
+async function runJobAction(action, jobId) {
+  const job = await apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/${action}`, { method: "POST" });
+  state.activeJobId = job.job_id || job.jobId; localStorage.setItem("wukong-active-job", state.activeJobId);
+  await loadJobs({ force: true });
+}
+
+async function submitRecipe() {
+  const recipe = buildRecipe();
+  localStorage.setItem("wukong-recipe-draft", JSON.stringify(recipe));
+  const job = await apiRequest("/v1/jobs", { method: "POST", body: JSON.stringify(recipe) });
+  state.activeJobId = job.job_id || job.jobId;
+  localStorage.setItem("wukong-active-job", state.activeJobId);
+  toast(t("buildCreated")); navigate("jobs"); await loadJobs({ force: true });
+}
+
+function scheduleSourceProbe() {
+  clearTimeout(state.sourceProbeTimer);
+  const uri = $("#source-uri").value.trim();
+  if (!miniApiAvailable() || !/^https?:\/\//i.test(uri) || !state.sourceDetection?.valid) return;
+  state.sourceProbeTimer = setTimeout(() => probeSourceInPlace().catch(() => {}), 450);
+}
+
 async function loadCatalog() {
   try {
     const response = await fetch("./catalog.json", { cache: "no-cache" });
@@ -671,6 +991,45 @@ async function loadCatalog() {
   }
 }
 
+async function runQuickAction(action) {
+  if (action === "diagnostics") {
+    const payload = await apiRequest("/v1/diagnostics");
+    const healthy = Boolean(payload.system || payload.runner || payload.cache);
+    $("#telegram-health")?.classList.toggle("ok", healthy);
+    toast(healthy ? t("jobsConnected") : t("requestFailed"), !healthy);
+    return;
+  }
+  if (action === "cloud") {
+    const payload = await apiRequest("/v1/cloud/library?category=artifacts");
+    const root = $("#cloud-results");
+    const entries = Array.isArray(payload.entries) ? payload.entries : [];
+    root.hidden = false;
+    const heading = document.createElement("h2"); heading.textContent = t("artifactsReady");
+    const list = document.createElement("div");
+    entries.slice(0, 50).forEach((entry) => {
+      const item = document.createElement("article");
+      const name = document.createElement("strong"); name.textContent = entry.name || entry.path || "Artifact";
+      const details = document.createElement("small"); details.textContent = `${formatBytes(entry.sizeBytes)} · ${formatDate(entry.modifiedAt)}`;
+      item.append(name, details); list.append(item);
+    });
+    if (!entries.length) { const empty = document.createElement("p"); empty.textContent = t("noArtifacts"); list.append(empty); }
+    root.replaceChildren(heading, list);
+    toast(`${entries.length} artifact`);
+    return;
+  }
+  if (action === "cache") {
+    const payload = await apiRequest("/v1/cache");
+    toast(`${payload.entryCount ?? 0} cache · ${formatBytes(payload.totalBytes)}`);
+    return;
+  }
+  if (action === "cache_clear") {
+    const payload = await apiRequest("/v1/cache/clear", { method: "POST" });
+    toast(`${payload.entryCount ?? 0} cache`);
+    return;
+  }
+  throw new Error(t("requestFailed"));
+}
+
 function bindEvents() {
   $("#language").addEventListener("click", () => { state.language = state.language === "vi" ? "en" : "vi"; localStorage.setItem("wukong-language", state.language); applyLanguage(); });
   $$('[data-nav]').forEach((button) => button.addEventListener("click", () => {
@@ -680,14 +1039,20 @@ function bindEvents() {
     }
     navigate(button.dataset.nav);
   }));
-  $$('[data-action]').forEach((button) => button.addEventListener("click", () => { try { send(button.dataset.action); } catch (error) { toast(error.message, true); } }));
-  $$('[data-job-action]').forEach((button) => button.addEventListener("click", () => {
-    try { const jobId = $("#job-id").value.trim(); if (!jobId) throw new Error(t("jobRequired")); send(button.dataset.jobAction, { jobId }); } catch (error) { toast(error.message, true); }
+  $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
+    runQuickAction(button.dataset.action).catch((error) => toast(error.message, true));
   }));
-  $("#recipe-form").addEventListener("submit", (event) => { event.preventDefault(); try { send("submit_recipe", { recipe: buildRecipe() }); } catch (error) { toast(error.message, true); } });
-  $("#source-uri").addEventListener("input", updateSourceDetection);
-  $("#source-uri").addEventListener("paste", () => queueMicrotask(updateSourceDetection));
+  $("#recipe-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.submitter || event.currentTarget.querySelector('[type="submit"]');
+    if (button) button.disabled = true;
+    try { await submitRecipe(); } catch (error) { toast(error.message, true); }
+    finally { if (button) button.disabled = false; }
+  });
+  $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
+  $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
   $("#probe-source").addEventListener("click", () => {
+    clearTimeout(state.sourceProbeTimer);
     probeSourceInPlace().catch((error) => toast(error.message, true));
   });
   $("#select-defaults").addEventListener("click", () => setMods("defaults"));
@@ -714,8 +1079,10 @@ function bindEvents() {
     $("#preset").value = state.defaultPreset;
     renderMods();
   });
-  $("#job-id").addEventListener("input", (event) => {
-    $("#state-actions").hidden = !event.target.value.trim();
+  $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) clearTimeout(state.jobsPollTimer);
+    else loadJobs({ force: true }).catch(() => {});
   });
   $$('input[name="task"]').forEach((input) => input.addEventListener("change", updateSummary));
 }
@@ -734,3 +1101,4 @@ window.WukongMiniApp = Object.freeze({ setDeliveryState });
 applyLanguage();
 navigate(location.hash.slice(1) || "build", false);
 loadCatalog();
+if (miniApiAvailable()) loadJobs().catch(() => {});

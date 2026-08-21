@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f4f2ec">
-  <meta name="wukong-source-probe-endpoint" content="">
+  <meta name="wukong-mini-api-endpoint" content="__WUKONG_TELEGRAM_MINI_APP_API_URL__">
   <title>Wukong ROM Studio</title>
   <link rel="stylesheet" href="./styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -48,11 +48,14 @@
             </div>
             <dl class="source-facts" id="source-facts" hidden>
               <div><dt data-i18n="provider">Nhà cung cấp</dt><dd id="source-provider">···</dd></div>
-              <div><dt data-i18n="detectedType">Loại nguồn</dt><dd id="source-type">···</dd></div>
-              <div><dt data-i18n="detectedDevice">Thiết bị</dt><dd id="source-device-detected">···</dd></div>
+              <div><dt data-i18n="detectedProduct">Product</dt><dd id="source-product-detected">···</dd></div>
               <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">···</dd></div>
-              <div><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
+              <div><dt data-i18n="androidVersion">Android</dt><dd id="source-android-version">—</dd></div>
+              <div><dt data-i18n="securityPatch">Bản vá bảo mật</dt><dd id="source-security-patch">—</dd></div>
+              <div><dt data-i18n="buildDate">Ngày build</dt><dd id="source-build-date">—</dd></div>
+              <div><dt data-i18n="sourceSizeDetected">Dung lượng</dt><dd id="source-size-detected">—</dd></div>
               <div><dt data-i18n="fileName">Tên file</dt><dd id="source-filename">—</dd></div>
+              <div><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
             </dl>
           </div>
           <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 (không bắt buộc)</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>
@@ -86,14 +89,21 @@
     </section>
 
     <section class="view" id="jobs" aria-labelledby="jobs-title">
-      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Điều khiển job.</h1><p data-i18n="jobsIntro">Xem trạng thái, log, artifact, hủy hoặc tiếp tục từ checkpoint.</p></div><button class="primary compact" data-action="jobs" data-i18n="myJobs">Danh sách của tôi</button></header>
-      <section class="operator-sheet"><label class="field"><span>JOB ID</span><input id="job-id" placeholder="abc123…"><small data-i18n="jobActionHint">Nhập ID để mở tác vụ; bot sẽ kiểm tra quyền và trạng thái.</small></label><div class="action-ledger"><button data-job-action="job"><b>01</b><span data-i18n="refreshJob">Làm mới trạng thái</span></button><button data-job-action="events"><b>02</b><span data-i18n="events">Xem nhật ký</span></button><div class="state-actions" id="state-actions" hidden><button data-job-action="artifact"><b>03</b><span data-i18n="artifact">Mở artifact</span></button><button data-job-action="resume"><b>04</b><span data-i18n="resume">Tiếp tục checkpoint</span></button><button class="danger" data-job-action="cancel"><b>×</b><span data-i18n="cancel">Hủy job</span></button></div></div></section>
+      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Điều khiển job.</h1><p data-i18n="jobsIntro">Xem trạng thái, log, artifact, hủy hoặc tiếp tục từ checkpoint.</p></div><button class="primary compact" id="refresh-jobs" type="button" data-i18n="refreshJob">Làm mới trạng thái</button></header>
+      <div class="jobs-connection" id="jobs-connection" role="status" aria-live="polite"><i></i><span data-i18n="jobsLoading">Đang đồng bộ lịch sử job…</span></div>
+      <section class="active-job" id="active-job" hidden aria-live="polite"></section>
+      <section class="job-history-sheet">
+        <header><div><small data-i18n="jobHistoryKicker">LỊCH SỬ</small><h2 data-i18n="jobHistory">Các lần chạy gần đây</h2></div><span id="job-history-count">0</span></header>
+        <div class="job-history" id="job-history"></div>
+        <div class="job-empty" id="job-empty" hidden><strong data-i18n="noJobsTitle">Chưa có job</strong><p data-i18n="noJobsMessage">Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.</p><button class="primary compact" type="button" data-nav="build" data-i18n="newBuild">Tạo build đầu tiên</button></div>
+      </section>
       <aside class="process-key"><h2 data-i18n="stageKey">Các trạng thái chuẩn</h2><ol><li data-i18n="stageQueued">Chờ</li><li data-i18n="stagePreflight">Kiểm tra</li><li data-i18n="stageDownloading">Tải ROM</li><li data-i18n="stageRunning">Đang build</li><li data-i18n="stageUploading">Đang upload</li><li data-i18n="stageTerminal">Thành công / Lỗi</li></ol></aside>
     </section>
 
     <section class="view" id="cloud" aria-labelledby="cloud-title">
       <header class="page-head"><div><h1 id="cloud-title" data-i18n="cloudTitle">Thư viện ROM.</h1><p data-i18n="cloudIntro">Nguồn, checkpoint và recipe riêng tư. Chỉ artifact đã phát hành có link chia sẻ.</p></div></header>
       <div class="library-index"><button data-action="cloud"><b>SRC</b><span><strong data-i18n="browseCloud">Duyệt nguồn & artifact</strong><small data-i18n="browseCloudHint">Mở thư viện đã xác thực trong chat</small></span></button><button data-nav="build" data-task="source_mirror"><b>GET</b><span><strong data-i18n="mirrorRom">Tải và lưu ROM gốc</strong><small data-i18n="mirrorHint">Điền URL rồi chỉ chạy tác vụ mirror</small></span></button><button data-nav="jobs"><b>CHK</b><span><strong data-i18n="checkpoints">Checkpoint & lịch sử</strong><small data-i18n="checkpointsHint">Dùng Job ID để xem và resume</small></span></button></div>
+      <section class="cloud-results" id="cloud-results" hidden aria-live="polite"></section>
       <div class="retention-note"><span>PRIVATE</span><p data-i18n="retention">Source và artifact giữ đến khi admin xóa · checkpoint 7 ngày · log 30 ngày.</p></div>
     </section>
 

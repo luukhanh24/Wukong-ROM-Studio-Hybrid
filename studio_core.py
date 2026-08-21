@@ -138,7 +138,13 @@ WK_MANAGER_METRICS_INIT_BLOCK_END = "# WK_STUDIO_WK_MANAGER_METRICS_END"
 WK_MANAGER_POWER_RELATIVE_ROOT = Path("WK_Manager/system/system")
 WK_MANAGER_POWER_DAEMON_RELATIVE = Path("bin/wukong-system-powerd")
 WK_MANAGER_POWER_RC_RELATIVE = Path("etc/init/wukong-system-powerd.rc")
+WK_MANAGER_SYSTEM_POLICY_PATCH = SCRIPT_ROOT / "config" / "wk_manager_system_policy.cil"
 WK_MANAGER_CONTEXT_REQUIRED_POLICY_TYPES = {"privapp_data_file", "system_file"}
+WK_MANAGER_ART_RUNTIME_POLICY_RULES = (
+    "(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)",
+    "(allow wukong_manager_app appdomain_tmpfs (file (ioctl read write getattr map execute)))",
+    "(allowx wukong_manager_app appdomain_tmpfs (ioctl file ((range 0x7701 0x770b))))",
+)
 WK_MANAGER_POWER_FS_CONFIG = {
     "system/bin/wukong-system-powerd": "system/bin/wukong-system-powerd 0 2000 0755",
     "system/system/bin/wukong-system-powerd": "system/system/bin/wukong-system-powerd 0 2000 0755",
@@ -2134,13 +2140,6 @@ def apply_stark_patch(source: Path, destination: Path) -> dict[str, int]:
                 "Unsafe WK_Manager vendor SELinux rule blocked: priv_app_34_0 "
                 "must not be granted vendor_sysfs access from vendor sepolicy"
             )
-        if (
-            source.name == "stark_plat_sepolicy.cil"
-            and UNSAFE_PLATFORM_PRIV_APP_METRIC_RE.match(normalized)
-        ):
-            # WK Manager now runs in its own domain. Do not leak its proc/sysfs
-            # permissions to every privileged application on the device.
-            continue
         if operation == "+":
             if not any(line.strip() == normalized for line in lines):
                 insert_index = _stark_insert_index(source.name, lines, normalized)
@@ -2744,6 +2743,19 @@ def _copy_if_changed(source: Path, destination: Path) -> int:
     return 1
 
 
+def _ensure_wk_manager_art_runtime_policy(policy: Path) -> int:
+    """Add the post-fork ART/JIT rules missing from early WK Manager packs."""
+    if not policy.is_file():
+        raise StudioError(f"WK_Manager platform SELinux policy is missing: {policy}")
+    lines = policy.read_text(encoding="utf-8", errors="replace").splitlines()
+    existing = {line.strip() for line in lines}
+    missing = [rule for rule in WK_MANAGER_ART_RUNTIME_POLICY_RULES if rule not in existing]
+    if not missing:
+        return 0
+    lines.extend(missing)
+    _write_text_lf(policy, "\n".join(lines) + "\n")
+    return len(missing)
+
 def _wk_manager_patch_policy_symbols(
     patch: Path,
 ) -> tuple[set[str], set[str], set[str]]:
@@ -2931,6 +2943,12 @@ def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) ->
         if not source.is_file():
             raise StudioError(f"WK_Manager system-power SELinux patch is missing: {source}")
         patched += sum(apply_stark_patch(source, target).values())
+    if not WK_MANAGER_SYSTEM_POLICY_PATCH.is_file():
+        raise StudioError(
+            f"WK_Manager tracked system SELinux policy is missing: {WK_MANAGER_SYSTEM_POLICY_PATCH}"
+        )
+    patched += sum(apply_stark_patch(WK_MANAGER_SYSTEM_POLICY_PATCH, policy).values())
+    patched += _ensure_wk_manager_art_runtime_policy(policy)
 
     config = rom_unpack / "system_unpacked" / "config"
     metadata = {
@@ -4415,7 +4433,10 @@ def _stage_notify(context: BuildContext) -> dict[str, Any]:
     finished = _local_datetime(timezone_name)
     finished_at = finished.isoformat(timespec="seconds")
     if not token or not chat_id:
-        message = "Telegram environment variables are not configured"
+        if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
+            message = "Terminal notification deferred to the always-on control plane"
+        else:
+            message = "Telegram environment variables are not configured"
         print(f"[!] {message}", flush=True)
         return {"notified": False, "warning": message, "finishedAt": finished_at}
     if not context.output_zip or not context.output_zip.is_file():

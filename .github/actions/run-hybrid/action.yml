@@ -9,10 +9,6 @@ inputs:
     required: true
   github_token:
     required: false
-  telegram_bot_token:
-    required: false
-  telegram_chat_id:
-    required: false
   self_hosted:
     required: true
 runs:
@@ -109,8 +105,11 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
         WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
         WUKONG_GITHUB_TOKEN: ${{ inputs.github_token }}
-        WUKONG_TELEGRAM_BOT_TOKEN: ${{ inputs.telegram_bot_token }}
-        WUKONG_TELEGRAM_CHAT_ID: ${{ inputs.telegram_chat_id }}
+        # Terminal reporting is owned by the always-on control plane after the
+        # public artifact URL has been synchronized. Avoid an early duplicate
+        # notification from the ephemeral Actions runner.
+        WUKONG_TELEGRAM_BOT_TOKEN: ""
+        WUKONG_TELEGRAM_CHAT_ID: ""
         WUKONG_DROP_MISSING_MODS: "0"
       run: |
         set -euo pipefail

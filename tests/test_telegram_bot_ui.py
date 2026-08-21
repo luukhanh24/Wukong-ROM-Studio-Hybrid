@@ -23,7 +23,11 @@ from wukong.telegram_bot import (
     TelegramLongPollingDaemon,
     TelegramUIStateStore,
 )
-from telegram_bot_daemon import _configured_admin_ids, build_telegram_catalog
+from telegram_bot_daemon import (
+    _configured_admin_ids,
+    build_control_plane_catalog,
+    build_telegram_catalog,
+)
 
 
 class TelegramBotUITests(unittest.TestCase):
@@ -226,6 +230,18 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual("PKG110", recipe.device)
         self.assertEqual("ColorOS_16.0.8", recipe.build.mod_version)
         self.assertEqual(("Fix_Metis", "WK_Installer"), recipe.build.mods)
+
+    def test_telegram_wizard_exposes_only_always_available_cloud_runner(self) -> None:
+        self.controller.handle_callback(42, "v1:new")
+        picker = self.controller.handle_callback(42, "v1:task:build")
+        callbacks = [
+            button["callback_data"]
+            for row in picker.reply_markup["inline_keyboard"]
+            for button in row
+        ]
+
+        self.assertIn("v1:run:github", callbacks)
+        self.assertNotIn("v1:run:local", callbacks)
 
     def test_wizard_exposes_artifact_publish_task(self) -> None:
         response = self.controller.handle_callback(42, "v1:new")
@@ -510,6 +526,56 @@ class TelegramDaemonUITests(unittest.TestCase):
             "Camera_mod",
             [item["name"] for item in catalog["modsByVersion"]["ColorOS_16.0.9"]],
         )
+
+    def test_control_plane_catalog_does_not_require_installed_private_mods(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)
+            index = path / "index.json"
+            index.write_text(json.dumps({
+                "schemaVersion": 1,
+                "packs": [{
+                    "id": "MOD/ColorOS_16.0.10",
+                    "target": "MOD/ColorOS_16.0.10",
+                    "remote": "drive:MOD/ColorOS_16.0.10",
+                    "sizeBytes": 1,
+                    "archive": {
+                        "uri": "drive:MOD/ColorOS_16.0.10.tar.zst",
+                        "sha256": "a" * 64,
+                        "md5": "b" * 32,
+                        "sizeBytes": 1,
+                    },
+                    "files": [{"path": "WK_Manager/system/app.apk", "sha256": "c" * 64, "sizeBytes": 1}],
+                }],
+            }), encoding="utf-8")
+
+            with patch("telegram_bot_daemon.DATA_ROOT", path):
+                catalog = build_control_plane_catalog(index)
+
+        self.assertIn("ColorOS_16.0.10", catalog["modVersions"])
+        self.assertIn("WK_Manager", catalog["modsByVersion"]["ColorOS_16.0.10"])
+
+        access = TelegramAccessStore(path / "access.json", admin_ids={42})
+        store = InMemoryJobStore()
+        controller = TelegramBotController(
+            access=access,
+            orchestrator=HybridOrchestrator(store=store, workspace_root=path / "jobs"),
+            catalog_provider=lambda: catalog,
+            diagnostics_provider=lambda: {},
+            ui_state=TelegramUIStateStore(path / "ui.json"),
+        )
+        devices = controller._devices()
+        self.assertTrue(any(product == "PKG110" for product, _name in devices))
+        controller.ui_state.set_session(42, {
+            "step": "mods",
+            "mod_version": "ColorOS_16.0.10",
+            "preset": "plus",
+        })
+        picker = controller._start_mod_picker(
+            42,
+            "vi",
+            controller.ui_state.session(42),
+        )
+        self.assertIn("WK_Manager", picker.text)
 
     def test_runtime_uses_the_same_content_root_as_the_bot_catalog(self) -> None:
         with tempfile.TemporaryDirectory() as root:

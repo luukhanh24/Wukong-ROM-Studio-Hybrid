@@ -998,7 +998,7 @@ class StudioCoreTests(unittest.TestCase):
             with self.assertRaisesRegex(studio_core.StudioError, "Unsafe WK_Manager vendor SELinux rule"):
                 studio_core.apply_stark_patch(patch, target)
 
-    def test_stark_platform_policy_does_not_grant_wk_metrics_to_all_priv_apps(self):
+    def test_stark_platform_policy_applies_explicit_priv_app_metric_rules(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             target = root / "plat_sepolicy.cil"
@@ -1013,7 +1013,7 @@ class StudioCoreTests(unittest.TestCase):
             studio_core.apply_stark_patch(patch, target)
 
             content = target.read_text(encoding="utf-8")
-            self.assertNotIn("allow priv_app sysfs_kgsl", content)
+            self.assertIn("allow priv_app sysfs_kgsl", content)
             self.assertIn("allow wukong_manager_app sysfs_kgsl", content)
 
     def test_vendor_sepolicy_guard_rejects_existing_unsafe_rule(self):
@@ -1058,6 +1058,8 @@ class StudioCoreTests(unittest.TestCase):
             "(allow wukong_manager_app wukong_manager_app (anon_inode (ioctl read create)))",
             policy_text,
         )
+        for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
+            self.assertIn(rule, policy_text)
         self.assertNotIn("+user=_app isPrivApp=true name=com.wukong.manager domain=wukong_manager_app", seapp_text)
         self.assertIn("-user=_app isPrivApp=true name=com.wukong.manager domain=wukong_manager_app", seapp_text)
         self.assertIn(
@@ -1084,6 +1086,31 @@ class StudioCoreTests(unittest.TestCase):
             init_text,
         )
         self.assertFalse((mod / "system/system/etc/init/wukong_manager_metrics.rc").exists())
+
+    def test_wk_manager_art_runtime_policy_fallback_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as temp:
+            policy = Path(temp) / "plat_sepolicy.cil"
+            policy.write_text("(type wukong_manager_app)\n", encoding="utf-8")
+
+            first = studio_core._ensure_wk_manager_art_runtime_policy(policy)
+            second = studio_core._ensure_wk_manager_art_runtime_policy(policy)
+
+            content = policy.read_text(encoding="utf-8")
+            self.assertEqual(first, 3)
+            self.assertEqual(second, 0)
+            for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
+                self.assertEqual(content.count(rule), 1)
+
+    def test_tracked_wk_manager_system_policy_contains_runtime_and_power_rules(self):
+        content = studio_core.WK_MANAGER_SYSTEM_POLICY_PATCH.read_text(encoding="utf-8")
+
+        for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
+            self.assertIn(f"+{rule}", content)
+        self.assertIn(
+            "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))",
+            content,
+        )
+        self.assertNotIn("stark_vendor_sepolicy", content)
 
     def test_wk_manager_metrics_hook_patches_existing_init_rc(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1136,6 +1163,8 @@ class StudioCoreTests(unittest.TestCase):
                     for name in (
                         "init",
                         "wukong_manager_app",
+                        "tmpfs",
+                        "appdomain_tmpfs",
                         "privapp_data_file",
                         "system_file",
                         "sysfs",
@@ -1249,6 +1278,9 @@ class StudioCoreTests(unittest.TestCase):
                 [],
             )
             self.assertIn("wukong_system_powerd", (selinux / "plat_sepolicy.cil").read_text(encoding="utf-8"))
+            installed_policy = (selinux / "plat_sepolicy.cil").read_text(encoding="utf-8")
+            for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
+                self.assertEqual(installed_policy.count(rule), 1)
             seapp = (selinux / "plat_seapp_contexts").read_text(encoding="utf-8")
             self.assertLess(seapp.index("name=com.wukong.manager"), seapp.index("domain=priv_app"))
             self.assertIn(
@@ -1271,11 +1303,16 @@ class StudioCoreTests(unittest.TestCase):
             patch = root / "stark_plat_sepolicy.cil"
             policy.write_text(
                 "(type wukong_manager_app)\n"
+                "(type tmpfs)\n"
+                "(type appdomain_tmpfs)\n"
                 "(type privapp_data_file)\n"
                 "(type system_file)\n",
                 encoding="utf-8",
             )
             patch.write_text(
+                "+(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)\n"
+                "+(allow wukong_manager_app appdomain_tmpfs (file (ioctl read write getattr map execute)))\n"
+                "+(allowx wukong_manager_app appdomain_tmpfs (ioctl file ((range 0x7701 0x770b))))\n"
                 "+(allow wukong_manager_app gpu_service (service_manager (find)))\n",
                 encoding="utf-8",
             )
@@ -1290,12 +1327,17 @@ class StudioCoreTests(unittest.TestCase):
             patch = root / "stark_plat_sepolicy.cil"
             policy.write_text(
                 "(type wukong_manager_app)\n"
+                "(type tmpfs)\n"
+                "(type appdomain_tmpfs)\n"
                 "(type privapp_data_file)\n"
                 "(type system_file)\n"
                 "(typeattribute sysfs_type)\n",
                 encoding="utf-8",
             )
             patch.write_text(
+                "+(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)\n"
+                "+(allow wukong_manager_app appdomain_tmpfs (file (ioctl read write getattr map execute)))\n"
+                "+(allowx wukong_manager_app appdomain_tmpfs (ioctl file ((range 0x7701 0x770b))))\n"
                 "+(allow wukong_manager_app sysfs_type (dir (read search)))\n",
                 encoding="utf-8",
             )
@@ -1310,6 +1352,8 @@ class StudioCoreTests(unittest.TestCase):
             patch = root / "stark_plat_sepolicy.cil"
             policy.write_text(
                 "(type wukong_manager_app)\n"
+                "(type tmpfs)\n"
+                "(type appdomain_tmpfs)\n"
                 "(type privapp_data_file)\n"
                 "(type system_file)\n",
                 encoding="utf-8",
@@ -1320,6 +1364,9 @@ class StudioCoreTests(unittest.TestCase):
                 encoding="utf-8",
             )
             patch.write_text(
+                "+(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)\n"
+                "+(allow wukong_manager_app appdomain_tmpfs (file (ioctl read write getattr map execute)))\n"
+                "+(allowx wukong_manager_app appdomain_tmpfs (ioctl file ((range 0x7701 0x770b))))\n"
                 "+(allow wukong_manager_app vendor_sysfs_kgsl (dir (read search)))\n"
                 "+(allow wukong_manager_app vendor_sysfs_kgsl_gpuclk (file (read)))\n",
                 encoding="utf-8",

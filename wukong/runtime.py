@@ -9,6 +9,7 @@ import time
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 from .adapters import RcloneStorageAdapter, sha256_file
 from .executor import LocalJobExecutor
@@ -30,12 +31,15 @@ class HybridRuntime:
         data_root: Path,
         content_root: Path | None = None,
         content_index: Path | None = None,
+        terminal_notifier: Callable[[JobManifest, BuildRecipe], None] | None = None,
     ) -> None:
         self.orchestrator = orchestrator
         self.store = store
         self.workspace_root = workspace_root.resolve()
         self.content_root = content_root.resolve() if content_root else None
         self.content_index = content_index.resolve() if content_index else None
+        self.terminal_notifier = terminal_notifier
+        self._notification_lock = threading.RLock()
         self.rclone_config = self._materialize_rclone_config(data_root)
 
     def start(self, manifest: JobManifest) -> None:
@@ -53,11 +57,14 @@ class HybridRuntime:
             return 0
         resumed = 0
         for manifest in self.store.list():
-            if manifest.runner == "windows" or manifest.status in {
+            if manifest.status in {
                 JobStatus.SUCCEEDED,
                 JobStatus.FAILED,
                 JobStatus.CANCELLED,
             }:
+                self.notify_terminal(manifest)
+                continue
+            if manifest.runner == "windows":
                 continue
             if self._cloud_watch_expired(manifest):
                 continue
@@ -84,13 +91,51 @@ class HybridRuntime:
         recipe = self.store.recipe(manifest.job_id)
         if not recipe:
             return manifest
-        return (
+        refreshed = (
             CloudJobSync(
                 self.store,
                 RcloneStorageAdapter(remote=recipe.storage.remote, config_path=self.rclone_config),
             ).pull(manifest.job_id)
             or manifest
         )
+        if manifest.status not in {
+            JobStatus.SUCCEEDED,
+            JobStatus.FAILED,
+            JobStatus.CANCELLED,
+        }:
+            self.notify_terminal(refreshed)
+        return refreshed
+
+    def notify_terminal(self, manifest: JobManifest) -> None:
+        if manifest.status not in {
+            JobStatus.SUCCEEDED,
+            JobStatus.FAILED,
+            JobStatus.CANCELLED,
+        } or self.terminal_notifier is None or manifest.owner.channel != "telegram":
+            return
+        recipe = self.store.recipe(manifest.job_id)
+        if not recipe or not recipe.build.notify_telegram:
+            return
+        with self._notification_lock:
+            if any(
+                event.type == "telegram_terminal_notified"
+                for event in self.store.events(manifest.job_id)
+            ):
+                return
+            try:
+                self.terminal_notifier(manifest, recipe)
+                self.store.append_event(
+                    manifest.job_id,
+                    "telegram_terminal_notified",
+                    status=manifest.status.value,
+                    recipient=manifest.owner.subject,
+                )
+            except Exception as exc:
+                self.store.append_event(
+                    manifest.job_id,
+                    "warning",
+                    warning=f"Terminal Telegram notification failed: {exc}",
+                )
 
     def cloud_library(self, *, category: str = "artifacts") -> dict[str, object]:
         if category not in {"sources", "artifacts"}:
@@ -131,7 +176,7 @@ class HybridRuntime:
         return resumed
 
     def _execute_local(self, job_id: str) -> None:
-        LocalJobExecutor(
+        result = LocalJobExecutor(
             store=self.store,
             workspace_root=self.workspace_root,
             rclone_config=self.rclone_config,
@@ -139,6 +184,7 @@ class HybridRuntime:
             content_root=self.content_root,
             content_index=self.content_index,
         ).execute(job_id)
+        self.notify_terminal(result)
 
     def _dispatch_github(self, job_id: str) -> None:
         recipe = self.store.recipe(job_id)
@@ -177,6 +223,7 @@ class HybridRuntime:
                         uri=source_record.uri,
                         sha256=digest,
                         size_bytes=source.stat().st_size,
+                        metadata=recipe.source.metadata,
                     ),
                 )
             recipe_path = self.workspace_root / job_id / "dispatch-recipe.json"
@@ -247,6 +294,13 @@ class HybridRuntime:
                 failures = 0
             else:
                 failures += 1
+            if refreshed and refreshed.status in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            }:
+                self.notify_terminal(refreshed)
+                return
             # A temporary Drive/API outage must not turn a running job into a
             # failure; interactive inspect calls continue to retry as well.
             time.sleep(5 if failures < 12 else 30)
@@ -275,7 +329,13 @@ class HybridRuntime:
 
     def _fail(self, job_id: str, error: str) -> None:
         self.store.append_event(job_id, "error", error=error)
-        self.store.update(job_id, status=JobStatus.FAILED, stage="dispatch-failed", error=error)
+        failed = self.store.update(
+            job_id,
+            status=JobStatus.FAILED,
+            stage="dispatch-failed",
+            error=error,
+        )
+        self.notify_terminal(failed)
 
     @staticmethod
     def _github_token() -> str:

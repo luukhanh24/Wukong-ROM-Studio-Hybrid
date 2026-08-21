@@ -1276,8 +1276,31 @@ class OrchestratorContractTests(unittest.TestCase):
                 workspace_root=Path(root, "jobs"),
                 access_validator=validate_recipe_access,
             )
-            with self.assertRaisesRegex(RecipeValidationError, "Telegram users"):
+            with self.assertRaisesRegex(RecipeValidationError, "Telegram jobs"):
                 orchestrator.submit(self._recipe(root), Identity("telegram", "100", "user"))
+
+    def test_telegram_control_plane_rejects_local_windows_runner(self) -> None:
+        recipe = BuildRecipe.from_dict(
+            {
+                "task": "source_mirror",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://example.com/rom.zip"},
+                "execution": {"target": "local-windows"},
+            }
+        )
+        orchestrator = HybridOrchestrator(
+            store=InMemoryJobStore(),
+            workspace_root=Path.cwd(),
+            access_validator=lambda candidate, identity: validate_recipe_access(
+                candidate,
+                identity,
+                local_roots=[Path.cwd()],
+                allowed_remote="wukong-gdrive",
+            ),
+        )
+
+        with self.assertRaisesRegex(RecipeValidationError, "cannot target a local Windows"):
+            orchestrator.submit(recipe, Identity("telegram", "1", "admin"))
 
 
 class CloudSyncContractTests(unittest.TestCase):

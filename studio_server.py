@@ -94,6 +94,11 @@ from wukong.security import validate_recipe_access
 from wukong.source_probe import probe_http_source
 from wukong.telegram import TelegramAccessStore
 from wukong.telegram_bot import TelegramBotController, TelegramLongPollingDaemon
+from wukong.telegram_mini_api import (
+    TelegramJobNotifier,
+    TelegramMiniAppAPI,
+    TelegramMiniAppAPIServer,
+)
 
 
 STATIC_DIR = WEB_ROOT
@@ -2032,6 +2037,7 @@ def create_app(*, start_queue: bool = True) -> Flask:
         return clear_stage_cache()
 
     telegram_daemon: TelegramLongPollingDaemon | None = None
+    telegram_mini_api_server: TelegramMiniAppAPIServer | None = None
     telegram_token = os.environ.get("WUKONG_TELEGRAM_BOT_TOKEN", "").strip()
     telegram_admins = {
         item.strip()
@@ -2040,15 +2046,21 @@ def create_app(*, start_queue: bool = True) -> Flask:
     }
     if start_queue and telegram_token and telegram_admins:
         access = TelegramAccessStore(RUNTIME_DIR / "telegram-access.json", admin_ids=telegram_admins)
+        hybrid_runtime.terminal_notifier = TelegramJobNotifier(telegram_token)
+        telegram_catalog_provider = lambda: {
+            "devices": load_devices(),
+            "modVersions": list_mod_versions(),
+            "modsByVersion": {version: list_mods(version) for version in list_mod_versions()},
+        }
+        telegram_diagnostics_provider = lambda: {
+            "system": diagnostics(),
+            "cache": stage_cache_status(),
+        }
         controller = TelegramBotController(
             access=access,
             orchestrator=hybrid_orchestrator,
-            catalog_provider=lambda: {
-                "devices": load_devices(),
-                "modVersions": list_mod_versions(),
-                "mods": {version: list_mods(version) for version in list_mod_versions()},
-            },
-            diagnostics_provider=lambda: {"system": diagnostics(), "cache": stage_cache_status()},
+            catalog_provider=telegram_catalog_provider,
+            diagnostics_provider=telegram_diagnostics_provider,
             cache_provider=stage_cache_status,
             cache_clearer=clear_hybrid_cache,
             cloud_provider=lambda category: hybrid_runtime.cloud_library(category=category),
@@ -2061,7 +2073,32 @@ def create_app(*, start_queue: bool = True) -> Flask:
             name="wukong-telegram-long-polling",
             daemon=True,
         ).start()
+        web_app_url = os.environ.get("WUKONG_TELEGRAM_WEB_APP_URL", "").strip()
+        if web_app_url:
+            mini_api = TelegramMiniAppAPI(
+                bot_token=telegram_token,
+                allowed_origin=web_app_url,
+                access=access,
+                orchestrator=hybrid_orchestrator,
+                runtime=hybrid_runtime,
+                catalog_provider=telegram_catalog_provider,
+                diagnostics_provider=telegram_diagnostics_provider,
+                source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
+                cloud_provider=lambda category: hybrid_runtime.cloud_library(category=category),
+                cache_provider=stage_cache_status,
+                cache_clearer=clear_hybrid_cache,
+                max_init_data_age_seconds=int(
+                    os.environ.get("WUKONG_TELEGRAM_MINI_APP_MAX_AUTH_AGE", "3600")
+                ),
+            )
+            telegram_mini_api_server = TelegramMiniAppAPIServer(
+                mini_api,
+                host=os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_BIND", "127.0.0.1"),
+                port=int(os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_PORT", "8766")),
+            )
+            telegram_mini_api_server.start()
     app.extensions["wukong_telegram_daemon"] = telegram_daemon
+    app.extensions["wukong_telegram_mini_api_server"] = telegram_mini_api_server
 
     @app.before_request
     def protect_api() -> None:
@@ -2255,6 +2292,8 @@ def create_app(*, start_queue: bool = True) -> Flask:
             return jsonify({"error": "Server shutdown is unavailable"}), 503
         if telegram_daemon:
             telegram_daemon.stop()
+        if telegram_mini_api_server:
+            telegram_mini_api_server.stop()
         threading.Timer(0.1, SERVER_SHUTDOWN).start()
         return jsonify({"ok": True})
 

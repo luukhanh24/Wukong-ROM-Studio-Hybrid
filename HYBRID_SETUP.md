@@ -78,9 +78,11 @@ must retain at least 4 GiB free disk after dependencies/content are installed.
 
 ## 4. Telegram daemon
 
-The packaged Windows backend hosts this controller automatically. Run the
-standalone daemon only when the desktop backend is stopped; two processes must
-not share the same `Data/Jobs/hybrid` directory.
+For a Mini App that remains available while Windows is off, run the standalone
+control plane on an always-on VPS using [deploy/control-plane/README.md](deploy/control-plane/README.md).
+The packaged Windows backend can still host the same controller for local-only
+development, but only one process may poll a Telegram bot token and two
+processes must not share the same `Data/Jobs/hybrid` directory.
 
 Set these only in the Windows process/user environment or encrypted desktop
 store:
@@ -89,6 +91,8 @@ store:
 WUKONG_TELEGRAM_BOT_TOKEN=...
 WUKONG_TELEGRAM_ADMIN_IDS=123456789,987654321
 WUKONG_TELEGRAM_WEB_APP_URL=https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/
+WUKONG_TELEGRAM_MINI_APP_API_BIND=127.0.0.1
+WUKONG_TELEGRAM_MINI_APP_API_PORT=8766
 ```
 
 Start long polling:
@@ -107,16 +111,30 @@ checks it before building.
 Language preference and non-sensitive wizard state are stored in
 `Data/telegram-ui-state.json`; signed URL query strings remain memory-only.
 
-The same menu prepares a one-time Telegram reply-keyboard button that opens the
-bilingual Mini App. This launch mode is required for Telegram `sendData` to
-deliver authenticated `web_app_data` back to the long-polling daemon; menu and
-inline Web App launches are intentionally not used. The Mini App is
-deployed by `.github/workflows/telegram-mini-app-pages.yml`; enable GitHub Pages
-with **Source: GitHub Actions**, run that workflow once, set the HTTPS URL above,
-then restart the daemon. Telegram supplies the authenticated sender when the
-Mini App calls `sendData`; the app never receives the bot token, GitHub token or
-rclone configuration. Build, mirror, jobs, events, artifact, cancel, resume,
-cloud and diagnostics actions all return their result in the chat.
+The same menu prepares a Telegram reply-keyboard button that opens the bilingual
+Mini App. Its primary transport is the dedicated Mini App API on port `8766`.
+Every request validates Telegram's signed `initData`, checks the allowlist and
+enforces job ownership. Recipe submission therefore remains inside the Mini App;
+`sendData` is retained only as a compatibility fallback when the public API has
+not been deployed.
+
+The Mini App is deployed by `.github/workflows/telegram-mini-app-pages.yml`.
+Enable GitHub Pages with **Source: GitHub Actions**, and expose the local Mini App
+API through a stable HTTPS reverse proxy or named tunnel. The public URL must
+forward to `127.0.0.1:8766`; do not expose the desktop API port and do not use a
+wildcard CORS proxy. Set this repository Actions variable before deploying:
+
+```text
+WUKONG_TELEGRAM_MINI_APP_API_URL=https://mini-api.example.com
+```
+
+The same value may be recorded as `WUKONG_TELEGRAM_MINI_APP_API_URL` in the
+local environment for operations/documentation, while bind and port remain the
+internal listener above. Restart the Windows backend or standalone daemon after
+changing the bind settings, then run the Pages workflow. The app never receives
+the bot token, GitHub token or rclone configuration. Build, mirror, jobs, event
+history, artifact links, cancel, resume, cloud and diagnostics stay inside the
+Mini App; terminal reports are also delivered to the owning Telegram user.
 
 Set `WUKONG_TELEGRAM_CONTENT_ROOT` when the installed content is not in the
 default `C:\WukongROMStudio\Content` location.

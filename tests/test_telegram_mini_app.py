@@ -94,11 +94,15 @@ class TelegramMiniAppTests(unittest.TestCase):
             "execution",
             "mod-version",
             "mod-list",
-            "job-id",
+            "active-job",
+            "job-history",
+            "job-history-count",
         ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("Telegram.WebApp", script)
-        self.assertIn('send("submit_recipe"', script)
+        self.assertIn('apiRequest("/v1/jobs"', script)
+        self.assertIn("submitRecipe", script)
+        self.assertNotIn('send("submit_recipe"', script)
         self.assertIn("telegramTransportAvailable", script)
         self.assertIn('TelegramApp.platform !== "unknown"', script)
         self.assertNotIn("!TelegramApp.initData", script)
@@ -108,6 +112,9 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("catalog.json", script)
         self.assertIn("const translations", script)
         self.assertIn("source_mirror", script)
+        self.assertIn("loadJobs", script)
+        self.assertIn("scheduleJobsPoll", script)
+        self.assertIn("renderArtifacts", script)
 
         exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")
         self.assertNotIn("from studio_core import", exporter)
@@ -129,6 +136,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "pipeline-count",
             "mod-search",
             "telegram-auth-state",
+            "cloud-results",
         ):
             self.assertIn(f'id="{control}"', html)
         self.assertIn('data-action="cache"', html)
@@ -141,6 +149,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('class="readiness-checklist"', html)
         self.assertIn("modCategory", script)
         self.assertIn("setDeliveryState", script)
+        self.assertIn('apiRequest("/v1/cache"', script)
+        self.assertIn('apiRequest("/v1/cache/clear"', script)
         self.assertIn("pipelineRunning", script)
         self.assertIn("runtimeReady", script)
         self.assertIn('className = "mod-group"', script)
@@ -157,16 +167,29 @@ class TelegramMiniAppTests(unittest.TestCase):
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
-        for element_id in ("source-state", "source-facts", "probe-source", "source-provider"):
+        for element_id in (
+            "source-state",
+            "source-facts",
+            "probe-source",
+            "source-provider",
+            "source-product-detected",
+            "source-android-version",
+            "source-security-patch",
+            "source-build-date",
+        ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("downloadcheck", script.casefold())
         self.assertIn("probeSourceInPlace", script)
         self.assertIn("probeSourceViaBackend", script)
-        self.assertIn('name="wukong-source-probe-endpoint"', html)
+        self.assertIn('name="wukong-mini-api-endpoint"', html)
+        self.assertIn("__WUKONG_TELEGRAM_MINI_APP_API_URL__", html)
         self.assertNotIn("fetch(uri", script)
         self.assertNotIn('send("probe_source"', script)
         self.assertNotIn("resolvedUrl", html + script)
         self.assertNotIn("Signature=signed", html + script)
+        self.assertIn("matchCatalogDevice", script)
+        self.assertIn("result?.productName", script)
+        self.assertIn("selectModPackForVersion", script)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")

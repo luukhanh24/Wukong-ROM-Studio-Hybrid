@@ -141,6 +141,8 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("03–19 · Build trên GitHub Hosted", workflow)
         self.assertIn("GITHUB_STEP_SUMMARY", workflow)
         self.assertIn("E · Pipeline 05–19", action)
+        self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))
+        self.assertNotIn("${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}", workflow)
 
     def test_plain_progress_messages_are_not_command_escaped(self) -> None:
         reporter = GitHubActionsUI(enabled=True)
