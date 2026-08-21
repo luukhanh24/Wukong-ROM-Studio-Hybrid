@@ -206,7 +206,7 @@ class TelegramMiniAppAPI:
                 finally:
                     self._probe_slots.release()
                 self._remember_probe(self._identity(), uri, result)
-                return jsonify(result)
+                return jsonify({key: value for key, value in result.items() if key != "metadata"})
             except (OSError, RuntimeError, TypeError, ValueError) as exc:
                 return jsonify({"error": str(exc)}), 400
 
