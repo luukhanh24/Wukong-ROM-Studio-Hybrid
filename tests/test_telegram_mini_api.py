@@ -7,7 +7,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from urllib.parse import urlencode
 
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
@@ -128,6 +128,58 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, allowed.status_code)
         self.assertEqual(ORIGIN, allowed.headers["Access-Control-Allow-Origin"])
         self.assertEqual(200, self.client.get("/healthz").status_code)
+
+    def test_webhook_requires_secret_and_dispatches_authenticated_update(self) -> None:
+        handler = Mock()
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            telegram_update_handler=handler,
+            telegram_webhook_secret="secret-token",
+        )
+        client = api.app.test_client()
+
+        denied = client.post("/telegram/webhook", json={"update_id": 1})
+        accepted = client.post(
+            "/telegram/webhook",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-token"},
+            json={"update_id": 1},
+        )
+
+        self.assertEqual(403, denied.status_code)
+        self.assertEqual(204, accepted.status_code)
+        handler.assert_called_once_with({"update_id": 1})
+
+    def test_health_waits_for_transport_readiness_and_identifies_release(self) -> None:
+        ready = False
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            readiness_provider=lambda: ready,
+        )
+        client = api.app.test_client()
+
+        with patch.dict("os.environ", {"WUKONG_RELEASE_SHA": "c" * 40}):
+            starting = client.get("/healthz")
+            ready = True
+            healthy = client.get("/healthz")
+
+        self.assertEqual(503, starting.status_code)
+        self.assertEqual("starting", starting.json["status"])
+        self.assertEqual(200, healthy.status_code)
+        self.assertEqual("c" * 40, healthy.json["release"])
 
     def test_probe_create_list_detail_events_and_ownership(self) -> None:
         probe = self.client.post(

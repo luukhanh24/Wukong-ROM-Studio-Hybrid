@@ -19,4 +19,5 @@ fi
 install -o wukong -g wukong -m 0600 /run/secrets/rclone.conf "$runtime_secret"
 chown -R wukong:wukong "$state_root"
 
+gosu wukong python -m tools.control_plane_preflight
 exec gosu wukong "$@"

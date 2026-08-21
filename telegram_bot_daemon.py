@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from pathlib import Path
 
 from tools.export_mini_app_catalog import export_catalog
@@ -170,6 +171,19 @@ def main() -> int:
         runtime=runtime,
         ui_state=TelegramUIStateStore(DATA_ROOT / "telegram-ui-state.json"),
     )
+    transport = os.environ.get("WUKONG_TELEGRAM_TRANSPORT", "polling").strip().casefold()
+    if transport not in {"polling", "webhook"}:
+        print("WUKONG_TELEGRAM_TRANSPORT must be polling or webhook")
+        return 2
+    webhook_secret = os.environ.get("WUKONG_TELEGRAM_WEBHOOK_SECRET", "").strip()
+    public_api_url = os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip()
+    if transport == "webhook" and (not webhook_secret or not public_api_url):
+        print("Webhook transport requires WUKONG_TELEGRAM_WEBHOOK_SECRET and the public API URL")
+        return 2
+    telegram_transport = TelegramLongPollingDaemon(token, controller)
+    readiness = threading.Event()
+    if transport == "polling":
+        readiness.set()
     mini_api_server: TelegramMiniAppAPIServer | None = None
     web_app_url = os.environ.get("WUKONG_TELEGRAM_WEB_APP_URL", "").strip()
     if web_app_url:
@@ -185,6 +199,11 @@ def main() -> int:
                 source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
                 cloud_provider=lambda category: runtime.cloud_library(category=category),
                 cache_provider=stage_cache_status,
+                telegram_update_handler=(
+                    telegram_transport.process_update if transport == "webhook" else None
+                ),
+                telegram_webhook_secret=webhook_secret if transport == "webhook" else None,
+                readiness_provider=readiness.is_set,
                 max_init_data_age_seconds=int(
                     os.environ.get("WUKONG_TELEGRAM_MINI_APP_MAX_AUTH_AGE", "3600")
                 ),
@@ -204,7 +223,14 @@ def main() -> int:
             print(f"Telegram Mini App API could not start: {exc}", flush=True)
             return 2
     try:
-        TelegramLongPollingDaemon(token, controller).run()
+        if transport == "webhook":
+            telegram_transport.register_commands()
+            telegram_transport.configure_webhook(public_api_url, webhook_secret)
+            readiness.set()
+            print(f"Telegram webhook registered at {public_api_url.rstrip('/')}/telegram/webhook", flush=True)
+            threading.Event().wait()
+        else:
+            telegram_transport.run()
     finally:
         if mini_api_server:
             mini_api_server.stop()

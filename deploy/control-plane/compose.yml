@@ -1,5 +1,8 @@
+name: wukong-control-plane
+
 services:
   wukong-control-plane:
+    image: wukong-control-plane:${WUKONG_RELEASE_SHA:-development}
     build:
       context: ../..
       dockerfile: deploy/control-plane/Dockerfile
@@ -21,13 +24,21 @@ services:
       start_period: 20s
     security_opt:
       - no-new-privileges:true
+    init: true
+    pids_limit: 256
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
 
   caddy:
-    image: caddy:2.10.2-alpine
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
     restart: unless-stopped
     depends_on:
       wukong-control-plane:
-        condition: service_healthy
+        condition: service_started
     environment:
       WUKONG_MINI_API_DOMAIN: ${WUKONG_MINI_API_DOMAIN}
     ports:
@@ -40,6 +51,12 @@ services:
       - caddy-config:/config
     security_opt:
       - no-new-privileges:true
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
 
 volumes:
   wukong-state:

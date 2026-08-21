@@ -782,6 +782,24 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertTrue(any(value.endswith("/answerCallbackQuery") for value in endpoints))
         self.assertTrue(any(value.endswith("/editMessageText") for value in endpoints))
 
+    def test_configures_https_webhook_with_secret_and_single_connection(self) -> None:
+        controller = Mock()
+        success = Mock()
+        success.raise_for_status.return_value = None
+        success.json.return_value = {"ok": True}
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+
+        daemon.configure_webhook("https://mini-api.example.com/", "stable-secret")
+
+        endpoint = http.post.call_args.args[0]
+        payload = http.post.call_args.kwargs["json"]
+        self.assertTrue(endpoint.endswith("/setWebhook"))
+        self.assertEqual("https://mini-api.example.com/telegram/webhook", payload["url"])
+        self.assertEqual("stable-secret", payload["secret_token"])
+        self.assertEqual(1, payload["max_connections"])
+
     def test_processes_telegram_web_app_data(self) -> None:
         controller = Mock()
         controller.handle_web_app_data.return_value = BotResponse("Created")

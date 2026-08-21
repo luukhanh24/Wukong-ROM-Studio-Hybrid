@@ -1,0 +1,209 @@
+name: Control Plane Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: wukong-control-plane-production
+  cancel-in-progress: false
+
+env:
+  WUKONG_MINI_API_DOMAIN: ${{ vars.WUKONG_MINI_API_DOMAIN }}
+  WUKONG_TELEGRAM_WEB_APP_URL: ${{ vars.WUKONG_TELEGRAM_WEB_APP_URL || 'https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/' }}
+
+jobs:
+  deploy-control-plane:
+    name: Deploy always-on API and bot
+    runs-on: ubuntu-24.04
+    outputs:
+      api_url: ${{ steps.release.outputs.api_url }}
+      release_sha: ${{ steps.release.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          fetch-depth: 1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Validate deployment inputs
+        env:
+          VPS_HOST: ${{ secrets.WUKONG_VPS_HOST }}
+          VPS_USER: ${{ secrets.WUKONG_VPS_USER }}
+          VPS_PORT: ${{ vars.WUKONG_VPS_PORT || '22' }}
+          VPS_KEY: ${{ secrets.WUKONG_VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.WUKONG_VPS_KNOWN_HOSTS }}
+          TELEGRAM_TOKEN: ${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMINS: ${{ secrets.WUKONG_TELEGRAM_ADMIN_IDS || secrets.WUKONG_TELEGRAM_CHAT_ID }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.WUKONG_TELEGRAM_WEBHOOK_SECRET }}
+          DEPLOY_GITHUB_TOKEN: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in WUKONG_MINI_API_DOMAIN VPS_HOST VPS_USER VPS_KEY VPS_KNOWN_HOSTS TELEGRAM_TOKEN TELEGRAM_ADMINS TELEGRAM_WEBHOOK_SECRET DEPLOY_GITHUB_TOKEN RCLONE_CONFIG_B64; do
+            [[ -n "${!name:-}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} )); then
+            printf 'Missing production setting: %s\n' "${missing[@]}" >&2
+            exit 2
+          fi
+          [[ "$WUKONG_MINI_API_DOMAIN" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]
+          [[ "$WUKONG_MINI_API_DOMAIN" == *.* ]]
+          [[ "$VPS_HOST" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]
+          [[ "$VPS_USER" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]]
+          [[ "$VPS_PORT" =~ ^[0-9]{1,5}$ ]] && (( VPS_PORT >= 1 && VPS_PORT <= 65535 ))
+          [[ "$TELEGRAM_ADMINS" =~ ^[0-9]+(,[0-9]+)*$ ]]
+          [[ "$TELEGRAM_WEBHOOK_SECRET" =~ ^[A-Za-z0-9_-]{32,256}$ ]]
+      - name: Prepare encrypted deployment payload
+        env:
+          WUKONG_TELEGRAM_BOT_TOKEN: ${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}
+          WUKONG_TELEGRAM_ADMIN_IDS: ${{ secrets.WUKONG_TELEGRAM_ADMIN_IDS || secrets.WUKONG_TELEGRAM_CHAT_ID }}
+          WUKONG_TELEGRAM_WEBHOOK_SECRET: ${{ secrets.WUKONG_TELEGRAM_WEBHOOK_SECRET }}
+          WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
+          WUKONG_GITHUB_TOKEN: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          WUKONG_RCLONE_REMOTE: ${{ vars.WUKONG_RCLONE_REMOTE || 'wukong-gdrive' }}
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          payload="$RUNNER_TEMP/wukong-control-plane"
+          mkdir -p "$payload"
+          git archive --format=tar.gz --output "$payload/release.tar.gz" "$GITHUB_SHA"
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$payload/rclone.conf"
+          python -m tools.render_control_plane_env \
+            --domain "$WUKONG_MINI_API_DOMAIN" \
+            --release-sha "$GITHUB_SHA" \
+            --output "$payload/control-plane.env"
+          cp deploy/control-plane/deploy_remote.sh "$payload/deploy_remote.sh"
+          chmod 0600 "$payload/release.tar.gz" "$payload/rclone.conf" "$payload/control-plane.env"
+          chmod 0700 "$payload/deploy_remote.sh"
+      - name: Deploy exact release over verified SSH
+        env:
+          VPS_HOST: ${{ secrets.WUKONG_VPS_HOST }}
+          VPS_USER: ${{ secrets.WUKONG_VPS_USER }}
+          VPS_PORT: ${{ vars.WUKONG_VPS_PORT || '22' }}
+          VPS_KEY: ${{ secrets.WUKONG_VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.WUKONG_VPS_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/wukong-deploy-key"
+          known_hosts="$RUNNER_TEMP/wukong-known-hosts"
+          printf '%s\n' "$VPS_KEY" > "$key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$known_hosts"
+          chmod 0600 "$key" "$known_hosts"
+          remote="${VPS_USER}@${VPS_HOST}"
+          staging="/tmp/wukong-control-plane-${GITHUB_SHA}"
+          ssh_options=(-i "$key" -p "$VPS_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$known_hosts" -o ConnectTimeout=15)
+          scp_options=(-i "$key" -P "$VPS_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$known_hosts" -o ConnectTimeout=15)
+          ssh "${ssh_options[@]}" "$remote" "install -d -m 0700 '$staging'"
+          scp "${scp_options[@]}" \
+            "$RUNNER_TEMP/wukong-control-plane/release.tar.gz" \
+            "$RUNNER_TEMP/wukong-control-plane/control-plane.env" \
+            "$RUNNER_TEMP/wukong-control-plane/rclone.conf" \
+            "$RUNNER_TEMP/wukong-control-plane/deploy_remote.sh" \
+            "$remote:$staging/"
+          ssh "${ssh_options[@]}" "$remote" \
+            "chmod 0700 '$staging/deploy_remote.sh' && '$staging/deploy_remote.sh' '$GITHUB_SHA'"
+      - name: Verify public HTTPS release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_url="https://${WUKONG_MINI_API_DOMAIN}"
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
+              "$api_url/healthz" > "$RUNNER_TEMP/control-plane-health.json"; then
+              if python - "$GITHUB_SHA" "$RUNNER_TEMP/control-plane-health.json" <<'PY'
+          import json
+          import sys
+
+          expected, path = sys.argv[1:]
+          payload = json.load(open(path, encoding="utf-8"))
+          if payload.get("status") != "ready" or payload.get("release") != expected:
+              raise SystemExit(1)
+          PY
+              then
+                break
+              fi
+            fi
+            if (( attempt == 30 )); then
+              echo "The public control plane did not become healthy." >&2
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "api_url=$api_url" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+      - name: Persist the verified API origin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_URL: ${{ steps.release.outputs.api_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh variable set WUKONG_TELEGRAM_MINI_APP_API_URL --repo "$GITHUB_REPOSITORY" --body "$API_URL"
+          gh variable set WUKONG_TELEGRAM_WEB_APP_URL --repo "$GITHUB_REPOSITORY" --body "$WUKONG_TELEGRAM_WEB_APP_URL"
+
+  publish-mini-app:
+    name: Publish Mini App bound to verified API
+    needs: deploy-control-plane
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Build public Mini App
+        env:
+          MINI_APP_API_URL: ${{ needs.deploy-control-plane.outputs.api_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .pages
+          cp telegram_mini_app/index.html telegram_mini_app/styles.css telegram_mini_app/app.js .pages/
+          sed -i "s|__WUKONG_TELEGRAM_MINI_APP_API_URL__|${MINI_APP_API_URL%/}|g" .pages/index.html
+          sed -i "s#./styles.css#./styles.css?v=${GITHUB_SHA}#; s#./app.js#./app.js?v=${GITHUB_SHA}#" .pages/index.html
+          python -m tools.export_mini_app_catalog --output .pages/catalog.json
+          ! grep -R '__WUKONG_TELEGRAM_MINI_APP_API_URL__' .pages
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v5.0.0
+      - name: Upload Mini App site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v4.0.0
+        with:
+          path: .pages
+      - name: Deploy Telegram Mini App
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v4.0.5
+      - name: Verify published Mini App
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          API_URL: ${{ needs.deploy-control-plane.outputs.api_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..24}; do
+            if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "${PAGE_URL}?release=${GITHUB_SHA}")" \
+              && grep -Fq "$API_URL" <<< "$page" \
+              && grep -Fq "app.js?v=${GITHUB_SHA}" <<< "$page"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "The published Mini App does not reference the verified API release." >&2
+          exit 1
