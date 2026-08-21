@@ -61,6 +61,8 @@ Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversio
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\App\WebView2"
+Type: files; Name: "{app}\Runtime\Config\wk_manager_system_policy.cil"
+Type: files; Name: "{app}\Content\STARK\WK_Manager\system\system\etc\selinux\stark_plat_sepolicy.cil"
 
 [Icons]
 Name: "{autoprograms}\Wukong ROM Studio"; Filename: "{app}\App\WukongStudio.exe"; WorkingDir: "{app}\App"; AppUserModelID: "WukongROMStudio.Desktop"

@@ -94,7 +94,10 @@ def build_paths(
         bin_root = app / "Bin"
         config_root = app / "Config"
         flash_root = (content / "Flash_script") if (content / "Flash_script").is_dir() else app / "Flash_script"
-        stark_root = (content / "STARK") if (content / "STARK").is_dir() else app / "STARK"
+        # Shared framework assets are part of the installed runtime and are
+        # deliberately writable by the installer. Keep one canonical desktop
+        # location so operators never have to guess between Content and Runtime.
+        stark_root = app / "STARK"
         web_root = app / "Web"
     else:
         install = source

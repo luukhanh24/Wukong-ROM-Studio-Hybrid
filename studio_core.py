@@ -138,7 +138,16 @@ WK_MANAGER_METRICS_INIT_BLOCK_END = "# WK_STUDIO_WK_MANAGER_METRICS_END"
 WK_MANAGER_POWER_RELATIVE_ROOT = Path("WK_Manager/system/system")
 WK_MANAGER_POWER_DAEMON_RELATIVE = Path("bin/wukong-system-powerd")
 WK_MANAGER_POWER_RC_RELATIVE = Path("etc/init/wukong-system-powerd.rc")
-WK_MANAGER_SYSTEM_POLICY_PATCH = CONFIG_ROOT / "wk_manager_system_policy.cil"
+WK_MANAGER_SYSTEM_POLICY_PATCH = (
+    STARK_ROOT
+    / "WK_Manager"
+    / "system"
+    / "system"
+    / "etc"
+    / "selinux"
+    / "stark_plat_sepolicy.cil"
+)
+WK_MANAGER_TRACKED_SYSTEM_POLICY_FALLBACK = CONFIG_ROOT / "wk_manager_system_policy.cil"
 WK_MANAGER_CONTEXT_REQUIRED_POLICY_TYPES = {"privapp_data_file", "system_file"}
 WK_MANAGER_ART_RUNTIME_POLICY_RULES = (
     "(typetransition wukong_manager_app tmpfs file appdomain_tmpfs)",
@@ -2918,6 +2927,11 @@ def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) ->
     vendor_policy, vendor_policy_probe = _stock_vendor_sepolicy_for_validation(
         rom_unpack
     )
+    fallback_policy = WK_MANAGER_TRACKED_SYSTEM_POLICY_FALLBACK
+    has_distinct_fallback = (
+        fallback_policy.is_file()
+        and fallback_policy.resolve() != policy_patch.resolve()
+    )
     try:
         _validate_wk_manager_power_policy_types(
             policy,
@@ -2943,11 +2957,8 @@ def _install_wk_manager_power_service(rom_unpack: Path, shared_mod_dir: Path) ->
         if not source.is_file():
             raise StudioError(f"WK_Manager system-power SELinux patch is missing: {source}")
         patched += sum(apply_stark_patch(source, target).values())
-    if not WK_MANAGER_SYSTEM_POLICY_PATCH.is_file():
-        raise StudioError(
-            f"WK_Manager tracked system SELinux policy is missing: {WK_MANAGER_SYSTEM_POLICY_PATCH}"
-        )
-    patched += sum(apply_stark_patch(WK_MANAGER_SYSTEM_POLICY_PATCH, policy).values())
+    if has_distinct_fallback:
+        patched += sum(apply_stark_patch(fallback_policy, policy).values())
     patched += _ensure_wk_manager_art_runtime_policy(policy)
 
     config = rom_unpack / "system_unpacked" / "config"
