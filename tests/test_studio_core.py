@@ -1102,6 +1102,10 @@ class StudioCoreTests(unittest.TestCase):
                 self.assertEqual(content.count(rule), 1)
 
     def test_tracked_wk_manager_system_policy_contains_runtime_and_power_rules(self):
+        self.assertEqual(
+            studio_core.WK_MANAGER_SYSTEM_POLICY_PATCH,
+            studio_core.CONFIG_ROOT / "wk_manager_system_policy.cil",
+        )
         content = studio_core.WK_MANAGER_SYSTEM_POLICY_PATCH.read_text(encoding="utf-8")
 
         for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
