@@ -1,0 +1,55 @@
+services:
+  - type: web
+    runtime: docker
+    name: wukong-mini-api
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./deploy/control-plane/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: WUKONG_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: WUKONG_TELEGRAM_ADMIN_IDS
+        sync: false
+      - key: WUKONG_GITHUB_TOKEN
+        sync: false
+      - key: WUKONG_RCLONE_CONFIG_CONTENT_B64
+        sync: false
+      - key: WUKONG_TELEGRAM_TRANSPORT
+        value: webhook
+      - key: WUKONG_TELEGRAM_WEB_APP_URL
+        value: https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/
+      - key: WUKONG_GITHUB_REPOSITORY
+        value: luukhanh24/Wukong-ROM-Studio-Hybrid
+      - key: WUKONG_RCLONE_REMOTE
+        value: wukong-gdrive
+      - key: WUKONG_CONTROL_PLANE_STATE_BACKUP_ENABLED
+        value: "true"
+      - key: WUKONG_CONTROL_PLANE_STATE_REMOTE_PATH
+        value: WukongROM/control-plane/state-v1.zip
+      - key: WUKONG_CONTROL_PLANE_STATE_BACKUP_INTERVAL
+        value: "30"
+      - key: WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS
+        value: "false"
+      - key: WUKONG_CONTROL_PLANE_ONLINE_PREFLIGHT
+        value: "1"
+      - key: WUKONG_STUDIO_DATA_ROOT
+        value: /var/lib/wukong/data
+      - key: WUKONG_STUDIO_WORKSPACE_ROOT
+        value: /var/lib/wukong/workspace
+      - key: WUKONG_STUDIO_OUTPUT_ROOT
+        value: /var/lib/wukong/output
+      - key: WUKONG_STUDIO_TEMP_ROOT
+        value: /var/lib/wukong/temp
+      - key: WUKONG_STUDIO_LOG_ROOT
+        value: /var/lib/wukong/logs
+      - key: WUKONG_STUDIO_CONTENT_ROOT
+        value: /app
+      - key: WUKONG_RCLONE_CONFIG
+        value: /var/lib/wukong/data/Secrets/rclone.runtime.conf
+      - key: WUKONG_TELEGRAM_MINI_APP_API_BIND
+        value: 0.0.0.0

@@ -22,6 +22,7 @@ from wukong.telegram_mini_api import (
 )
 
 TOKEN = "123456789:test-token"
+CALLBACK_SECRET = "github-token-" + "x" * 32
 ORIGIN = "https://luukhanh24.github.io"
 
 
@@ -82,6 +83,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             source_probe_provider=self.probe,
             cache_provider=lambda: {"entryCount": 3, "totalBytes": 1024},
             cache_clearer=lambda: {"entryCount": 0, "totalBytes": 0},
+            actions_callback_secret=CALLBACK_SECRET,
         )
         self.client = self.api.app.test_client()
 
@@ -161,6 +163,54 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(403, denied.status_code)
         self.assertEqual(204, accepted.status_code)
         handler.assert_called_once_with({"update_id": 1})
+
+    def test_actions_callback_requires_fresh_hmac_and_refreshes_existing_job(self) -> None:
+        probe = self.client.post(
+            "/v1/sources/probe",
+            headers=self.headers(),
+            json={"uri": "https://downloads.example/rom.zip"},
+        )
+        self.assertEqual(200, probe.status_code)
+        created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        job_id = created.json["job_id"]
+        body = json.dumps({"jobId": job_id}, separators=(",", ":")).encode()
+        timestamp = str(int(time.time()))
+        key = hmac.new(
+            b"WukongActionsCallback\0",
+            CALLBACK_SECRET.encode(),
+            hashlib.sha256,
+        ).digest()
+        signature = hmac.new(
+            key,
+            timestamp.encode("ascii") + b"." + body,
+            hashlib.sha256,
+        ).hexdigest()
+
+        denied = self.client.post("/internal/actions/callback", data=body)
+        stale = self.client.post(
+            "/internal/actions/callback",
+            headers={
+                "Content-Type": "application/json",
+                "X-Wukong-Timestamp": str(int(timestamp) - 600),
+                "X-Wukong-Signature": signature,
+            },
+            data=body,
+        )
+        accepted = self.client.post(
+            "/internal/actions/callback",
+            headers={
+                "Content-Type": "application/json",
+                "X-Wukong-Timestamp": timestamp,
+                "X-Wukong-Signature": signature,
+            },
+            data=body,
+        )
+
+        self.assertEqual(403, denied.status_code)
+        self.assertEqual(403, stale.status_code)
+        self.assertEqual(200, accepted.status_code)
+        self.runtime.refresh.assert_called_with(self.store.get(job_id))
+        self.runtime.notify_terminal.assert_called_once()
 
     def test_health_waits_for_transport_readiness_and_identifies_release(self) -> None:
         ready = False

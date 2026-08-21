@@ -133,6 +133,13 @@ configuration. Build, mirror, jobs, event history, artifact links, cancel,
 resume, cloud and diagnostics stay inside the Mini App; terminal reports are
 also delivered to the owning Telegram user.
 
+For a no-cost deployment with a managed HTTPS hostname, use the Render
+Blueprint in [`render.yaml`](render.yaml) and follow
+[`deploy/render/README.md`](deploy/render/README.md). It accounts for Render's
+idle spin-down and ephemeral filesystem by restoring the small control-plane
+state from Google Drive and by letting the terminal GitHub Actions job wake the
+service. Heavy ROM work remains on GitHub runners.
+
 Set `WUKONG_TELEGRAM_CONTENT_ROOT` when the installed content is not in the
 default `C:\WukongROMStudio\Content` location.
 

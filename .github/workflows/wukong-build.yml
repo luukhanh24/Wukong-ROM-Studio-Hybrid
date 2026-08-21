@@ -279,3 +279,62 @@ jobs:
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
           self_hosted: "true"
+
+  notify-control-plane:
+    name: "20 · Đánh thức Mini App & báo kết quả"
+    needs: [route, hosted, self-hosted]
+    if: always() && needs.route.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "20 · Đồng bộ kết quả / Wake control plane"
+        env:
+          API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          CALLBACK_SECRET: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          WUKONG_JOB_ID: ${{ inputs.job_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$API_URL" || -z "$CALLBACK_SECRET" ]]; then
+            echo "Control plane is not bound yet; skipping terminal callback."
+            exit 0
+          fi
+          api_url="${API_URL%/}"
+          [[ "$api_url" == https://* ]]
+          body="$(python - "$WUKONG_JOB_ID" <<'PY'
+          import json
+          import sys
+          print(json.dumps({"jobId": sys.argv[1]}, separators=(",", ":")))
+          PY
+          )"
+          for attempt in {1..30}; do
+            timestamp="$(date +%s)"
+            signature="$(CALLBACK_SECRET="$CALLBACK_SECRET" TIMESTAMP="$timestamp" BODY="$body" python - <<'PY'
+          import hashlib
+          import hmac
+          import os
+          key = hmac.new(
+              b"WukongActionsCallback\0",
+              os.environ["CALLBACK_SECRET"].encode(),
+              hashlib.sha256,
+          ).digest()
+          print(hmac.new(
+              key,
+              os.environ["TIMESTAMP"].encode("ascii") + b"." + os.environ["BODY"].encode(),
+              hashlib.sha256,
+          ).hexdigest())
+          PY
+            )"
+            if curl --fail --silent --show-error --connect-timeout 15 --max-time 45 \
+              -H 'Content-Type: application/json' \
+              -H "X-Wukong-Timestamp: $timestamp" \
+              -H "X-Wukong-Signature: $signature" \
+              --data-binary "$body" \
+              "$api_url/internal/actions/callback"; then
+              exit 0
+            fi
+            if (( attempt == 30 )); then
+              echo "::warning title=20 · Control-plane callback::The ROM result is already stored on Drive, but the free control plane did not wake in time. Opening Mini App will retry synchronization."
+              exit 0
+            fi
+            sleep 10
+          done

@@ -27,6 +27,6 @@ RUN mkdir -p /var/lib/wukong/data /var/lib/wukong/workspace /var/lib/wukong/outp
     && chown -R wukong:wukong /var/lib/wukong \
     && chmod 0755 /app/deploy/control-plane/entrypoint.sh
 
-EXPOSE 8766
+EXPOSE 8766 10000
 ENTRYPOINT ["/app/deploy/control-plane/entrypoint.sh"]
 CMD ["python", "telegram_bot_daemon.py"]

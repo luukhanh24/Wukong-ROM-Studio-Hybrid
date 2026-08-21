@@ -372,6 +372,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("const uriChanged = state.sourceInputUri !== currentUri", script)
         self.assertIn("sourceProbeRequestId", script)
         self.assertIn("sourceProbeController?.abort()", script)
+        self.assertIn("110000", script)
         self.assertIn("metadataCompleteness", script)
         self.assertIn("copySourceMetadata", script)
         self.assertIn("apiUnavailableMessage", script)

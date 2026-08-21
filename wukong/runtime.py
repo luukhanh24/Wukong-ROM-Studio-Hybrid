@@ -41,6 +41,9 @@ class HybridRuntime:
         self.terminal_notifier = terminal_notifier
         self._notification_lock = threading.RLock()
         self.rclone_config = self._materialize_rclone_config(data_root)
+        self.cloud_watchers_enabled = os.environ.get(
+            "WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS", "true"
+        ).strip().casefold() not in {"0", "false", "no", "off"}
 
     def start(self, manifest: JobManifest) -> None:
         worker = threading.Thread(
@@ -53,7 +56,7 @@ class HybridRuntime:
 
     def resume_cloud_watchers(self) -> int:
         """Resume cloud-state polling for jobs that survived a daemon restart."""
-        if not self.rclone_config:
+        if not self.rclone_config or not self.cloud_watchers_enabled:
             return 0
         resumed = 0
         for manifest in self.store.list():
@@ -260,13 +263,14 @@ class HybridRuntime:
                 stage="github-actions",
                 external_run_id=run_id,
             )
-            watcher = threading.Thread(
-                target=self._watch_cloud_job,
-                args=(job_id, storage),
-                name=f"wukong-cloud-watch-{job_id[:8]}",
-                daemon=True,
-            )
-            watcher.start()
+            if self.cloud_watchers_enabled:
+                watcher = threading.Thread(
+                    target=self._watch_cloud_job,
+                    args=(job_id, storage),
+                    name=f"wukong-cloud-watch-{job_id[:8]}",
+                    daemon=True,
+                )
+                watcher.start()
         except Exception as exc:
             self._fail(job_id, str(exc))
 

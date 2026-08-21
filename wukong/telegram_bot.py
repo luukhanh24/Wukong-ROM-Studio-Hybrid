@@ -260,8 +260,14 @@ class BotResponse:
 class TelegramUIStateStore:
     """Small atomic preference/session store keyed only by authenticated Telegram ID."""
 
-    def __init__(self, path: Path | None = None) -> None:
+    def __init__(
+        self,
+        path: Path | None = None,
+        *,
+        on_change: Callable[[], None] | None = None,
+    ) -> None:
         self.path = path.resolve() if path else None
+        self.on_change = on_change
         self._memory: dict[str, object] = {
             "schemaVersion": 1,
             "languages": {},
@@ -363,6 +369,8 @@ class TelegramUIStateStore:
                 os.replace(temporary_name, self.path)
             finally:
                 Path(temporary_name).unlink(missing_ok=True)
+            if self.on_change:
+                self.on_change()
 
 
 class TelegramBotController:
