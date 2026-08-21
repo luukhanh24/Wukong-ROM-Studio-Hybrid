@@ -1,10 +1,15 @@
 {$WUKONG_MINI_API_DOMAIN} {
     encode zstd gzip
+    request_body {
+        max_size 1MB
+    }
     reverse_proxy wukong-control-plane:8766
 
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
         Referrer-Policy "no-referrer"
         -Server
     }

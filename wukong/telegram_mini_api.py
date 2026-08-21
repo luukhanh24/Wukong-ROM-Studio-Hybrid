@@ -4,6 +4,8 @@ import copy
 import hashlib
 import hmac
 import json
+import os
+import re
 import threading
 import time
 from dataclasses import replace
@@ -32,6 +34,7 @@ SOURCE_METADATA_KEYS = (
     "buildDate",
     "otaType",
 )
+RELEASE_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 
 
 class TelegramInitDataError(PermissionError):
@@ -119,6 +122,9 @@ class TelegramMiniAppAPI:
         cloud_provider: Callable[[str], dict[str, object]] | None = None,
         cache_provider: Callable[[], dict[str, object]] | None = None,
         cache_clearer: Callable[[], dict[str, object]] | None = None,
+        telegram_update_handler: Callable[[dict[str, object]], None] | None = None,
+        telegram_webhook_secret: str | None = None,
+        readiness_provider: Callable[[], bool] | None = None,
         max_init_data_age_seconds: int = 3600,
         probe_cache_seconds: int = 15 * 60,
     ) -> None:
@@ -133,6 +139,11 @@ class TelegramMiniAppAPI:
         self.cloud_provider = cloud_provider
         self.cache_provider = cache_provider
         self.cache_clearer = cache_clearer
+        self.telegram_update_handler = telegram_update_handler
+        self.telegram_webhook_secret = (telegram_webhook_secret or "").strip()
+        if bool(self.telegram_update_handler) != bool(self.telegram_webhook_secret):
+            raise ValueError("Telegram webhook handler and secret must be configured together")
+        self.readiness_provider = readiness_provider or (lambda: True)
         self.max_init_data_age_seconds = max(60, max_init_data_age_seconds)
         self.probe_cache_seconds = max(60, probe_cache_seconds)
         self._probe_cache: dict[tuple[str, str], tuple[float, dict[str, object]]] = {}
@@ -147,6 +158,14 @@ class TelegramMiniAppAPI:
         @app.before_request
         def authenticate() -> Response | None:
             if request.path == "/healthz":
+                return None
+            if request.path == "/telegram/webhook":
+                supplied = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+                if not self.telegram_webhook_secret or not hmac.compare_digest(
+                    supplied,
+                    self.telegram_webhook_secret,
+                ):
+                    return jsonify({"error": "Telegram webhook authentication failed"}), 403
                 return None
             origin = (request.headers.get("Origin") or "").rstrip("/").casefold()
             if origin != self.allowed_origin.casefold():
@@ -190,7 +209,25 @@ class TelegramMiniAppAPI:
 
         @app.get("/healthz")
         def health() -> Response:
-            return jsonify({"status": "ready"})
+            release = os.environ.get("WUKONG_RELEASE_SHA", "").strip().casefold()
+            ready = bool(self.readiness_provider())
+            return jsonify(
+                {
+                    "status": "ready" if ready else "starting",
+                    "service": "wukong-control-plane",
+                    "release": release if RELEASE_SHA_RE.fullmatch(release) else "development",
+                }
+            ), 200 if ready else 503
+
+        @app.post("/telegram/webhook")
+        def telegram_webhook() -> Response:
+            if self.telegram_update_handler is None:
+                return jsonify({"error": "Telegram webhook is not configured"}), 503
+            payload = request.get_json(force=True)
+            if not isinstance(payload, dict):
+                return jsonify({"error": "Telegram update must be an object"}), 400
+            self.telegram_update_handler(payload)
+            return Response(status=204)
 
         @app.post("/v1/sources/probe")
         def probe_source() -> Response:

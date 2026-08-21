@@ -64,6 +64,36 @@ jobs:
       - name: Run generated ROM fixture
         run: python -m tools.smoke_rom_fixture_linux
 
+  control-plane-container:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: Build always-on control plane image
+        shell: bash
+        run: docker build --pull --tag wukong-control-plane:ci --file deploy/control-plane/Dockerfile .
+      - name: Verify container preflight and unprivileged runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '[fixture]\ntype = local\nnounc = true\n' > "$RUNNER_TEMP/rclone.conf"
+          docker run --rm \
+            --env WUKONG_MINI_API_DOMAIN=mini-api.example.com \
+            --env WUKONG_RELEASE_SHA=0000000000000000000000000000000000000000 \
+            --env WUKONG_TELEGRAM_BOT_TOKEN=1234567:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            --env WUKONG_TELEGRAM_ADMIN_IDS=123456789 \
+            --env WUKONG_TELEGRAM_TRANSPORT=polling \
+            --env WUKONG_TELEGRAM_WEB_APP_URL=https://example.github.io/Wukong/ \
+            --env WUKONG_TELEGRAM_MINI_APP_API_URL=https://mini-api.example.com \
+            --env WUKONG_GITHUB_REPOSITORY=owner/repository \
+            --env WUKONG_GITHUB_TOKEN=github-token-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+            --env WUKONG_RCLONE_REMOTE=fixture \
+            --volume "$RUNNER_TEMP/rclone.conf:/run/secrets/rclone.conf:ro" \
+            wukong-control-plane:ci \
+            python -c 'import os; assert os.getuid() == 10001; print("control-plane container ready")'
+
   workflow-security:
     runs-on: ubuntu-24.04
     steps:

@@ -1302,6 +1302,26 @@ class TelegramLongPollingDaemon:
     def stop(self) -> None:
         self._stop.set()
 
+    def configure_webhook(self, public_api_url: str, secret: str) -> None:
+        base_url = public_api_url.strip().rstrip("/")
+        if not base_url.startswith("https://") or not secret:
+            raise ValueError("Telegram webhook requires a public HTTPS API URL and secret")
+        response = self._http.post(
+            f"{self.base_url}/setWebhook",
+            json={
+                "url": f"{base_url}/telegram/webhook",
+                "secret_token": secret,
+                "allowed_updates": ["message", "callback_query"],
+                "max_connections": 1,
+                "drop_pending_updates": False,
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict) or payload.get("ok") is not True:
+            raise requests.RequestException("Telegram rejected the webhook configuration")
+
     @staticmethod
     def _is_probe_request(raw_data: str) -> bool:
         try:

@@ -8,6 +8,10 @@
 .venv
 venv
 __pycache__
+**/.env
+**/.env.*
+!**/.env.example
+**/secrets
 *.pyc
 *.log
 *.zip
