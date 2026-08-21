@@ -1141,7 +1141,6 @@ class StudioCoreTests(unittest.TestCase):
                         "sysfs",
                         "sysfs_devices_system_cpu",
                         "sysfs_kgsl",
-                        "vendor_sysfs_kgsl",
                         "sysfs_thermal",
                     )
                 )
@@ -1204,12 +1203,33 @@ class StudioCoreTests(unittest.TestCase):
                 "+(type wukong_system_power_socket)\n"
                 "+(roletype object_r wukong_system_power_socket)\n"
                 "+(typeattributeset domain (wukong_system_powerd))\n"
-                "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))\n",
+                "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))\n"
+                "+(allow wukong_system_powerd vendor_sysfs_kgsl (file (read write)))\n",
                 encoding="utf-8",
             )
 
-            first = studio_core._install_wk_manager_power_service(unpack, source)
-            second = studio_core._install_wk_manager_power_service(unpack, source)
+            vendor_image = root / "source_rom" / "vendor.img"
+            vendor_image.parent.mkdir()
+            vendor_image.write_bytes(b"vendor-erofs-fixture")
+
+            def extract_vendor_policy(command, **_kwargs):
+                output = Path(command[command.index("-o") + 1])
+                extracted = output / "vendor" / "etc" / "selinux" / "vendor_sepolicy.cil"
+                extracted.parent.mkdir(parents=True)
+                extracted.write_text("(type vendor_sysfs_kgsl)\n", encoding="utf-8")
+                return SimpleNamespace(returncode=0, stdout="")
+
+            with mock.patch.object(
+                studio_core,
+                "gettype",
+                return_value="erofs",
+            ), mock.patch.object(
+                studio_core.subprocess,
+                "run",
+                side_effect=extract_vendor_policy,
+            ) as run:
+                first = studio_core._install_wk_manager_power_service(unpack, source)
+                second = studio_core._install_wk_manager_power_service(unpack, source)
 
             daemon = system / "bin" / "wukong-system-powerd"
             service = system / "etc" / "init" / "wukong-system-powerd.rc"
@@ -1217,6 +1237,17 @@ class StudioCoreTests(unittest.TestCase):
             self.assertIn("user system", service.read_text(encoding="utf-8"))
             self.assertEqual(first["copied"], 2)
             self.assertEqual(second["copied"], 0)
+            self.assertEqual(run.call_count, 2)
+            extract_command = run.call_args.args[0]
+            self.assertIn(str(vendor_image), extract_command)
+            self.assertIn("-X", extract_command)
+            self.assertIn("/etc/selinux/vendor_sepolicy.cil", extract_command)
+            self.assertEqual(vendor_image.read_bytes(), b"vendor-erofs-fixture")
+            self.assertFalse((unpack / "vendor_unpacked").exists())
+            self.assertEqual(
+                list(root.glob(".wkstudio-vendor-policy-*")),
+                [],
+            )
             self.assertIn("wukong_system_powerd", (selinux / "plat_sepolicy.cil").read_text(encoding="utf-8"))
             seapp = (selinux / "plat_seapp_contexts").read_text(encoding="utf-8")
             self.assertLess(seapp.index("name=com.wukong.manager"), seapp.index("domain=priv_app"))
