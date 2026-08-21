@@ -190,6 +190,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("matchCatalogDevice", script)
         self.assertIn("result?.productName", script)
         self.assertIn("selectModPackForVersion", script)
+        self.assertIn("error?.status !== 429", script)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
