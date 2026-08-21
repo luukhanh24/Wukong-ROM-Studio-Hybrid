@@ -132,7 +132,18 @@ Copy-Tree (Join-Path $source 'config') (Join-Path $destination 'Runtime\Config')
 Copy-Tree (Join-Path $source 'Flash_script') (Join-Path $destination 'Runtime\Flash_script')
 Copy-Tree (Join-Path $source 'STARK') (Join-Path $destination 'Runtime\STARK')
 Copy-Tree (Join-Path $source 'Flash_script') (Join-Path $destination 'Content\Flash_script')
-Copy-Tree (Join-Path $source 'STARK') (Join-Path $destination 'Content\STARK')
+$trackedWkPolicy = Join-Path $source 'config\wk_manager_system_policy.cil'
+$runtimeWkPolicy = Join-Path $destination 'Runtime\STARK\WK_Manager\system\system\etc\selinux\stark_plat_sepolicy.cil'
+if (-not (Test-Path -LiteralPath $trackedWkPolicy -PathType Leaf)) {
+    throw "Tracked WK Manager policy is missing: $trackedWkPolicy"
+}
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $runtimeWkPolicy) | Out-Null
+Copy-Item -LiteralPath $trackedWkPolicy -Destination $runtimeWkPolicy -Force
+$duplicateWkPolicy = Join-Path $destination 'Runtime\Config\wk_manager_system_policy.cil'
+if (Test-Path -LiteralPath $duplicateWkPolicy) {
+    Remove-Item -LiteralPath $duplicateWkPolicy -Force
+}
+Assert-FileHashMatch $trackedWkPolicy $runtimeWkPolicy
 Copy-Tree (Join-Path $source 'studio_static') (Join-Path $destination 'Runtime\Web')
 Copy-Tree (Join-Path $source 'wukong') (Join-Path $scriptRoot 'wukong')
 Copy-Tree (Join-Path $source 'tools') (Join-Path $scriptRoot 'tools')

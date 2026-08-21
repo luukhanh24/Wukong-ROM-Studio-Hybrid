@@ -1104,9 +1104,16 @@ class StudioCoreTests(unittest.TestCase):
     def test_tracked_wk_manager_system_policy_contains_runtime_and_power_rules(self):
         self.assertEqual(
             studio_core.WK_MANAGER_SYSTEM_POLICY_PATCH,
+            studio_core.STARK_ROOT
+            / "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil",
+        )
+        content = studio_core.WK_MANAGER_TRACKED_SYSTEM_POLICY_FALLBACK.read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(
+            studio_core.WK_MANAGER_TRACKED_SYSTEM_POLICY_FALLBACK,
             studio_core.CONFIG_ROOT / "wk_manager_system_policy.cil",
         )
-        content = studio_core.WK_MANAGER_SYSTEM_POLICY_PATCH.read_text(encoding="utf-8")
 
         for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
             self.assertIn(f"+{rule}", content)
@@ -1115,6 +1122,14 @@ class StudioCoreTests(unittest.TestCase):
             content,
         )
         self.assertNotIn("stark_vendor_sepolicy", content)
+
+    def test_desktop_wk_manager_policy_has_one_canonical_stark_location(self):
+        expected = (
+            studio_core.STARK_ROOT
+            / "WK_Manager/system/system/etc/selinux/stark_plat_sepolicy.cil"
+        )
+
+        self.assertEqual(studio_core.WK_MANAGER_SYSTEM_POLICY_PATCH, expected)
 
     def test_wk_manager_metrics_hook_patches_existing_init_rc(self):
         with tempfile.TemporaryDirectory() as temp:
