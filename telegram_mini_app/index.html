@@ -46,16 +46,26 @@
               <div class="source-state-copy"><small id="source-kicker" data-i18n="sourceIdleKicker">SMART SOURCE</small><strong id="source-state-title" data-i18n="sourceIdleTitle">Dán link để nhận diện</strong><p id="source-state-message" data-i18n="sourceIdleMessage">Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.</p></div>
               <button id="probe-source" type="button" class="probe-button" hidden data-i18n="analyzeSource">Phân tích ROM</button>
             </div>
+            <div class="source-facts-head" id="source-facts-head" hidden>
+              <div><small data-i18n="metadataTitle">ROM METADATA</small><strong id="source-metadata-count">0/14 thông số</strong></div>
+              <button id="copy-source-metadata" type="button" data-i18n="copyMetadata">Sao chép thông số</button>
+            </div>
             <dl class="source-facts" id="source-facts" hidden>
               <div><dt data-i18n="provider">Nhà cung cấp</dt><dd id="source-provider">···</dd></div>
               <div><dt data-i18n="detectedProduct">Product</dt><dd id="source-product-detected">···</dd></div>
+              <div><dt data-i18n="detectedDevice">Mã thiết bị</dt><dd id="source-device-detected">—</dd></div>
               <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">···</dd></div>
               <div><dt data-i18n="androidVersion">Android</dt><dd id="source-android-version">—</dd></div>
               <div><dt data-i18n="securityPatch">Bản vá bảo mật</dt><dd id="source-security-patch">—</dd></div>
               <div><dt data-i18n="buildDate">Ngày build</dt><dd id="source-build-date">—</dd></div>
               <div><dt data-i18n="sourceSizeDetected">Dung lượng</dt><dd id="source-size-detected">—</dd></div>
+              <div><dt data-i18n="otaType">Kiểu OTA</dt><dd id="source-ota-type">—</dd></div>
+              <div><dt data-i18n="contentType">Định dạng</dt><dd id="source-content-type">—</dd></div>
               <div><dt data-i18n="fileName">Tên file</dt><dd id="source-filename">—</dd></div>
               <div><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
+              <div><dt>MD5</dt><dd id="source-md5">—</dd></div>
+              <div><dt data-i18n="lastModified">Cập nhật máy chủ</dt><dd id="source-last-modified">—</dd></div>
+              <div><dt data-i18n="deepInspection">Kiểm tra ZIP</dt><dd id="source-deep-inspection">—</dd></div>
             </dl>
           </div>
           <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 (không bắt buộc)</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>
@@ -75,15 +85,16 @@
           <div class="switches"><label data-state="pending"><input id="package" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="publish" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="notify" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label></div>
         </section>
         <aside class="dispatch-docket incomplete">
-          <header><small id="readiness-label" data-i18n="incompleteLabel">HỒ SƠ CHƯA ĐỦ</small><span id="readiness-count">1/3 điều kiện</span></header>
+          <header><small id="readiness-label" data-i18n="incompleteLabel">HỒ SƠ CHƯA ĐỦ</small><span id="readiness-count">1/4 điều kiện</span></header>
           <strong id="launch-summary">— / PLUS / GITHUB AUTO</strong>
           <ol class="readiness-checklist">
             <li id="check-source"><i aria-hidden="true"></i><span><b data-i18n="checklistSource">Nguồn ROM</b><small data-i18n="checklistSourcePending">Chưa có URL hợp lệ</small></span></li>
             <li id="check-device"><i aria-hidden="true"></i><span><b data-i18n="checklistDevice">Thiết bị đích</b><small data-i18n="checklistDevicePending">Cần chọn thủ công</small></span></li>
             <li id="check-runner" class="complete"><i aria-hidden="true"></i><span><b data-i18n="checklistRunner">Tuyến thực thi</b><small data-i18n="checklistRunnerDone">Đã cấu hình runner</small></span></li>
+            <li id="check-api"><i aria-hidden="true"></i><span><b data-i18n="checklistApi">Mini App API</b><small data-i18n="checklistApiPending">Chưa kết nối máy chủ</small></span></li>
           </ol>
           <p id="launch-warning" data-i18n="completeSourceHint">Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.</p>
-          <button class="primary" type="submit"><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+          <button class="primary" id="submit-recipe" type="submit" disabled><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
         </aside>
       </form>
     </section>

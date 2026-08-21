@@ -87,13 +87,17 @@ Object.assign(translations.vi, {
 });
 
 Object.assign(translations.vi, {
-  confirmSource: "Xác nhận nguồn",
-  probeDeferred: "Đã nhận diện link. Máy chủ build sẽ xác minh khả dụng và metadata ở bước preflight trước khi tải ROM.",
-  probeDeferredKicker: "SẴN SÀNG KIỂM TRA"
+  probeDeferred: "Máy chủ đang bận phân tích ROM. Hãy thử lại sau ít phút.",
+  probeDeferredKicker: "ĐANG CHỜ MÁY CHỦ"
 });
 
 Object.assign(translations.vi, {
-  detectedProduct: "Product", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng",
+  detectedProduct: "Product", detectedDevice: "Mã thiết bị", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng", otaType: "Kiểu OTA", contentType: "Định dạng", lastModified: "Cập nhật máy chủ", deepInspection: "Kiểm tra ZIP",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
+  apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
+  apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Mở Mini App từ nút trong bot Telegram để xác thực rồi phân tích ROM.", apiAuthButton: "Mở từ bot Telegram", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
+  probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.",
+  checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Cần mở từ bot Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
@@ -126,13 +130,17 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.en, {
-  confirmSource: "Confirm source",
-  probeDeferred: "Link recognized. Build preflight will verify availability and metadata before downloading the ROM.",
-  probeDeferredKicker: "READY FOR PREFLIGHT"
+  probeDeferred: "The server is busy analyzing ROMs. Try again in a moment.",
+  probeDeferredKicker: "WAITING FOR SERVER"
 });
 
 Object.assign(translations.en, {
-  detectedProduct: "Product", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Size",
+  detectedProduct: "Product", detectedDevice: "Device code", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Size", otaType: "OTA type", contentType: "Content type", lastModified: "Server modified", deepInspection: "ZIP inspection",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
+  apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
+  apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "Open the Mini App from the Telegram bot button to authenticate and analyze the ROM.", apiAuthButton: "Open from Telegram bot", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
+  probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.",
+  checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Open from the Telegram bot", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
@@ -167,7 +175,10 @@ const state = {
   jobsPollTimer: null,
   jobsLoading: false,
   sourceProbeTimer: null,
-  sourceProbeUri: ""
+  sourceProbeUri: "",
+  sourceInputUri: "",
+  sourceProbeController: null,
+  sourceProbeRequestId: 0
 };
 
 function t(key, values = {}) {
@@ -207,6 +218,12 @@ function miniApiAvailable() {
   return Boolean(miniApiEndpoint && TelegramApp?.initData);
 }
 
+function miniApiState() {
+  if (!miniApiEndpoint) return "unconfigured";
+  if (!TelegramApp?.initData) return "unauthenticated";
+  return "ready";
+}
+
 async function apiRequest(path, options = {}) {
   if (!miniApiEndpoint) throw new Error(t("apiRequired"));
   if (!TelegramApp?.initData) throw new Error(t("telegramOnly"));
@@ -216,8 +233,11 @@ async function apiRequest(path, options = {}) {
   let response;
   try {
     response = await fetch(`${miniApiEndpoint}${path}`, { ...options, headers, cache: "no-store" });
-  } catch {
-    throw new Error(t("requestFailed"));
+  } catch (cause) {
+    if (cause?.name === "AbortError") throw cause;
+    const error = new Error(t("requestFailed"));
+    error.connectionFailed = true;
+    throw error;
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -281,58 +301,138 @@ function classifySource(rawValue) {
   return { valid: true, kind: url.protocol === "https:" ? "https" : "http", provider, type, marker, device, version };
 }
 
+const sourceFactDefinitions = [
+  ["source-provider", "provider"],
+  ["source-product-detected", "detectedProduct"],
+  ["source-device-detected", "detectedDevice"],
+  ["source-version-detected", "detectedVersion"],
+  ["source-android-version", "androidVersion"],
+  ["source-security-patch", "securityPatch"],
+  ["source-build-date", "buildDate"],
+  ["source-size-detected", "sourceSizeDetected"],
+  ["source-ota-type", "otaType"],
+  ["source-content-type", "contentType"],
+  ["source-filename", "fileName"],
+  ["source-host", "resolvedHost"],
+  ["source-md5", "MD5"],
+  ["source-last-modified", "lastModified"],
+  ["source-deep-inspection", "deepInspection"]
+];
+
+const requiredSourceFactIds = sourceFactDefinitions
+  .map(([id]) => id)
+  .filter((id) => id !== "source-deep-inspection");
+
+function setSourceFact(id, value) {
+  const node = $(`#${id}`);
+  if (!node) return;
+  const text = String(value || "").trim();
+  node.textContent = text || "—";
+  node.dataset.empty = text && text !== "—" ? "false" : "true";
+  node.title = text && text !== "—" ? text : "";
+}
+
+function updateMetadataCompleteness() {
+  const complete = requiredSourceFactIds.filter((id) => {
+    const value = $(`#${id}`)?.textContent?.trim();
+    return value && value !== "—" && value !== "···";
+  }).length;
+  const total = requiredSourceFactIds.length;
+  $("#source-metadata-count").textContent = t("metadataCompleteness", { complete, total });
+  return { complete, total };
+}
+
+function resetSourceFacts(detection, uri) {
+  sourceFactDefinitions.forEach(([id]) => setSourceFact(id, ""));
+  if (!detection?.valid) { updateMetadataCompleteness(); return; }
+  setSourceFact("source-provider", detection.provider);
+  setSourceFact("source-product-detected", detection.device);
+  setSourceFact("source-version-detected", detection.version);
+  setSourceFact("source-host", detection.kind === "rclone" ? "Google Drive" : new URL(uri).hostname);
+  updateMetadataCompleteness();
+}
+
+function sourceMetadataText() {
+  return sourceFactDefinitions.map(([id, key]) => `${t(key)}: ${$(`#${id}`)?.textContent?.trim() || "—"}`).join("\n");
+}
+
+async function copySourceMetadata() {
+  const text = sourceMetadataText();
+  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+  else {
+    const input = document.createElement("textarea"); input.value = text;
+    input.style.position = "fixed"; input.style.opacity = "0"; input.style.pointerEvents = "none";
+    document.body.append(input); input.select(); document.execCommand("copy"); input.remove();
+  }
+  toast(t("metadataCopied"));
+}
+
+function presentMissingApi() {
+  const status = miniApiState();
+  const node = $("#source-state");
+  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
+  node.classList.add("probe-unavailable");
+  const unconfigured = status === "unconfigured";
+  $("#source-kicker").textContent = t(unconfigured ? "apiUnavailableKicker" : "apiAuthKicker");
+  $("#source-state-message").textContent = t(unconfigured ? "apiUnavailableMessage" : "apiAuthMessage");
+  const button = $("#probe-source");
+  button.textContent = t(unconfigured ? "apiUnavailableButton" : "apiAuthButton");
+  button.disabled = true;
+}
+
 function updateSourceDetection() {
   const node = $("#source-state");
   if (!node) return;
   const currentUri = $("#source-uri").value.trim();
   const detection = classifySource(currentUri);
-  if (state.sourceProbeUri && state.sourceProbeUri !== currentUri) {
+  const uriChanged = state.sourceInputUri !== currentUri;
+  if (uriChanged) {
+    state.sourceInputUri = currentUri;
+    state.sourceProbeRequestId += 1;
+    state.sourceProbeController?.abort();
+    state.sourceProbeController = null;
     $("#source-size").value = "";
     state.sourceProbeUri = "";
+    if (state.sourceAutoDevice && $("#device").value === state.sourceAutoDevice) {
+      $("#device").value = "";
+      updateSummary();
+    }
+    state.sourceAutoDevice = null;
+    state.sourceProbe = null;
   }
-  if (state.sourceAutoDevice && $("#device").value === state.sourceAutoDevice) {
-    $("#device").value = "";
-    updateSummary();
-  }
-  state.sourceAutoDevice = null;
-  state.sourceProbe = null;
   state.sourceDetection = detection;
   updateSummary();
   node.classList.toggle("detected", Boolean(detection?.valid));
   node.classList.toggle("invalid", Boolean(detection && !detection.valid));
-  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed");
+  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   const marker = node.querySelector(".source-state-mark span");
   const facts = $("#source-facts");
+  const factsHead = $("#source-facts-head");
   const probe = $("#probe-source");
-  probe.textContent = t(miniApiAvailable() ? "analyzeSource" : "confirmSource");
+  probe.disabled = false;
+  probe.textContent = t("analyzeSource");
   if (!detection) {
     marker.textContent = "URL";
     $("#source-kicker").textContent = t("sourceIdleKicker");
     $("#source-state-title").textContent = t("sourceIdleTitle");
     $("#source-state-message").textContent = t("sourceIdleMessage");
-    facts.hidden = true; probe.hidden = true; return;
+    resetSourceFacts(null, "");
+    facts.hidden = true; factsHead.hidden = true; probe.hidden = true; return;
   }
   if (!detection.valid) {
     marker.textContent = "?";
     $("#source-kicker").textContent = t("sourceInvalidKicker");
     $("#source-state-title").textContent = t("sourceInvalidTitle");
     $("#source-state-message").textContent = t("sourceInvalidMessage");
-    facts.hidden = true; probe.hidden = true; return;
+    resetSourceFacts(null, "");
+    facts.hidden = true; factsHead.hidden = true; probe.hidden = true; return;
   }
   marker.textContent = detection.marker;
   $("#source-kicker").textContent = t("sourceDetectedKicker");
   $("#source-state-title").textContent = `${detection.provider} · ${detection.type}`;
   $("#source-state-message").textContent = t("deepProbeHint");
-  $("#source-provider").textContent = detection.provider;
-  $("#source-product-detected").textContent = detection.device || "—";
-  $("#source-version-detected").textContent = detection.version || "—";
-  $("#source-android-version").textContent = "—";
-  $("#source-security-patch").textContent = "—";
-  $("#source-build-date").textContent = "—";
-  $("#source-size-detected").textContent = "—";
-  $("#source-host").textContent = detection.kind === "rclone" ? "Google Drive" : new URL($("#source-uri").value.trim()).hostname;
-  $("#source-filename").textContent = "—";
-  facts.hidden = false;
+  resetSourceFacts(detection, currentUri);
+  facts.hidden = false; factsHead.hidden = false;
   probe.hidden = detection.marker === "DRV";
   if (detection.device && [...$("#device").options].some((option) => option.value === detection.device)) {
     $("#device").value = detection.device;
@@ -342,11 +442,17 @@ function updateSourceDetection() {
   if (!$("#device").value) {
     $(".source-manual").open = true;
   }
+  if (state.sourceProbeUri === currentUri && state.sourceProbe?.result) {
+    const completeness = applyProbeResult(state.sourceProbe.result, currentUri, { announce: false });
+    setProbePresentation(completeness.complete === completeness.total ? "analyzed" : "probe-limited", completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
+    return;
+  }
+  if (!probe.hidden && !miniApiAvailable()) presentMissingApi();
 }
 
 function setProbePresentation(status, messageKey) {
   const node = $("#source-state");
-  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed");
+  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   node.classList.add(status);
   const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-deferred" ? "probeDeferredKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
   $("#source-kicker").textContent = t(kickerKey);
@@ -394,7 +500,7 @@ function formatBytes(value) {
   return `${size.toFixed(index ? 2 : 0)} ${units[index]}`;
 }
 
-function applyProbeResult(result, uri) {
+function applyProbeResult(result, uri, { announce = true } = {}) {
   const detected = state.sourceDetection;
   const url = new URL(uri);
   const rawFilename = url.pathname.split("/").filter(Boolean).at(-1) || "";
@@ -406,50 +512,72 @@ function applyProbeResult(result, uri) {
   const product = result?.productName || String(result?.version || "").split("_", 1)[0] || device;
   const version = result?.version || detected.version || inferred?.version || "";
   const size = Number(result?.sizeBytes || 0);
-  $("#source-provider").textContent = result?.provider || detected.provider;
-  $("#source-host").textContent = host;
-  $("#source-filename").textContent = filename;
-  $("#source-product-detected").textContent = product || "—";
-  $("#source-version-detected").textContent = version || "—";
-  $("#source-android-version").textContent = result?.androidVersion || "—";
-  $("#source-security-patch").textContent = result?.securityPatch || "—";
-  $("#source-build-date").textContent = result?.buildDate || "—";
-  $("#source-size-detected").textContent = formatBytes(size);
+  setSourceFact("source-provider", result?.provider || detected.provider);
+  setSourceFact("source-host", host);
+  setSourceFact("source-filename", filename);
+  setSourceFact("source-product-detected", product);
+  setSourceFact("source-device-detected", result?.device);
+  setSourceFact("source-version-detected", version);
+  setSourceFact("source-android-version", result?.androidVersion);
+  setSourceFact("source-security-patch", result?.securityPatch);
+  setSourceFact("source-build-date", result?.buildDate);
+  setSourceFact("source-size-detected", size > 0 ? `${formatBytes(size)} · ${size.toLocaleString(state.language === "vi" ? "vi-VN" : "en-US")} bytes` : "");
+  setSourceFact("source-ota-type", result?.otaType);
+  setSourceFact("source-content-type", result?.contentType);
+  setSourceFact("source-md5", result?.md5);
+  setSourceFact("source-last-modified", result?.lastModified);
+  setSourceFact("source-deep-inspection", result?.deepInspected ? t("deepInspected") : t("headersOnly"));
   if (Number.isSafeInteger(size) && size > 0) $("#source-size").value = String(size);
   if (device && [...$("#device").options].some((option) => option.value === device)) {
     $("#device").value = device;
     state.sourceAutoDevice = device;
-    toast(t("autoSelected", { device }));
+    if (announce) toast(t("autoSelected", { device }));
   }
   selectModPackForVersion(version);
   state.sourceProbeUri = uri;
-  state.sourceProbe = { status: "analyzed", result };
+  const completeness = updateMetadataCompleteness();
+  state.sourceProbe = { status: completeness.complete === completeness.total ? "analyzed" : "partial", result };
   updateSummary();
+  return completeness;
 }
 
 async function probeSourceInPlace() {
   const button = $("#probe-source");
   const uri = $("#source-uri").value.trim();
   if (!state.sourceDetection?.valid || !/^https?:\/\//i.test(uri)) throw new Error(t("invalidUrl"));
+  if (!miniApiAvailable()) { presentMissingApi(); return; }
+  state.sourceProbeController?.abort();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 50000);
+  state.sourceProbeController = controller;
+  const requestId = ++state.sourceProbeRequestId;
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 50000);
   button.disabled = true;
   button.textContent = t("probeAnalyzing");
   setProbePresentation("probing", "probeAnalyzing");
   try {
     const result = await probeSourceViaBackend(uri, controller.signal);
-    applyProbeResult(result, uri);
-    state.sourceProbe = { status: result ? "analyzed" : "deferred", result };
-    setProbePresentation(result ? "analyzed" : "probe-deferred", result ? "probeSuccess" : "probeDeferred");
+    if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
+    const completeness = applyProbeResult(result, uri);
+    setProbePresentation(completeness.complete === completeness.total ? "analyzed" : "probe-limited", completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
   } catch (error) {
-    const unavailable = (error?.sourceRejected && error?.status !== 429) || navigator.onLine === false;
-    state.sourceProbe = { status: unavailable ? "failed" : "deferred" };
-    setProbePresentation(unavailable ? "probe-failed" : "probe-deferred", unavailable ? "probeFailed" : "probeDeferred");
-    toast(unavailable ? t("probeFailed") : error.message, true);
+    if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
+    if (error?.name === "AbortError" && !timedOut) return;
+    const sourceFailed = error?.sourceRejected && error?.status !== 429;
+    const apiOffline = timedOut || error?.connectionFailed || navigator.onLine === false;
+    const status = sourceFailed ? "probe-failed" : apiOffline ? "backend-offline" : "probe-deferred";
+    const message = sourceFailed ? "probeFailed" : apiOffline ? "apiOfflineMessage" : "probeDeferred";
+    state.sourceProbe = { status: sourceFailed ? "failed" : apiOffline ? "offline" : "deferred" };
+    setProbePresentation(status, message);
+    if (apiOffline) $("#source-kicker").textContent = t("apiOfflineKicker");
+    toast(sourceFailed ? t("probeFailed") : apiOffline ? t("apiOfflineMessage") : error.message, true);
   } finally {
     clearTimeout(timeout);
-    button.disabled = false;
-    button.textContent = t(miniApiAvailable() ? "analyzeSource" : "confirmSource");
+    if (requestId === state.sourceProbeRequestId) {
+      state.sourceProbeController = null;
+      button.disabled = false;
+      button.textContent = t("analyzeSource");
+    }
   }
 }
 
@@ -555,18 +683,20 @@ function filterMods() {
 function updateTelegramState() {
   const authenticated = Boolean(TelegramApp?.initData);
   const keyboardConnected = telegramTransportAvailable();
-  const connected = authenticated || keyboardConnected;
+  const sessionAvailable = authenticated || keyboardConnected;
+  const connected = miniApiAvailable();
   const connection = $("#telegram-state");
   const connectionText = connection?.querySelector("span");
   if (connectionText) {
-    connectionText.dataset.i18n = connected ? "connected" : "previewMode";
-    connectionText.textContent = t(connected ? "connected" : "previewMode");
+    const stateKey = connected ? "connected" : sessionAvailable ? "apiSessionOnly" : "previewMode";
+    connectionText.dataset.i18n = stateKey;
+    connectionText.textContent = t(stateKey);
   }
   connection?.classList.toggle("preview", !connected);
   $("#telegram-health")?.classList.toggle("ok", connected);
   const authText = $("#telegram-auth-state");
   if (authText) {
-    const stateKey = authenticated ? "authenticated" : keyboardConnected ? "keyboardConnected" : "authenticatedPreview";
+    const stateKey = connected ? "authenticated" : sessionAvailable ? "apiUnavailableMessage" : "authenticatedPreview";
     authText.dataset.i18n = stateKey;
     authText.textContent = t(stateKey);
   }
@@ -652,10 +782,16 @@ function updateSummary() {
   $("#mod-count").textContent = `${selectedMods().length} ${t("selected")}`;
   $("#build-options").hidden = task !== "build";
   $("#package").disabled = task !== "build";
-  const sourceReady = Boolean(classifySource($("#source-uri")?.value || "")?.valid);
-  const ready = sourceReady && Boolean(selectedDevice);
+  const currentUri = $("#source-uri")?.value?.trim() || "";
+  const sourceDetection = classifySource(currentUri);
+  const sourceReady = Boolean(sourceDetection?.valid);
+  const apiReady = miniApiAvailable();
+  const sourceVerified = sourceDetection?.kind === "rclone"
+    ? sourceReady
+    : sourceReady && state.sourceProbeUri === currentUri && ["analyzed", "partial"].includes(state.sourceProbe?.status);
   const runnerReady = Boolean($("#execution")?.value);
-  const completedChecks = [sourceReady, Boolean(selectedDevice), runnerReady].filter(Boolean).length;
+  const ready = sourceVerified && Boolean(selectedDevice) && runnerReady && apiReady;
+  const completedChecks = [sourceVerified, Boolean(selectedDevice), runnerReady, apiReady].filter(Boolean).length;
   const docket = $(".dispatch-docket");
   docket?.classList.toggle("incomplete", !ready);
   const runtimeState = $("#runtime-pipeline-state");
@@ -665,10 +801,15 @@ function updateSummary() {
   runtimeDot?.classList.toggle("online", ready);
   if ($("#readiness-label")) $("#readiness-label").textContent = t(ready ? "readyLabel" : "incompleteLabel");
   if ($("#readiness-count")) $("#readiness-count").textContent = t("readinessProgress", { done: completedChecks });
-  if ($("#launch-warning")) $("#launch-warning").textContent = t(ready ? "fallbackWarning" : sourceReady ? "chooseDeviceHint" : "completeSourceHint");
-  updateChecklistItem("check-source", sourceReady, "checklistSourceDone", "checklistSourcePending");
+  if ($("#launch-warning")) {
+    const warningKey = ready ? "fallbackWarning" : !apiReady ? "apiRequiredHint" : sourceReady && !sourceVerified ? "sourceProbePendingHint" : sourceReady ? "chooseDeviceHint" : "completeSourceHint";
+    $("#launch-warning").textContent = t(warningKey);
+  }
+  updateChecklistItem("check-source", sourceVerified, "checklistSourceVerified", sourceReady ? "checklistSourceProbePending" : "checklistSourcePending");
   updateChecklistItem("check-device", Boolean(selectedDevice), "checklistDeviceDone", "checklistDevicePending");
   updateChecklistItem("check-runner", runnerReady, "checklistRunnerDone", "checklistRunnerDone");
+  updateChecklistItem("check-api", apiReady, "checklistApiDone", miniApiEndpoint ? "checklistApiAuthPending" : "checklistApiPending");
+  if ($("#submit-recipe")) $("#submit-recipe").disabled = !ready;
   updateDeliveryStates();
   $$('[data-i18n="launch"], [data-i18n="finishSource"]').forEach((node) => {
     node.dataset.i18n = ready ? "launch" : "finishSource";
@@ -955,6 +1096,7 @@ async function runJobAction(action, jobId) {
 }
 
 async function submitRecipe() {
+  if (!miniApiAvailable()) throw new Error(t("apiRequired"));
   const recipe = buildRecipe();
   localStorage.setItem("wukong-recipe-draft", JSON.stringify(recipe));
   const job = await apiRequest("/v1/jobs", { method: "POST", body: JSON.stringify(recipe) });
@@ -967,6 +1109,7 @@ function scheduleSourceProbe() {
   clearTimeout(state.sourceProbeTimer);
   const uri = $("#source-uri").value.trim();
   if (!miniApiAvailable() || !/^https?:\/\//i.test(uri) || !state.sourceDetection?.valid) return;
+  if (state.sourceProbeUri === uri && state.sourceProbe?.result) return;
   state.sourceProbeTimer = setTimeout(() => probeSourceInPlace().catch(() => {}), 450);
 }
 
@@ -1089,6 +1232,7 @@ function bindEvents() {
     if (document.hidden) clearTimeout(state.jobsPollTimer);
     else loadJobs({ force: true }).catch(() => {});
   });
+  $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
   $$('input[name="task"]').forEach((input) => input.addEventListener("change", updateSummary));
 }
 

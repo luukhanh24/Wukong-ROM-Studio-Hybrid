@@ -64,6 +64,12 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             "androidVersion": "16",
             "securityPatch": "2026-08-01",
             "buildDate": "2026-08-11 09:38:18",
+            "otaType": "AB",
+            "contentType": "application/zip",
+            "lastModified": "Tue, 11 Aug 2026 09:38:18 GMT",
+            "md5": "a28632dc4e3e2c8b51cc6e938c87b6fb",
+            "deepInspected": True,
+            "warning": None,
         })
         self.api = TelegramMiniAppAPI(
             bot_token=TOKEN,
@@ -191,6 +197,12 @@ class TelegramMiniAppAPITests(unittest.TestCase):
 
         self.assertEqual(200, probe.status_code)
         self.assertNotIn("metadata", probe.json)
+        for key in (
+            "provider", "filename", "resolvedHost", "sizeBytes", "productName", "device",
+            "version", "androidVersion", "securityPatch", "buildDate", "otaType", "contentType",
+            "lastModified", "md5", "deepInspected", "warning",
+        ):
+            self.assertIn(key, probe.json)
         self.assertEqual(201, created.status_code)
         job_id = created.json["job_id"]
         stored = self.store.recipe(job_id)

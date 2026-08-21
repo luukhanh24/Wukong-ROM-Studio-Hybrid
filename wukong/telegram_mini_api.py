@@ -26,6 +26,7 @@ TERMINAL_STATUSES = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
 SOURCE_METADATA_KEYS = (
     "provider",
     "filename",
+    "resolvedHost",
     "productName",
     "device",
     "version",
@@ -33,6 +34,11 @@ SOURCE_METADATA_KEYS = (
     "securityPatch",
     "buildDate",
     "otaType",
+    "contentType",
+    "lastModified",
+    "md5",
+    "deepInspected",
+    "warning",
 )
 RELEASE_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 
