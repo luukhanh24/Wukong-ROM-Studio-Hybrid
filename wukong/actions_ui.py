@@ -89,6 +89,18 @@ class GitHubActionsUI:
             duration = details.get("durationSeconds")
             if isinstance(duration, (int, float)):
                 self._stage_results.append((stage, float(duration)))
+            if stage == "debloat":
+                deleted = int(details.get("deleted") or 0)
+                skipped = int(details.get("skipped") or 0)
+                _emit(
+                    "[Wukong] Debloat · "
+                    f"Đã xóa / Removed: {deleted} · "
+                    f"Không tồn tại / Not found: {skipped}"
+                )
+                for path in details.get("deletedPaths") or []:
+                    _emit(f"  [removed] {path}")
+                for path in details.get("skippedPaths") or []:
+                    _emit(f"  [not found] {path}")
             suffix = f" · {duration}s" if duration is not None else ""
             _emit(f"::notice title={_command_text(title)}::Hoàn thành / Completed{suffix}")
             self.close_group()

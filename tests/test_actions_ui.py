@@ -34,6 +34,31 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("Hoàn thành / Completed · 12.5s", rendered)
         self.assertIn("::endgroup::", rendered)
 
+    def test_debloat_completion_lists_removed_and_missing_targets(self) -> None:
+        reporter = GitHubActionsUI(enabled=True)
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            reporter.event({"type": "step", "step": "debloat", "status": "running"})
+            reporter.event(
+                {
+                    "type": "step",
+                    "step": "debloat",
+                    "status": "success",
+                    "details": {
+                        "deleted": 1,
+                        "skipped": 1,
+                        "deletedPaths": [r"my_stock\app\Browser"],
+                        "skippedPaths": [r"my_stock\app\Missing"],
+                    },
+                }
+            )
+
+        rendered = output.getvalue()
+        self.assertIn("Đã xóa / Removed: 1", rendered)
+        self.assertIn(r"[removed] my_stock\app\Browser", rendered)
+        self.assertIn(r"[not found] my_stock\app\Missing", rendered)
+
     def test_terminal_summary_contains_recipe_and_artifact_integrity(self) -> None:
         recipe = BuildRecipe.from_dict(
             {
