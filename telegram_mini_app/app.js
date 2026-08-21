@@ -163,9 +163,11 @@ const state = {
   jobs: [],
   activeJobId: localStorage.getItem("wukong-active-job") || "",
   activeEvents: [],
+  activeEventsJobId: "",
   jobsPollTimer: null,
   jobsLoading: false,
-  sourceProbeTimer: null
+  sourceProbeTimer: null,
+  sourceProbeUri: ""
 };
 
 function t(key, values = {}) {
@@ -199,14 +201,6 @@ function toast(message, error = false) {
   clearTimeout(state.toastTimer);
   state.toastTimer = setTimeout(() => node.classList.remove("visible"), 3600);
   if (TelegramApp?.HapticFeedback) TelegramApp.HapticFeedback.notificationOccurred(error ? "error" : "success");
-}
-
-function send(action, extra = {}) {
-  const data = JSON.stringify({ version: 1, action, ...extra });
-  if (new TextEncoder().encode(data).length > 4096) throw new Error(t("payloadLarge"));
-  if (!telegramTransportAvailable()) throw new Error(t("telegramOnly"));
-  TelegramApp.sendData(data);
-  toast(t("sent"));
 }
 
 function miniApiAvailable() {
@@ -290,7 +284,12 @@ function classifySource(rawValue) {
 function updateSourceDetection() {
   const node = $("#source-state");
   if (!node) return;
-  const detection = classifySource($("#source-uri").value);
+  const currentUri = $("#source-uri").value.trim();
+  const detection = classifySource(currentUri);
+  if (state.sourceProbeUri && state.sourceProbeUri !== currentUri) {
+    $("#source-size").value = "";
+    state.sourceProbeUri = "";
+  }
   if (state.sourceAutoDevice && $("#device").value === state.sourceAutoDevice) {
     $("#device").value = "";
     updateSummary();
@@ -423,6 +422,7 @@ function applyProbeResult(result, uri) {
     toast(t("autoSelected", { device }));
   }
   selectModPackForVersion(version);
+  state.sourceProbeUri = uri;
   state.sourceProbe = { status: "analyzed", result };
   updateSummary();
 }
@@ -718,8 +718,7 @@ function buildRecipe() {
       package: $("#package").checked, notifyTelegram: $("#notify").checked
     };
     const paths = $("#debloat-paths").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-    // The shared default list is intentionally visible/editable in the Mini App,
-    // but repeating it in sendData can exceed Telegram's 4096-byte hard limit.
+    // The shared default list is intentionally visible/editable in the Mini App.
     // Omitting an unchanged list is lossless: every runner resolves a missing
     // debloatPaths field from the same versioned config/debloat.json catalog.
     if (paths.length && !sameStringList(paths, state.catalog.defaultDebloatPaths)) {
@@ -903,11 +902,17 @@ function setJobsConnection(key, error = false) {
 
 async function loadJobDetail(jobId) {
   if (!jobId) return;
+  const sameJob = state.activeEventsJobId === jobId;
+  const after = sameJob
+    ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
+    : 0;
   const [job, eventsPayload] = await Promise.all([
     apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}`),
-    apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/events?after=0`)
+    apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/events?after=${after}`)
   ]);
-  state.activeEvents = eventsPayload.events || [];
+  const incoming = Array.isArray(eventsPayload.events) ? eventsPayload.events : [];
+  state.activeEvents = sameJob ? [...state.activeEvents, ...incoming].slice(-100) : incoming.slice(-100);
+  state.activeEventsJobId = jobId;
   const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
   if (index >= 0) state.jobs[index] = job;
   renderActiveJob(job, state.activeEvents); renderJobHistory();

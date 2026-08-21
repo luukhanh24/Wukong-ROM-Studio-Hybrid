@@ -138,6 +138,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
 
         self.assertEqual(200, probe.status_code)
+        self.assertNotIn("metadata", probe.json)
         self.assertEqual(201, created.status_code)
         job_id = created.json["job_id"]
         stored = self.store.recipe(job_id)

@@ -104,6 +104,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("submitRecipe", script)
         self.assertNotIn('send("submit_recipe"', script)
         self.assertIn("telegramTransportAvailable", script)
+        self.assertNotIn("TelegramApp.sendData(", script)
         self.assertIn('TelegramApp.platform !== "unknown"', script)
         self.assertNotIn("!TelegramApp.initData", script)
         self.assertIn("keyboardConnected", script)
@@ -115,6 +116,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("loadJobs", script)
         self.assertIn("scheduleJobsPoll", script)
         self.assertIn("renderArtifacts", script)
+        self.assertIn("activeEventsJobId", script)
+        self.assertIn("events?after=${after}", script)
 
         exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")
         self.assertNotIn("from studio_core import", exporter)
@@ -191,6 +194,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("result?.productName", script)
         self.assertIn("selectModPackForVersion", script)
         self.assertIn("error?.status !== 429", script)
+        self.assertIn("state.sourceProbeUri !== currentUri", script)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
