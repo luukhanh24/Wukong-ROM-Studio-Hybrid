@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     env_file:
       - ${WUKONG_CONTROL_PLANE_ENV_FILE:-.env}
+    environment:
+      WUKONG_MINI_API_DOMAIN: ${WUKONG_MINI_API_DOMAIN}
     volumes:
       - wukong-state:/var/lib/wukong
       - ./secrets/rclone.conf:/run/secrets/rclone.conf:ro

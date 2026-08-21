@@ -442,10 +442,10 @@ async function probeSourceInPlace() {
     state.sourceProbe = { status: result ? "analyzed" : "deferred", result };
     setProbePresentation(result ? "analyzed" : "probe-deferred", result ? "probeSuccess" : "probeDeferred");
   } catch (error) {
-    const unavailable = error?.sourceRejected || navigator.onLine === false;
+    const unavailable = (error?.sourceRejected && error?.status !== 429) || navigator.onLine === false;
     state.sourceProbe = { status: unavailable ? "failed" : "deferred" };
     setProbePresentation(unavailable ? "probe-failed" : "probe-deferred", unavailable ? "probeFailed" : "probeDeferred");
-    if (unavailable) toast(t("probeFailed"), true);
+    toast(unavailable ? t("probeFailed") : error.message, true);
   } finally {
     clearTimeout(timeout);
     button.disabled = false;
