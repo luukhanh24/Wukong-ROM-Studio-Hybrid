@@ -134,8 +134,8 @@ class CloudJobSync:
     def _warn_stale_pull(self, job_id: str) -> None:
         now = time.monotonic()
         with self._pull_warning_lock:
-            last = self._pull_warning_at.get(job_id, 0.0)
-            if now - last < self.PULL_WARNING_INTERVAL_SECONDS:
+            last = self._pull_warning_at.get(job_id)
+            if last is not None and now - last < self.PULL_WARNING_INTERVAL_SECONDS:
                 return
             self._pull_warning_at[job_id] = now
         self.store.append_event(
