@@ -1,5 +1,8 @@
 FROM python:3.13-slim@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a
 
+ARG RCLONE_VERSION=1.75.0
+ARG RCLONE_LINUX_AMD64_SHA256=aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONUTF8=1 \
@@ -14,7 +17,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     WUKONG_TELEGRAM_MINI_APP_API_PORT=8766
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates gosu rclone \
+    && apt-get install -y --no-install-recommends ca-certificates curl gosu unzip \
+    && curl --fail --location --silent --show-error \
+        "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip" \
+        --output /tmp/rclone.zip \
+    && echo "${RCLONE_LINUX_AMD64_SHA256}  /tmp/rclone.zip" | sha256sum --check --strict \
+    && unzip -q /tmp/rclone.zip -d /tmp/rclone \
+    && install -o root -g root -m 0755 \
+        "/tmp/rclone/rclone-v${RCLONE_VERSION}-linux-amd64/rclone" \
+        /usr/local/bin/rclone \
+    && rclone version | grep -F "rclone v${RCLONE_VERSION}" \
+    && rm -rf /tmp/rclone /tmp/rclone.zip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
