@@ -126,7 +126,7 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("os.getuid() == 10001", ci)
         self.assertIn("**/.env", dockerignore)
         self.assertIn("**/secrets", dockerignore)
-        self.assertIn("RCLONE_VERSION=1.75.0", dockerfile)
+        self.assertIn("WUKONG_RCLONE_RELEASE=1.75.0", dockerfile)
         self.assertIn(
             "aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa",
             dockerfile,
