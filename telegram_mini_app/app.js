@@ -1,4 +1,4 @@
-const TelegramApp = window.Telegram && window.Telegram.WebApp;
+let TelegramApp = window.Telegram && window.Telegram.WebApp;
 const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
 const telegramBotUsername = (document.querySelector('meta[name="wukong-telegram-bot"]')?.content?.trim().replace(/^@/, "") || "");
@@ -98,6 +98,7 @@ Object.assign(translations.vi, {
   metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Mở Mini App từ nút trong bot Telegram để xác thực rồi phân tích ROM.", apiAuthButton: "Mở từ bot Telegram", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
+  sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống → trang đang mở bằng link trực tiếp, không phải từ nút Mini App trong bot. Quay lại tab Studio và bấm “Mở từ bot Telegram”.", sessionDiagNoLib: "Không nạp được thư viện Telegram (telegram.org có thể bị chặn). Kiểm tra mạng rồi mở lại từ bot.",
   probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.",
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Cần mở từ bot Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
@@ -141,6 +142,7 @@ Object.assign(translations.en, {
   metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "Open the Mini App from the Telegram bot button to authenticate and analyze the ROM.", apiAuthButton: "Open from Telegram bot", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
+  sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "Bridge loaded but initData is empty → this page was opened as a direct link, not from the bot's Mini App button. Go back to Studio and press “Open from Telegram bot”.", sessionDiagNoLib: "The Telegram bridge could not load (telegram.org may be blocked). Check the network and reopen from the bot.",
   probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.",
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Open from the Telegram bot", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
@@ -201,6 +203,7 @@ function applyLanguage() {
   renderJobHistory();
   const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
   if (activeJob) renderActiveJob(activeJob, state.activeEvents);
+  renderSessionDiagnostics();
   updateSummary();
   updateTelegramState();
   updateSourceDetection();
@@ -1297,19 +1300,59 @@ function bindEvents() {
   $$('input[name="task"]').forEach((input) => input.addEventListener("change", updateSummary));
 }
 
-if (TelegramApp) {
-  TelegramApp.ready(); TelegramApp.expand();
-  if (TelegramApp.isVersionAtLeast?.("7.7")) TelegramApp.disableVerticalSwipes?.();
-  if (TelegramApp.isVersionAtLeast?.("6.1")) {
-    TelegramApp.setHeaderColor?.("secondary_bg_color");
-    TelegramApp.setBackgroundColor?.("secondary_bg_color");
-  }
+function renderSessionDiagnostics() {
+  const node = $("#session-diag");
+  if (!node) return;
+  if (!TelegramApp) { node.textContent = t("sessionDiagNoLib"); return; }
+  const chars = String(TelegramApp.initData || "").length;
+  if (!chars) { node.textContent = t("sessionDiagNoData"); return; }
+  node.textContent = t("sessionDiagOk", { platform: TelegramApp.platform || "?", chars });
 }
 
-bindEvents();
-restoreSourceDraft();
-window.WukongMiniApp = Object.freeze({ setDeliveryState });
-applyLanguage();
-navigate(location.hash.slice(1) || "build", false);
-loadCatalog();
-if (miniApiAvailable()) loadJobs().catch(() => {});
+function activateTelegramApp() {
+  try {
+    TelegramApp.ready(); TelegramApp.expand();
+    if (TelegramApp.isVersionAtLeast?.("7.7")) TelegramApp.disableVerticalSwipes?.();
+    if (TelegramApp.isVersionAtLeast?.("6.1")) {
+      TelegramApp.setHeaderColor?.("secondary_bg_color");
+      TelegramApp.setBackgroundColor?.("secondary_bg_color");
+    }
+  } catch (_) {}
+}
+
+function startMiniApp() {
+  bindEvents();
+  restoreSourceDraft();
+  window.WukongMiniApp = Object.freeze({ setDeliveryState });
+  applyLanguage();
+  navigate(location.hash.slice(1) || "build", false);
+  loadCatalog();
+  renderSessionDiagnostics();
+  if (miniApiAvailable()) loadJobs().catch(() => {});
+}
+
+if (TelegramApp) {
+  activateTelegramApp();
+  startMiniApp();
+} else {
+  // The official bridge failed to load before boot (blocked CDN, flaky
+  // network inside the Telegram webview). Render the UI anyway, then inject
+  // the bridge once more so a real session can still attach late.
+  startMiniApp();
+  const bridge = document.createElement("script");
+  bridge.src = "https://telegram.org/js/telegram-web-app.js";
+  bridge.async = true;
+  bridge.addEventListener("load", () => {
+    TelegramApp = (window.Telegram && window.Telegram.WebApp) || null;
+    if (!TelegramApp) { renderSessionDiagnostics(); return; }
+    activateTelegramApp();
+    restoreSourceDraft();
+    updateTelegramState();
+    updateSourceDetection();
+    scheduleSourceProbe();
+    renderSessionDiagnostics();
+    loadJobs({ force: true }).catch(() => {});
+  });
+  bridge.addEventListener("error", renderSessionDiagnostics);
+  document.head.append(bridge);
+}
