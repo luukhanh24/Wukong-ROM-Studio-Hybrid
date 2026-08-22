@@ -1,6 +1,8 @@
 const TelegramApp = window.Telegram && window.Telegram.WebApp;
 const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
+const telegramBotUsername = (document.querySelector('meta[name="wukong-telegram-bot"]')?.content?.trim().replace(/^@/, "") || "");
+const SOURCE_DRAFT_KEY = "wukong-source-draft";
 
 const translations = {
   vi: {
@@ -377,7 +379,46 @@ function presentMissingApi() {
   $("#source-state-message").textContent = t(unconfigured ? "apiUnavailableMessage" : "apiAuthMessage");
   const button = $("#probe-source");
   button.textContent = t(unconfigured ? "apiUnavailableButton" : "apiAuthButton");
-  button.disabled = true;
+  // Without a Telegram session the probe cannot run, but the pasted link is
+  // kept and the button jumps into the bot so the session can be created.
+  const openBot = !unconfigured && Boolean(telegramBotUsername);
+  button.disabled = !openBot;
+  if (openBot) button.dataset.openBot = "1";
+  else delete button.dataset.openBot;
+}
+
+function persistSourceDraft() {
+  const uri = $("#source-uri")?.value?.trim();
+  if (uri) {
+    try { localStorage.setItem(SOURCE_DRAFT_KEY, uri.slice(0, 8192)); } catch (_) {}
+  }
+}
+
+function telegramBotLink() {
+  return `https://t.me/${telegramBotUsername}`;
+}
+
+function openTelegramBot() {
+  persistSourceDraft();
+  const link = telegramBotLink();
+  try {
+    if (TelegramApp?.openTelegramLink) { TelegramApp.openTelegramLink(link); return; }
+  } catch (_) {}
+  window.open(link, "_blank", "noopener");
+}
+
+function restoreSourceDraft() {
+  const input = $("#source-uri");
+  if (!input || input.value.trim()) return;
+  let startParam = "";
+  try { startParam = decodeURIComponent(String(TelegramApp?.initDataUnsafe?.start_param || "")); } catch (_) { startParam = String(TelegramApp?.initDataUnsafe?.start_param || ""); }
+  let draft = "";
+  try { draft = localStorage.getItem(SOURCE_DRAFT_KEY) || ""; } catch (_) {}
+  const candidate = /^https?:\/\//i.test(startParam) ? startParam : draft;
+  if (!candidate || !/^https?:\/\//i.test(candidate)) return;
+  input.value = candidate;
+  updateSourceDetection();
+  scheduleSourceProbe();
 }
 
 function updateSourceDetection() {
@@ -1216,10 +1257,11 @@ function bindEvents() {
     try { await submitRecipe(); } catch (error) { toast(error.message, true); }
     finally { if (button) button.disabled = false; }
   });
-  $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
-  $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
+  $("#source-uri").addEventListener("input", () => { persistSourceDraft(); updateSourceDetection(); scheduleSourceProbe(); });
+  $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { persistSourceDraft(); updateSourceDetection(); scheduleSourceProbe(); }));
   $("#probe-source").addEventListener("click", () => {
     clearTimeout(state.sourceProbeTimer);
+    if ($("#probe-source").dataset.openBot) { openTelegramBot(); return; }
     probeSourceInPlace().catch((error) => toast(error.message, true));
   });
   $("#select-defaults").addEventListener("click", () => setMods("defaults"));
@@ -1265,6 +1307,7 @@ if (TelegramApp) {
 }
 
 bindEvents();
+restoreSourceDraft();
 window.WukongMiniApp = Object.freeze({ setDeliveryState });
 applyLanguage();
 navigate(location.hash.slice(1) || "build", false);
