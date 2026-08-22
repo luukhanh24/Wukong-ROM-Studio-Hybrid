@@ -43,8 +43,8 @@ class ControlPlaneStateBackup:
         config_path: Path,
         remote_path: str = "WukongROM/control-plane/state-v1.zip",
         interval_seconds: float = 15.0,
-        restore_attempts: int = 3,
-        restore_retry_seconds: float = 2.0,
+        restore_attempts: int = 8,
+        restore_retry_seconds: float = 10.0,
         run_command: RunCommand = subprocess.run,
     ) -> None:
         self.data_root = data_root.resolve()
@@ -93,6 +93,12 @@ class ControlPlaneStateBackup:
             ),
             interval_seconds=float(
                 os.environ.get("WUKONG_CONTROL_PLANE_STATE_BACKUP_INTERVAL", "15")
+            ),
+            restore_attempts=int(
+                os.environ.get("WUKONG_CONTROL_PLANE_STATE_RESTORE_ATTEMPTS", "8")
+            ),
+            restore_retry_seconds=float(
+                os.environ.get("WUKONG_CONTROL_PLANE_STATE_RESTORE_RETRY_SECONDS", "10")
             ),
         )
 
@@ -146,7 +152,11 @@ class ControlPlaneStateBackup:
                     print("No restorable control-plane state snapshot was found.", flush=True)
                     return False
                 if attempt == self.restore_attempts:
-                    raise ControlPlaneStateError("rclone could not download the state snapshot")
+                    raise ControlPlaneStateError(
+                        "rclone could not download the state snapshot after "
+                        f"{self.restore_attempts} attempts; configure a private Google Drive "
+                        "OAuth client_id if the remote uses rclone's retired shared client"
+                    )
                 print(
                     "Control-plane state restore was temporarily unavailable; "
                     f"retrying ({attempt}/{self.restore_attempts}).",

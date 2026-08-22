@@ -32,6 +32,10 @@ services:
         value: WukongROM/control-plane/state-v1.zip
       - key: WUKONG_CONTROL_PLANE_STATE_BACKUP_INTERVAL
         value: "30"
+      - key: WUKONG_CONTROL_PLANE_STATE_RESTORE_ATTEMPTS
+        value: "8"
+      - key: WUKONG_CONTROL_PLANE_STATE_RESTORE_RETRY_SECONDS
+        value: "10"
       - key: WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS
         value: "false"
       - key: WUKONG_CONTROL_PLANE_ONLINE_PREFLIGHT
