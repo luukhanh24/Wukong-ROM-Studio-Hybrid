@@ -1341,6 +1341,106 @@ class CloudSyncContractTests(unittest.TestCase):
             self.assertTrue(command_timeouts)
             self.assertTrue(all(value == 8.0 for value in command_timeouts))
 
+    def test_pull_retries_after_a_state_timeout_and_recovers(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("windows", "local", "admin"))
+            remote_manifest = job.to_dict() | {
+                "status": "succeeded",
+                "stage": "complete",
+                "progress": 1.0,
+            }
+            attempts = {"manifest": 0}
+
+            def fake_run(args: list[str], **options: object) -> str:
+                destination = Path(args[3])
+                if args[2].endswith("manifest.json"):
+                    attempts["manifest"] += 1
+                    if attempts["manifest"] == 1:
+                        raise subprocess.TimeoutExpired(cmd=args, timeout=8.0)
+                    destination.write_text(json.dumps(remote_manifest), encoding="utf-8")
+                return ""
+
+            sync = CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run))
+            updated = sync.pull(job.job_id)
+            self.assertEqual(updated.status, JobStatus.SUCCEEDED)
+            self.assertEqual(attempts["manifest"], 2)
+
+    def test_pull_does_not_retry_fast_object_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("windows", "local", "admin"))
+            calls = {"manifest": 0}
+
+            def fake_run(args: list[str], **options: object) -> str:
+                if args[2].endswith("manifest.json"):
+                    calls["manifest"] += 1
+                    raise subprocess.CalledProcessError(returncode=3, cmd=args)
+                raise AssertionError("events merge must not run when the manifest is missing")
+
+            sync = CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run))
+            self.assertEqual(sync.pull(job.job_id).status, JobStatus.QUEUED)
+            self.assertEqual(calls["manifest"], 1)
+            warnings = [event for event in store.events(job.job_id) if event.type == "warning"]
+            self.assertEqual(warnings, [])
+
+    def test_pull_warns_once_per_interval_when_state_times_out(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("windows", "local", "admin"))
+
+            def fake_run(args: list[str], **options: object) -> str:
+                if args[2].endswith("manifest.json"):
+                    raise subprocess.TimeoutExpired(cmd=args, timeout=8.0)
+                raise AssertionError("events merge must not run when the pull times out")
+
+            CloudJobSync._pull_warning_at.clear()
+            sync = CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run))
+            self.assertEqual(sync.pull(job.job_id).status, JobStatus.QUEUED)
+            self.assertEqual(sync.pull(job.job_id).status, JobStatus.QUEUED)
+            warnings = [
+                event
+                for event in store.events(job.job_id)
+                if event.type == "warning" and event.payload.get("source") == "cloud-pull"
+            ]
+            self.assertEqual(len(warnings), 1)
+
     def test_pull_imports_resume_checkpoint_before_actions_execute(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             store = InMemoryJobStore()
