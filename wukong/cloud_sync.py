@@ -12,6 +12,8 @@ from .orchestrator import JobStore
 
 
 class CloudJobSync:
+    STATE_OPERATION_TIMEOUT_SECONDS = 8.0
+
     def __init__(self, store: JobStore, storage: RcloneStorageAdapter) -> None:
         self.store = store
         self.storage = storage
@@ -35,8 +37,16 @@ class CloudJobSync:
                 ),
                 encoding="utf-8",
             )
-            self.storage.copy_file(manifest_path, f"jobs/{job_id}/manifest.json")
-            self.storage.copy_file(events_path, f"jobs/{job_id}/events.jsonl")
+            self.storage.copy_file(
+                manifest_path,
+                f"jobs/{job_id}/manifest.json",
+                timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
+            )
+            self.storage.copy_file(
+                events_path,
+                f"jobs/{job_id}/events.jsonl",
+                timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
+            )
 
     def pull(self, job_id: str) -> JobManifest | None:
         local = self.store.get(job_id)
@@ -54,7 +64,10 @@ class CloudJobSync:
                 "1",
             )
             try:
-                self.storage.run_command(args)
+                self.storage.run_command(
+                    args,
+                    timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
+                )
             except Exception:
                 return local
             if not destination.is_file():
@@ -100,7 +113,8 @@ class CloudJobSync:
                         str(destination),
                         "--retries",
                         "1",
-                    )
+                    ),
+                    timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
                 )
             except Exception:
                 return local
@@ -158,7 +172,8 @@ class CloudJobSync:
                         str(destination),
                         "--retries",
                         "1",
-                    )
+                    ),
+                    timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
                 )
             except Exception:
                 return

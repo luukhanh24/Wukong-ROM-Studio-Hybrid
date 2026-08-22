@@ -881,9 +881,19 @@ class RcloneStorageAdapter:
             raise ValueError("Cloud storage path is empty or contains path traversal")
         return f"{self.remote}:{self.root}/{normalized}"
 
-    def copy_file(self, source: Path, relative_path: str) -> str:
+    def copy_file(
+        self,
+        source: Path,
+        relative_path: str,
+        *,
+        timeout: float | None = None,
+    ) -> str:
         uri = self.remote_uri(relative_path)
-        self.run_command(self._args("copyto", str(source), uri, "--retries", "3"))
+        options = {"timeout": timeout} if timeout is not None else {}
+        self.run_command(
+            self._args("copyto", str(source), uri, "--retries", "3"),
+            **options,
+        )
         return uri
 
     def copy_tree(self, source: Path, relative_path: str) -> str:

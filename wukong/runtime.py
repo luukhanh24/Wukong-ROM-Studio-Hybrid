@@ -254,7 +254,11 @@ class HybridRuntime:
             recipe_path = self.workspace_root / job_id / "dispatch-recipe.json"
             recipe_path.parent.mkdir(parents=True, exist_ok=True)
             recipe_path.write_text(dispatch_recipe.canonical_json + "\n", encoding="utf-8")
-            recipe_ref = storage.copy_file(recipe_path, f"recipes/{job_id}.json")
+            recipe_ref = storage.copy_file(
+                recipe_path,
+                f"recipes/{job_id}.json",
+                timeout=60.0,
+            )
             owner, name = repository.split("/", 1)
             github = GitHubActionsAdapter(owner, name, token)
             self.store.update(job_id, status=JobStatus.QUEUED, stage="github-actions")
