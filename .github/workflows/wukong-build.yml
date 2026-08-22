@@ -283,7 +283,7 @@ jobs:
   notify-control-plane:
     name: "20 · Đánh thức Mini App & báo kết quả"
     needs: [route, hosted, self-hosted]
-    if: always() && needs.route.result == 'success'
+    if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: "20 · Đồng bộ kết quả / Wake control plane"
@@ -291,6 +291,11 @@ jobs:
           API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
           CALLBACK_SECRET: ${{ secrets.WUKONG_GITHUB_TOKEN }}
           WUKONG_JOB_ID: ${{ inputs.job_id }}
+          WUKONG_RUN_ID: ${{ github.run_id }}
+          ROUTE_RESULT: ${{ needs.route.result }}
+          RUNNER_KIND: ${{ needs.route.outputs.runner_kind }}
+          HOSTED_RESULT: ${{ needs.hosted.result }}
+          SELF_HOSTED_RESULT: ${{ needs.self-hosted.result }}
         shell: bash
         run: |
           set -euo pipefail
@@ -300,10 +305,26 @@ jobs:
           fi
           api_url="${API_URL%/}"
           [[ "$api_url" == https://* ]]
-          body="$(python - "$WUKONG_JOB_ID" <<'PY'
+          body="$(python - "$WUKONG_JOB_ID" "$WUKONG_RUN_ID" <<'PY'
           import json
+          import os
           import sys
-          print(json.dumps({"jobId": sys.argv[1]}, separators=(",", ":")))
+          route = os.environ.get("ROUTE_RESULT", "")
+          runner = os.environ.get("RUNNER_KIND", "")
+          selected = (
+              os.environ.get("HOSTED_RESULT", "")
+              if runner == "github-hosted"
+              else os.environ.get("SELF_HOSTED_RESULT", "")
+          )
+          result = route if route != "success" else selected
+          if result not in {"success", "failure", "cancelled"}:
+              result = "failure"
+          print(json.dumps({
+              "jobId": sys.argv[1],
+              "runId": int(sys.argv[2]),
+              "workflowResult": result,
+              "preExecutorFailure": route != "success",
+          }, separators=(",", ":")))
           PY
           )"
           for attempt in {1..30}; do

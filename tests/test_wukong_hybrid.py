@@ -1495,6 +1495,66 @@ class ControlAdapterContractTests(unittest.TestCase):
         self.assertNotIn("secret-token", serialized)
         self.assertEqual(requests[0][2]["inputs"]["recipe_ref"], "wukong-gdrive:WukongROM/recipes/abc.json")
 
+    def test_github_run_lookup_matches_current_workflow_title_and_reads_terminal_state(self) -> None:
+        requests: list[tuple[str, str]] = []
+
+        def transport(method: str, url: str, _payload: dict[str, object] | None = None) -> object:
+            requests.append((method, url))
+            if url.endswith("/actions/runs/321"):
+                return {
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "html_url": "https://github.example/actions/runs/321",
+                }
+            return {
+                "workflow_runs": [
+                    {"id": 321, "display_title": "job-123 · Wukong Hybrid"},
+                ]
+            }
+
+        adapter = GitHubActionsAdapter("owner", "repo", "token", transport=transport)
+
+        self.assertEqual(321, adapter.find_run("wukong-build.yml", "job-123", attempts=1))
+        self.assertEqual(
+            {
+                "status": "completed",
+                "conclusion": "failure",
+                "url": "https://github.example/actions/runs/321",
+            },
+            adapter.run_state(321),
+        )
+        self.assertEqual("GET", requests[0][0])
+
+    def test_source_metadata_accepts_complete_probe_contract(self) -> None:
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "PKG110",
+            "source": {
+                "kind": "https",
+                "uri": "https://downloads.example/rom.zip",
+                "metadata": {
+                    "provider": "oplus",
+                    "filename": "rom.zip",
+                    "resolvedHost": "cdn.example",
+                    "productName": "PKG110",
+                    "device": "OP5D2BL1",
+                    "version": "PKG110_16.0.9.400(CN01)",
+                    "androidVersion": "16",
+                    "securityPatch": "2026-07-01",
+                    "buildDate": "2026-07-06 08:51:35",
+                    "otaType": "AB",
+                    "contentType": "application/zip",
+                    "lastModified": "Wed, 08 Jul 2026 10:28:55 GMT",
+                    "md5": "6fb0095cc9c07dbdb74074c87cbb643f",
+                    "deepInspected": "True",
+                },
+            },
+        })
+
+        self.assertEqual("application/zip", recipe.source.metadata["contentType"])
+        self.assertEqual("cdn.example", recipe.source.metadata["resolvedHost"])
+
     def test_github_runner_inventory_requires_qualified_online_runner(self) -> None:
         def transport(method: str, url: str, payload: dict[str, object] | None = None) -> object:
             return {

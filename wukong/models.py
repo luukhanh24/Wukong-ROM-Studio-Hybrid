@@ -71,6 +71,7 @@ ROLES = {"admin", "user"}
 SOURCE_METADATA_KEYS = {
     "provider",
     "filename",
+    "resolvedHost",
     "productName",
     "device",
     "version",
@@ -78,6 +79,11 @@ SOURCE_METADATA_KEYS = {
     "securityPatch",
     "buildDate",
     "otaType",
+    "contentType",
+    "lastModified",
+    "md5",
+    "deepInspected",
+    "warning",
 }
 
 

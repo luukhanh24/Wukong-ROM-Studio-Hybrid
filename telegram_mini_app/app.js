@@ -101,7 +101,7 @@ Object.assign(translations.vi, {
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
-  retryJob: "Chạy lại", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API."
+  retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API."
 });
 
 Object.assign(translations.en, {
@@ -144,7 +144,7 @@ Object.assign(translations.en, {
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
-  retryJob: "Retry", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API."
+  retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API."
 });
 
 const pipelineLabels = {
@@ -975,6 +975,15 @@ function jobAction(label, action, job, danger = false) {
   return button;
 }
 
+function githubRunLink(job) {
+  const runId = Number(job?.external_run_id ?? job?.externalRunId ?? 0);
+  if (!Number.isSafeInteger(runId) || runId <= 0) return null;
+  const link = document.createElement("a");
+  link.href = `https://github.com/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/${runId}`;
+  link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = t("openActionsLog");
+  return link;
+}
+
 function renderActiveJob(job, events) {
   const root = $("#active-job");
   if (!root) return;
@@ -1009,6 +1018,7 @@ function renderActiveJob(job, events) {
   const actions = document.createElement("div"); actions.className = "job-controls";
   if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
   if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
+  const runLink = githubRunLink(job); if (runLink) actions.append(runLink);
   root.replaceChildren(header, progress, facts, actions, renderEvents(events), renderArtifacts(job));
 }
 
@@ -1054,7 +1064,14 @@ async function loadJobDetail(jobId) {
     apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/events?after=${after}`)
   ]);
   const incoming = Array.isArray(eventsPayload.events) ? eventsPayload.events : [];
-  state.activeEvents = sameJob ? [...state.activeEvents, ...incoming].slice(-100) : incoming.slice(-100);
+  const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
+  const unique = new Map();
+  merged.forEach((event) => {
+    const sequence = Number(event?.sequence || 0);
+    const fallback = `${event?.timestamp || ""}|${event?.type || ""}|${JSON.stringify(event || {})}`;
+    unique.set(sequence > 0 ? `sequence:${sequence}` : `event:${fallback}`, event);
+  });
+  state.activeEvents = [...unique.values()].slice(-100);
   state.activeEventsJobId = jobId;
   const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
   if (index >= 0) state.jobs[index] = job;
