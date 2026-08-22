@@ -328,27 +328,9 @@ jobs:
           PY
           )"
           for attempt in {1..30}; do
-            timestamp="$(date +%s)"
-            signature="$(CALLBACK_SECRET="$CALLBACK_SECRET" TIMESTAMP="$timestamp" BODY="$body" python - <<'PY'
-          import hashlib
-          import hmac
-          import os
-          key = hmac.new(
-              b"WukongActionsCallback\0",
-              os.environ["CALLBACK_SECRET"].encode(),
-              hashlib.sha256,
-          ).digest()
-          print(hmac.new(
-              key,
-              os.environ["TIMESTAMP"].encode("ascii") + b"." + os.environ["BODY"].encode(),
-              hashlib.sha256,
-          ).hexdigest())
-          PY
-            )"
             if curl --fail --silent --show-error --connect-timeout 15 --max-time 45 \
               -H 'Content-Type: application/json' \
-              -H "X-Wukong-Timestamp: $timestamp" \
-              -H "X-Wukong-Signature: $signature" \
+              -H "Authorization: Bearer $CALLBACK_SECRET" \
               --data-binary "$body" \
               "$api_url/internal/actions/callback"; then
               exit 0
