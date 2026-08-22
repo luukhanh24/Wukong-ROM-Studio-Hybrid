@@ -1306,6 +1306,7 @@ class OrchestratorContractTests(unittest.TestCase):
 class CloudSyncContractTests(unittest.TestCase):
     def test_pull_imports_remote_events_once(self) -> None:
         with tempfile.TemporaryDirectory() as root:
+            command_timeouts: list[object] = []
             store = InMemoryJobStore()
             orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
             source = Path(root, "rom.zip")
@@ -1323,7 +1324,8 @@ class CloudSyncContractTests(unittest.TestCase):
             remote_manifest = job.to_dict() | {"status": "running", "stage": "repack", "progress": 0.5}
             remote_events = [{"sequence": 5, "jobId": job.job_id, "timestamp": "now", "type": "state", "stage": "repack"}]
 
-            def fake_run(args: list[str], **_: object) -> str:
+            def fake_run(args: list[str], **options: object) -> str:
+                command_timeouts.append(options.get("timeout"))
                 destination = Path(args[3])
                 if args[2].endswith("manifest.json"):
                     destination.write_text(json.dumps(remote_manifest), encoding="utf-8")
@@ -1336,6 +1338,8 @@ class CloudSyncContractTests(unittest.TestCase):
             sync.pull(job.job_id)
             imported = [event for event in store.events(job.job_id) if event.payload.get("remoteSequence") == 5]
             self.assertEqual(len(imported), 1)
+            self.assertTrue(command_timeouts)
+            self.assertTrue(all(value == 8.0 for value in command_timeouts))
 
     def test_pull_imports_resume_checkpoint_before_actions_execute(self) -> None:
         with tempfile.TemporaryDirectory() as root:
