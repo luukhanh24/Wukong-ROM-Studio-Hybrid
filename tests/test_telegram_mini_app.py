@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -55,6 +56,7 @@ def _chrome_path() -> str | None:
 
 class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     api_enabled = True
+    telegram_authenticated = True
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -77,8 +79,13 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
             self._send(html.encode(), "text/html; charset=utf-8")
             return
         if path == "/telegram-web-app.js":
+            session = (
+                "initData: 'fixture-init-data', "
+                if self.telegram_authenticated
+                else "initData: '', "
+            )
             source = f"""
-window.Telegram = {{ WebApp: {{ initData: 'fixture-init-data', platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
 window.addEventListener('load', () => {{
   const fill = () => {{
     const input = document.querySelector('#source-uri');
@@ -134,11 +141,19 @@ window.addEventListener('load', () => {{
         self._send(b'{"error":"not found"}', "application/json", 404)
 
 
-def _render_mini_app_in_chrome(*, api_enabled: bool) -> tuple[str, int]:
+def _render_mini_app_in_chrome(
+    *,
+    api_enabled: bool,
+    telegram_authenticated: bool = True,
+) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
         raise unittest.SkipTest("Chrome/Chromium is unavailable")
-    handler = type("MiniAppFixtureHandler", (_MiniAppFixtureHandler,), {"api_enabled": api_enabled})
+    handler = type(
+        "MiniAppFixtureHandler",
+        (_MiniAppFixtureHandler,),
+        {"api_enabled": api_enabled, "telegram_authenticated": telegram_authenticated},
+    )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -420,6 +435,22 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="submit-recipe" type="submit" disabled=""', dom)
         self.assertNotIn("SẴN SÀNG KIỂM TRA", dom)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_unauthenticated_preview_keeps_link_and_offers_bot_jump(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, telegram_authenticated=False)
+
+        self.assertIn("CẦN PHIÊN TELEGRAM", dom)
+        button_match = re.search(r'<button[^>]*id="probe-source"[^>]*>', dom)
+        self.assertIsNotNone(button_match)
+        button_tag = button_match.group(0)
+        self.assertIn('data-open-bot="1"', button_tag)
+        self.assertNotIn("disabled", button_tag)
+        self.assertNotIn("hidden", button_tag)
+        self.assertIn("Mở từ bot Telegram", dom)
+        self.assertIn(OPLUS_TEST_URI.split("?")[0], dom.replace("&amp;", "&"))
+        submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
+        self.assertIsNotNone(submit_match)
+        self.assertIn("disabled", submit_match.group(0))
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
