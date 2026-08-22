@@ -9,7 +9,6 @@ services:
     dockerContext: .
     autoDeployTrigger: checksPass
     healthCheckPath: /healthz
-    maxShutdownDelaySeconds: 120
     envVars:
       - key: WUKONG_TELEGRAM_BOT_TOKEN
         sync: false

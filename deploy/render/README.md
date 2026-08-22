@@ -36,6 +36,8 @@ traffic. Opening the bot or Mini App wakes it again; the Mini App allows enough
 time for a cold start before reporting an API timeout. GitHub Actions sends an
 authenticated terminal callback after each build, which also wakes the service
 to synchronize the public artifact and send the Telegram completion message.
+State is also snapshotted continuously while the service is awake because the
+free plan does not expose a configurable shutdown grace period.
 
 The free filesystem is ephemeral. Small control-plane files are therefore
 snapshotted to `WukongROM/control-plane/state-v1.zip` on the configured Google

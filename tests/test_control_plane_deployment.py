@@ -135,6 +135,7 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("runtime: docker", blueprint)
         self.assertIn("plan: free", blueprint)
         self.assertIn("healthCheckPath: /healthz", blueprint)
+        self.assertNotIn("maxShutdownDelaySeconds", blueprint)
         self.assertIn("WUKONG_CONTROL_PLANE_STATE_BACKUP_ENABLED", blueprint)
         self.assertIn("WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS", blueprint)
         self.assertIn("WUKONG_CONTROL_PLANE_ONLINE_PREFLIGHT", blueprint)
