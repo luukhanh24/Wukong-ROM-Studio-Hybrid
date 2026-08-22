@@ -150,6 +150,22 @@ class ControlPlaneStateBackupTests(unittest.TestCase):
         backup.mark_dirty()
         self.assertTrue(backup._dirty.is_set())
 
+    def test_restore_failure_reports_private_google_oauth_migration(self) -> None:
+        runner = _FakeRclone(download_failures=20)
+        backup = ControlPlaneStateBackup(
+            self.data,
+            remote="fixture",
+            config_path=self.config,
+            restore_attempts=2,
+            restore_retry_seconds=0,
+            run_command=runner,
+        )
+
+        with self.assertRaisesRegex(ControlPlaneStateError, "private Google Drive OAuth client_id"):
+            backup.restore()
+
+        self.assertEqual(2, len(runner.commands))
+
 
 if __name__ == "__main__":
     unittest.main()
