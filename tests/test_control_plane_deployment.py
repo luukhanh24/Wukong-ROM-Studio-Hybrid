@@ -112,6 +112,9 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
             encoding="utf-8"
         )
         dockerignore = (Path(__file__).parents[1] / ".dockerignore").read_text(encoding="utf-8")
+        dockerfile = (Path(__file__).parents[1] / "deploy/control-plane/Dockerfile").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("StrictHostKeyChecking=yes", workflow)
         self.assertIn("WUKONG_VPS_KNOWN_HOSTS", workflow)
@@ -123,6 +126,13 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("os.getuid() == 10001", ci)
         self.assertIn("**/.env", dockerignore)
         self.assertIn("**/secrets", dockerignore)
+        self.assertIn("RCLONE_VERSION=1.75.0", dockerfile)
+        self.assertIn(
+            "aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa",
+            dockerfile,
+        )
+        self.assertIn("sha256sum --check --strict", dockerfile)
+        self.assertNotIn("ca-certificates gosu rclone", dockerfile)
 
     def test_render_free_blueprint_uses_docker_generated_tls_and_ephemeral_state_backup(self) -> None:
         root = Path(__file__).parents[1]
