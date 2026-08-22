@@ -65,7 +65,10 @@ class GitHubActionsAdapter:
         return run_id
 
     def find_run(self, workflow: str, job_id: str, *, attempts: int = 12, delay: float = 5.0) -> int | None:
-        expected = f"Wukong {job_id}"
+        # Keep this in sync with ``run-name`` in wukong-build.yml. The legacy
+        # title remains accepted so an upgraded control plane can still find
+        # runs created by an older workflow revision.
+        expected = {f"{job_id} · Wukong Hybrid", f"Wukong {job_id}"}
         for attempt in range(max(1, attempts)):
             result = self._call(
                 "GET",
@@ -74,11 +77,21 @@ class GitHubActionsAdapter:
             )
             runs = result.get("workflow_runs", []) if isinstance(result, dict) else []
             for run in runs:
-                if isinstance(run, dict) and run.get("display_title") == expected:
+                if isinstance(run, dict) and run.get("display_title") in expected:
                     return int(run["id"])
             if attempt + 1 < attempts:
                 time.sleep(delay)
         return None
+
+    def run_state(self, run_id: int) -> dict[str, str | None]:
+        result = self._call("GET", f"{self.repo_url}/actions/runs/{int(run_id)}", None)
+        if not isinstance(result, dict):
+            raise GitHubApiError("GitHub returned an invalid workflow run response")
+        return {
+            "status": str(result.get("status") or "").casefold() or None,
+            "conclusion": str(result.get("conclusion") or "").casefold() or None,
+            "url": str(result.get("html_url") or "") or None,
+        }
 
     def runner_inventory(self) -> RunnerInventory:
         result = self._call("GET", f"{self.repo_url}/actions/runners?per_page=100", None)

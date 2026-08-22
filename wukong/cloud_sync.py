@@ -63,6 +63,13 @@ class CloudJobSync:
                 remote = JobManifest.from_dict(json.loads(destination.read_text(encoding="utf-8")))
             except (OSError, ValueError, json.JSONDecodeError):
                 return local
+            terminal = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
+            # A workflow that fails before the shared executor starts cannot
+            # publish a newer Drive manifest. In that case the control plane
+            # reconciles the terminal GitHub result itself; never let the old
+            # queued Drive snapshot roll that terminal state backwards.
+            if local.status in terminal and remote.status not in terminal:
+                return local
             updated = self.store.update(
                 job_id,
                 status=remote.status,

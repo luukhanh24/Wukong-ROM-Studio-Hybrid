@@ -139,6 +139,9 @@ class GitHubActionsUITests(unittest.TestCase):
 
         self.assertIn("01–02 · Kiểm tra recipe & chọn runner", workflow)
         self.assertIn("03–19 · Build trên GitHub Hosted", workflow)
+        self.assertIn("if: always()", workflow)
+        self.assertIn('"workflowResult": result', workflow)
+        self.assertIn('"preExecutorFailure": route != "success"', workflow)
         self.assertIn("GITHUB_STEP_SUMMARY", workflow)
         self.assertIn("E · Pipeline 05–19", action)
         self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))

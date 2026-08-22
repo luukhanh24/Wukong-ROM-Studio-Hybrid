@@ -65,6 +65,8 @@ class ControlPlaneStateBackup:
         self._thread: threading.Thread | None = None
         self._backup_lock = threading.Lock()
         self._last_backup = 0.0
+        self._failure_count = 0
+        self._retry_not_before = 0.0
 
     @classmethod
     def from_environment(cls, data_root: Path) -> ControlPlaneStateBackup | None:
@@ -179,6 +181,8 @@ class ControlPlaneStateBackup:
                     raise ControlPlaneStateError("rclone could not upload the state snapshot")
             self._dirty.clear()
             self._last_backup = time.monotonic()
+            self._failure_count = 0
+            self._retry_not_before = 0.0
             print(f"Backed up {len(files)} control-plane state file(s).", flush=True)
             return True
 
@@ -186,11 +190,17 @@ class ControlPlaneStateBackup:
         while not self._stop.wait(1.0):
             if not self._dirty.is_set():
                 continue
-            if time.monotonic() - self._last_backup < self.interval_seconds:
+            now = time.monotonic()
+            if now < self._retry_not_before or now - self._last_backup < self.interval_seconds:
                 continue
             try:
                 self.backup()
             except ControlPlaneStateError as exc:
+                self._failure_count += 1
+                self._retry_not_before = time.monotonic() + min(
+                    300.0,
+                    self.interval_seconds * (2 ** min(self._failure_count - 1, 5)),
+                )
                 print(f"Control-plane state backup deferred: {exc}", flush=True)
 
     def _state_files(self) -> list[Path]:

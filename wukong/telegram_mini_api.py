@@ -272,7 +272,36 @@ class TelegramMiniAppAPI:
             manifest = self.orchestrator.store.get(job_id)
             if manifest is None:
                 return jsonify({"error": "Job not found"}), 404
-            refreshed = self.runtime.refresh(manifest)
+            run_id: int | None = None
+            conclusion = ""
+            if isinstance(payload, dict) and payload.get("runId") is not None:
+                try:
+                    run_id = int(payload["runId"])
+                except (TypeError, ValueError):
+                    return jsonify({"error": "Actions callback run is invalid"}), 400
+                conclusion = str(payload.get("workflowResult") or "").strip().casefold()
+                if run_id <= 0 or conclusion not in {"success", "failure", "cancelled"}:
+                    return jsonify({"error": "Actions callback result is invalid"}), 400
+            # A pre-executor failure has no newer Drive manifest to fetch.
+            # Reconcile it immediately so the callback can wake a cold free
+            # instance well within the workflow's request timeout.
+            pre_executor_failure = bool(
+                isinstance(payload, dict) and payload.get("preExecutorFailure") is True
+            )
+            if run_id is not None and pre_executor_failure and conclusion in {"failure", "cancelled"}:
+                refreshed = self.runtime.reconcile_actions_callback(
+                    manifest,
+                    run_id=run_id,
+                    conclusion=conclusion,
+                )
+            else:
+                refreshed = self.runtime.refresh(manifest)
+                if run_id is not None:
+                    refreshed = self.runtime.reconcile_actions_callback(
+                        refreshed,
+                        run_id=run_id,
+                        conclusion=conclusion,
+                    )
             self.runtime.notify_terminal(refreshed)
             return jsonify(
                 {

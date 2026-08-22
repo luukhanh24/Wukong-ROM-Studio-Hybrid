@@ -52,7 +52,14 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             inventory_provider=lambda: RunnerInventory(False),
             access_validator=lambda _recipe, _identity: None,
         )
-        self.runtime = Mock(spec=["start", "refresh", "cancel_external", "resume", "notify_terminal"])
+        self.runtime = Mock(spec=[
+            "start",
+            "refresh",
+            "reconcile_actions_callback",
+            "cancel_external",
+            "resume",
+            "notify_terminal",
+        ])
         self.runtime.refresh.side_effect = lambda manifest: manifest
         self.probe = Mock(return_value={
             "provider": "daniel-springer",
@@ -211,6 +218,57 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, accepted.status_code)
         self.runtime.refresh.assert_called_with(self.store.get(job_id))
         self.runtime.notify_terminal.assert_called_once()
+
+    def test_pre_executor_callback_reconciles_failure_without_waiting_for_drive(self) -> None:
+        created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        job_id = created.json["job_id"]
+        self.runtime.reset_mock()
+        self.runtime.reconcile_actions_callback.return_value = self.store.update(
+            job_id,
+            status=JobStatus.FAILED,
+            stage="github-actions-failed",
+            external_run_id=321,
+            error="route failed",
+        )
+        body = json.dumps(
+            {
+                "jobId": job_id,
+                "runId": 321,
+                "workflowResult": "failure",
+                "preExecutorFailure": True,
+            },
+            separators=(",", ":"),
+        ).encode()
+        timestamp = str(int(time.time()))
+        key = hmac.new(
+            b"WukongActionsCallback\0",
+            CALLBACK_SECRET.encode(),
+            hashlib.sha256,
+        ).digest()
+        signature = hmac.new(
+            key,
+            timestamp.encode("ascii") + b"." + body,
+            hashlib.sha256,
+        ).hexdigest()
+
+        accepted = self.client.post(
+            "/internal/actions/callback",
+            headers={
+                "Content-Type": "application/json",
+                "X-Wukong-Timestamp": timestamp,
+                "X-Wukong-Signature": signature,
+            },
+            data=body,
+        )
+
+        self.assertEqual(200, accepted.status_code)
+        self.assertEqual("failed", accepted.json["status"])
+        self.runtime.refresh.assert_not_called()
+        self.runtime.reconcile_actions_callback.assert_called_once_with(
+            self.store.get(job_id),
+            run_id=321,
+            conclusion="failure",
+        )
 
     def test_health_waits_for_transport_readiness_and_identifies_release(self) -> None:
         ready = False

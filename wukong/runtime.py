@@ -40,6 +40,8 @@ class HybridRuntime:
         self.content_index = content_index.resolve() if content_index else None
         self.terminal_notifier = terminal_notifier
         self._notification_lock = threading.RLock()
+        self._github_refresh_lock = threading.RLock()
+        self._github_refresh_at: dict[str, float] = {}
         self.rclone_config = self._materialize_rclone_config(data_root)
         self.cloud_watchers_enabled = os.environ.get(
             "WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS", "true"
@@ -94,13 +96,16 @@ class HybridRuntime:
         recipe = self.store.recipe(manifest.job_id)
         if not recipe:
             return manifest
-        refreshed = (
-            CloudJobSync(
-                self.store,
-                RcloneStorageAdapter(remote=recipe.storage.remote, config_path=self.rclone_config),
-            ).pull(manifest.job_id)
-            or manifest
+        storage = RcloneStorageAdapter(
+            remote=recipe.storage.remote,
+            config_path=self.rclone_config,
         )
+        sync = CloudJobSync(self.store, storage)
+        # Prefer the executor's Drive manifest because it contains the exact
+        # failing stage and error. GitHub reconciliation is the fallback for a
+        # workflow that failed before the executor could publish that manifest.
+        refreshed = sync.pull(manifest.job_id) or manifest
+        refreshed = self._refresh_github_state(refreshed, sync=sync)
         if manifest.status not in {
             JobStatus.SUCCEEDED,
             JobStatus.FAILED,
@@ -108,6 +113,23 @@ class HybridRuntime:
         }:
             self.notify_terminal(refreshed)
         return refreshed
+
+    def reconcile_actions_callback(
+        self,
+        manifest: JobManifest,
+        *,
+        run_id: int,
+        conclusion: str,
+    ) -> JobManifest:
+        """Apply the authenticated result reported by the workflow's final job."""
+        current = self.store.get(manifest.job_id) or manifest
+        if current.external_run_id != run_id:
+            current = self.store.update(current.job_id, external_run_id=run_id)
+            self.store.append_event(current.job_id, "github_run", runId=run_id)
+        normalized = conclusion.strip().casefold()
+        if normalized in {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}:
+            current = self._finish_github_failure(current, normalized, run_id=run_id)
+        return current
 
     def notify_terminal(self, manifest: JobManifest) -> None:
         if manifest.status not in {
@@ -236,13 +258,12 @@ class HybridRuntime:
             owner, name = repository.split("/", 1)
             github = GitHubActionsAdapter(owner, name, token)
             self.store.update(job_id, status=JobStatus.QUEUED, stage="github-actions")
-            self.store.append_event(job_id, "dispatched", recipeRef=recipe_ref)
-            CloudJobSync(self.store, storage).push(job_id)
             github.dispatch(
                 "wukong-build.yml",
                 recipe_ref=recipe_ref,
                 job_id=job_id,
             )
+            self.store.append_event(job_id, "dispatched", recipeRef=recipe_ref)
             # The dispatch request is the point of no return: once GitHub has
             # accepted it, a temporary failure while looking the run back up
             # must not mark the local job as failed.  The workflow may already
@@ -263,6 +284,13 @@ class HybridRuntime:
                 stage="github-actions",
                 external_run_id=run_id,
             )
+            if run_id is not None:
+                self.store.append_event(job_id, "github_run", runId=run_id)
+            # Do not upload this queued manifest after dispatch. The runner may
+            # already have published a newer running manifest while find_run
+            # was polling; a late queued upload would roll cloud progress back.
+            # The private recipe is already on Drive and the control-plane
+            # state backup persists this local manifest independently.
             if self.cloud_watchers_enabled:
                 watcher = threading.Thread(
                     target=self._watch_cloud_job,
@@ -308,6 +336,104 @@ class HybridRuntime:
             # A temporary Drive/API outage must not turn a running job into a
             # failure; interactive inspect calls continue to retry as well.
             time.sleep(5 if failures < 12 else 30)
+
+    def _refresh_github_state(
+        self,
+        manifest: JobManifest,
+        *,
+        sync: CloudJobSync,
+    ) -> JobManifest:
+        if manifest.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}:
+            return manifest
+        now = time.monotonic()
+        with self._github_refresh_lock:
+            if now - self._github_refresh_at.get(manifest.job_id, 0.0) < 15.0:
+                return manifest
+            self._github_refresh_at[manifest.job_id] = now
+        token = self._github_token()
+        repository = os.environ.get("WUKONG_GITHUB_REPOSITORY", "").strip()
+        if not token or "/" not in repository:
+            return manifest
+        owner, name = repository.split("/", 1)
+        github = GitHubActionsAdapter(owner, name, token)
+        try:
+            run_id = manifest.external_run_id or github.find_run(
+                "wukong-build.yml",
+                manifest.job_id,
+                attempts=1,
+                delay=0,
+            )
+            if run_id is None:
+                return manifest
+            if manifest.external_run_id != run_id:
+                manifest = self.store.update(manifest.job_id, external_run_id=run_id)
+                self.store.append_event(manifest.job_id, "github_run", runId=run_id)
+            state = github.run_state(run_id)
+            if state.get("status") != "completed":
+                return manifest
+            conclusion = str(state.get("conclusion") or "failure")
+            if conclusion in {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}:
+                terminal = self._finish_github_failure(
+                    manifest,
+                    conclusion,
+                    run_id=run_id,
+                    run_url=str(state.get("url") or ""),
+                )
+                try:
+                    sync.push(terminal.job_id)
+                except Exception as exc:
+                    self.store.append_event(
+                        terminal.job_id,
+                        "warning",
+                        warning=f"Terminal GitHub state could not be synchronized to Drive: {exc}",
+                    )
+                return terminal
+            return manifest
+        except Exception as exc:
+            # Interactive refresh remains available during a temporary GitHub
+            # outage. Avoid adding a warning every 15 seconds to the timeline.
+            if not any(
+                event.type == "warning" and event.payload.get("source") == "github-refresh"
+                for event in self.store.events(manifest.job_id)
+            ):
+                self.store.append_event(
+                    manifest.job_id,
+                    "warning",
+                    source="github-refresh",
+                    warning=f"GitHub run status is temporarily unavailable: {exc}",
+                )
+            return self.store.get(manifest.job_id) or manifest
+
+    def _finish_github_failure(
+        self,
+        manifest: JobManifest,
+        conclusion: str,
+        *,
+        run_id: int,
+        run_url: str = "",
+    ) -> JobManifest:
+        if manifest.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}:
+            return manifest
+        cancelled = conclusion == "cancelled"
+        label = "cancelled" if cancelled else f"failed ({conclusion})"
+        suffix = f" See {run_url}" if run_url else ""
+        error = f"GitHub Actions {label} before a terminal build result was synchronized.{suffix}"
+        self.store.append_event(
+            manifest.job_id,
+            "error",
+            error=error,
+            externalRunId=run_id,
+            runUrl=run_url or None,
+        )
+        terminal = self.store.update(
+            manifest.job_id,
+            status=JobStatus.CANCELLED if cancelled else JobStatus.FAILED,
+            stage="github-actions-failed",
+            external_run_id=run_id,
+            error=error,
+        )
+        self.notify_terminal(terminal)
+        return terminal
 
     @classmethod
     def _cloud_watch_expired(cls, manifest: JobManifest) -> bool:
