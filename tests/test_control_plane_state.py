@@ -12,8 +12,9 @@ from wukong.control_plane_state import ControlPlaneStateBackup, ControlPlaneStat
 
 
 class _FakeRclone:
-    def __init__(self, remote_payload: bytes | None = None) -> None:
+    def __init__(self, remote_payload: bytes | None = None, *, download_failures: int = 0) -> None:
         self.remote_payload = remote_payload
+        self.download_failures = download_failures
         self.uploaded_payload: bytes | None = None
         self.commands: list[list[str]] = []
 
@@ -25,6 +26,9 @@ class _FakeRclone:
         if operation != "copyto":
             return subprocess.CompletedProcess(command, 2, "", "unsupported")
         if source.startswith("fixture:"):
+            if self.download_failures > 0:
+                self.download_failures -= 1
+                return subprocess.CompletedProcess(command, 1, "", "temporary unavailable")
             if self.remote_payload is None:
                 return subprocess.CompletedProcess(command, 1, "", "object not found")
             Path(destination).write_bytes(self.remote_payload)
@@ -56,6 +60,7 @@ class ControlPlaneStateBackupTests(unittest.TestCase):
             remote="fixture",
             config_path=self.config,
             interval_seconds=1,
+            restore_retry_seconds=0,
             run_command=runner,
         )
 
@@ -106,6 +111,19 @@ class ControlPlaneStateBackupTests(unittest.TestCase):
             ["42"],
             json.loads((self.data / "telegram-access.json").read_text(encoding="utf-8"))["users"],
         )
+
+    def test_restore_retries_temporary_remote_failure_without_losing_state(self) -> None:
+        payload = _archive({
+            "jobs/hybrid/job-123/manifest.json": b'{"jobId":"job-123"}\n',
+            "jobs/hybrid/job-123/recipe.json": b'{"schemaVersion":1}\n',
+            "jobs/hybrid/job-123/events.jsonl": b'{"sequence":1}\n',
+        })
+        runner = _FakeRclone(payload, download_failures=2)
+
+        self.assertTrue(self._backup(runner).restore())
+
+        self.assertEqual(3, len(runner.commands))
+        self.assertTrue((self.data / "jobs/hybrid/job-123/manifest.json").is_file())
 
     def test_missing_remote_snapshot_is_a_clean_first_start(self) -> None:
         self.assertFalse(self._backup(_FakeRclone()).restore())

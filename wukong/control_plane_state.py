@@ -43,6 +43,8 @@ class ControlPlaneStateBackup:
         config_path: Path,
         remote_path: str = "WukongROM/control-plane/state-v1.zip",
         interval_seconds: float = 15.0,
+        restore_attempts: int = 3,
+        restore_retry_seconds: float = 2.0,
         run_command: RunCommand = subprocess.run,
     ) -> None:
         self.data_root = data_root.resolve()
@@ -59,6 +61,8 @@ class ControlPlaneStateBackup:
             raise ValueError("Control-plane state remote path is invalid")
         self.remote_uri = f"{self.remote}:{normalized_remote_path}"
         self.interval_seconds = max(1.0, float(interval_seconds))
+        self.restore_attempts = max(1, int(restore_attempts))
+        self.restore_retry_seconds = max(0.0, float(restore_retry_seconds))
         self.run_command = run_command
         self._dirty = threading.Event()
         self._stop = threading.Event()
@@ -120,17 +124,20 @@ class ControlPlaneStateBackup:
         self.data_root.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="wukong-state-restore-") as root:
             archive = Path(root) / "state.zip"
-            result = self._rclone(
-                "copyto",
-                self.remote_uri,
-                str(archive),
-                "--retries",
-                "2",
-                "--low-level-retries",
-                "2",
-                check=False,
-            )
-            if result.returncode != 0:
+            for attempt in range(1, self.restore_attempts + 1):
+                archive.unlink(missing_ok=True)
+                result = self._rclone(
+                    "copyto",
+                    self.remote_uri,
+                    str(archive),
+                    "--retries",
+                    "2",
+                    "--low-level-retries",
+                    "2",
+                    check=False,
+                )
+                if result.returncode == 0:
+                    break
                 details = f"{result.stdout}\n{result.stderr}".casefold()
                 if any(
                     marker in details
@@ -138,7 +145,15 @@ class ControlPlaneStateBackup:
                 ):
                     print("No restorable control-plane state snapshot was found.", flush=True)
                     return False
-                raise ControlPlaneStateError("rclone could not download the state snapshot")
+                if attempt == self.restore_attempts:
+                    raise ControlPlaneStateError("rclone could not download the state snapshot")
+                print(
+                    "Control-plane state restore was temporarily unavailable; "
+                    f"retrying ({attempt}/{self.restore_attempts}).",
+                    flush=True,
+                )
+                if self.restore_retry_seconds:
+                    time.sleep(self.restore_retry_seconds)
             if not archive.is_file():
                 raise ControlPlaneStateError("rclone reported success without a state snapshot")
             if archive.stat().st_size > MAX_STATE_ARCHIVE_BYTES:
