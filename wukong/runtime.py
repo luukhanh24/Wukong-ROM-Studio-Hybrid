@@ -13,7 +13,7 @@ from typing import Callable
 
 from .adapters import RcloneStorageAdapter, sha256_file
 from .executor import LocalJobExecutor
-from .github import GitHubActionsAdapter
+from .github import GitHubActionsAdapter, GitHubApiError
 from .cloud_sync import CloudJobSync
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, SourceSpec
 from .orchestrator import HybridOrchestrator, JobStore
@@ -130,6 +130,37 @@ class HybridRuntime:
         if normalized in {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}:
             current = self._finish_github_failure(current, normalized, run_id=run_id)
         return current
+
+    def verify_actions_bearer(self, token: str, run_id: int) -> str:
+        """Validate an Actions callback bearer token against GitHub itself.
+
+        The runner presents its own repository token; trusting the run only
+        after GitHub confirms it keeps callback authentication immune to a
+        desynchronized copy of the token stored on the control plane.
+        Returns GitHub's authoritative conclusion for the run.
+        """
+        repository = os.environ.get("WUKONG_GITHUB_REPOSITORY", "").strip()
+        owner, separator, name = repository.partition("/")
+        if not separator or not name:
+            raise PermissionError("Actions callback is not bound to a repository")
+        github = GitHubActionsAdapter(owner.strip(), name.strip(), token)
+        try:
+            state = github.run_state(run_id)
+        except (GitHubApiError, OSError, ValueError) as exc:
+            raise PermissionError("Actions callback authentication failed") from exc
+        if state.get("status") != "completed":
+            raise PermissionError("Actions callback run is not terminal yet")
+        conclusion = str(state.get("conclusion") or "")
+        if conclusion not in {
+            "success",
+            "failure",
+            "cancelled",
+            "timed_out",
+            "action_required",
+            "startup_failure",
+        }:
+            raise PermissionError("Actions callback run has no usable conclusion")
+        return conclusion
 
     def notify_terminal(self, manifest: JobManifest) -> None:
         if manifest.status not in {

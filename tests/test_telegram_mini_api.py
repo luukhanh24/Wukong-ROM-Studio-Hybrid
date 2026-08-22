@@ -56,6 +56,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             "start",
             "refresh",
             "reconcile_actions_callback",
+            "verify_actions_bearer",
             "cancel_external",
             "resume",
             "notify_terminal",
@@ -269,6 +270,67 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             run_id=321,
             conclusion="failure",
         )
+
+    def test_actions_callback_accepts_runner_bearer_verified_via_github(self) -> None:
+        created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        job_id = created.json["job_id"]
+        token = "g" * 40
+        self.runtime.verify_actions_bearer.return_value = "success"
+        self.runtime.reconcile_actions_callback.side_effect = lambda manifest, **_: manifest
+        body = json.dumps(
+            {
+                "jobId": job_id,
+                "runId": 555,
+                "workflowResult": "success",
+                "preExecutorFailure": False,
+            },
+            separators=(",", ":"),
+        ).encode()
+
+        short = self.client.post(
+            "/internal/actions/callback",
+            headers={"Content-Type": "application/json", "Authorization": "Bearer short"},
+            data=body,
+        )
+        accepted = self.client.post(
+            "/internal/actions/callback",
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+            data=body,
+        )
+
+        self.assertEqual(403, short.status_code)
+        self.assertEqual(200, accepted.status_code)
+        self.runtime.verify_actions_bearer.assert_called_once_with(token, 555)
+        self.runtime.refresh.assert_called_once_with(self.store.get(job_id))
+        self.runtime.notify_terminal.assert_called_once()
+
+    def test_actions_callback_rejects_runner_token_github_does_not_confirm(self) -> None:
+        created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        job_id = created.json["job_id"]
+        self.runtime.reset_mock()
+        self.runtime.verify_actions_bearer.side_effect = PermissionError(
+            "Actions callback authentication failed"
+        )
+        body = json.dumps(
+            {
+                "jobId": job_id,
+                "runId": 555,
+                "workflowResult": "success",
+                "preExecutorFailure": False,
+            },
+            separators=(",", ":"),
+        ).encode()
+
+        denied = self.client.post(
+            "/internal/actions/callback",
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {'g' * 40}"},
+            data=body,
+        )
+
+        self.assertEqual(403, denied.status_code)
+        self.runtime.refresh.assert_not_called()
+        self.runtime.reconcile_actions_callback.assert_not_called()
+        self.runtime.notify_terminal.assert_not_called()
 
     def test_health_waits_for_transport_readiness_and_identifies_release(self) -> None:
         ready = False

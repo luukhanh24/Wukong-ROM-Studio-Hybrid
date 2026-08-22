@@ -169,6 +169,18 @@ class TelegramMiniAppAPI:
             if request.path == "/healthz":
                 return None
             if request.path == "/internal/actions/callback":
+                authorization = request.headers.get("Authorization", "")
+                scheme, separator, credential = authorization.partition(" ")
+                if separator == " " and scheme.casefold() == "bearer":
+                    # The Actions runner presents its own repository token.
+                    # Trust is deferred to the handler, which verifies the
+                    # run directly against GitHub so a rotated token can
+                    # never desynchronize callback authentication again.
+                    credential = credential.strip()
+                    if len(credential) < 20:
+                        return jsonify({"error": "Actions callback authentication failed"}), 403
+                    request.environ["wukong.actions_bearer"] = credential
+                    return None
                 if len(self.actions_callback_secret) < 20:
                     return jsonify({"error": "Actions callback is not configured"}), 503
                 timestamp = request.headers.get("X-Wukong-Timestamp", "")
@@ -282,6 +294,15 @@ class TelegramMiniAppAPI:
                 conclusion = str(payload.get("workflowResult") or "").strip().casefold()
                 if run_id <= 0 or conclusion not in {"success", "failure", "cancelled"}:
                     return jsonify({"error": "Actions callback result is invalid"}), 400
+            bearer = request.environ.get("wukong.actions_bearer")
+            if isinstance(bearer, str) and bearer:
+                # Runner-authenticated callback: GitHub is the trust anchor.
+                if run_id is None:
+                    return jsonify({"error": "Actions callback authentication failed"}), 403
+                try:
+                    conclusion = self.runtime.verify_actions_bearer(bearer, run_id)
+                except PermissionError as exc:
+                    return jsonify({"error": str(exc)}), 403
             # A pre-executor failure has no newer Drive manifest to fetch.
             # Reconcile it immediately so the callback can wake a cold free
             # instance well within the workflow's request timeout.
