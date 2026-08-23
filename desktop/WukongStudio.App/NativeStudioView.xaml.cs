@@ -3552,7 +3552,16 @@ public sealed partial class NativeStudioView : UserControl
                     throw new InvalidOperationException(
                         "Không thể dừng tiến trình đồng bộ. Hãy đóng Studio trước khi xóa file tạm.");
                 }
-                await process.WaitForExitAsync();
+                try
+                {
+                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                }
+                catch (TimeoutException exception)
+                {
+                    throw new InvalidOperationException(
+                        "Tiến trình đồng bộ chưa dừng sau 10 giây; file tạm của lượt này được giữ nguyên để tránh xóa nhầm dữ liệu đang dùng.",
+                        exception);
+                }
                 CleanupContentSyncRunArtifacts(syncDataRoot, index, runId);
                 throw;
             }
