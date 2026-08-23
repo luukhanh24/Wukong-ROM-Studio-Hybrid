@@ -41,7 +41,10 @@
           <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2><p data-i18n="sourceHint">URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.</p></div></header>
           <div class="task-tabs" role="group" aria-label="Task"><label><input type="radio" name="task" value="build" checked><span data-i18n="taskBuild">Build đầy đủ</span></label><label><input type="radio" name="task" value="source_mirror"><span data-i18n="taskMirror">Lưu ROM gốc</span></label><label><input type="radio" name="task" value="artifact_publish"><span data-i18n="taskPublish">Phát hành file</span></label></div>
           <div class="smart-source">
-            <label class="field field-wide"><span data-i18n="sourceUrl">Dán link ROM</span><textarea id="source-uri" rows="3" required spellcheck="false" aria-describedby="source-state source-facts" placeholder="https://component-ota-cn.allawntech.com/downloadCheck?…"></textarea><small data-i18n="sourceSecure">Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.</small></label>
+            <div class="field field-wide source-input-field">
+              <div class="source-input-head"><label for="source-uri" data-i18n="sourceUrl">Dán link ROM</label><div><button id="paste-source" type="button" data-i18n="pasteLink">Dán</button><button id="clear-source" type="button" data-i18n="clearLink">Xóa</button></div></div>
+              <textarea id="source-uri" rows="3" required spellcheck="false" aria-describedby="source-state source-facts" placeholder="https://component-ota-cn.allawntech.com/downloadCheck?…"></textarea><small data-i18n="sourceSecure">Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.</small>
+            </div>
             <div class="source-state idle" id="source-state" aria-live="polite">
               <div class="source-state-mark" aria-hidden="true"><span>URL</span></div>
               <div class="source-state-copy"><small id="source-kicker" data-i18n="sourceIdleKicker">SMART SOURCE</small><strong id="source-state-title" data-i18n="sourceIdleTitle">Dán link để nhận diện</strong><p id="source-state-message" data-i18n="sourceIdleMessage">Loại nguồn được nhận ra ngay; metadata sâu được bot kiểm tra mà không tải cả ROM.</p></div>

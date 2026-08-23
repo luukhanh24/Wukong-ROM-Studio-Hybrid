@@ -57,6 +57,8 @@ def _chrome_path() -> str | None:
 class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     api_enabled = True
     telegram_authenticated = True
+    click_paste = False
+    source_uri = OPLUS_TEST_URI
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -85,14 +87,14 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
                 else "initData: '', "
             )
             source = f"""
-window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, readTextFromClipboard(callback) {{ callback({json.dumps(self.source_uri)}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
 window.addEventListener('load', () => {{
   const fill = () => {{
     const input = document.querySelector('#source-uri');
     const catalogReady = document.querySelector('#device option[value="PKG110"]');
     if (!input || !catalogReady) {{ setTimeout(fill, 50); return; }}
-    input.value = {json.dumps(OPLUS_TEST_URI)};
-    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    if ({str(self.click_paste).lower()}) document.querySelector('#paste-source')?.click();
+    else {{ input.value = {json.dumps(self.source_uri)}; input.dispatchEvent(new Event('input', {{ bubbles: true }})); }}
   }};
   setTimeout(fill, 50);
 }});
@@ -145,6 +147,8 @@ def _render_mini_app_in_chrome(
     *,
     api_enabled: bool,
     telegram_authenticated: bool = True,
+    click_paste: bool = False,
+    source_uri: str = OPLUS_TEST_URI,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -152,7 +156,12 @@ def _render_mini_app_in_chrome(
     handler = type(
         "MiniAppFixtureHandler",
         (_MiniAppFixtureHandler,),
-        {"api_enabled": api_enabled, "telegram_authenticated": telegram_authenticated},
+        {
+            "api_enabled": api_enabled,
+            "telegram_authenticated": telegram_authenticated,
+            "click_paste": click_paste,
+            "source_uri": source_uri,
+        },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -348,6 +357,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--accent:", styles)
         self.assertIn("--success:", styles)
         self.assertIn("--radius-sm: 4px", styles)
+        self.assertIn("repeat(3,minmax(0,1fr))", styles)
+        self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -426,6 +437,13 @@ class TelegramMiniAppTests(unittest.TestCase):
         submit_tag = dom.split('id="submit-recipe"', 1)[1].split(">", 1)[0]
         self.assertNotIn("disabled", submit_tag)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_paste_button_reads_clipboard_and_starts_source_analysis(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, click_paste=True)
+
+        self.assertIn('id="paste-source"', dom)
+        self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
+        self.assertIn("14/14 thông số", dom)
 
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)

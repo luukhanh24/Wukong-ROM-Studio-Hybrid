@@ -131,7 +131,7 @@ Object.assign(translations.vi, {
 
 Object.assign(translations.vi, {
   detectedProduct: "Product", detectedDevice: "Mã thiết bị", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng", otaType: "Kiểu OTA", contentType: "Định dạng", lastModified: "Cập nhật máy chủ", deepInspection: "Kiểm tra ZIP",
-  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", pasteLink: "Dán", clearLink: "Xóa", linkPasted: "Đã dán link ROM và bắt đầu phân tích.", clipboardEmpty: "Clipboard không có văn bản.", clipboardDenied: "Không đọc được clipboard. Hãy cấp quyền hoặc dán thủ công.", sourceCleared: "Đã xóa nguồn ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Mở Mini App từ nút trong bot Telegram để xác thực rồi phân tích ROM.", apiAuthButton: "Mở từ bot Telegram", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống → trang đang mở bằng link trực tiếp, không phải từ nút Mini App trong bot. Quay lại tab Studio và bấm “Mở từ bot Telegram”.", sessionDiagNoLib: "Không nạp được thư viện Telegram (telegram.org có thể bị chặn). Kiểm tra mạng rồi mở lại từ bot.",
@@ -175,7 +175,7 @@ Object.assign(translations.en, {
 
 Object.assign(translations.en, {
   detectedProduct: "Product", detectedDevice: "Device code", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Size", otaType: "OTA type", contentType: "Content type", lastModified: "Server modified", deepInspection: "ZIP inspection",
-  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", pasteLink: "Paste", clearLink: "Clear", linkPasted: "ROM link pasted and analysis started.", clipboardEmpty: "The clipboard contains no text.", clipboardDenied: "Clipboard access failed. Allow access or paste manually.", sourceCleared: "ROM source cleared.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "Open the Mini App from the Telegram bot button to authenticate and analyze the ROM.", apiAuthButton: "Open from Telegram bot", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "Bridge loaded but initData is empty → this page was opened as a direct link, not from the bot's Mini App button. Go back to Studio and press “Open from Telegram bot”.", sessionDiagNoLib: "The Telegram bridge could not load (telegram.org may be blocked). Check the network and reopen from the bot.",
@@ -407,6 +407,53 @@ async function copySourceMetadata() {
     document.body.append(input); input.select(); document.execCommand("copy"); input.remove();
   }
   toast(t("metadataCopied"));
+}
+
+function readTelegramClipboard() {
+  if (typeof TelegramApp?.readTextFromClipboard !== "function") return Promise.resolve({ text: "", readable: false });
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolve({ text: typeof value === "string" ? value : "", readable: typeof value === "string" });
+    };
+    const timeout = setTimeout(() => finish(null), 1200);
+    try { TelegramApp.readTextFromClipboard(finish); } catch (_) { finish(null); }
+  });
+}
+
+async function readClipboardText() {
+  if (navigator.clipboard?.readText) {
+    try {
+      const result = await Promise.race([
+        navigator.clipboard.readText().then((text) => ({ text, readable: true })),
+        new Promise((resolve) => setTimeout(() => resolve({ text: "", readable: false }), 500)),
+      ]);
+      if (result.readable) return result;
+    } catch (_) {}
+  }
+  return readTelegramClipboard();
+}
+
+async function pasteSourceFromClipboard() {
+  const clipboard = await readClipboardText();
+  const value = String(clipboard.text || "").trim();
+  if (!value) throw new Error(t(clipboard.readable ? "clipboardEmpty" : "clipboardDenied"));
+  const input = $("#source-uri");
+  input.value = value;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus({ preventScroll: true });
+  toast(t("linkPasted"));
+}
+
+function clearSource() {
+  const input = $("#source-uri");
+  input.value = "";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus({ preventScroll: true });
+  toast(t("sourceCleared"));
 }
 
 function presentMissingApi() {
@@ -1318,6 +1365,8 @@ function bindEvents() {
   });
   $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
   $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
+  $("#paste-source").addEventListener("click", () => pasteSourceFromClipboard().catch((error) => toast(error.message, true)));
+  $("#clear-source").addEventListener("click", clearSource);
   $("#probe-source").addEventListener("click", () => {
     clearTimeout(state.sourceProbeTimer);
     const probeButton = $("#probe-source");

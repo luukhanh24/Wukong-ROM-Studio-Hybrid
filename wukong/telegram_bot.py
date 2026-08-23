@@ -1205,7 +1205,10 @@ class TelegramBotController:
         ])
         if self.web_app_url:
             markup["inline_keyboard"].insert(
-                0, [{"text": TEXT[language]["mini_app"], "callback_data": "v1:app"}]
+                0, [{
+                    "text": TEXT[language]["mini_app"],
+                    "web_app": {"url": self.web_app_url},
+                }]
             )
         return BotResponse(TEXT[language]["welcome"], markup)
 
@@ -1384,6 +1387,19 @@ class TelegramLongPollingDaemon:
             json={"commands": command_sets["en"], "language_code": "en"},
             timeout=20,
         ).raise_for_status()
+        web_app_url = getattr(self.controller, "web_app_url", "")
+        if isinstance(web_app_url, str) and web_app_url:
+            self._http.post(
+                f"{self.base_url}/setChatMenuButton",
+                json={
+                    "menu_button": {
+                        "type": "web_app",
+                        "text": "Wukong Studio",
+                        "web_app": {"url": web_app_url},
+                    }
+                },
+                timeout=20,
+            ).raise_for_status()
 
     def process_update(self, update: dict[str, Any]) -> None:
         callback = update.get("callback_query") or {}

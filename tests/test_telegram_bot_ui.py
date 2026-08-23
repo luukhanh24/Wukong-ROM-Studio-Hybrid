@@ -121,14 +121,11 @@ class TelegramBotUITests(unittest.TestCase):
 
         buttons = [button for row in response.reply_markup["inline_keyboard"] for button in row]
         app_button = next(button for button in buttons if "Mini App" in button["text"])
-        self.assertEqual("v1:app", app_button["callback_data"])
-
-        launcher = self.controller.handle_callback(42, app_button["callback_data"])
-        keyboard_button = launcher.reply_markup["keyboard"][0][0]
         self.assertEqual(
-            keyboard_button["web_app"]["url"],
+            app_button["web_app"]["url"],
             "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/",
         )
+        self.assertNotIn("callback_data", app_button)
 
     def test_app_command_uses_reply_keyboard_transport_required_by_send_data(self) -> None:
         self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
@@ -471,6 +468,7 @@ class TelegramDaemonUITests(unittest.TestCase):
     def test_reuses_one_http_session_for_telegram_requests(self) -> None:
         controller = Mock()
         controller.command_sets.return_value = {"vi": [], "en": []}
+        controller.web_app_url = ""
         success = Mock()
         success.raise_for_status.return_value = None
         http = Mock()
@@ -482,6 +480,32 @@ class TelegramDaemonUITests(unittest.TestCase):
 
         session.assert_called_once_with()
         self.assertEqual(2, http.post.call_count)
+
+    def test_register_commands_configures_authenticated_mini_app_menu_button(self) -> None:
+        controller = Mock()
+        controller.command_sets.return_value = {"vi": [], "en": []}
+        controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        success = Mock()
+        success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+
+        daemon.register_commands()
+
+        menu_call = next(
+            call for call in http.post.call_args_list if call.args[0].endswith("/setChatMenuButton")
+        )
+        self.assertEqual(
+            {
+                "menu_button": {
+                    "type": "web_app",
+                    "text": "Wukong Studio",
+                    "web_app": {"url": controller.web_app_url},
+                }
+            },
+            menu_call.kwargs["json"],
+        )
 
     def test_catalog_uses_installed_mod_root_and_only_uploaded_github_versions(self) -> None:
         with tempfile.TemporaryDirectory() as root:
