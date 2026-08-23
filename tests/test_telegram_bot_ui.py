@@ -9,6 +9,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlsplit
 
 import requests
 
@@ -23,6 +24,7 @@ from wukong.telegram_bot import (
     TelegramLongPollingDaemon,
     TelegramUIStateStore,
 )
+from wukong.telegram_mini_api import validate_telegram_launch_token
 from telegram_bot_daemon import (
     _configured_admin_ids,
     build_control_plane_catalog,
@@ -507,6 +509,40 @@ class TelegramDaemonUITests(unittest.TestCase):
             },
             menu_call.kwargs["json"],
         )
+
+    def test_start_personalizes_mini_app_button_and_chat_menu(self) -> None:
+        controller = Mock()
+        controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        controller.handle_ui.return_value = BotResponse(
+            "Open app",
+            {"inline_keyboard": [[{
+                "text": "Open",
+                "web_app": {"url": controller.web_app_url},
+            }]]},
+        )
+        success = Mock()
+        success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+
+        daemon.process_update({
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 42},
+                "text": "/start",
+            }
+        })
+
+        calls = [call for call in http.post.call_args_list if call.args[0].endswith(("/sendMessage", "/setChatMenuButton"))]
+        sent = next(call.kwargs["json"] for call in calls if call.args[0].endswith("/sendMessage"))
+        menu = next(call.kwargs["json"] for call in calls if call.args[0].endswith("/setChatMenuButton"))
+        button_url = sent["reply_markup"]["inline_keyboard"][0][0]["web_app"]["url"]
+        menu_url = menu["menu_button"]["web_app"]["url"]
+        self.assertEqual(42, menu["chat_id"])
+        self.assertEqual(button_url, menu_url)
+        launch_token = parse_qs(urlsplit(button_url).query)["wkLaunch"][0]
+        self.assertEqual(42, validate_telegram_launch_token(launch_token, "test-token"))
 
     def test_catalog_uses_installed_mod_root_and_only_uploaded_github_versions(self) -> None:
         with tempfile.TemporaryDirectory() as root:

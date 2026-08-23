@@ -18,7 +18,9 @@ from wukong.telegram_mini_api import (
     TelegramInitDataError,
     TelegramJobNotifier,
     TelegramMiniAppAPI,
+    issue_telegram_launch_token,
     validate_telegram_init_data,
+    validate_telegram_launch_token,
 )
 
 TOKEN = "123456789:test-token"
@@ -129,6 +131,31 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             validate_telegram_init_data(
                 signed_init_data(42, auth_date=int(time.time()) - 7200), TOKEN
             )
+
+    def test_signed_bot_launch_token_is_user_bound_and_expires(self) -> None:
+        token = issue_telegram_launch_token(42, TOKEN, now=1_000, lifetime_seconds=300)
+
+        self.assertEqual(42, validate_telegram_launch_token(token, TOKEN, now=1_200))
+        with self.assertRaisesRegex(TelegramInitDataError, "signature"):
+            validate_telegram_launch_token(token[:-1] + ("0" if token[-1] != "0" else "1"), TOKEN, now=1_200)
+        with self.assertRaisesRegex(TelegramInitDataError, "expired"):
+            validate_telegram_launch_token(token, TOKEN, now=1_301)
+
+    def test_signed_bot_launch_token_authenticates_private_routes(self) -> None:
+        token = issue_telegram_launch_token(42, TOKEN)
+        unapproved = issue_telegram_launch_token(99, TOKEN)
+
+        response = self.client.get(
+            "/v1/jobs",
+            headers={"Origin": ORIGIN, "Authorization": f"wla {token}"},
+        )
+        denied = self.client.get(
+            "/v1/jobs",
+            headers={"Origin": ORIGIN, "Authorization": f"wla {unapproved}"},
+        )
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(403, denied.status_code)
 
     def test_strict_cors_and_allowlist(self) -> None:
         denied_origin = self.client.get("/v1/jobs", headers=self.headers(origin="https://evil.example"))

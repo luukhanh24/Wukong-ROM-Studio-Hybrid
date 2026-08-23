@@ -60,6 +60,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_paste = False
     source_uri = OPLUS_TEST_URI
     clipboard_fallback = False
+    clipboard_gesture_only = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -87,26 +88,38 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
                 if self.telegram_authenticated
                 else "initData: '', "
             )
-            clipboard_value = "null" if self.clipboard_fallback else json.dumps(self.source_uri)
+            clipboard_value = "null" if (self.clipboard_fallback or self.clipboard_gesture_only) else json.dumps(self.source_uri)
+            gesture_guard = "window.__wukongPasteGesture === true" if self.clipboard_gesture_only else "true"
             exec_fallback = f"""
 document.execCommand = (command) => {{
   if (command !== 'paste') return false;
+  if (!({gesture_guard})) return false;
   const input = document.querySelector('#source-uri');
   if (!input) return false;
   input.value = {json.dumps(self.source_uri)};
   input.dispatchEvent(new Event('input', {{ bubbles: true }}));
   return true;
 }};
-""" if self.clipboard_fallback else ""
+""" if (self.clipboard_fallback or self.clipboard_gesture_only) else ""
+            navigator_fallback = """
+Object.defineProperty(navigator, 'clipboard', { value: {
+  readText() { return Promise.reject(new DOMException('blocked', 'NotAllowedError')); }
+}});
+""" if self.clipboard_gesture_only else ""
             source = f"""
 window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
 {exec_fallback}
+{navigator_fallback}
 window.addEventListener('load', () => {{
   const fill = () => {{
     const input = document.querySelector('#source-uri');
     const catalogReady = document.querySelector('#device option[value="PKG110"]');
     if (!input || !catalogReady) {{ setTimeout(fill, 50); return; }}
-    if ({str(self.click_paste).lower()}) document.querySelector('#paste-source')?.click();
+    if ({str(self.click_paste).lower()}) {{
+      window.__wukongPasteGesture = true;
+      document.querySelector('#paste-source')?.click();
+      window.__wukongPasteGesture = false;
+    }}
     else {{ input.value = {json.dumps(self.source_uri)}; input.dispatchEvent(new Event('input', {{ bubbles: true }})); }}
   }};
   setTimeout(fill, 50);
@@ -163,7 +176,9 @@ def _render_mini_app_in_chrome(
     click_paste: bool = False,
     source_uri: str = OPLUS_TEST_URI,
     clipboard_fallback: bool = False,
+    clipboard_gesture_only: bool = False,
     telegram_hash_authenticated: bool = False,
+    signed_launch_authenticated: bool = False,
     initial_view: str = "",
 ) -> tuple[str, int]:
     chrome = _chrome_path()
@@ -178,6 +193,7 @@ def _render_mini_app_in_chrome(
             "click_paste": click_paste,
             "source_uri": source_uri,
             "clipboard_fallback": clipboard_fallback,
+            "clipboard_gesture_only": clipboard_gesture_only,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -187,6 +203,8 @@ def _render_mini_app_in_chrome(
         with tempfile.TemporaryDirectory() as profile:
             screenshot = Path(profile) / "mini-app-mobile.png"
             launch_url = f"http://127.0.0.1:{server.server_port}/"
+            if signed_launch_authenticated:
+                launch_url += f"?wkLaunch=v1.42.1.9999999999.{('a' * 64)}"
             if telegram_hash_authenticated:
                 init_data = (
                     'query_id=fixture-query&'
@@ -483,6 +501,17 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("14/14 thông số", dom)
         self.assertNotIn("Không đọc được clipboard", dom)
 
+    def test_paste_fallback_runs_inside_the_original_user_gesture(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            click_paste=True,
+            clipboard_gesture_only=True,
+        )
+
+        self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
+        self.assertIn("14/14 thông số", dom)
+        self.assertNotIn("Ô link đã được chọn", dom)
+
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)
 
@@ -512,6 +541,20 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("14/14 thông số", dom)
         self.assertIn('<li id="check-api" class="complete">', dom)
         self.assertIn("phiên hợp lệ", dom)
+        submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
+        self.assertIsNotNone(submit_match)
+        self.assertNotIn("disabled", submit_match.group(0))
+
+    def test_signed_bot_launch_enables_api_when_telegram_omits_init_data(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            telegram_authenticated=False,
+            signed_launch_authenticated=True,
+        )
+
+        self.assertIn("14/14 thông số", dom)
+        self.assertIn('<li id="check-api" class="complete">', dom)
+        self.assertIn("phiên dự phòng", dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)
         self.assertNotIn("disabled", submit_match.group(0))

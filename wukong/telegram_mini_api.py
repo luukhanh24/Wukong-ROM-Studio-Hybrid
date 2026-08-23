@@ -42,10 +42,81 @@ SOURCE_METADATA_KEYS = (
 )
 RELEASE_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 ACTIONS_CALLBACK_MAX_AGE_SECONDS = 5 * 60
+TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS = 60 * 60
 
 
 class TelegramInitDataError(PermissionError):
     pass
+
+
+def _telegram_launch_key(bot_token: str) -> bytes:
+    return hmac.new(
+        b"WukongMiniAppLaunch\0",
+        bot_token.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+
+
+def issue_telegram_launch_token(
+    user_id: int | str,
+    bot_token: str,
+    *,
+    now: int | None = None,
+    lifetime_seconds: int = TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS,
+) -> str:
+    try:
+        subject = int(user_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Telegram launch user is invalid") from exc
+    if subject <= 0 or not bot_token:
+        raise ValueError("Telegram launch user is invalid")
+    issued_at = int(time.time()) if now is None else int(now)
+    lifetime = max(60, min(int(lifetime_seconds), TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS))
+    payload = f"v1.{subject}.{issued_at}.{issued_at + lifetime}"
+    signature = hmac.new(
+        _telegram_launch_key(bot_token),
+        payload.encode("ascii"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def validate_telegram_launch_token(
+    token: str,
+    bot_token: str,
+    *,
+    now: int | None = None,
+    max_age_seconds: int = TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS,
+) -> int:
+    parts = token.split(".") if isinstance(token, str) else []
+    if (
+        len(parts) != 5
+        or parts[0] != "v1"
+        or any(not re.fullmatch(r"[0-9]+", value) for value in parts[1:4])
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", parts[4])
+    ):
+        raise TelegramInitDataError("Telegram launch signature is invalid")
+    payload = ".".join(parts[:4])
+    expected = hmac.new(
+        _telegram_launch_key(bot_token),
+        payload.encode("ascii", errors="strict"),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(parts[4].casefold(), expected):
+        raise TelegramInitDataError("Telegram launch signature is invalid")
+    try:
+        subject = int(parts[1])
+        issued_at = int(parts[2])
+        expires_at = int(parts[3])
+    except ValueError as exc:
+        raise TelegramInitDataError("Telegram launch signature is invalid") from exc
+    current = int(time.time()) if now is None else int(now)
+    maximum_age = max(60, min(int(max_age_seconds), TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS))
+    if subject <= 0 or issued_at > current + 60 or expires_at <= issued_at:
+        raise TelegramInitDataError("Telegram launch signature is invalid")
+    if expires_at - issued_at > maximum_age or current > expires_at:
+        raise TelegramInitDataError("Telegram launch authentication has expired")
+    return subject
 
 
 def validate_telegram_init_data(
@@ -228,17 +299,21 @@ class TelegramMiniAppAPI:
             ):
                 return None
             authorization = request.headers.get("Authorization", "")
-            scheme, separator, init_data = authorization.partition(" ")
-            if separator != " " or scheme.casefold() != "tma":
+            scheme, separator, credential = authorization.partition(" ")
+            if separator != " " or scheme.casefold() not in {"tma", "wla"}:
                 return jsonify({"error": "Telegram Mini App authentication is required"}), 401
             try:
-                telegram = validate_telegram_init_data(
-                    init_data,
-                    self.bot_token,
-                    max_age_seconds=self.max_init_data_age_seconds,
-                )
-                user = telegram["user"]
-                identity = self.access.identity(str(user["id"])) if isinstance(user, dict) else None
+                if scheme.casefold() == "tma":
+                    telegram = validate_telegram_init_data(
+                        credential,
+                        self.bot_token,
+                        max_age_seconds=self.max_init_data_age_seconds,
+                    )
+                    user = telegram["user"]
+                    user_id = str(user["id"]) if isinstance(user, dict) else ""
+                else:
+                    user_id = str(validate_telegram_launch_token(credential, self.bot_token))
+                identity = self.access.identity(user_id) if user_id else None
                 if not identity:
                     return jsonify({"error": "Telegram account is not approved"}), 403
                 request.environ["wukong.identity"] = identity

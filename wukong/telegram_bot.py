@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -9,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
@@ -18,6 +19,7 @@ from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
 from .telegram import TelegramAccessStore
+from .telegram_mini_api import issue_telegram_launch_token
 
 
 LANGUAGES = {"vi", "en"}
@@ -1307,6 +1309,58 @@ class TelegramLongPollingDaemon:
         self._probe_threads: set[threading.Thread] = set()
         self._probe_threads_lock = threading.Lock()
 
+    def _personalized_web_app_url(self, user_id: int | str) -> str:
+        configured = getattr(self.controller, "web_app_url", "")
+        if not isinstance(configured, str) or not configured:
+            return ""
+        parsed = urlsplit(configured)
+        query = [(key, value) for key, value in parse_qsl(parsed.query, keep_blank_values=True) if key != "wkLaunch"]
+        query.append(("wkLaunch", issue_telegram_launch_token(user_id, self._token)))
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment))
+
+    @staticmethod
+    def _personalize_response(response: BotResponse, web_app_url: str) -> BotResponse:
+        if not web_app_url or not response.reply_markup:
+            return response
+        markup = copy.deepcopy(response.reply_markup)
+        for keyboard_name in ("inline_keyboard", "keyboard"):
+            rows = markup.get(keyboard_name)
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if not isinstance(row, list):
+                    continue
+                for button in row:
+                    if isinstance(button, dict) and isinstance(button.get("web_app"), dict):
+                        button["web_app"]["url"] = web_app_url
+        return BotResponse(response.text, markup)
+
+    def _configure_private_chat_menu(
+        self,
+        user_id: int | str,
+        chat_id: int | str,
+        web_app_url: str,
+    ) -> None:
+        if not web_app_url or str(user_id) != str(chat_id):
+            return
+        try:
+            self._http.post(
+                f"{self.base_url}/setChatMenuButton",
+                json={
+                    "chat_id": chat_id,
+                    "menu_button": {
+                        "type": "web_app",
+                        "text": "Wukong Studio",
+                        "web_app": {"url": web_app_url},
+                    },
+                },
+                timeout=20,
+            ).raise_for_status()
+        except requests.RequestException:
+            # A menu refresh must never prevent the bot from replying. The
+            # personalized inline button remains available in the response.
+            pass
+
     def stop(self) -> None:
         self._stop.set()
 
@@ -1417,7 +1471,12 @@ class TelegramLongPollingDaemon:
                     ).raise_for_status()
                 except requests.RequestException:
                     pass
-            response = self.controller.handle_callback(sender["id"], data)
+            web_app_url = self._personalized_web_app_url(sender["id"])
+            self._configure_private_chat_menu(sender["id"], chat["id"], web_app_url)
+            response = self._personalize_response(
+                self.controller.handle_callback(sender["id"], data),
+                web_app_url,
+            )
             payload = {"chat_id": chat["id"], **response.telegram_payload()}
             if message.get("message_id") and "keyboard" not in response.reply_markup:
                 payload["message_id"] = message["message_id"]
@@ -1468,6 +1527,9 @@ class TelegramLongPollingDaemon:
         if not sender.get("id") or not chat.get("id") or not isinstance(text, str):
             return
         response = self.controller.handle_ui(sender["id"], text)
+        web_app_url = self._personalized_web_app_url(sender["id"])
+        self._configure_private_chat_menu(sender["id"], chat["id"], web_app_url)
+        response = self._personalize_response(response, web_app_url)
         self._http.post(
             f"{self.base_url}/sendMessage",
             json={"chat_id": chat["id"], **response.telegram_payload()},
