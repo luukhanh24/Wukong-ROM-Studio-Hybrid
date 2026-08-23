@@ -13,7 +13,7 @@ from urllib.request import Request
 
 from wukong.cli import main as cli_main
 from wukong.adapters import SourceResolutionError
-from wukong.source_probe import probe_http_source
+from wukong.source_probe import probe_http_source, validate_direct_signed_url_ttl
 
 
 class _Response(io.BytesIO):
@@ -149,7 +149,7 @@ class SourceProbeTests(unittest.TestCase):
 
         self.assertEqual([], initial.requests)
 
-    def test_probe_rejects_a_signed_url_that_will_expire_before_a_cloud_build_can_download_it(self) -> None:
+    def test_probe_reads_metadata_from_a_live_signed_url_that_is_too_short_for_build(self) -> None:
         payload = _fixture_zip()
         now = 1_787_484_600
         near_expiry = (
@@ -159,10 +159,27 @@ class SourceProbeTests(unittest.TestCase):
         initial = _InitialOpener(payload, near_expiry)
 
         with mock.patch("wukong.source_probe.time.time", return_value=now):
-            with self.assertRaisesRegex(SourceResolutionError, "signed.*expires too soon"):
-                probe_http_source(near_expiry, opener=initial, timeout=2)
+            result = probe_http_source(
+                near_expiry,
+                opener=initial,
+                opener_factory=lambda: _RangeOpener(payload, near_expiry),
+                timeout=2,
+            )
 
-        self.assertEqual([], initial.requests)
+        self.assertEqual("PKG110", result.product_name)
+        self.assertFalse(result.cloud_build_ready)
+        self.assertEqual(now + 633, result.signed_url_expires_at)
+        self.assertNotEqual([], initial.requests)
+
+    def test_cloud_build_validation_still_rejects_a_near_expiry_signed_url(self) -> None:
+        now = 1_787_484_600
+        near_expiry = (
+            "https://93.184.216.35/rom.zip?"
+            f"expires={now + 633}&signature=short-lived"
+        )
+
+        with self.assertRaisesRegex(SourceResolutionError, "signed.*expires too soon"):
+            validate_direct_signed_url_ttl(near_expiry, now=now)
 
     def test_probe_does_not_treat_an_unsigned_expires_parameter_as_a_signed_download(self) -> None:
         payload = _fixture_zip()
@@ -179,7 +196,7 @@ class SourceProbeTests(unittest.TestCase):
         self.assertEqual("PKG110", result.product_name)
         self.assertNotEqual([], initial.requests)
 
-    def test_probe_rejects_relative_aws_and_oss_v4_expirations(self) -> None:
+    def test_probe_marks_live_relative_aws_and_oss_v4_urls_as_preview_only(self) -> None:
         payload = _fixture_zip()
         now = 1_787_484_900
         urls = (
@@ -193,9 +210,14 @@ class SourceProbeTests(unittest.TestCase):
             with self.subTest(uri=uri):
                 initial = _InitialOpener(payload, uri)
                 with mock.patch("wukong.source_probe.time.time", return_value=now):
-                    with self.assertRaisesRegex(SourceResolutionError, "signed.*expires too soon"):
-                        probe_http_source(uri, opener=initial, timeout=2)
-                self.assertEqual([], initial.requests)
+                    result = probe_http_source(
+                        uri,
+                        opener=initial,
+                        opener_factory=lambda: _RangeOpener(payload, uri),
+                        timeout=2,
+                    )
+                self.assertFalse(result.cloud_build_ready)
+                self.assertNotEqual([], initial.requests)
 
     def test_probe_resolves_oplus_and_reads_remote_zip_metadata_without_full_download(self) -> None:
         payload = _fixture_zip()

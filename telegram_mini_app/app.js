@@ -204,8 +204,8 @@ Object.assign(translations.vi, {
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Lần mở này thiếu phiên Telegram. Bấm Kết nối Telegram để phục hồi an toàn.", apiAuthButton: "Kết nối Telegram", pairingHint: "Telegram không gửi phiên cho lần mở này. Kết nối một lần qua bot; nếu được hỏi, bấm START rồi quay lại Mini App.", pairingButton: "Kết nối Telegram", pairingOpening: "Đã mở bot. Hãy bấm START nếu Telegram yêu cầu rồi quay lại đây…", pairingWaiting: "Đang chờ bot xác nhận tài khoản…", pairingReady: "Đã kết nối Telegram. Mini App API sẵn sàng.", pairingFailed: "Không thể kết nối phiên Telegram. Hãy thử lại.", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.",
-  probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.",
-  checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
+  probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.", probeSignedPreviewOnly: "Link còn hiệu lực để phân tích nhưng không đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.",
+  checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", checklistSourceRefreshRequired: "Cần link gốc để build cloud", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
@@ -248,8 +248,8 @@ Object.assign(translations.en, {
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "This launch is missing a Telegram session. Press Connect Telegram to recover securely.", apiAuthButton: "Connect Telegram", pairingHint: "Telegram did not provide a session. Connect once through the bot; press START if prompted, then return to the Mini App.", pairingButton: "Connect Telegram", pairingOpening: "The bot is open. Press START if prompted, then return here…", pairingWaiting: "Waiting for the bot to confirm your account…", pairingReady: "Telegram connected. The Mini App API is ready.", pairingFailed: "Could not connect the Telegram session. Please try again.", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.",
-  probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated when the runner starts.",
-  checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
+  probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated when the runner starts.", probeSignedPreviewOnly: "The link is still valid for analysis but does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so the runner can create a fresh link when downloading starts.",
+  checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", checklistSourceRefreshRequired: "Original link required for cloud build", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
@@ -719,7 +719,7 @@ function updateSourceDetection() {
   updateSummary();
   node.classList.toggle("detected", Boolean(detection?.valid));
   node.classList.toggle("invalid", Boolean(detection && !detection.valid));
-  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
+  node.classList.remove("probing", "analyzed", "preview-only", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   const marker = node.querySelector(".source-state-mark span");
   const facts = $("#source-facts");
   const factsHead = $("#source-facts-head");
@@ -759,7 +759,8 @@ function updateSourceDetection() {
   }
   if (state.sourceProbeUri === currentUri && state.sourceProbe?.result) {
     const completeness = applyProbeResult(state.sourceProbe.result, currentUri, { announce: false });
-    setProbePresentation(completeness.complete === completeness.total ? "analyzed" : "probe-limited", completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
+    const previewOnly = state.sourceProbe.status === "preview-only";
+    setProbePresentation(previewOnly ? "preview-only" : completeness.complete === completeness.total ? "analyzed" : "probe-limited", previewOnly ? "probeSignedPreviewOnly" : completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
     return;
   }
   if (!probe.hidden && !miniApiEndpoint) presentMissingApi();
@@ -767,9 +768,9 @@ function updateSourceDetection() {
 
 function setProbePresentation(status, messageKey) {
   const node = $("#source-state");
-  node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
+  node.classList.remove("probing", "analyzed", "preview-only", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   node.classList.add(status);
-  const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-deferred" ? "probeDeferredKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
+  const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "preview-only" ? "probeLimitedKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-deferred" ? "probeDeferredKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
   $("#source-kicker").textContent = t(kickerKey);
   $("#source-state-message").textContent = t(messageKey);
 }
@@ -871,7 +872,7 @@ function applyProbeResult(result, uri, { announce = true } = {}) {
   selectModPackForVersion(version);
   state.sourceProbeUri = uri;
   const completeness = updateMetadataCompleteness();
-  state.sourceProbe = { status: completeness.complete === completeness.total ? "analyzed" : "partial", result };
+  state.sourceProbe = { status: result?.cloudBuildReady === false ? "preview-only" : completeness.complete === completeness.total ? "analyzed" : "partial", result };
   updateSummary();
   return completeness;
 }
@@ -896,7 +897,8 @@ async function probeSourceInPlace() {
     const result = await probeSourceViaBackend(uri, controller.signal);
     if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
     const completeness = applyProbeResult(result, uri);
-    setProbePresentation(completeness.complete === completeness.total ? "analyzed" : "probe-limited", completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
+    const previewOnly = state.sourceProbe.status === "preview-only";
+    setProbePresentation(previewOnly ? "preview-only" : completeness.complete === completeness.total ? "analyzed" : "probe-limited", previewOnly ? "probeSignedPreviewOnly" : completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
   } catch (error) {
     if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
     if (error?.name === "AbortError" && !timedOut) return;
@@ -1129,6 +1131,7 @@ function updateSummary() {
   const sourceVerified = sourceDetection?.kind === "rclone"
     ? sourceReady
     : sourceReady && state.sourceProbeUri === currentUri && ["analyzed", "partial"].includes(state.sourceProbe?.status);
+  const sourceNeedsRefresh = sourceReady && state.sourceProbeUri === currentUri && state.sourceProbe?.status === "preview-only";
   const runnerReady = Boolean($("#execution")?.value);
   const ready = sourceVerified && Boolean(selectedDevice) && runnerReady && apiReady;
   const completedChecks = [sourceVerified, Boolean(selectedDevice), runnerReady, apiReady].filter(Boolean).length;
@@ -1142,7 +1145,7 @@ function updateSummary() {
   if ($("#readiness-label")) $("#readiness-label").textContent = t(ready ? "readyLabel" : "incompleteLabel");
   if ($("#readiness-count")) $("#readiness-count").textContent = t("readinessProgress", { done: completedChecks });
   if ($("#launch-warning")) {
-    const warningKey = ready ? "fallbackWarning" : !apiReady ? "apiRequiredHint" : sourceReady && !sourceVerified ? "sourceProbePendingHint" : sourceReady ? "chooseDeviceHint" : "completeSourceHint";
+    const warningKey = ready ? "fallbackWarning" : !apiReady ? "apiRequiredHint" : sourceNeedsRefresh ? "probeSignedPreviewOnly" : sourceReady && !sourceVerified ? "sourceProbePendingHint" : sourceReady ? "chooseDeviceHint" : "completeSourceHint";
     $("#launch-warning").textContent = t(warningKey);
   }
   const recovery = $("#session-recovery");
@@ -1152,7 +1155,7 @@ function updateSummary() {
     connect.disabled = state.pairingInFlight;
     connect.textContent = state.pairingInFlight ? t("pairingWaiting") : t("pairingButton");
   }
-  updateChecklistItem("check-source", sourceVerified, "checklistSourceVerified", sourceReady ? "checklistSourceProbePending" : "checklistSourcePending");
+  updateChecklistItem("check-source", sourceVerified, "checklistSourceVerified", sourceNeedsRefresh ? "checklistSourceRefreshRequired" : sourceReady ? "checklistSourceProbePending" : "checklistSourcePending");
   updateChecklistItem("check-device", Boolean(selectedDevice), "checklistDeviceDone", "checklistDevicePending");
   updateChecklistItem("check-runner", runnerReady, "checklistRunnerDone", "checklistRunnerDone");
   updateChecklistItem("check-api", apiReady, "checklistApiDone", miniApiEndpoint ? "checklistApiAuthPending" : "checklistApiPending");

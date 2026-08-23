@@ -83,6 +83,7 @@ def validate_direct_signed_url_ttl(
     *,
     refreshable: bool = False,
     now: int | None = None,
+    minimum_ttl_seconds: int = MIN_DIRECT_SIGNED_URL_TTL_SECONDS,
 ) -> None:
     """Reject a direct signed URL that cannot safely survive cloud queueing."""
     if refreshable or not _looks_like_signed_download(uri):
@@ -96,7 +97,7 @@ def validate_direct_signed_url_ttl(
             "The signed ROM download URL has expired; "
             "paste the original OPlus downloadCheck or Daniel Springer page"
         )
-    if expires_at <= checked_at + MIN_DIRECT_SIGNED_URL_TTL_SECONDS:
+    if minimum_ttl_seconds > 0 and expires_at <= checked_at + minimum_ttl_seconds:
         raise SourceResolutionError(
             "The signed ROM download URL expires too soon for a cloud build; "
             "paste the original OPlus downloadCheck or Daniel Springer page"
@@ -144,6 +145,8 @@ class SourceProbeResult:
     ota_type: str | None = None
     deep_inspected: bool = False
     warning: str | None = None
+    signed_url_expires_at: int | None = None
+    cloud_build_ready: bool = True
     metadata: Mapping[str, str] = field(default_factory=dict)
     resolved_url: str = field(default="", repr=False, compare=False)
 
@@ -167,6 +170,8 @@ class SourceProbeResult:
             "otaType": self.ota_type,
             "deepInspected": self.deep_inspected,
             "warning": self.warning,
+            "signedUrlExpiresAt": self.signed_url_expires_at,
+            "cloudBuildReady": self.cloud_build_ready,
             "metadata": dict(self.metadata),
         }
 
@@ -427,9 +432,22 @@ def probe_http_source(
         resolved_input, page_metadata = adapter._resolve_daniel_ota_page_details(uri)
         validate_http_url(resolved_input, resolve_dns=True)
     is_oplus_resolver = adapter._is_oplus_resolver_url(resolved_input)
+    refreshable_source = is_daniel_ota_page or is_oplus_resolver
+    checked_at = int(time.time())
     validate_direct_signed_url_ttl(
         resolved_input,
-        refreshable=is_daniel_ota_page or is_oplus_resolver,
+        refreshable=refreshable_source,
+        now=checked_at,
+        minimum_ttl_seconds=0,
+    )
+    signed_url_expires_at = (
+        _signed_url_expiry(resolved_input)
+        if not refreshable_source and _looks_like_signed_download(resolved_input)
+        else None
+    )
+    cloud_build_ready = (
+        signed_url_expires_at is None
+        or signed_url_expires_at > checked_at + MIN_DIRECT_SIGNED_URL_TTL_SECONDS
     )
     headers = adapter._request_headers(resolved_input)
     headers["Range"] = "bytes=0-0"
@@ -507,6 +525,8 @@ def probe_http_source(
         ota_type=_first(metadata, "ota-type"),
         deep_inspected=deep_inspected,
         warning=warning,
+        signed_url_expires_at=signed_url_expires_at,
+        cloud_build_ready=cloud_build_ready,
         metadata=metadata,
         resolved_url=final_url,
     )

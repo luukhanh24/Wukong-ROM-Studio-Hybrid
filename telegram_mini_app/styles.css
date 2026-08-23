@@ -147,6 +147,8 @@ h2 { letter-spacing: -.015em; }
 .source-state.probing .source-state-mark { border-color: var(--sun); color: #8b6112; animation: probe-orbit 1.2s ease-in-out infinite; }
 .source-state.analyzed { background: var(--success-soft); }
 .source-state.analyzed .source-state-mark, .source-state.analyzed .source-state-copy > small { border-color: var(--aqua); color: var(--success); }
+.source-state.preview-only { background: var(--sun-soft); }
+.source-state.preview-only .source-state-mark, .source-state.preview-only .source-state-copy > small { border-color: var(--sun); color: #8b6112; }
 .source-state.probe-deferred, .source-state.probe-limited { background: var(--surface-soft); }
 .source-state.probe-deferred .source-state-mark, .source-state.probe-deferred .source-state-copy > small { border-color: var(--accent); color: var(--accent-strong); }
 .source-state.probe-limited .source-state-mark, .source-state.probe-limited .source-state-copy > small { border-color: var(--sun); color: #8b6112; }
