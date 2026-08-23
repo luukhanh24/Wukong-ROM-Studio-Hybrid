@@ -41,6 +41,11 @@ def main() -> int:
 
     if args.folder and args.migrate_shared:
         parser.error("--folder and --migrate-shared cannot be used together")
+    if args.target == "github" and (args.folder or args.migrate_shared):
+        parser.error(
+            "--target github publishes the verified index as-is; "
+            "--folder and --migrate-shared are not allowed"
+        )
     try:
         run_id = uuid.UUID(args.run_id).hex if args.run_id else uuid.uuid4().hex
     except ValueError:
@@ -80,13 +85,19 @@ def main() -> int:
             repaired = restore_incomplete_index(working_index_path, Path(args.baseline_index))
             if repaired:
                 emit("repair", packs=repaired)
-        index, changed = refresh_content_index(
-            install,
-            working_index_path,
-            remote=args.remote,
-            only_pack_ids=selected_pack_ids,
-            force_pack_ids=forced_pack_ids,
-        )
+        if args.target == "github":
+            if not working_index_path.is_file():
+                raise FileNotFoundError(f"Content-pack index does not exist: {working_index_path}")
+            index = json.loads(working_index_path.read_text(encoding="utf-8"))
+            changed = []
+        else:
+            index, changed = refresh_content_index(
+                install,
+                working_index_path,
+                remote=args.remote,
+                only_pack_ids=selected_pack_ids,
+                force_pack_ids=forced_pack_ids,
+            )
         emit("index", packs=len(index["packs"]), changed=changed)
         if args.target in {"drive", "all"}:
             upload_changed_packs(

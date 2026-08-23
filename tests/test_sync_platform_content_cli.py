@@ -8,9 +8,52 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tools import sync_platform_content
+from wukong.content_sync import refresh_content_index
 
 
 class SyncPlatformContentCliTests(unittest.TestCase):
+    def test_github_publish_uses_repaired_verified_index_without_rescanning_local_content(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            install = Path(root)
+            stark = install / "Content" / "STARK"
+            stark.mkdir(parents=True)
+            source = stark / "manager.smali"
+            source.write_bytes(b"verified")
+            baseline_path = install / "baseline.json"
+            baseline, _ = refresh_content_index(install, baseline_path, remote="drive:packs")
+            baseline["packs"][0]["archive"] = {
+                "uri": "drive:packs/STARK/common.tar.zst",
+                "sha256": "a" * 64,
+                "md5": "b" * 32,
+                "sizeBytes": 7,
+            }
+            baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+            interrupted = json.loads(json.dumps(baseline))
+            interrupted["packs"][0].pop("archive")
+            index_path = install / "index.json"
+            index_path.write_text(json.dumps(interrupted), encoding="utf-8")
+            source.write_bytes(b"locally changed after the verified upload")
+            argv = [
+                "sync_platform_content",
+                "--install-root", str(install),
+                "--index", str(index_path),
+                "--baseline-index", str(baseline_path),
+                "--target", "github",
+                "--repository", "owner/repository",
+                "--run-id", "11111111111111111111111111111111",
+            ]
+
+            with (
+                patch.object(sys, "argv", argv),
+                patch.object(sync_platform_content, "publish_index_to_github", return_value="commit") as publish,
+            ):
+                result = sync_platform_content.main()
+
+            self.assertEqual(0, result)
+            publish.assert_called_once()
+            published = json.loads(index_path.read_text(encoding="utf-8"))
+            self.assertEqual("a" * 64, published["packs"][0]["archive"]["sha256"])
+
     def test_selected_upload_skips_global_migration_and_rolls_back_index_on_failure(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             install = Path(root)
@@ -71,6 +114,21 @@ class SyncPlatformContentCliTests(unittest.TestCase):
                 "--target", "refresh",
                 "--migrate-shared",
                 "--folder", str(selected),
+            ]
+            with patch.object(sys, "argv", argv):
+                with self.assertRaises(SystemExit) as error:
+                    sync_platform_content.main()
+            self.assertEqual(2, error.exception.code)
+
+    def test_github_publish_rejects_content_migration(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            install = Path(root)
+            argv = [
+                "sync_platform_content",
+                "--install-root", str(install),
+                "--index", str(install / "index.json"),
+                "--target", "github",
+                "--migrate-shared",
             ]
             with patch.object(sys, "argv", argv):
                 with self.assertRaises(SystemExit) as error:
