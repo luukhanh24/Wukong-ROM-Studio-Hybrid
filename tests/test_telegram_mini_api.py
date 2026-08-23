@@ -422,7 +422,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
 
         self.assertEqual(403, short.status_code)
         self.assertEqual(200, accepted.status_code)
-        self.runtime.verify_actions_bearer.assert_called_once_with(token, 555)
+        self.runtime.verify_actions_bearer.assert_called_once_with(token, 555, "success")
         self.runtime.refresh.assert_called_once_with(self.store.get(job_id))
         self.runtime.notify_terminal.assert_called_once()
 

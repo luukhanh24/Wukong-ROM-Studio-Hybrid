@@ -131,13 +131,21 @@ class HybridRuntime:
             current = self._finish_github_failure(current, normalized, run_id=run_id)
         return current
 
-    def verify_actions_bearer(self, token: str, run_id: int) -> str:
+    def verify_actions_bearer(
+        self,
+        token: str,
+        run_id: int,
+        claimed_conclusion: str = "",
+    ) -> str:
         """Validate an Actions callback bearer token against GitHub itself.
 
         The runner presents its own repository token; trusting the run only
         after GitHub confirms it keeps callback authentication immune to a
         desynchronized copy of the token stored on the control plane.
-        Returns GitHub's authoritative conclusion for the run.
+        The terminal callback is itself the workflow's final job, so GitHub
+        reports the run as ``in_progress`` until this request returns. In that
+        state, accept the final job's already-normalized conclusion only after
+        GitHub confirms that the short-lived runner token can read this run.
         """
         repository = os.environ.get("WUKONG_GITHUB_REPOSITORY", "").strip()
         owner, separator, name = repository.partition("/")
@@ -148,17 +156,21 @@ class HybridRuntime:
             state = github.run_state(run_id)
         except (GitHubApiError, OSError, ValueError) as exc:
             raise PermissionError("Actions callback authentication failed") from exc
-        if state.get("status") != "completed":
-            raise PermissionError("Actions callback run is not terminal yet")
-        conclusion = str(state.get("conclusion") or "")
-        if conclusion not in {
+        allowed = {
             "success",
             "failure",
             "cancelled",
             "timed_out",
             "action_required",
             "startup_failure",
-        }:
+        }
+        status = str(state.get("status") or "").casefold()
+        conclusion = str(state.get("conclusion") or "").casefold()
+        if status == "in_progress":
+            conclusion = claimed_conclusion.strip().casefold()
+        elif status != "completed":
+            raise PermissionError("Actions callback run is not ready for its terminal callback")
+        if conclusion not in allowed:
             raise PermissionError("Actions callback run has no usable conclusion")
         return conclusion
 

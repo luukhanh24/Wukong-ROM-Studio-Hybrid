@@ -697,6 +697,39 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertEqual("token-from-keyring", token)
         self.assertEqual(["gh", "auth", "token"], run.call_args.args[0])
 
+    def test_actions_bearer_accepts_final_callback_while_run_is_in_progress(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        store = InMemoryJobStore()
+        orchestrator = HybridOrchestrator(store=store, workspace_root=root / "jobs")
+        runtime = HybridRuntime(
+            orchestrator=orchestrator,
+            store=store,
+            workspace_root=root / "runtime",
+            data_root=root / "data",
+        )
+        github = Mock()
+        github.run_state.return_value = {
+            "status": "in_progress",
+            "conclusion": None,
+            "url": "https://github.example/actions/runs/321",
+        }
+
+        with patch.dict(
+            os.environ,
+            {"WUKONG_GITHUB_REPOSITORY": "owner/repository"},
+            clear=False,
+        ), patch("wukong.runtime.GitHubActionsAdapter", return_value=github):
+            conclusion = runtime.verify_actions_bearer(
+                "github-actions-token-1234567890",
+                321,
+                "success",
+            )
+
+        self.assertEqual("success", conclusion)
+        github.run_state.assert_called_once_with(321)
+
     def test_dispatched_job_stays_queued_when_run_lookup_temporarily_fails(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

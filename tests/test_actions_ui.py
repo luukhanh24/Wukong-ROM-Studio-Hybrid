@@ -142,6 +142,7 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("if: always()", workflow)
         self.assertIn('"workflowResult": result', workflow)
         self.assertIn('"preExecutorFailure": route != "success"', workflow)
+        self.assertIn("CALLBACK_SECRET: ${{ github.token }}", workflow)
         self.assertIn("GITHUB_STEP_SUMMARY", workflow)
         self.assertIn("E · Pipeline 05–19", action)
         self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))

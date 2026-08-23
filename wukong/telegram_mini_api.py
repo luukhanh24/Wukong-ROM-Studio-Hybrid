@@ -573,7 +573,11 @@ class TelegramMiniAppAPI:
                 if run_id is None:
                     return jsonify({"error": "Actions callback authentication failed"}), 403
                 try:
-                    conclusion = self.runtime.verify_actions_bearer(bearer, run_id)
+                    conclusion = self.runtime.verify_actions_bearer(
+                        bearer,
+                        run_id,
+                        conclusion,
+                    )
                 except PermissionError as exc:
                     return jsonify({"error": str(exc)}), 403
             # A pre-executor failure has no newer Drive manifest to fetch.
