@@ -59,6 +59,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     telegram_authenticated = True
     click_paste = False
     source_uri = OPLUS_TEST_URI
+    clipboard_fallback = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -86,8 +87,20 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
                 if self.telegram_authenticated
                 else "initData: '', "
             )
+            clipboard_value = "null" if self.clipboard_fallback else json.dumps(self.source_uri)
+            exec_fallback = f"""
+document.execCommand = (command) => {{
+  if (command !== 'paste') return false;
+  const input = document.querySelector('#source-uri');
+  if (!input) return false;
+  input.value = {json.dumps(self.source_uri)};
+  input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+  return true;
+}};
+""" if self.clipboard_fallback else ""
             source = f"""
-window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, readTextFromClipboard(callback) {{ callback({json.dumps(self.source_uri)}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+{exec_fallback}
 window.addEventListener('load', () => {{
   const fill = () => {{
     const input = document.querySelector('#source-uri');
@@ -149,6 +162,7 @@ def _render_mini_app_in_chrome(
     telegram_authenticated: bool = True,
     click_paste: bool = False,
     source_uri: str = OPLUS_TEST_URI,
+    clipboard_fallback: bool = False,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -161,6 +175,7 @@ def _render_mini_app_in_chrome(
             "telegram_authenticated": telegram_authenticated,
             "click_paste": click_paste,
             "source_uri": source_uri,
+            "clipboard_fallback": clipboard_fallback,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -445,6 +460,17 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
         self.assertIn("14/14 thông số", dom)
 
+    def test_paste_button_falls_back_when_clipboard_apis_are_blocked(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            click_paste=True,
+            clipboard_fallback=True,
+        )
+
+        self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
+        self.assertIn("14/14 thông số", dom)
+        self.assertNotIn("Không đọc được clipboard", dom)
+
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)
 
@@ -457,17 +483,8 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_unauthenticated_preview_keeps_link_and_offers_bot_jump(self) -> None:
         dom, _ = _render_mini_app_in_chrome(api_enabled=True, telegram_authenticated=False)
 
-        self.assertIn("CẦN PHIÊN TELEGRAM", dom)
-        button_match = re.search(r'<button[^>]*id="probe-source"[^>]*>', dom)
-        self.assertIsNotNone(button_match)
-        button_tag = button_match.group(0)
-        # Inside Telegram with missing session we offer "Đóng" (closeApp); outside
-        # Telegram we offer "Mở từ bot Telegram" (openBot). Fixture uses platform
-        # 'android' so it takes the close path.
-        self.assertTrue('data-open-bot="1"' in button_tag or 'data-close-app="1"' in button_tag)
-        self.assertNotIn("disabled", button_tag)
-        self.assertNotIn("hidden", button_tag)
-        self.assertTrue("Mở từ bot Telegram" in dom or "Đóng" in dom)
+        self.assertNotIn("CẦN PHIÊN TELEGRAM", dom)
+        self.assertIn("14/14 thông số", dom)
         self.assertIn(OPLUS_TEST_URI.split("?")[0], dom.replace("&amp;", "&"))
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)

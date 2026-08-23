@@ -145,6 +145,18 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(ORIGIN, allowed.headers["Access-Control-Allow-Origin"])
         self.assertEqual(200, self.client.get("/healthz").status_code)
 
+    def test_source_preview_allows_origin_without_identity_but_jobs_stay_private(self) -> None:
+        preview = self.client.post(
+            "/v1/sources/probe",
+            headers={"Origin": ORIGIN},
+            json={"uri": "https://downloads.example/rom.zip"},
+        )
+        jobs = self.client.get("/v1/jobs", headers={"Origin": ORIGIN})
+
+        self.assertEqual(200, preview.status_code)
+        self.assertEqual("PKG110", preview.json["productName"])
+        self.assertEqual(401, jobs.status_code)
+
     def test_webhook_requires_secret_and_dispatches_authenticated_update(self) -> None:
         handler = Mock()
         api = TelegramMiniAppAPI(

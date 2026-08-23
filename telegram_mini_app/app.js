@@ -131,7 +131,7 @@ Object.assign(translations.vi, {
 
 Object.assign(translations.vi, {
   detectedProduct: "Product", detectedDevice: "Mã thiết bị", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng", otaType: "Kiểu OTA", contentType: "Định dạng", lastModified: "Cập nhật máy chủ", deepInspection: "Kiểm tra ZIP",
-  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", pasteLink: "Dán", clearLink: "Xóa", linkPasted: "Đã dán link ROM và bắt đầu phân tích.", clipboardEmpty: "Clipboard không có văn bản.", clipboardDenied: "Không đọc được clipboard. Hãy cấp quyền hoặc dán thủ công.", sourceCleared: "Đã xóa nguồn ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", pasteLink: "Dán", clearLink: "Xóa", linkPasted: "Đã dán link ROM và bắt đầu phân tích.", clipboardEmpty: "Clipboard không có văn bản.", clipboardDenied: "Không đọc được clipboard. Hãy cấp quyền hoặc dán thủ công.", clipboardManual: "Telegram đang chặn đọc clipboard tự động. Ô link đã được chọn; nhấn giữ rồi chọn Dán.", sourceCleared: "Đã xóa nguồn ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Mở Mini App từ nút trong bot Telegram để xác thực rồi phân tích ROM.", apiAuthButton: "Mở từ bot Telegram", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống → trang đang mở bằng link trực tiếp, không phải từ nút Mini App trong bot. Quay lại tab Studio và bấm “Mở từ bot Telegram”.", sessionDiagNoLib: "Không nạp được thư viện Telegram (telegram.org có thể bị chặn). Kiểm tra mạng rồi mở lại từ bot.",
@@ -175,7 +175,7 @@ Object.assign(translations.en, {
 
 Object.assign(translations.en, {
   detectedProduct: "Product", detectedDevice: "Device code", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Size", otaType: "OTA type", contentType: "Content type", lastModified: "Server modified", deepInspection: "ZIP inspection",
-  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", pasteLink: "Paste", clearLink: "Clear", linkPasted: "ROM link pasted and analysis started.", clipboardEmpty: "The clipboard contains no text.", clipboardDenied: "Clipboard access failed. Allow access or paste manually.", sourceCleared: "ROM source cleared.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", pasteLink: "Paste", clearLink: "Clear", linkPasted: "ROM link pasted and analysis started.", clipboardEmpty: "The clipboard contains no text.", clipboardDenied: "Clipboard access failed. Allow access or paste manually.", clipboardManual: "Telegram is blocking automatic clipboard access. The link field is selected; long-press it and choose Paste.", sourceCleared: "ROM source cleared.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "Open the Mini App from the Telegram bot button to authenticate and analyze the ROM.", apiAuthButton: "Open from Telegram bot", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "Bridge loaded but initData is empty → this page was opened as a direct link, not from the bot's Mini App button. Go back to Studio and press “Open from Telegram bot”.", sessionDiagNoLib: "The Telegram bridge could not load (telegram.org may be blocked). Check the network and reopen from the bot.",
@@ -434,14 +434,29 @@ async function readClipboardText() {
       if (result.readable) return result;
     } catch (_) {}
   }
-  return readTelegramClipboard();
+  const telegram = await readTelegramClipboard();
+  if (telegram.readable) return telegram;
+  const input = $("#source-uri");
+  input.focus({ preventScroll: true });
+  try {
+    const accepted = document.execCommand?.("paste") === true;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const text = input.value.trim();
+    if (accepted && text) return { text, readable: true };
+  } catch (_) {}
+  return { text: "", readable: false };
 }
 
 async function pasteSourceFromClipboard() {
   const clipboard = await readClipboardText();
   const value = String(clipboard.text || "").trim();
-  if (!value) throw new Error(t(clipboard.readable ? "clipboardEmpty" : "clipboardDenied"));
   const input = $("#source-uri");
+  if (!value) {
+    input.focus({ preventScroll: true });
+    input.select();
+    toast(t(clipboard.readable ? "clipboardEmpty" : "clipboardManual"));
+    return;
+  }
   input.value = value;
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.focus({ preventScroll: true });
@@ -594,7 +609,7 @@ function updateSourceDetection() {
     setProbePresentation(completeness.complete === completeness.total ? "analyzed" : "probe-limited", completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
     return;
   }
-  if (!probe.hidden && !miniApiAvailable()) presentMissingApi();
+  if (!probe.hidden && !miniApiEndpoint) presentMissingApi();
 }
 
 function setProbePresentation(status, messageKey) {
@@ -607,11 +622,30 @@ function setProbePresentation(status, messageKey) {
 }
 
 async function probeSourceViaBackend(uri, signal) {
-  return apiRequest("/v1/sources/probe", {
+  const options = {
     method: "POST",
     body: JSON.stringify({ uri }),
     signal
-  });
+  };
+  if (effectiveInitData()) return apiRequest("/v1/sources/probe", options);
+  const headers = new Headers({ "Content-Type": "application/json" });
+  let response;
+  try {
+    response = await fetch(`${miniApiEndpoint}/v1/sources/probe`, { ...options, headers, cache: "no-store" });
+  } catch (cause) {
+    if (cause?.name === "AbortError") throw cause;
+    const error = new Error(t("requestFailed"));
+    error.connectionFailed = true;
+    throw error;
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error || `HTTP ${response.status}`);
+    error.status = response.status;
+    error.sourceRejected = response.status >= 400 && response.status < 500;
+    throw error;
+  }
+  return payload;
 }
 
 function normalizeDevice(value) {
@@ -692,7 +726,7 @@ async function probeSourceInPlace() {
   const button = $("#probe-source");
   const uri = $("#source-uri").value.trim();
   if (!state.sourceDetection?.valid || !/^https?:\/\//i.test(uri)) throw new Error(t("invalidUrl"));
-  if (!miniApiAvailable()) { presentMissingApi(); return; }
+  if (!miniApiEndpoint) { presentMissingApi(); return; }
   state.sourceProbeController?.abort();
   const controller = new AbortController();
   state.sourceProbeController = controller;
@@ -1274,7 +1308,7 @@ async function submitRecipe() {
 function scheduleSourceProbe() {
   clearTimeout(state.sourceProbeTimer);
   const uri = $("#source-uri").value.trim();
-  if (!miniApiAvailable() || !/^https?:\/\//i.test(uri) || !state.sourceDetection?.valid) return;
+  if (!miniApiEndpoint || !/^https?:\/\//i.test(uri) || !state.sourceDetection?.valid) return;
   if (state.sourceProbeUri === uri && state.sourceProbe?.result) return;
   state.sourceProbeTimer = setTimeout(() => probeSourceInPlace().catch(() => {}), 450);
 }

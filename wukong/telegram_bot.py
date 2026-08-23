@@ -1218,13 +1218,10 @@ class TelegramBotController:
         return BotResponse(
             TEXT[language]["mini_app_prompt"],
             {
-                "keyboard": [[{
+                "inline_keyboard": [[{
                     "text": TEXT[language]["mini_app"],
                     "web_app": {"url": self.web_app_url},
                 }]],
-                "resize_keyboard": True,
-                "one_time_keyboard": True,
-                "input_field_placeholder": TEXT[language]["mini_app"],
             },
         )
 

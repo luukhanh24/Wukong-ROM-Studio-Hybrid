@@ -218,6 +218,15 @@ class TelegramMiniAppAPI:
                 return jsonify({"error": "This Mini App origin is not allowed"}), 403
             if request.method == "OPTIONS":
                 return Response(status=204)
+            # Source inspection is a read-only preview. It remains available
+            # when Telegram omits initData, while jobs and private routes
+            # below still require a validated Telegram identity.
+            if (
+                request.path == "/v1/sources/probe"
+                and request.method == "POST"
+                and not request.headers.get("Authorization")
+            ):
+                return None
             authorization = request.headers.get("Authorization", "")
             scheme, separator, init_data = authorization.partition(" ")
             if separator != " " or scheme.casefold() != "tma":
@@ -345,7 +354,9 @@ class TelegramMiniAppAPI:
                     result = self.source_probe_provider(uri)
                 finally:
                     self._probe_slots.release()
-                self._remember_probe(self._identity(), uri, result)
+                identity = request.environ.get("wukong.identity")
+                if isinstance(identity, Identity):
+                    self._remember_probe(identity, uri, result)
                 return jsonify({key: value for key, value in result.items() if key != "metadata"})
             except (OSError, RuntimeError, TypeError, ValueError) as exc:
                 return jsonify({"error": str(exc)}), 400

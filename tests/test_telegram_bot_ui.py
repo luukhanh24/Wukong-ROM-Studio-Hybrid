@@ -127,14 +127,15 @@ class TelegramBotUITests(unittest.TestCase):
         )
         self.assertNotIn("callback_data", app_button)
 
-    def test_app_command_uses_reply_keyboard_transport_required_by_send_data(self) -> None:
+    def test_app_command_uses_inline_web_app_transport_required_for_init_data(self) -> None:
         self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
 
         response = self.controller.handle_ui(42, "/app")
 
-        self.assertIn("keyboard", response.reply_markup)
-        self.assertNotIn("inline_keyboard", response.reply_markup)
-        self.assertTrue(response.reply_markup["one_time_keyboard"])
+        self.assertIn("inline_keyboard", response.reply_markup)
+        self.assertNotIn("keyboard", response.reply_markup)
+        app_button = response.reply_markup["inline_keyboard"][0][0]
+        self.assertEqual(self.controller.web_app_url, app_button["web_app"]["url"])
 
     def test_mini_app_submits_recipe_under_authenticated_telegram_identity(self) -> None:
         response = self.controller.handle_web_app_data(42, json.dumps({
