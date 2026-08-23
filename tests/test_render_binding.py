@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from unittest.mock import Mock
+from urllib.parse import urlsplit
 
 from wukong.render_binding import RenderBinding, RenderBindingError, RenderOriginBinder
 
@@ -13,7 +14,19 @@ class RenderOriginBinderTests(unittest.TestCase):
             token="github-token-" + "x" * 32,
             api_url="https://wukong-mini-api.onrender.com",
             release_sha="a" * 40,
+            mini_app_url="https://app.example.com/",
         )
+
+    def test_binding_accepts_configured_vercel_origin_without_personal_hostname(self) -> None:
+        binding = RenderBinding(
+            repository="owner/repository",
+            token="github-token-" + "x" * 32,
+            api_url="https://wukong-mini-api.onrender.com",
+            release_sha="a" * 40,
+            mini_app_url="https://wukong-rom-studio.vercel.app/",
+        )
+
+        self.assertEqual("wukong-rom-studio.vercel.app", urlsplit(binding.mini_app_url).hostname)
 
     def test_creates_missing_variable_and_dispatches_pages(self) -> None:
         http = Mock()
@@ -81,6 +94,7 @@ class RenderOriginBinderTests(unittest.TestCase):
                 token="x" * 32,
                 api_url="https://example.com",
                 release_sha="a" * 40,
+                mini_app_url="https://app.example.com/",
             )
         http = Mock()
         http.get.return_value = Mock(status_code=403)

@@ -19,7 +19,13 @@ from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
 from .telegram import TelegramAccessStore
-from .telegram_mini_api import TelegramMiniAppSessionStore, issue_telegram_launch_token
+from .telegram_mini_api import (
+    TelegramMiniAppSessionStore,
+    issue_telegram_launch_token,
+    public_event_payload,
+    public_job_payload,
+    sanitize_public_value,
+)
 
 
 LANGUAGES = {"vi", "en"}
@@ -796,7 +802,14 @@ class TelegramBotController:
                     return "Thư viện cloud chưa được cấu hình."
                 return self._render_json(provider(category))
             if command == "/jobs":
-                return self._render_json({"jobs": [job.to_dict() for job in self.orchestrator.list(identity)]})
+                return self._render_json(
+                    {
+                        "jobs": [
+                            public_job_payload(job)
+                            for job in self.orchestrator.list(identity)
+                        ]
+                    }
+                )
             if command == "/submit":
                 if not argument:
                     return "Cú pháp: /submit <recipe JSON>"
@@ -1156,25 +1169,28 @@ class TelegramBotController:
             job = self.orchestrator.inspect(job_id, identity)
             if self.runtime:
                 job = self.runtime.refresh(job)
-            return self._render_json(job.to_dict())
+            return self._render_json(public_job_payload(job))
         if command == "/events":
             events = self.orchestrator.events(job_id, identity)
-            return self._render_json({"events": [event.to_dict() for event in events[-10:]]})
+            return self._render_json(
+                {"events": [public_event_payload(event) for event in events[-10:]]}
+            )
         if command == "/cancel":
             current = self.orchestrator.inspect(job_id, identity)
             cancelled = self.orchestrator.cancel(job_id, identity)
             if self.runtime:
                 self.runtime.cancel_external(current)
                 self.runtime.notify_terminal(cancelled)
-            return self._render_json(cancelled.to_dict())
+            return self._render_json(public_job_payload(cancelled))
         if command == "/resume":
             resumed = self.runtime.resume(job_id, identity) if self.runtime else self.orchestrator.resume(job_id, identity)
-            return self._render_json(resumed.to_dict())
+            return self._render_json(public_job_payload(resumed))
         job = self.orchestrator.inspect(job_id, identity)
         if self.runtime:
             job = self.runtime.refresh(job)
         return "\n".join(
-            f"{artifact.name}\n{artifact.public_url or artifact.uri}\nSHA-256: {artifact.sha256}"
+            f"{artifact.name}\n{sanitize_public_value(artifact.public_url or artifact.uri)}"
+            f"\nSHA-256: {artifact.sha256}"
             for artifact in job.artifacts
         ) or "Job chưa có artifact."
 

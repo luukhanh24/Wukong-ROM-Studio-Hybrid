@@ -203,6 +203,43 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertIn("chưa có job", jobs.text.casefold())
         self.assertIn("Chẩn đoán", diagnostics.text)
 
+    def test_text_job_commands_hide_internal_github_identity(self) -> None:
+        recipe = BuildRecipe.from_dict(
+            {
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+                "execution": {"target": "github-auto"},
+            }
+        )
+        identity = Identity("telegram", "42", "user")
+        job = self.orchestrator.submit(recipe, identity)
+        internal_url = (
+            "https://github.com/luukhanh24/"
+            "Wukong-ROM-Studio-Hybrid/actions/runs/123"
+        )
+        self.store.update(job.job_id, external_run_id=123, error=f"Failed: {internal_url}")
+        self.store.append_event(
+            job.job_id,
+            "github_run",
+            runId=123,
+            repository="luukhanh24/Wukong-ROM-Studio-Hybrid",
+            url=internal_url,
+        )
+
+        output = "\n".join(
+            [
+                self.controller.handle(42, "/jobs"),
+                self.controller.handle(42, f"/job {job.job_id}"),
+                self.controller.handle(42, f"/events {job.job_id}"),
+            ]
+        ).casefold()
+
+        self.assertNotIn("luukhanh24", output)
+        self.assertNotIn("github.com", output)
+        self.assertNotIn("external_run_id", output)
+        self.assertNotIn('"runid"', output)
+
     def test_mini_app_cache_actions_preserve_admin_boundary(self) -> None:
         self.controller.cache_provider = lambda: {"entryCount": 3, "totalBytes": 2048}
         self.controller.cache_clearer = lambda: {"entryCount": 0, "totalBytes": 0}

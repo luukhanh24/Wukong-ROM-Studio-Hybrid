@@ -13,6 +13,7 @@ from tools.control_plane_preflight import (
     run_preflight,
 )
 from tools.render_control_plane_env import render_environment
+from tools.build_vercel_mini_app import build_site
 
 
 class ControlPlaneDeploymentTests(unittest.TestCase):
@@ -115,6 +116,11 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         dockerfile = (Path(__file__).parents[1] / "deploy/control-plane/Dockerfile").read_text(
             encoding="utf-8"
         )
+        control_plane_requirements = (
+            Path(__file__).parents[1] / "deploy/control-plane/requirements.txt"
+        ).read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("StrictHostKeyChecking=yes", workflow)
         self.assertIn("WUKONG_VPS_KNOWN_HOSTS", workflow)
@@ -133,6 +139,8 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         )
         self.assertIn("sha256sum --check --strict", dockerfile)
         self.assertNotIn("ca-certificates gosu rclone", dockerfile)
+        self.assertIn("psycopg[binary]", control_plane_requirements)
+        self.assertIn("deploy/control-plane/requirements.txt", dockerfile)
 
     def test_render_free_blueprint_uses_docker_generated_tls_and_ephemeral_state_backup(self) -> None:
         root = Path(__file__).parents[1]
@@ -152,6 +160,14 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS", blueprint)
         self.assertIn("WUKONG_CONTROL_PLANE_ONLINE_PREFLIGHT", blueprint)
         self.assertIn("WUKONG_RCLONE_CONFIG_CONTENT_B64", blueprint)
+        self.assertRegex(blueprint, r"(?s)- key: DATABASE_URL\s+sync: false")
+        self.assertRegex(
+            blueprint,
+            r"(?s)- key: WUKONG_GITHUB_REPOSITORY\s+sync: false",
+        )
+        self.assertIn("https://wukong-rom-studio.vercel.app/", blueprint)
+        self.assertIn("WUKONG_CONTROL_PLANE_REQUIRE_POSTGRES", blueprint)
+        self.assertNotIn("luukhanh24", blueprint.casefold())
         self.assertNotIn("github_pat_", blueprint)
         self.assertIn("RENDER_EXTERNAL_URL", entrypoint)
         self.assertIn('WUKONG_TELEGRAM_MINI_APP_API_PORT', entrypoint)
@@ -161,6 +177,30 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("api_url", binder)
         self.assertIn("/healthz", binder)
         self.assertIn("WUKONG_TELEGRAM_MINI_APP_API_URL", binder)
+
+    def test_vercel_static_bundle_contains_no_personal_github_identity(self) -> None:
+        output = self.root / "vercel-static"
+
+        build_site(
+            Path(__file__).parents[1],
+            output,
+            api_url="https://wukong-mini-api.onrender.com",
+            release="privacy-test",
+        )
+
+        combined = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in output.iterdir()
+            if path.is_file()
+        ).casefold()
+        vercel = (Path(__file__).parents[1] / "vercel.json").read_text(encoding="utf-8")
+        self.assertIn("https://wukong-mini-api.onrender.com", combined)
+        self.assertNotIn("__wukong_telegram_mini_app_api_url__", combined)
+        self.assertNotIn("luukhanh24", combined)
+        self.assertNotIn("github.com", combined)
+        self.assertNotIn("github.io", combined)
+        self.assertIn('"outputDirectory": ".vercel-static"', vercel)
+        self.assertIn("X-Robots-Tag", vercel)
 
 
 if __name__ == "__main__":

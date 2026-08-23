@@ -73,3 +73,5 @@ rclone*.conf
 
 # Generated Telegram Pages catalog
 /telegram_mini_app/catalog.json
+/.vercel-static/
+/.vercel/

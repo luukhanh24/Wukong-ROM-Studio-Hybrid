@@ -22,7 +22,7 @@ Wukong ROM Studio Hybrid is a ROM build and source-mirroring tool with one share
 
 ## Build wizard
 
-The chat wizard and Mini App gather task, execution target, ROM source, device, MOD version, preset, individual MOD selections, pipeline stages, packaging, publishing, notification, and confirmation. Chat MOD selection is paginated for one-handed use; the Mini App exposes the complete searchable flight plan in one responsive surface. Local files are permitted only for eligible Windows/admin jobs; GitHub jobs use HTTP(S) or a private Google Drive reference and only advertise MOD versions backed by a verified private content-pack. UI state is stored locally by Telegram user ID and never contains credentials.
+The chat wizard and Mini App gather task, execution target, ROM source, device, MOD version, preset, individual MOD selections, pipeline stages, packaging, publishing, notification, and confirmation. Chat MOD selection is paginated for one-handed use; the Mini App exposes the complete searchable flight plan in one responsive surface. Local files are permitted only for eligible Windows/admin jobs; GitHub jobs use HTTP(S) or a private Google Drive reference and only advertise MOD versions backed by a verified private content-pack. Cloud UI state is stored by Telegram user ID in private PostgreSQL (with a local file fallback for Windows development) and never contains credentials.
 
 ## Product constraints
 

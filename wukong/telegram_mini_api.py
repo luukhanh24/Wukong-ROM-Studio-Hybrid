@@ -296,9 +296,13 @@ def _origin_from_web_app_url(value: str) -> str:
     return f"https://{parsed.netloc.casefold()}"
 
 
-def _public_job(manifest: JobManifest, recipe: BuildRecipe | None) -> dict[str, object]:
+def public_job_payload(
+    manifest: JobManifest,
+    recipe: BuildRecipe | None = None,
+) -> dict[str, object]:
     payload = manifest.to_dict()
     payload.pop("owner", None)
+    payload.pop("external_run_id", None)
     if recipe:
         payload["recipe"] = {
             "task": recipe.task,
@@ -312,7 +316,52 @@ def _public_job(manifest: JobManifest, recipe: BuildRecipe | None) -> dict[str, 
             "execution": recipe.execution.to_dict(),
             "storage": {"publishArtifact": recipe.storage.publish_artifact},
         }
-    return payload
+    sanitized = sanitize_public_value(payload)
+    return dict(sanitized) if isinstance(sanitized, Mapping) else {}
+
+
+_PRIVATE_EVENT_KEYS = {
+    "actionsurl",
+    "externalrunid",
+    "githuburl",
+    "htmlurl",
+    "repository",
+    "repositoryurl",
+    "repo",
+    "runid",
+    "url",
+    "workflowurl",
+}
+
+
+def sanitize_public_value(value: object) -> object:
+    """Remove internal GitHub references before data reaches any end user."""
+
+    if isinstance(value, str):
+        return re.sub(
+            r"https?://(?:api\.)?github\.com/\S+",
+            "[internal build reference]",
+            value,
+            flags=re.IGNORECASE,
+        )
+    if isinstance(value, Mapping):
+        return {
+            key: sanitize_public_value(item)
+            for key, item in value.items()
+            if str(key).replace("_", "").casefold() not in _PRIVATE_EVENT_KEYS
+        }
+    if isinstance(value, list):
+        return [sanitize_public_value(item) for item in value]
+    return value
+
+
+def public_event_payload(event: object) -> dict[str, object]:
+    payload = event.to_dict() if hasattr(event, "to_dict") else {}
+    return {
+        key: sanitize_public_value(value)
+        for key, value in payload.items()
+        if key.replace("_", "").casefold() not in _PRIVATE_EVENT_KEYS
+    }
 
 
 class TelegramMiniAppAPI:
@@ -338,6 +387,7 @@ class TelegramMiniAppAPI:
         probe_cache_seconds: int = 15 * 60,
         session_store: TelegramMiniAppSessionStore | None = None,
         bot_username: str | None = None,
+        state_backend: str = "file",
     ) -> None:
         self.bot_token = bot_token
         self.allowed_origin = _origin_from_web_app_url(allowed_origin)
@@ -370,6 +420,7 @@ class TelegramMiniAppAPI:
         self.bot_username = (
             bot_username or os.environ.get("WUKONG_TELEGRAM_BOT_USERNAME", "WK_build_bot")
         ).strip().lstrip("@")
+        self.state_backend = state_backend.strip().casefold() or "unknown"
         self._probe_cache: dict[tuple[str, str], tuple[float, dict[str, object]]] = {}
         self._probe_lock = threading.RLock()
         self._probe_slots = threading.BoundedSemaphore(2)
@@ -505,6 +556,7 @@ class TelegramMiniAppAPI:
                 {
                     "status": "ready" if ready else "starting",
                     "service": "wukong-control-plane",
+                    "stateBackend": self.state_backend,
                     "release": release if RELEASE_SHA_RE.fullmatch(release) else "development",
                 }
             ), 200 if ready else 503
@@ -644,7 +696,7 @@ class TelegramMiniAppAPI:
                 recipe = self._verified_recipe(payload, self._identity())
                 manifest = self.orchestrator.submit(recipe, self._identity())
                 self.runtime.start(manifest)
-                return jsonify(_public_job(manifest, recipe)), 201
+                return jsonify(public_job_payload(manifest, recipe)), 201
             except (
                 OSError,
                 RuntimeError,
@@ -663,7 +715,10 @@ class TelegramMiniAppAPI:
             return jsonify(
                 {
                     "jobs": [
-                        _public_job(manifest, self.orchestrator.store.recipe(manifest.job_id))
+                        public_job_payload(
+                            manifest,
+                            self.orchestrator.store.recipe(manifest.job_id),
+                        )
                         for manifest in jobs
                     ]
                 }
@@ -679,7 +734,9 @@ class TelegramMiniAppAPI:
             try:
                 manifest = self.orchestrator.inspect(job_id, self._identity())
                 refreshed = self.runtime.refresh(manifest)
-                return jsonify(_public_job(refreshed, self.orchestrator.store.recipe(job_id)))
+                return jsonify(
+                    public_job_payload(refreshed, self.orchestrator.store.recipe(job_id))
+                )
             except OrchestrationError as exc:
                 return jsonify({"error": str(exc)}), 404
 
@@ -688,7 +745,7 @@ class TelegramMiniAppAPI:
             try:
                 after = max(0, int(request.args.get("after", "0")))
                 events = self.orchestrator.events(job_id, self._identity(), after=after)
-                return jsonify({"events": [event.to_dict() for event in events]})
+                return jsonify({"events": [public_event_payload(event) for event in events]})
             except ValueError:
                 return jsonify({"error": "Event cursor must be an integer"}), 400
             except OrchestrationError as exc:
@@ -701,7 +758,9 @@ class TelegramMiniAppAPI:
                 cancelled = self.orchestrator.cancel(job_id, self._identity())
                 self.runtime.cancel_external(current)
                 self.runtime.notify_terminal(cancelled)
-                return jsonify(_public_job(cancelled, self.orchestrator.store.recipe(job_id)))
+                return jsonify(
+                    public_job_payload(cancelled, self.orchestrator.store.recipe(job_id))
+                )
             except OrchestrationError as exc:
                 return jsonify({"error": str(exc)}), 404
 
@@ -710,7 +769,7 @@ class TelegramMiniAppAPI:
             try:
                 resumed = self.runtime.resume(job_id, self._identity())
                 return jsonify(
-                    _public_job(resumed, self.orchestrator.store.recipe(resumed.job_id))
+                    public_job_payload(resumed, self.orchestrator.store.recipe(resumed.job_id))
                 ), 201
             except OrchestrationError as exc:
                 return jsonify({"error": str(exc)}), 409
@@ -857,7 +916,7 @@ class TelegramJobNotifier:
         if duration:
             lines.append(f"Duration: {duration}")
         if manifest.error:
-            lines.extend(["", f"Error: {manifest.error}"])
+            lines.extend(["", f"Error: {sanitize_public_value(manifest.error)}"])
         if manifest.artifacts:
             lines.extend(["", "Artifacts:"])
             for artifact in manifest.artifacts:

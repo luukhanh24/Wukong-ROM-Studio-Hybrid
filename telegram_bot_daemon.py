@@ -5,6 +5,7 @@ import os
 import signal
 import threading
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from tools.export_mini_app_catalog import export_catalog
 
@@ -31,16 +32,15 @@ from studio_core import (
 from studio_env import load_local_env
 from studio_paths import CONTENT_ROOT, DATA_ROOT, JOBS_ROOT, WORKSPACE_ROOT
 from studio_server import diagnostics
-from wukong.orchestrator import FileJobStore, HybridOrchestrator
+from wukong.orchestrator import HybridOrchestrator
 from wukong.content_packs import validate_content_index
+from wukong.control_plane_storage import open_control_plane_stores
 from wukong.control_plane_state import ControlPlaneStateBackup, ControlPlaneStateError
 from wukong.render_binding import RenderBinding, RenderOriginBinder
 from wukong.routing import RunnerInventory
-from wukong.telegram import TelegramAccessStore
 from wukong.telegram_bot import (
     TelegramBotController,
     TelegramLongPollingDaemon,
-    TelegramUIStateStore,
 )
 from wukong.telegram_mini_api import (
     TelegramJobNotifier,
@@ -137,6 +137,14 @@ def main() -> int:
     if not token or not admins:
         print("Missing WUKONG_TELEGRAM_BOT_TOKEN or WUKONG_TELEGRAM_ADMIN_IDS")
         return 2
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    require_postgres = bool(render_url) or os.environ.get(
+        "WUKONG_CONTROL_PLANE_REQUIRE_POSTGRES",
+        "",
+    ).strip().casefold() in {"1", "true", "yes", "on"}
+    if require_postgres and not database_url:
+        print("DATABASE_URL is required for the production control plane")
+        return 2
     try:
         state_backup = ControlPlaneStateBackup.from_environment(DATA_ROOT)
         if state_backup:
@@ -145,12 +153,17 @@ def main() -> int:
         print(f"Control-plane state restore failed: {exc}", flush=True)
         return 2
     on_state_change = state_backup.mark_dirty if state_backup else None
-    store = FileJobStore(JOBS_ROOT / "hybrid", on_change=on_state_change)
-    access = TelegramAccessStore(
-        DATA_ROOT / "telegram-access.json",
-        admin_ids=admins,
+    stores = open_control_plane_stores(
+        database_url=database_url,
+        data_root=DATA_ROOT,
+        jobs_root=JOBS_ROOT / "hybrid",
+        admin_ids=sorted(admins),
         on_change=on_state_change,
     )
+    store = stores.jobs
+    access = stores.access
+    if stores.migration:
+        print(f"PostgreSQL state ready; legacy migration: {stores.migration}", flush=True)
     orchestrator = HybridOrchestrator(
         store=store,
         workspace_root=WORKSPACE_ROOT / ".wkstudio" / "hybrid",
@@ -193,10 +206,7 @@ def main() -> int:
         cloud_provider=lambda category: runtime.cloud_library(category=category),
         source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
         runtime=runtime,
-        ui_state=TelegramUIStateStore(
-            DATA_ROOT / "telegram-ui-state.json",
-            on_change=on_state_change,
-        ),
+        ui_state=stores.ui_state,
         session_store=mini_app_sessions,
     )
     transport = os.environ.get("WUKONG_TELEGRAM_TRANSPORT", "polling").strip().casefold()
@@ -249,6 +259,7 @@ def main() -> int:
                 ),
                 session_store=mini_app_sessions,
                 bot_username=os.environ.get("WUKONG_TELEGRAM_BOT_USERNAME", "WK_build_bot"),
+                state_backend="postgresql" if database_url else "file",
             )
             mini_api_server = TelegramMiniAppAPIServer(
                 mini_api,
@@ -272,7 +283,8 @@ def main() -> int:
             telegram_transport.configure_webhook(public_api_url, webhook_secret)
             readiness.set()
             print(f"Telegram webhook registered at {public_api_url.rstrip('/')}/telegram/webhook", flush=True)
-            if render_url:
+            mini_app_host = (urlsplit(web_app_url).hostname or "").casefold()
+            if render_url and mini_app_host.endswith(".github.io"):
                 try:
                     RenderOriginBinder(
                         RenderBinding(
@@ -280,6 +292,7 @@ def main() -> int:
                             token=os.environ.get("WUKONG_GITHUB_TOKEN", ""),
                             api_url=render_url,
                             release_sha=os.environ.get("WUKONG_RELEASE_SHA", "").casefold(),
+                            mini_app_url=web_app_url,
                         )
                     ).start()
                 except ValueError as exc:

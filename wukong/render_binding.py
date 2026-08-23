@@ -25,8 +25,8 @@ class RenderBinding:
     token: str
     api_url: str
     release_sha: str
+    mini_app_url: str
     branch: str = "main"
-    mini_app_url: str = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
 
     def __post_init__(self) -> None:
         parsed = urlsplit(self.api_url.rstrip("/"))
@@ -44,7 +44,8 @@ class RenderBinding:
             or not re.fullmatch(r"[A-Za-z0-9._/-]{1,255}", self.branch)
             or mini_app.scheme.casefold() != "https"
             or not mini_app.hostname
-            or mini_app.hostname.casefold() != "luukhanh24.github.io"
+            or mini_app.username
+            or mini_app.password
             or mini_app.query
             or mini_app.fragment
         ):

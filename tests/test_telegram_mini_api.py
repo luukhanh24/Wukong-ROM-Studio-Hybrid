@@ -222,6 +222,39 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual("PKG110", preview.json["productName"])
         self.assertEqual(401, jobs.status_code)
 
+    def test_public_job_and_events_never_expose_github_identity_or_run_ids(self) -> None:
+        created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        job_id = created.json["job_id"]
+        self.store.update(
+            job_id,
+            external_run_id=321,
+            error=(
+                "Build failed: https://github.com/luukhanh24/"
+                "Wukong-ROM-Studio-Hybrid/actions/runs/321"
+            ),
+        )
+        self.store.append_event(
+            job_id,
+            "github_run",
+            runId=321,
+            repository="luukhanh24/Wukong-ROM-Studio-Hybrid",
+            url="https://github.com/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/321",
+        )
+
+        jobs = self.client.get("/v1/jobs", headers=self.headers())
+        events = self.client.get(f"/v1/jobs/{job_id}/events", headers=self.headers())
+        public_payload = json.dumps(
+            {"jobs": jobs.json, "events": events.json},
+            ensure_ascii=False,
+        ).casefold()
+
+        self.assertEqual(200, jobs.status_code)
+        self.assertEqual(200, events.status_code)
+        self.assertNotIn("external_run_id", public_payload)
+        self.assertNotIn('"runid"', public_payload)
+        self.assertNotIn("luukhanh24", public_payload)
+        self.assertNotIn("github.com", public_payload)
+
     def test_source_probe_returns_a_stable_code_for_expired_signed_urls(self) -> None:
         self.probe.side_effect = ValueError(
             "The signed ROM download URL has expired; paste the original OPlus downloadCheck"
@@ -466,6 +499,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             diagnostics_provider=lambda: {"ready": True},
             source_probe_provider=self.probe,
             readiness_provider=lambda: ready,
+            state_backend="postgresql",
         )
         client = api.app.test_client()
 
@@ -478,6 +512,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual("starting", starting.json["status"])
         self.assertEqual(200, healthy.status_code)
         self.assertEqual("c" * 40, healthy.json["release"])
+        self.assertEqual("postgresql", healthy.json["stateBackend"])
 
     def test_probe_create_list_detail_events_and_ownership(self) -> None:
         probe = self.client.post(
@@ -589,6 +624,10 @@ class TelegramJobNotifierTests(unittest.TestCase):
         manifest = store.update(
             job.job_id,
             status=JobStatus.SUCCEEDED,
+            error=(
+                "Internal failure: https://github.com/luukhanh24/"
+                "Wukong-ROM-Studio-Hybrid/actions/runs/123"
+            ),
             artifacts=[ArtifactRecord(
                 "Wukong.zip",
                 "drive:artifact.zip",
@@ -617,6 +656,9 @@ class TelegramJobNotifierTests(unittest.TestCase):
         self.assertIn("PKG110_16.0.10.500(CN01)", text)
         self.assertIn("Android: 16", text)
         self.assertIn("https://drive.google.com/download/fixture", text)
+        self.assertIn("[internal build reference]", text)
+        self.assertNotIn("github.com", text.casefold())
+        self.assertNotIn("luukhanh24", text.casefold())
         self.assertEqual(1, len([
             event for event in store.events(job.job_id)
             if event.type == "telegram_terminal_notified"

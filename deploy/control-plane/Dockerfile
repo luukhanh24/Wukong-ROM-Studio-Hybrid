@@ -32,7 +32,10 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY requirements.txt ./
-RUN python -m pip install --no-cache-dir -r requirements.txt
+COPY deploy/control-plane/requirements.txt ./deploy/control-plane/requirements.txt
+RUN python -m pip install --no-cache-dir \
+    -r requirements.txt \
+    -r deploy/control-plane/requirements.txt
 
 COPY . .
 RUN mkdir -p /var/lib/wukong/data /var/lib/wukong/workspace /var/lib/wukong/output /var/lib/wukong/temp /var/lib/wukong/logs \

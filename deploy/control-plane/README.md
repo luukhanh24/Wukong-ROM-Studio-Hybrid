@@ -3,15 +3,32 @@
 This service keeps the Telegram bot and Mini App available when the Windows PC
 is off. It stores only control-plane state and dispatches heavy ROM work to
 GitHub Actions; source ROMs, content packs, checkpoints and artifacts stay on
-Google Drive.
+Google Drive. Production uses a static Vercel Mini App, the Render API/bot, and
+private PostgreSQL for jobs, access control, events, and Telegram UI state.
 
-## Requirements
+## Production requirements
 
-- A small always-on Linux VPS (1 vCPU / 1 GiB RAM is sufficient for the control plane).
-- Docker Engine with Compose v2.
-- A DNS `A`/`AAAA` record such as `mini-api.example.com` pointing to the VPS.
-- Inbound TCP 80 and TCP/UDP 443 allowed. Caddy obtains and renews TLS automatically.
-- A fine-grained GitHub token and the same private rclone Drive configuration used by Actions.
+- A Vercel project rooted at this repository. `vercel.json` publishes only the
+  generated `.vercel-static` directory.
+- The Render `wukong-mini-api` Docker service described by `render.yaml`.
+- A private PostgreSQL database (Neon or managed Render PostgreSQL) whose pooled
+  connection string is stored only in Render as `DATABASE_URL`.
+- A fine-grained GitHub token and the same private rclone Google Drive
+  configuration used by Actions. These are Render secrets, never frontend values.
+
+Set `WUKONG_TELEGRAM_WEB_APP_URL` in Render to the exact Vercel production URL.
+The API permits only that HTTPS origin. Set `WUKONG_GITHUB_REPOSITORY` privately
+in Render; do not hard-code a personal owner/repository in frontend files or the
+public blueprint. Production refuses to start without `DATABASE_URL`, and
+`/healthz` must report `"stateBackend":"postgresql"` before the Telegram Mini
+App is switched to the new origin.
+
+Vercel deployments need only the public API origin in
+`WUKONG_TELEGRAM_MINI_APP_API_URL`. Connecting Vercel to a private GitHub
+repository does not publish the repository identity in the generated bundle.
+The CI privacy test scans the output for personal GitHub references.
+
+## Optional self-hosted VPS
 
 ## One-time VPS bootstrap
 
@@ -34,7 +51,7 @@ Configure these repository variables:
 
 - `WUKONG_MINI_API_DOMAIN`: API hostname without `https://`.
 - `WUKONG_VPS_PORT`: SSH port, normally `22`.
-- `WUKONG_TELEGRAM_WEB_APP_URL`: exact GitHub Pages Mini App URL.
+- `WUKONG_TELEGRAM_WEB_APP_URL`: exact Vercel Mini App URL.
 - `WUKONG_RCLONE_REMOTE`: normally `wukong-gdrive`.
 
 Configure these repository secrets:
@@ -50,14 +67,14 @@ workflow token updates repository variables after public health verification.
 
 Run the manually triggered `Control Plane Production` workflow. It deploys the
 exact Git commit over host-key-verified SSH, validates Telegram/GitHub/Drive,
-registers the authenticated Telegram webhook, waits for internal and public
-HTTPS health, and only then publishes GitHub Pages. A failed container release
+registers the authenticated Telegram webhook and waits for internal and public
+HTTPS health. Vercel deploys the static Mini App independently. A failed container release
 automatically restores the previous immutable image/release.
 
 ## Manual deploy
 
 The manual path is useful for initial diagnostics. Automated production deploys
-are preferred because they bind API, bot and Pages to one verified release SHA.
+are preferred because they bind the API and bot to one verified release SHA.
 
 ```bash
 cd deploy/control-plane
@@ -72,26 +89,24 @@ docker compose ps
 curl https://mini-api.example.com/healthz
 ```
 
-Do not put `.env` or `secrets/rclone.conf` in Git. The Compose volume
-`wukong-state` preserves allowlist, recipes, jobs, events and watcher state
-across image upgrades and host restarts. The container entrypoint copies the
+Do not put `.env` or `secrets/rclone.conf` in Git. PostgreSQL preserves the
+allowlist, recipes, jobs, events, and Telegram UI state across image upgrades
+and host restarts. The `wukong-state` volume is only a local rollback source and
+scratch area; it is not the production database backup. The container entrypoint copies the
 root-readable rclone bind mount to a mode `0600` runtime file, then drops to the
 unprivileged `wukong` user before starting Python.
 
-The production workflow sets repository variable
-`WUKONG_TELEGRAM_MINI_APP_API_URL` only after the public endpoint reports the
-expected release. Keep `WUKONG_TELEGRAM_WEB_APP_URL` set to the exact GitHub
-Pages URL because the API uses that origin as its only CORS origin.
+Keep `WUKONG_TELEGRAM_WEB_APP_URL` set to the exact Vercel URL because the API
+uses that origin as its only CORS origin. A custom domain can be attached in
+Vercel later; update this Render variable and Telegram's Web App URL together.
 
-Until that repository variable exists, the Pages workflow intentionally skips
-deployment and leaves the last known-good Mini App online.
+## Backup and recovery
 
-## Backup
-
-```bash
-docker run --rm -v control-plane_wukong-state:/state -v "$PWD":/backup alpine \
-  tar czf /backup/wukong-state-backup.tgz -C /state .
-```
+Use the PostgreSQL provider's encrypted backup/point-in-time recovery for jobs,
+access, events, and UI state. Google Drive remains the durable store for ROM
+sources, content packs, checkpoints, and build artifacts. The legacy JSON state
+is imported once and marked complete in PostgreSQL; restarting the service does
+not restore revoked users or overwrite newer UI preferences.
 
 Production uses an authenticated Telegram webhook. Registering it disables the
 old `getUpdates` polling path, so a Windows bot process cannot steal updates.

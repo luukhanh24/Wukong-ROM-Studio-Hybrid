@@ -401,8 +401,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("activeEventsJobId", script)
         self.assertIn("events?after=${after}", script)
         self.assertIn("const unique = new Map()", script)
-        self.assertIn("openActionsLog", script)
-        self.assertIn("external_run_id", script)
+        self.assertNotIn("githubRunLink", script)
+        self.assertNotIn("external_run_id", script)
+        self.assertNotIn("luukhanh24", script)
+        self.assertNotIn("github.com", script)
 
         exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")
         self.assertNotIn("from studio_core import", exporter)

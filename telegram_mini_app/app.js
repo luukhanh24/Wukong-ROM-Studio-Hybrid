@@ -1320,15 +1320,6 @@ function jobAction(label, action, job, danger = false) {
   return button;
 }
 
-function githubRunLink(job) {
-  const runId = Number(job?.external_run_id ?? job?.externalRunId ?? 0);
-  if (!Number.isSafeInteger(runId) || runId <= 0) return null;
-  const link = document.createElement("a");
-  link.href = `https://github.com/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/${runId}`;
-  link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = t("openActionsLog");
-  return link;
-}
-
 function renderActiveJob(job, events) {
   const root = $("#active-job");
   if (!root) return;
@@ -1363,7 +1354,6 @@ function renderActiveJob(job, events) {
   const actions = document.createElement("div"); actions.className = "job-controls";
   if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
   if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
-  const runLink = githubRunLink(job); if (runLink) actions.append(runLink);
   root.replaceChildren(header, progress, facts, actions, renderEvents(events), renderArtifacts(job));
 }
 
