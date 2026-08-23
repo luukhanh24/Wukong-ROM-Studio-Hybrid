@@ -30,7 +30,11 @@ MAX_METADATA_FILES = 8
 MAX_METADATA_FIELDS = 256
 MAX_METADATA_TEXT_BYTES = 4 * 1024 * 1024
 SIGNED_URL_CLOCK_SKEW_SECONDS = 15
-MIN_DIRECT_SIGNED_URL_TTL_SECONDS = 30 * 60
+# A signed URL only needs to survive control-plane validation and runner
+# dispatch. The download server validates the request when it starts; forcing
+# a 30-minute lifetime unnecessarily rejects the short-lived OPlus links users
+# actually receive.
+MIN_DIRECT_SIGNED_URL_DISPATCH_TTL_SECONDS = 90
 METADATA_SUFFIXES = (
     "meta-inf/com/android/metadata",
     "payload_properties.txt",
@@ -83,7 +87,7 @@ def validate_direct_signed_url_ttl(
     *,
     refreshable: bool = False,
     now: int | None = None,
-    minimum_ttl_seconds: int = MIN_DIRECT_SIGNED_URL_TTL_SECONDS,
+    minimum_ttl_seconds: int = MIN_DIRECT_SIGNED_URL_DISPATCH_TTL_SECONDS,
 ) -> None:
     """Reject a direct signed URL that cannot safely survive cloud queueing."""
     if refreshable or not _looks_like_signed_download(uri):
@@ -447,7 +451,7 @@ def probe_http_source(
     )
     cloud_build_ready = (
         signed_url_expires_at is None
-        or signed_url_expires_at > checked_at + MIN_DIRECT_SIGNED_URL_TTL_SECONDS
+        or signed_url_expires_at > checked_at + MIN_DIRECT_SIGNED_URL_DISPATCH_TTL_SECONDS
     )
     headers = adapter._request_headers(resolved_input)
     headers["Range"] = "bytes=0-0"

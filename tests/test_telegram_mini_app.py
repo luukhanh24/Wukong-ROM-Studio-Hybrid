@@ -613,22 +613,21 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud", dom)
         self.assertIn("OPlus downloadCheck", dom)
 
-    def test_live_short_signed_source_shows_metadata_but_blocks_cloud_build(self) -> None:
+    def test_live_signed_source_with_dispatch_margin_allows_cloud_build(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
             api_enabled=True,
             source_metadata={
                 **OPLUS_TEST_METADATA,
-                "cloudBuildReady": False,
+                "cloudBuildReady": True,
                 "signedUrlExpiresAt": 1_787_500_917,
             },
         )
 
         self.assertIn("14/14 thông số", dom)
-        self.assertIn("Link còn hiệu lực để phân tích nhưng không đủ thời gian cho build cloud", dom)
-        self.assertNotIn('<li id="check-source" class="complete">', dom)
+        self.assertIn('<li id="check-source" class="complete">', dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)
-        self.assertIn("disabled", submit_match.group(0))
+        self.assertNotIn("disabled", submit_match.group(0))
 
     def test_unauthenticated_preview_keeps_link_and_offers_bot_jump(self) -> None:
         dom, _ = _render_mini_app_in_chrome(api_enabled=True, telegram_authenticated=False)

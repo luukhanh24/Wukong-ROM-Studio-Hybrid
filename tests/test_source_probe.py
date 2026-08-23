@@ -149,7 +149,7 @@ class SourceProbeTests(unittest.TestCase):
 
         self.assertEqual([], initial.requests)
 
-    def test_probe_reads_metadata_from_a_live_signed_url_that_is_too_short_for_build(self) -> None:
+    def test_probe_marks_a_live_signed_url_ready_when_runner_can_start_in_time(self) -> None:
         payload = _fixture_zip()
         now = 1_787_484_600
         near_expiry = (
@@ -167,15 +167,24 @@ class SourceProbeTests(unittest.TestCase):
             )
 
         self.assertEqual("PKG110", result.product_name)
-        self.assertFalse(result.cloud_build_ready)
+        self.assertTrue(result.cloud_build_ready)
         self.assertEqual(now + 633, result.signed_url_expires_at)
         self.assertNotEqual([], initial.requests)
 
-    def test_cloud_build_validation_still_rejects_a_near_expiry_signed_url(self) -> None:
+    def test_cloud_build_validation_accepts_a_live_signed_url_with_start_margin(self) -> None:
         now = 1_787_484_600
         near_expiry = (
             "https://93.184.216.35/rom.zip?"
             f"expires={now + 633}&signature=short-lived"
+        )
+
+        validate_direct_signed_url_ttl(near_expiry, now=now)
+
+    def test_cloud_build_validation_rejects_a_signed_url_without_start_margin(self) -> None:
+        now = 1_787_484_600
+        near_expiry = (
+            "https://93.184.216.35/rom.zip?"
+            f"expires={now + 60}&signature=almost-expired"
         )
 
         with self.assertRaisesRegex(SourceResolutionError, "signed.*expires too soon"):
@@ -196,7 +205,7 @@ class SourceProbeTests(unittest.TestCase):
         self.assertEqual("PKG110", result.product_name)
         self.assertNotEqual([], initial.requests)
 
-    def test_probe_marks_live_relative_aws_and_oss_v4_urls_as_preview_only(self) -> None:
+    def test_probe_marks_live_relative_aws_and_oss_v4_urls_ready_for_immediate_dispatch(self) -> None:
         payload = _fixture_zip()
         now = 1_787_484_900
         urls = (
@@ -216,7 +225,7 @@ class SourceProbeTests(unittest.TestCase):
                         opener_factory=lambda: _RangeOpener(payload, uri),
                         timeout=2,
                     )
-                self.assertFalse(result.cloud_build_ready)
+                self.assertTrue(result.cloud_build_ready)
                 self.assertNotEqual([], initial.requests)
 
     def test_probe_resolves_oplus_and_reads_remote_zip_metadata_without_full_download(self) -> None:
