@@ -16,6 +16,7 @@ from .orchestrator import JobStore
 
 class CloudJobSync:
     STATE_OPERATION_TIMEOUT_SECONDS = 8.0
+    STATE_PUSH_ATTEMPTS = 2
     STATE_PULL_ATTEMPTS = 2
     PULL_WARNING_INTERVAL_SECONDS = 600.0
     # Instances are short-lived (one per refresh call), so the throttle lives
@@ -46,16 +47,21 @@ class CloudJobSync:
                 ),
                 encoding="utf-8",
             )
-            self.storage.copy_file(
-                manifest_path,
-                f"jobs/{job_id}/manifest.json",
-                timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
-            )
-            self.storage.copy_file(
-                events_path,
-                f"jobs/{job_id}/events.jsonl",
-                timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
-            )
+            self._push_state_file(manifest_path, f"jobs/{job_id}/manifest.json")
+            self._push_state_file(events_path, f"jobs/{job_id}/events.jsonl")
+
+    def _push_state_file(self, source: Path, relative_path: str) -> None:
+        for attempt in range(max(1, self.STATE_PUSH_ATTEMPTS)):
+            try:
+                self.storage.copy_file(
+                    source,
+                    relative_path,
+                    timeout=self.STATE_OPERATION_TIMEOUT_SECONDS,
+                )
+                return
+            except subprocess.TimeoutExpired:
+                if attempt + 1 >= max(1, self.STATE_PUSH_ATTEMPTS):
+                    raise
 
     def pull(self, job_id: str) -> JobManifest | None:
         local = self.store.get(job_id)

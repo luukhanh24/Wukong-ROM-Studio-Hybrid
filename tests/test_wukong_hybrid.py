@@ -1304,6 +1304,36 @@ class OrchestratorContractTests(unittest.TestCase):
 
 
 class CloudSyncContractTests(unittest.TestCase):
+    def test_push_retries_a_timed_out_state_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("windows", "local", "admin"))
+            attempts = {"manifest": 0, "events": 0}
+
+            def fake_run(args: list[str], **options: object) -> str:
+                state_file = "manifest" if args[3].endswith("manifest.json") else "events"
+                attempts[state_file] += 1
+                self.assertEqual(options.get("timeout"), 8.0)
+                if state_file == "manifest" and attempts[state_file] == 1:
+                    raise subprocess.TimeoutExpired(cmd=args, timeout=8.0)
+                return ""
+
+            CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).push(job.job_id)
+
+            self.assertEqual(attempts, {"manifest": 2, "events": 1})
+
     def test_pull_imports_remote_events_once(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             command_timeouts: list[object] = []
