@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Text;
@@ -79,6 +80,10 @@ public sealed partial class NativeStudioView : UserControl
     private bool _deviceSelectionChanging;
     private bool _syncingJobSelection;
     private bool _initialized;
+    private bool _contentSyncUploadedChanges;
+    private string _contentSyncVisualState = string.Empty;
+    private ContentSyncProgressSnapshot? _lastContentSyncProgress;
+    private ContentSyncFolderSelection? _contentSyncFolderSelection;
     private bool _uiPollingActive = true;
     private string? _selectedDeviceOriginalProductName;
     private string? _layoutSourcePath;
@@ -2765,6 +2770,7 @@ public sealed partial class NativeStudioView : UserControl
     {
         LocalizeVisualTree(RootLayout);
         RenderRomRenamePreview();
+        RefreshContentSyncLocalization();
     }
 
     private void LocalizeVisualTree(DependencyObject element)
@@ -2932,6 +2938,76 @@ public sealed partial class NativeStudioView : UserControl
             ["không rõ dung lượng"] = "unknown size",
             ["Metadata sẽ được kiểm tra khi job preflight tải nguồn riêng tư."] = "Metadata will be checked when preflight fetches the private source.",
             ["File local sẽ được kiểm tra quyền truy cập và checksum trước khi build."] = "The local file will be checked for access and checksum before building.",
+            ["Đồng bộ nội dung đa nền tảng"] = "Cross-platform content sync",
+            ["Content là nguồn chuẩn duy nhất. Chọn một thư mục để tạo lại toàn bộ content-pack tương ứng, thay thế binary trên Drive và công bố checksum mới lên GitHub."] = "Content is the single source of truth. Choose a folder to rebuild its complete content pack, replace the Drive binary, and publish the new checksum to GitHub.",
+            ["Chọn thư mục trong Content; Content\\STARK chứa WK_Manager và com."] = "Choose a folder inside Content; Content\\STARK contains WK_Manager and com.",
+            ["Đồng bộ binary lên Drive"] = "Sync binaries to Drive",
+            ["Chọn thư mục và thay thế trên Drive"] = "Choose folder and replace on Drive",
+            ["Công bố manifest lên GitHub"] = "Publish manifest to GitHub",
+            ["Không thể chọn thư mục này"] = "This folder cannot be selected",
+            ["Chỉ chọn thư mục được quản lý bên trong Content."] = "Choose a managed folder inside Content only.",
+            ["Thay thế content-pack trên Drive?"] = "Replace the content pack on Drive?",
+            ["Thư mục đã chọn"] = "Selected folder",
+            ["Content-pack sẽ bị thay thế toàn bộ"] = "Content pack that will be fully replaced",
+            ["Phạm vi được đóng gói"] = "Packaged scope",
+            ["Archive hiện tại trên Drive sẽ bị ghi đè sau khi upload và checksum được xác minh."] = "The current Drive archive will be overwritten after upload and checksum verification.",
+            ["Thay thế trên Drive"] = "Replace on Drive",
+            ["Sẽ thay thế pack"] = "Will replace pack",
+            ["Chưa đồng bộ trong phiên này."] = "Not synced in this session.",
+            ["Đang chuẩn bị đồng bộ"] = "Preparing sync",
+            ["Đang kiểm tra nội dung thay đổi…"] = "Checking changed content…",
+            ["Đang tính dung lượng…"] = "Calculating size…",
+            ["Tốc độ — · ETA —"] = "Speed — · ETA —",
+            ["Tiến độ đồng bộ content-pack"] = "Content-pack sync progress",
+            ["Đang đóng gói content-pack"] = "Packaging content pack",
+            ["Đang tạo archive nén…"] = "Creating compressed archive…",
+            ["Chuẩn bị upload"] = "Preparing upload",
+            ["Đang upload lên Google Drive"] = "Uploading to Google Drive",
+            ["Đang đo tốc độ…"] = "Measuring speed…",
+            ["Đang tính ETA…"] = "Calculating ETA…",
+            ["Còn lại"] = "Remaining",
+            ["Gói"] = "Pack",
+            ["Gói 1/1"] = "Pack 1/1",
+            ["Đang xác minh dung lượng và checksum trên Drive"] = "Verifying size and checksum on Drive",
+            ["Đang tải xuống để kiểm tra toàn vẹn"] = "Downloading for integrity verification",
+            ["Đang đối chiếu dữ liệu…"] = "Comparing data…",
+            ["Content-pack đã xác minh"] = "Content pack verified",
+            ["Sẵn sàng cho pack tiếp theo"] = "Ready for the next pack",
+            ["Đang công bố manifest"] = "Publishing manifest",
+            ["Đang kiểm tra checksum và catalog…"] = "Checking checksums and catalog…",
+            ["Đang cập nhật catalog GitHub…"] = "Updating the GitHub catalog…",
+            ["Không có pack thay đổi; đang kiểm tra manifest hiện tại…"] = "No changed packs; checking the current manifest…",
+            ["Binary trên Drive đã xác minh"] = "Drive binaries verified",
+            ["Đã bỏ qua upload Drive"] = "Drive upload skipped",
+            ["Không đổi"] = "Unchanged",
+            ["Đồng bộ hoàn tất"] = "Sync complete",
+            ["Manifest GitHub đã được công bố"] = "GitHub manifest published",
+            ["Drive và GitHub đã nhận dữ liệu mới"] = "Drive and GitHub received the new data",
+            ["Không có content-pack thay đổi; manifest hiện tại đã xác minh"] = "No content packs changed; the current manifest is verified",
+            ["Checksum đã xác minh"] = "Checksum verified",
+            ["Đồng bộ thất bại"] = "Sync failed",
+            ["Lỗi"] = "Failed",
+            ["Xem log chi tiết bên dưới để xử lý"] = "Review the detailed log below to recover",
+            ["Không có content-pack thay đổi"] = "No content packs changed",
+            ["Đã đồng bộ content-pack"] = "Content packs synced",
+            ["Binary và manifest đã được công bố liền mạch; Actions và Telegram đã sẵn sàng."] = "Binaries and manifest are published; Actions and Telegram are ready.",
+            ["Đã bỏ qua upload Drive và xác minh manifest hiện tại."] = "Drive upload was skipped and the current manifest was verified.",
+            ["Drive không cần upload binary mới"] = "Drive does not need a new binary upload",
+            ["0 B cần upload"] = "0 B to upload",
+            ["Sẽ kiểm tra manifest GitHub"] = "The GitHub manifest will be checked",
+            ["giây"] = "sec",
+            ["phút"] = "min",
+            ["giờ"] = "hr",
+            ["Đang đồng bộ Drive, xác minh checksum và công bố manifest GitHub…"] = "Syncing Drive, verifying checksums, and publishing the GitHub manifest…",
+            ["Đang thay thế content-pack trên Drive, xác minh checksum và công bố manifest GitHub…"] = "Replacing the content pack on Drive, verifying checksums, and publishing the GitHub manifest…",
+            ["Drive và manifest GitHub đã đồng bộ; checksum đã được xác minh."] = "Drive and the GitHub manifest are synced; checksums are verified.",
+            ["Thư mục đã chọn đã thay thế content-pack trên Drive; manifest GitHub và checksum đã cập nhật."] = "The selected folder replaced its Drive content pack; the GitHub manifest and checksum are updated.",
+            ["Đã thay thế content-pack"] = "Content pack replaced",
+            ["Binary và manifest mới đã sẵn sàng cho Actions và Telegram."] = "The new binary and manifest are ready for Actions and Telegram.",
+            ["Đồng bộ content-pack thất bại — xem lỗi chi tiết bên dưới."] = "Content-pack sync failed — review the details below.",
+            ["Đang kiểm tra archive và công bố manifest lên GitHub…"] = "Checking archives and publishing the manifest to GitHub…",
+            ["Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới."] = "The GitHub manifest is updated; Actions and Telegram will use the new catalog.",
+            ["Công bố manifest thất bại — xem lỗi chi tiết bên dưới."] = "Manifest publishing failed — review the details below.",
         };
 
     private async void NavigationSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -3240,24 +3316,65 @@ public sealed partial class NativeStudioView : UserControl
 
     private async void SyncContentToDriveClick(object sender, RoutedEventArgs e)
     {
+        if (_owner is null || _layout is null)
+        {
+            return;
+        }
+        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.ComputerFolder };
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(_owner));
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is null)
+        {
+            return;
+        }
+        try
+        {
+            _contentSyncFolderSelection = ContentSyncFolderResolver.Resolve(_layout.InstallRoot, folder.Path);
+            RenderContentSyncSelection();
+        }
+        catch (Exception exception)
+        {
+            ShowMessage(
+                Localized("Không thể chọn thư mục này"),
+                $"{Localized("Chỉ chọn thư mục được quản lý bên trong Content.")}\n{exception.Message}",
+                InfoBarSeverity.Error);
+            return;
+        }
+        var selection = _contentSyncFolderSelection!;
+        var confirmed = await ConfirmDialogAsync(
+            Localized("Thay thế content-pack trên Drive?"),
+            $"{Localized("Thư mục đã chọn")}:\n{selection.SelectedFolder}\n\n" +
+            $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{selection.PackId}\n\n" +
+            $"{Localized("Phạm vi được đóng gói")}:\n{selection.PackRoot}\n\n" +
+            Localized("Archive hiện tại trên Drive sẽ bị ghi đè sau khi upload và checksum được xác minh."),
+            Localized("Thay thế trên Drive"));
+        if (!confirmed)
+        {
+            return;
+        }
         await RunBusyActionAsync(async () =>
         {
-            ContentSyncStatusText.Text = "Đang đồng bộ Drive, xác minh checksum và công bố manifest GitHub…";
+            BeginContentSyncProgress();
+            ContentSyncStatusText.Text = Localized("Đang thay thế content-pack trên Drive, xác minh checksum và công bố manifest GitHub…");
             try
             {
-                var driveOutput = await RunPlatformContentSyncAsync("drive");
-                var githubOutput = await RunPlatformContentSyncAsync("github");
+                var driveOutput = await RunPlatformContentSyncAsync("drive", selection.SelectedFolder);
+                ShowContentSyncPublishing();
+                var githubOutput = await RunPlatformContentSyncAsync("github", selection.SelectedFolder);
                 HybridResultBox.Text = $"{driveOutput.TrimEnd()}\n{githubOutput.TrimEnd()}";
-                ContentSyncStatusText.Text = "Drive và manifest GitHub đã đồng bộ; checksum đã được xác minh.";
+                ContentSyncStatusText.Text = Localized("Thư mục đã chọn đã thay thế content-pack trên Drive; manifest GitHub và checksum đã cập nhật.");
+                CompleteContentSyncProgress();
                 ShowMessage(
-                    "Đã đồng bộ content-pack",
-                    "Binary và manifest đã được công bố liền mạch; Actions và Telegram đã sẵn sàng.",
+                    Localized("Đã thay thế content-pack"),
+                    $"{selection.PackId} · {Localized("Binary và manifest mới đã sẵn sàng cho Actions và Telegram.")}",
                     InfoBarSeverity.Success);
             }
             catch (Exception exception)
             {
-                ContentSyncStatusText.Text = "Đồng bộ content-pack thất bại — xem lỗi chi tiết bên dưới.";
+                ContentSyncStatusText.Text = Localized("Đồng bộ content-pack thất bại — xem lỗi chi tiết bên dưới.");
                 HybridResultBox.Text = exception.Message;
+                FailContentSyncProgress();
                 throw;
             }
         });
@@ -3267,12 +3384,14 @@ public sealed partial class NativeStudioView : UserControl
     {
         await RunBusyActionAsync(async () =>
         {
-            ContentSyncStatusText.Text = "Đang kiểm tra archive và công bố manifest lên GitHub…";
+            BeginContentSyncProgress(manifestOnly: true);
+            ContentSyncStatusText.Text = Localized("Đang kiểm tra archive và công bố manifest lên GitHub…");
             try
             {
                 var output = await RunPlatformContentSyncAsync("github");
                 HybridResultBox.Text = output;
-                ContentSyncStatusText.Text = "Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới.";
+                ContentSyncStatusText.Text = Localized("Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới.");
+                CompleteContentSyncProgress(manifestOnly: true);
                 ShowMessage(
                     "Đã công bố manifest",
                     "GitHub Actions và catalog Telegram đã nhận mốc content-pack mới.",
@@ -3280,14 +3399,15 @@ public sealed partial class NativeStudioView : UserControl
             }
             catch (Exception exception)
             {
-                ContentSyncStatusText.Text = "Công bố manifest thất bại — xem lỗi chi tiết bên dưới.";
+                ContentSyncStatusText.Text = Localized("Công bố manifest thất bại — xem lỗi chi tiết bên dưới.");
                 HybridResultBox.Text = exception.Message;
+                FailContentSyncProgress();
                 throw;
             }
         });
     }
 
-    private async Task<string> RunPlatformContentSyncAsync(string target)
+    private async Task<string> RunPlatformContentSyncAsync(string target, string? selectedFolder = null)
     {
         if (_layout is null)
         {
@@ -3334,6 +3454,11 @@ public sealed partial class NativeStudioView : UserControl
             startInfo.ArgumentList.Add($"{credentials.RcloneRemote.TrimEnd(':')}:WukongROM/content-packs");
             startInfo.ArgumentList.Add("--target");
             startInfo.ArgumentList.Add(target);
+            if (!string.IsNullOrWhiteSpace(selectedFolder))
+            {
+                startInfo.ArgumentList.Add("--folder");
+                startInfo.ArgumentList.Add(selectedFolder);
+            }
             startInfo.ArgumentList.Add("--repository");
             startInfo.ArgumentList.Add(credentials.GitHubRepository);
             if (target == "drive")
@@ -3355,16 +3480,32 @@ public sealed partial class NativeStudioView : UserControl
             {
                 throw new InvalidOperationException("Không thể khởi động tác vụ đồng bộ content-pack.");
             }
-            var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
+            var output = new StringBuilder();
+            while (await process.StandardOutput.ReadLineAsync() is { } line)
+            {
+                output.AppendLine(line);
+                if (target == "drive" && ContentSyncProgressProtocol.TryParse(line, out var progress))
+                {
+                    RenderContentSyncProgress(progress!);
+                }
+                else if (target == "drive"
+                    && ContentSyncProgressProtocol.TryReadChangedPackCount(line, out var changedPackCount))
+                {
+                    _contentSyncUploadedChanges = changedPackCount > 0;
+                    if (changedPackCount == 0)
+                    {
+                        ShowContentSyncNoChanges();
+                    }
+                }
+            }
             await process.WaitForExitAsync();
-            var output = await outputTask;
             var error = await errorTask;
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output : error);
+                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output.ToString() : error);
             }
-            return output.Trim();
+            return output.ToString().Trim();
         }
         finally
         {
@@ -3374,6 +3515,207 @@ public sealed partial class NativeStudioView : UserControl
                 File.Delete(rcloneConfig);
             }
         }
+    }
+
+    private void RenderContentSyncSelection()
+    {
+        ContentSyncSelectionText.Text = _contentSyncFolderSelection is null
+            ? Localized("Chọn thư mục trong Content; Content\\STARK chứa WK_Manager và com.")
+            : $"{Localized("Sẽ thay thế pack")} {_contentSyncFolderSelection.PackId} · {_contentSyncFolderSelection.PackRoot}";
+    }
+
+    private void BeginContentSyncProgress(bool manifestOnly = false)
+    {
+        _contentSyncVisualState = manifestOnly ? "manifest" : "preparing";
+        _contentSyncUploadedChanges = false;
+        _lastContentSyncProgress = null;
+        ContentSyncProgressPanel.Visibility = Visibility.Visible;
+        ContentSyncPhaseText.Text = manifestOnly
+            ? Localized("Đang công bố manifest")
+            : Localized("Đang chuẩn bị đồng bộ");
+        ContentSyncPackText.Text = manifestOnly
+            ? Localized("Đang kiểm tra checksum và catalog…")
+            : _contentSyncFolderSelection is null
+                ? Localized("Đang kiểm tra nội dung thay đổi…")
+                : $"{Localized("Gói 1/1")} · {_contentSyncFolderSelection.PackId}";
+        ContentSyncPercentText.Text = "—";
+        ContentSyncProgressBar.Value = 0;
+        ContentSyncProgressBar.IsIndeterminate = true;
+        ContentSyncBytesText.Text = Localized("Đang tính dung lượng…");
+        ContentSyncSpeedText.Text = Localized("Tốc độ — · ETA —");
+        AutomationProperties.SetName(
+            ContentSyncProgressBar,
+            Localized("Tiến độ đồng bộ content-pack"));
+    }
+
+    private void RenderContentSyncProgress(ContentSyncProgressSnapshot progress)
+    {
+        _contentSyncVisualState = "progress";
+        _contentSyncUploadedChanges = true;
+        _lastContentSyncProgress = progress;
+        ContentSyncProgressPanel.Visibility = Visibility.Visible;
+        ContentSyncPackText.Text = ContentSyncPackLabel(progress);
+
+        switch (progress.Phase)
+        {
+            case "archive":
+                ContentSyncPhaseText.Text = Localized("Đang đóng gói content-pack");
+                ContentSyncPercentText.Text = "—";
+                ContentSyncProgressBar.IsIndeterminate = true;
+                ContentSyncBytesText.Text = Localized("Đang tạo archive nén…");
+                ContentSyncSpeedText.Text = Localized("Chuẩn bị upload");
+                break;
+            case "upload":
+                ContentSyncPhaseText.Text = Localized("Đang upload lên Google Drive");
+                ContentSyncProgressBar.IsIndeterminate = false;
+                ContentSyncProgressBar.Value = progress.Percent;
+                ContentSyncPercentText.Text = $"{progress.Percent:0.#}%";
+                ContentSyncBytesText.Text = $"{FormatTransferBytes(progress.Bytes)} / {FormatTransferBytes(progress.TotalBytes)}";
+                var speed = progress.SpeedBytesPerSecond > 0
+                    ? $"{FormatTransferBytes(progress.SpeedBytesPerSecond)}/s"
+                    : Localized("Đang đo tốc độ…");
+                var eta = progress.EtaSeconds is double etaSeconds
+                    ? $"{Localized("Còn lại")} {FormatTransferDuration(etaSeconds)}"
+                    : Localized("Đang tính ETA…");
+                ContentSyncSpeedText.Text = $"{speed} · {eta}";
+                break;
+            case "verify-remote":
+                ShowContentSyncVerification(progress, Localized("Đang xác minh dung lượng và checksum trên Drive"));
+                break;
+            case "verify-download":
+                ShowContentSyncVerification(progress, Localized("Đang tải xuống để kiểm tra toàn vẹn"));
+                break;
+            case "complete":
+                ContentSyncPhaseText.Text = Localized("Content-pack đã xác minh");
+                ContentSyncProgressBar.IsIndeterminate = false;
+                ContentSyncProgressBar.Value = 100;
+                ContentSyncPercentText.Text = "100%";
+                ContentSyncBytesText.Text = FormatTransferBytes(progress.TotalBytes);
+                ContentSyncSpeedText.Text = Localized("Sẵn sàng cho pack tiếp theo");
+                break;
+        }
+    }
+
+    private void ShowContentSyncVerification(ContentSyncProgressSnapshot progress, string phase)
+    {
+        ContentSyncPhaseText.Text = phase;
+        ContentSyncProgressBar.IsIndeterminate = true;
+        ContentSyncProgressBar.Value = 100;
+        ContentSyncPercentText.Text = "100%";
+        ContentSyncBytesText.Text = FormatTransferBytes(progress.TotalBytes);
+        ContentSyncSpeedText.Text = Localized("Đang đối chiếu dữ liệu…");
+    }
+
+    private void ShowContentSyncPublishing()
+    {
+        _contentSyncVisualState = "publishing";
+        _lastContentSyncProgress = null;
+        ContentSyncPhaseText.Text = Localized("Đang công bố manifest");
+        ContentSyncPackText.Text = _contentSyncUploadedChanges
+            ? Localized("Đang cập nhật catalog GitHub…")
+            : Localized("Không có pack thay đổi; đang kiểm tra manifest hiện tại…");
+        ContentSyncProgressBar.IsIndeterminate = true;
+        ContentSyncPercentText.Text = _contentSyncUploadedChanges ? "100%" : Localized("Không đổi");
+        ContentSyncSpeedText.Text = _contentSyncUploadedChanges
+            ? Localized("Binary trên Drive đã xác minh")
+            : Localized("Đã bỏ qua upload Drive");
+    }
+
+    private void CompleteContentSyncProgress(bool manifestOnly = false)
+    {
+        _contentSyncVisualState = manifestOnly ? "manifest-complete" : "complete";
+        _lastContentSyncProgress = null;
+        ContentSyncPhaseText.Text = Localized("Đồng bộ hoàn tất");
+        ContentSyncPackText.Text = manifestOnly
+            ? Localized("Manifest GitHub đã được công bố")
+            : _contentSyncUploadedChanges
+                ? Localized("Drive và GitHub đã nhận dữ liệu mới")
+                : Localized("Không có content-pack thay đổi; manifest hiện tại đã xác minh");
+        ContentSyncProgressBar.IsIndeterminate = false;
+        ContentSyncProgressBar.Value = 100;
+        ContentSyncPercentText.Text = !manifestOnly && !_contentSyncUploadedChanges
+            ? Localized("Không đổi")
+            : "100%";
+        ContentSyncSpeedText.Text = !manifestOnly && !_contentSyncUploadedChanges
+            ? Localized("Đã bỏ qua upload Drive")
+            : Localized("Checksum đã xác minh");
+    }
+
+    private void FailContentSyncProgress()
+    {
+        _contentSyncVisualState = "failed";
+        if (_lastContentSyncProgress is not null)
+        {
+            ContentSyncPackText.Text = ContentSyncPackLabel(_lastContentSyncProgress);
+        }
+        ContentSyncPhaseText.Text = Localized("Đồng bộ thất bại");
+        ContentSyncProgressBar.IsIndeterminate = false;
+        ContentSyncProgressBar.Value = 0;
+        ContentSyncPercentText.Text = Localized("Lỗi");
+        ContentSyncSpeedText.Text = Localized("Xem log chi tiết bên dưới để xử lý");
+    }
+
+    private string ContentSyncPackLabel(ContentSyncProgressSnapshot progress)
+    {
+        var position = progress.PackCount > 1
+            ? $"{Localized("Gói")} {progress.PackIndex}/{progress.PackCount}"
+            : Localized("Gói 1/1");
+        return $"{position} · {progress.PackId}";
+    }
+
+    private void ShowContentSyncNoChanges()
+    {
+        _contentSyncVisualState = "no-changes";
+        _lastContentSyncProgress = null;
+        ContentSyncProgressPanel.Visibility = Visibility.Visible;
+        ContentSyncPhaseText.Text = Localized("Không có content-pack thay đổi");
+        ContentSyncPackText.Text = Localized("Drive không cần upload binary mới");
+        ContentSyncProgressBar.IsIndeterminate = false;
+        ContentSyncProgressBar.Value = 100;
+        ContentSyncPercentText.Text = Localized("Không đổi");
+        ContentSyncBytesText.Text = Localized("0 B cần upload");
+        ContentSyncSpeedText.Text = Localized("Sẽ kiểm tra manifest GitHub");
+    }
+
+    private void RefreshContentSyncLocalization()
+    {
+        RenderContentSyncSelection();
+        if (ContentSyncProgressPanel.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+        AutomationProperties.SetName(
+            ContentSyncProgressBar,
+            Localized("Tiến độ đồng bộ content-pack"));
+        switch (_contentSyncVisualState)
+        {
+            case "preparing": BeginContentSyncProgress(); break;
+            case "manifest": BeginContentSyncProgress(manifestOnly: true); break;
+            case "progress" when _lastContentSyncProgress is not null:
+                RenderContentSyncProgress(_lastContentSyncProgress);
+                break;
+            case "no-changes": ShowContentSyncNoChanges(); break;
+            case "publishing": ShowContentSyncPublishing(); break;
+            case "complete": CompleteContentSyncProgress(); break;
+            case "manifest-complete": CompleteContentSyncProgress(manifestOnly: true); break;
+            case "failed": FailContentSyncProgress(); break;
+        }
+    }
+
+    private static string FormatTransferBytes(double value) =>
+        value <= 0 ? "0 B" : FormatBytes((long)value);
+
+    private string FormatTransferDuration(double seconds)
+    {
+        if (seconds < 60)
+        {
+            return $"{Math.Max(1, (int)Math.Ceiling(seconds))} {Localized("giây")}";
+        }
+        if (seconds < 3600)
+        {
+            return $"{Math.Ceiling(seconds / 60):0} {Localized("phút")}";
+        }
+        return $"{Math.Floor(seconds / 3600):0} {Localized("giờ")} {Math.Ceiling(seconds % 3600 / 60):0} {Localized("phút")}";
     }
 
     private async Task RefreshArtifactsAsync()

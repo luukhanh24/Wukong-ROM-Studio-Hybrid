@@ -667,11 +667,28 @@
                                 <Border Style="{StaticResource SubtlePanelStyle}" Padding="14">
                                     <StackPanel Spacing="10">
                                         <TextBlock Text="Đồng bộ nội dung đa nền tảng" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="Đóng gói các thay đổi trong Content, Runtime\STARK và Runtime\Flash_script; binary lên Drive, manifest/checksum lên GitHub. WK_Manager và WK_Installer được dùng chung cho mọi phiên bản MOD." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <TextBlock Text="Content là nguồn chuẩn duy nhất. Chọn một thư mục để tạo lại toàn bộ content-pack tương ứng, thay thế binary trên Drive và công bố checksum mới lên GitHub." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="ContentSyncSelectionText" Text="Chọn thư mục trong Content; Content\STARK chứa WK_Manager và com." Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Button x:Name="SyncContentDriveButton" Content="Đồng bộ binary lên Drive" Style="{StaticResource AccentButtonStyle}" Click="SyncContentToDriveClick" />
+                                            <Button x:Name="SyncContentDriveButton" Content="Chọn thư mục và thay thế trên Drive" Style="{StaticResource AccentButtonStyle}" Click="SyncContentToDriveClick" />
                                             <Button x:Name="PublishContentManifestButton" Content="Công bố manifest lên GitHub" Click="PublishContentManifestClick" />
                                         </StackPanel>
+                                        <Border x:Name="ContentSyncProgressPanel" Background="{ThemeResource CardBackgroundBrush}" CornerRadius="8" Padding="12" Visibility="Collapsed">
+                                            <StackPanel Spacing="9">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock x:Name="ContentSyncPhaseText" Text="Đang chuẩn bị đồng bộ" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                        <TextBlock x:Name="ContentSyncPackText" Text="Đang kiểm tra nội dung thay đổi…" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <TextBlock x:Name="ContentSyncPercentText" Grid.Column="1" Text="—" Foreground="{ThemeResource PrimaryBrush}" FontFamily="Consolas" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                </Grid>
+                                                <ProgressBar x:Name="ContentSyncProgressBar" Minimum="0" Maximum="100" Value="0" Height="6" Foreground="{ThemeResource PrimaryBrush}" IsIndeterminate="True" AutomationProperties.Name="Tiến độ đồng bộ content-pack" />
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                    <TextBlock x:Name="ContentSyncBytesText" Text="Đang tính dung lượng…" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" />
+                                                    <TextBlock x:Name="ContentSyncSpeedText" Grid.Column="1" Text="Tốc độ — · ETA —" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" TextAlignment="Right" />
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
                                         <TextBlock x:Name="ContentSyncStatusText" Text="Chưa đồng bộ trong phiên này." Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Border>

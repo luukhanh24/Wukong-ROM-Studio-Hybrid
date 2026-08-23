@@ -73,8 +73,10 @@ activation. Previous pack content is backed up under `Backups\ContentPacks`.
 
 The Hybrid Cloud page also provides two operator actions:
 
-- **Sync binary to Drive** verifies and uploads only changed packs from
-  `Content`, `Runtime\STARK`, and `Runtime\Flash_script`.
+- **Choose folder and replace on Drive** maps the selected managed `Content`
+  folder to its complete pack, rebuilds it from scratch, and replaces the Drive
+  archive after size/SHA-256 verification. `Content\STARK` is the only source
+  for `STARK/common`; `Runtime\STARK` is not created or read.
 - **Publish manifest to GitHub** updates `content-packs/index.json` only after
   every pack has a verified Drive archive. The GitHub token used for this
   action needs Contents write permission.

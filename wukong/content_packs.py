@@ -5,9 +5,12 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import tarfile
 import tempfile
+import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -21,7 +24,10 @@ SHARED_RUNTIME_PACKS = {
     "Flash_script/common": "Flash_script",
 }
 RunCommand = Callable[..., str]
+ProgressCallback = Callable[[Mapping[str, object]], None]
 ARCHIVE_CHUNK_SIZE = 1024 * 1024
+ARCHIVE_FINALIZE_ATTEMPTS = 7
+ARCHIVE_FINALIZE_RETRY_SECONDS = 0.1
 
 
 def _run_text(args: list[str], **kwargs: object) -> str:
@@ -35,6 +41,62 @@ def _run_text(args: list[str], **kwargs: object) -> str:
         **kwargs,
     )
     return result.stdout
+
+
+def _parse_rclone_progress(line: str) -> dict[str, object] | None:
+    try:
+        payload = json.loads(line)
+    except json.JSONDecodeError:
+        return None
+    stats = payload.get("stats")
+    if not isinstance(stats, Mapping):
+        return None
+    transfers = stats.get("transferring")
+    active = transfers[0] if isinstance(transfers, list) and transfers and isinstance(transfers[0], Mapping) else {}
+    transferred = int(active.get("bytes", stats.get("bytes", 0)) or 0)
+    total = int(active.get("size", stats.get("totalBytes", 0)) or 0)
+    speed = float(active.get("speed", stats.get("speed", 0)) or 0)
+    eta_value = active.get("eta", stats.get("eta"))
+    eta = float(eta_value) if isinstance(eta_value, (int, float)) else None
+    percent = min(100.0, max(0.0, (transferred * 100.0 / total) if total > 0 else 0.0))
+    return {
+        "bytes": transferred,
+        "totalBytes": total,
+        "speedBytesPerSecond": speed,
+        "etaSeconds": eta,
+        "percent": percent,
+    }
+
+
+def _run_rclone_copy(args: list[str], progress_callback: ProgressCallback) -> str:
+    command = [
+        *args,
+        "--use-json-log",
+        "--stats", "500ms",
+        "--stats-one-line",
+        "--stats-log-level", "NOTICE",
+        "--log-level", "NOTICE",
+    ]
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    output: list[str] = []
+    assert process.stdout is not None
+    for line in process.stdout:
+        output.append(line)
+        progress = _parse_rclone_progress(line)
+        if progress is not None:
+            progress_callback(progress)
+    return_code = process.wait()
+    combined = "".join(output)
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, command, output=combined)
+    return combined
 
 
 def _file_records(root: Path) -> list[dict[str, object]]:
@@ -313,6 +375,23 @@ def _zstd_binary() -> str:
     return executable
 
 
+def _finalize_archive(source: Path, destination: Path) -> None:
+    """Atomically publish an archive despite short-lived Windows file locks."""
+    for attempt in range(ARCHIVE_FINALIZE_ATTEMPTS):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if destination.exists():
+                try:
+                    destination.chmod(destination.stat().st_mode | stat.S_IWRITE)
+                except (FileNotFoundError, PermissionError):
+                    pass
+            if attempt + 1 == ARCHIVE_FINALIZE_ATTEMPTS:
+                raise
+            time.sleep(min(ARCHIVE_FINALIZE_RETRY_SECONDS * (2**attempt), 1.0))
+
+
 def create_content_pack_archive(
     content_root: Path,
     pack: Mapping[str, Any],
@@ -366,9 +445,9 @@ def create_content_pack_archive(
                 [_zstd_binary(), "-q", "-f", "-T0", "-3", str(temporary_tar), "-o", str(temporary_output)],
                 check=True,
             )
-            os.replace(temporary_output, output)
+            _finalize_archive(temporary_output, output)
         else:
-            os.replace(temporary_tar, output)
+            _finalize_archive(temporary_tar, output)
         return {
             "uri": str(pack["remote"]).rstrip("/") + (".tar.zst" if compressed else ".tar"),
             "sizeBytes": output.stat().st_size,
@@ -549,50 +628,80 @@ def upload_content_packs(
     verify_download: bool = True,
     archive_root: Path | None = None,
     pack_id: str | None = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> None:
     validate_content_index(index)
     archive_root = (archive_root or content_root / ".wkstudio" / "content-pack-archives").resolve()
     selected = [pack for pack in index["packs"] if pack_id is None or pack["id"] == pack_id]
     if pack_id is not None and not selected:
         raise KeyError(f"Unknown content-pack: {pack_id}")
-    for pack in selected:
+    for pack_index, pack in enumerate(selected, start=1):
+        def report(phase: str, **values: object) -> None:
+            if progress_callback is not None:
+                progress_callback({
+                    "phase": phase,
+                    "packId": str(pack["id"]),
+                    "packIndex": pack_index,
+                    "packCount": len(selected),
+                    **values,
+                })
+
         ContentPackManager.verify(content_root / str(pack["target"]), pack)
-        archive_name = str(pack["id"]).replace("/", "-") + ".tar.zst"
-        archive_path = archive_root / archive_name
-        archive_record = create_content_pack_archive(content_root, pack, archive_path)
-        args = [
-            "rclone", "copyto", str(archive_path), str(archive_record["uri"]),
-            "--retries", "3", "--transfers", "1", "--checkers", "1", "--tpslimit", "2",
-        ]
-        if rclone_config:
-            args.extend(["--config", str(rclone_config)])
-        run_command(args)
-        size_args = ["rclone", "size", str(archive_record["uri"]), "--json"]
-        if rclone_config:
-            size_args.extend(["--config", str(rclone_config)])
-        remote_size = json.loads(run_command(size_args))
-        if int(remote_size.get("count", 0)) != 1 or int(remote_size.get("bytes", -1)) != int(
-            archive_record["sizeBytes"]
-        ):
-            raise SourceIntegrityError(f"Remote content-pack size mismatch: {pack['id']}")
-        md5_args = ["rclone", "md5sum", str(archive_record["uri"])]
-        if rclone_config:
-            md5_args.extend(["--config", str(rclone_config)])
-        remote_md5 = run_command(md5_args).strip().split(maxsplit=1)[0].casefold()
-        if remote_md5 != archive_record["md5"]:
-            raise SourceIntegrityError(f"Remote content-pack checksum mismatch: {pack['id']}")
-        if verify_download:
-            with tempfile.TemporaryDirectory(prefix="wukong-pack-download-verify-") as root:
-                verification_index = dict(index)
-                verification_index["packs"] = [
-                    ({**candidate, "archive": archive_record} if candidate is pack else candidate)
-                    for candidate in index["packs"]
-                ]
-                manager = ContentPackManager(
-                    Path(root),
-                    run_command=run_command,
-                    rclone_config=rclone_config,
-                )
-                installed = manager.install(verification_index, str(pack["id"]))
-                manager.verify(installed, pack)
-        pack["archive"] = archive_record
+        archive_root.mkdir(parents=True, exist_ok=True)
+        archive_stem = str(pack["id"]).replace("/", "-")
+        archive_path = archive_root / f"{archive_stem}.{uuid.uuid4().hex}.tar.zst"
+        try:
+            report("archive")
+            archive_record = create_content_pack_archive(content_root, pack, archive_path)
+            report(
+                "upload",
+                bytes=0,
+                totalBytes=int(archive_record["sizeBytes"]),
+                speedBytesPerSecond=0.0,
+                etaSeconds=None,
+                percent=0.0,
+            )
+            args = [
+                "rclone", "copyto", str(archive_path), str(archive_record["uri"]),
+                "--retries", "3", "--transfers", "1", "--checkers", "1", "--tpslimit", "2",
+            ]
+            if rclone_config:
+                args.extend(["--config", str(rclone_config)])
+            if progress_callback is not None and run_command is _run_text:
+                _run_rclone_copy(args, lambda values: report("upload", **values))
+            else:
+                run_command(args)
+            report("verify-remote", bytes=int(archive_record["sizeBytes"]), totalBytes=int(archive_record["sizeBytes"]), percent=100.0)
+            size_args = ["rclone", "size", str(archive_record["uri"]), "--json"]
+            if rclone_config:
+                size_args.extend(["--config", str(rclone_config)])
+            remote_size = json.loads(run_command(size_args))
+            if int(remote_size.get("count", 0)) != 1 or int(remote_size.get("bytes", -1)) != int(
+                archive_record["sizeBytes"]
+            ):
+                raise SourceIntegrityError(f"Remote content-pack size mismatch: {pack['id']}")
+            md5_args = ["rclone", "md5sum", str(archive_record["uri"])]
+            if rclone_config:
+                md5_args.extend(["--config", str(rclone_config)])
+            remote_md5 = run_command(md5_args).strip().split(maxsplit=1)[0].casefold()
+            if remote_md5 != archive_record["md5"]:
+                raise SourceIntegrityError(f"Remote content-pack checksum mismatch: {pack['id']}")
+            if verify_download:
+                report("verify-download", bytes=int(archive_record["sizeBytes"]), totalBytes=int(archive_record["sizeBytes"]), percent=100.0)
+                with tempfile.TemporaryDirectory(prefix="wukong-pack-download-verify-") as root:
+                    verification_index = dict(index)
+                    verification_index["packs"] = [
+                        ({**candidate, "archive": archive_record} if candidate is pack else candidate)
+                        for candidate in index["packs"]
+                    ]
+                    manager = ContentPackManager(
+                        Path(root),
+                        run_command=run_command,
+                        rclone_config=rclone_config,
+                    )
+                    installed = manager.install(verification_index, str(pack["id"]))
+                    manager.verify(installed, pack)
+            pack["archive"] = archive_record
+            report("complete", bytes=int(archive_record["sizeBytes"]), totalBytes=int(archive_record["sizeBytes"]), percent=100.0)
+        finally:
+            archive_path.unlink(missing_ok=True)

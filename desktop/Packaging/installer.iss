@@ -36,6 +36,7 @@ RestartApplications=no
 Name: "{app}"; Permissions: users-readexec
 Name: "{app}\Content"; Permissions: users-modify
 Name: "{app}\Content\MOD"; Permissions: users-modify
+Name: "{app}\Content\STARK"; Permissions: users-modify
 Name: "{app}\Content\TWRP"; Permissions: users-modify
 Name: "{app}\Content\OFX"; Permissions: users-modify
 Name: "{app}\Content\copy-image"; Permissions: users-modify
@@ -57,12 +58,12 @@ Name: "{app}\Backups"; Permissions: users-modify
 [Files]
 Source: "{#SourceRoot}\App\*"; DestDir: "{app}\App"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: not IsUpdateOnly
+Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: not IsExistingInstall
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\App\WebView2"
 Type: files; Name: "{app}\Runtime\Config\wk_manager_system_policy.cil"
-Type: files; Name: "{app}\Content\STARK\WK_Manager\system\system\etc\selinux\stark_plat_sepolicy.cil"
+Type: filesandordirs; Name: "{app}\Runtime\STARK"
 
 [Icons]
 Name: "{autoprograms}\Wukong ROM Studio"; Filename: "{app}\App\WukongStudio.exe"; WorkingDir: "{app}\App"; AppUserModelID: "WukongROMStudio.Desktop"
@@ -79,7 +80,7 @@ Filename: "{sys}\icacls.exe"; Parameters: """{app}\App"" /reset /T /C"; Flags: r
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\App"" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX"; Flags: runhidden waituntilterminated
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime"" /reset /T /C"; Flags: runhidden waituntilterminated
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime"" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX"; Flags: runhidden waituntilterminated
-Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime\STARK"" /grant:r *S-1-5-32-545:(OI)(CI)M"; Flags: runhidden waituntilterminated
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\Content\STARK"" /grant:r *S-1-5-32-545:(OI)(CI)M"; Flags: runhidden waituntilterminated
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime\Flash_script"" /grant:r *S-1-5-32-545:(OI)(CI)M"; Flags: runhidden waituntilterminated
 Filename: "{app}\App\WukongStudio.exe"; Description: "Khởi động Wukong ROM Studio"; Flags: postinstall nowait skipifsilent runasoriginaluser
 
@@ -87,19 +88,9 @@ Filename: "{app}\App\WukongStudio.exe"; Description: "Khởi động Wukong ROM 
 var
   RemoveAllDataCheckBox: TNewCheckBox;
 
-function IsUpdateOnly(): Boolean;
-var
-  I: Integer;
+function IsExistingInstall(): Boolean;
 begin
-  Result := False;
-  for I := 1 to ParamCount do
-  begin
-    if CompareText(ParamStr(I), '/UPDATEONLY') = 0 then
-    begin
-      Result := True;
-      Exit;
-    end;
-  end;
+  Result := FileExists(ExpandConstant('{app}\App\WukongStudio.exe'));
 end;
 
 function InitializeUninstall(): Boolean;

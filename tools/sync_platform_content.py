@@ -11,6 +11,7 @@ from wukong.content_sync import (
     migrate_shared_mods,
     publish_index_to_github,
     refresh_content_index,
+    resolve_selected_content_pack,
     upload_changed_packs,
 )
 
@@ -30,6 +31,7 @@ def main() -> int:
     parser.add_argument("--branch", default="main")
     parser.add_argument("--migrate-shared", action="store_true")
     parser.add_argument("--skip-download-verify", action="store_true")
+    parser.add_argument("--folder", help="Managed Content folder whose complete pack must replace Drive")
     args = parser.parse_args()
 
     install = Path(args.install_root).resolve()
@@ -37,7 +39,26 @@ def main() -> int:
     if args.migrate_shared:
         migrated = migrate_shared_mods(install)
         emit("migrate", mods=migrated)
-    index, changed = refresh_content_index(install, index_path, remote=args.remote)
+    selected_pack_ids: set[str] | None = None
+    forced_pack_ids: set[str] | None = None
+    if args.folder:
+        selected_pack_id, selected_pack_root = resolve_selected_content_pack(install, Path(args.folder))
+        selected_pack_ids = {selected_pack_id}
+        forced_pack_ids = selected_pack_ids if args.target in {"drive", "all"} else set()
+        emit(
+            "selection",
+            folder=str(Path(args.folder).resolve()),
+            packId=selected_pack_id,
+            packRoot=str(selected_pack_root),
+            replace=True,
+        )
+    index, changed = refresh_content_index(
+        install,
+        index_path,
+        remote=args.remote,
+        only_pack_ids=selected_pack_ids,
+        force_pack_ids=forced_pack_ids,
+    )
     emit("index", packs=len(index["packs"]), changed=changed)
     if args.target in {"drive", "all"}:
         if not args.rclone_config:
@@ -49,6 +70,7 @@ def main() -> int:
             changed,
             rclone_config=Path(args.rclone_config).resolve(),
             verify_download=not args.skip_download_verify,
+            progress_callback=lambda values: emit("content-progress", **values),
         )
         emit("drive", uploaded=changed)
     if args.target in {"github", "all"}:

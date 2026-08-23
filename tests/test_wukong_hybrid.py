@@ -30,6 +30,7 @@ from wukong.cli import main as cli_main
 from wukong.cli import configure_utf8_stdio
 from wukong.content_packs import (
     ContentPackManager,
+    _parse_rclone_progress,
     build_content_index,
     build_content_pack_record,
     create_content_pack_archive,
@@ -1847,6 +1848,30 @@ class TelegramAccessContractTests(unittest.TestCase):
 
 
 class ContentPackContractTests(unittest.TestCase):
+    def test_rclone_json_stats_expose_bytes_speed_percent_and_eta(self) -> None:
+        progress = _parse_rclone_progress(json.dumps({
+            "stats": {
+                "bytes": 256,
+                "totalBytes": 1024,
+                "speed": 10,
+                "eta": 77,
+                "transferring": [{
+                    "bytes": 512,
+                    "size": 1024,
+                    "speed": 128.5,
+                    "eta": 4,
+                }],
+            }
+        }))
+
+        self.assertEqual({
+            "bytes": 512,
+            "totalBytes": 1024,
+            "speedBytesPerSecond": 128.5,
+            "etaSeconds": 4.0,
+            "percent": 50.0,
+        }, progress)
+
     def test_merging_one_pack_preserves_existing_archive_records(self) -> None:
         existing = {
             "schemaVersion": 1,
@@ -1989,6 +2014,29 @@ class ContentPackContractTests(unittest.TestCase):
             self.assertEqual((installed / "recovery.img").read_bytes(), b"img")
             downloads = [args for args in commands if args[1] == "copyto" and args[2].startswith("drive:")]
             self.assertEqual(len(downloads), 1)
+
+    def test_archive_finalize_retries_a_transient_windows_access_denied(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "content")
+            (content / "TWRP").mkdir(parents=True)
+            (content / "TWRP" / "recovery.img").write_bytes(b"img")
+            pack = build_content_index(content, remote="drive:content-packs")["packs"][0]
+            archive_path = Path(root, "TWRP-v1.tar")
+            real_replace = os.replace
+            attempts = 0
+
+            def transient_access_denied(source: object, destination: object) -> None:
+                nonlocal attempts
+                attempts += 1
+                if attempts == 1:
+                    raise PermissionError(5, "Access is denied", str(source), str(destination))
+                real_replace(source, destination)
+
+            with patch("wukong.content_packs.os.replace", side_effect=transient_access_denied):
+                archive = create_content_pack_archive(content, pack, archive_path)
+
+            self.assertEqual(attempts, 2)
+            self.assertEqual(archive_path.stat().st_size, archive["sizeBytes"])
 
     def test_archive_install_rejects_checksum_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as root:
@@ -2134,18 +2182,72 @@ class ContentPackContractTests(unittest.TestCase):
                     return hashlib.md5(archive.read_bytes(), usedforsecurity=False).hexdigest() + "  pack.tar.zst\n"
                 return ""
 
+            progress: list[dict[str, object]] = []
             upload_content_packs(
                 content,
                 index,
                 run_command=fake_run,
                 verify_download=False,
                 archive_root=Path(root, "archives"),
+                progress_callback=lambda values: progress.append(dict(values)),
             )
 
             self.assertRegex(index["packs"][0]["archive"]["sha256"], r"^[0-9a-f]{64}$")
             uploads = [args for args in commands if args[1] == "copyto"]
             self.assertEqual(len(uploads), 1)
             self.assertEqual(uploads[0][3], "wukong-gdrive:WukongROM/content-packs/TWRP/v1.tar.zst")
+            self.assertEqual(
+                ["archive", "upload", "verify-remote", "complete"],
+                [event["phase"] for event in progress],
+            )
+
+    def test_upload_isolates_local_archive_from_a_windows_locked_previous_upload(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "content")
+            (content / "TWRP").mkdir(parents=True)
+            (content / "TWRP" / "recovery.img").write_bytes(b"img")
+            index = build_content_index(content, remote="wukong-gdrive:WukongROM/content-packs")
+            archive_root = Path(root, "archives")
+            archive_root.mkdir()
+            locked_archive = (archive_root / "TWRP-v1.tar.zst").resolve()
+            locked_archive.write_bytes(b"previous upload still in use")
+            uploaded_source: Path | None = None
+            uploaded_size = 0
+            uploaded_md5 = ""
+
+            def fake_run(args: list[str], **_: object) -> str:
+                nonlocal uploaded_source, uploaded_size, uploaded_md5
+                if args[1] == "copyto":
+                    uploaded_source = Path(args[2])
+                    payload = uploaded_source.read_bytes()
+                    uploaded_size = len(payload)
+                    uploaded_md5 = hashlib.md5(payload, usedforsecurity=False).hexdigest()
+                elif args[1] == "size":
+                    return json.dumps({"count": 1, "bytes": uploaded_size})
+                elif args[1] == "md5sum":
+                    return uploaded_md5 + "  pack.tar.zst\n"
+                return ""
+
+            real_replace = os.replace
+
+            def deny_locked_destination(source: object, destination: object) -> None:
+                if Path(destination) == locked_archive:
+                    raise PermissionError(5, "Access is denied", str(source), str(destination))
+                real_replace(source, destination)
+
+            with patch("wukong.content_packs.os.replace", side_effect=deny_locked_destination):
+                upload_content_packs(
+                    content,
+                    index,
+                    run_command=fake_run,
+                    verify_download=False,
+                    archive_root=archive_root,
+                )
+
+            self.assertIsNotNone(uploaded_source)
+            self.assertNotEqual(locked_archive, uploaded_source)
+            self.assertFalse(uploaded_source.exists())
+            self.assertEqual(b"previous upload still in use", locked_archive.read_bytes())
 
     def test_legacy_directory_pack_still_installs(self) -> None:
         with tempfile.TemporaryDirectory() as root:
