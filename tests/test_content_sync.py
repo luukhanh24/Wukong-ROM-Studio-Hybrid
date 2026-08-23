@@ -10,6 +10,7 @@ from wukong.content_sync import (
     migrate_shared_mods,
     refresh_content_index,
     resolve_selected_content_pack,
+    restore_incomplete_index,
 )
 
 
@@ -155,6 +156,61 @@ class ContentSyncTests(unittest.TestCase):
             refreshed_stark = next(pack for pack in refreshed["packs"] if pack["id"] == "STARK/common")
             self.assertEqual(old_mod, refreshed_mod)
             self.assertNotIn("archive", refreshed_stark)
+
+    def test_restore_incomplete_index_replaces_only_unverified_records_from_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            current_path = directory / "index.json"
+            baseline_path = directory / "baseline.json"
+            archive = {
+                "uri": "drive:packs/archive.tar.zst",
+                "sha256": "a" * 64,
+                "md5": "b" * 32,
+                "sizeBytes": 7,
+            }
+            baseline_stark = {
+                "id": "STARK/common",
+                "target": "STARK",
+                "remote": "drive:packs",
+                "sizeBytes": 7,
+                "files": [{"path": "old", "sha256": "c" * 64, "sizeBytes": 7}],
+                "archive": archive,
+            }
+            verified_mod = {
+                "id": "MOD/Test",
+                "target": "MOD/Test",
+                "remote": "drive:packs",
+                "sizeBytes": 9,
+                "files": [{"path": "current", "sha256": "d" * 64, "sizeBytes": 9}],
+                "archive": {**archive, "sha256": "e" * 64},
+            }
+            baseline_mod = {
+                **verified_mod,
+                "sizeBytes": 1,
+                "files": [{"path": "old-mod", "sha256": "f" * 64, "sizeBytes": 1}],
+            }
+            baseline = {
+                "schemaVersion": 1,
+                "generatedAt": "baseline",
+                "packs": [baseline_stark, baseline_mod],
+            }
+            current = {
+                "schemaVersion": 1,
+                "generatedAt": "interrupted",
+                "packs": [
+                    {**baseline_stark, "files": [], "sizeBytes": 0, "archive": None},
+                    verified_mod,
+                ],
+            }
+            baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+            current_path.write_text(json.dumps(current), encoding="utf-8")
+
+            repaired = restore_incomplete_index(current_path, baseline_path)
+
+            restored = json.loads(current_path.read_text(encoding="utf-8"))
+            self.assertEqual(1, repaired)
+            self.assertEqual(baseline_stark, restored["packs"][1])
+            self.assertEqual(verified_mod, restored["packs"][0])
 
 
 if __name__ == "__main__":

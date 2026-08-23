@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
+import uuid
 from pathlib import Path
 
 from wukong.content_sync import (
@@ -12,6 +14,7 @@ from wukong.content_sync import (
     publish_index_to_github,
     refresh_content_index,
     resolve_selected_content_pack,
+    restore_incomplete_index,
     upload_changed_packs,
 )
 
@@ -24,6 +27,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Synchronize Wukong Content and Runtime packs")
     parser.add_argument("--install-root", required=True)
     parser.add_argument("--index", required=True)
+    parser.add_argument("--baseline-index")
     parser.add_argument("--remote", default=DEFAULT_REMOTE)
     parser.add_argument("--target", choices=("refresh", "drive", "github", "all"), required=True)
     parser.add_argument("--rclone-config")
@@ -34,11 +38,11 @@ def main() -> int:
     parser.add_argument("--folder", help="Managed Content folder whose complete pack must replace Drive")
     args = parser.parse_args()
 
+    if args.folder and args.migrate_shared:
+        parser.error("--folder and --migrate-shared cannot be used together")
+
     install = Path(args.install_root).resolve()
     index_path = Path(args.index).resolve()
-    if args.migrate_shared:
-        migrated = migrate_shared_mods(install)
-        emit("migrate", mods=migrated)
     selected_pack_ids: set[str] | None = None
     forced_pack_ids: set[str] | None = None
     if args.folder:
@@ -52,40 +56,62 @@ def main() -> int:
             packRoot=str(selected_pack_root),
             replace=True,
         )
-    index, changed = refresh_content_index(
-        install,
-        index_path,
-        remote=args.remote,
-        only_pack_ids=selected_pack_ids,
-        force_pack_ids=forced_pack_ids,
-    )
-    emit("index", packs=len(index["packs"]), changed=changed)
+    if args.migrate_shared:
+        migrated = migrate_shared_mods(install)
+        emit("migrate", mods=migrated)
+
+    working_index_path = index_path
+    transaction_path: Path | None = None
     if args.target in {"drive", "all"}:
         if not args.rclone_config:
             parser.error("--rclone-config is required for Drive sync")
-        upload_changed_packs(
+        transaction_path = index_path.with_name(f".{index_path.name}.{uuid.uuid4().hex}.working")
+        transaction_path.parent.mkdir(parents=True, exist_ok=True)
+        if index_path.is_file():
+            shutil.copy2(index_path, transaction_path)
+        working_index_path = transaction_path
+    try:
+        if args.baseline_index:
+            repaired = restore_incomplete_index(working_index_path, Path(args.baseline_index))
+            if repaired:
+                emit("repair", packs=repaired)
+        index, changed = refresh_content_index(
             install,
-            index_path,
-            index,
-            changed,
-            rclone_config=Path(args.rclone_config).resolve(),
-            verify_download=not args.skip_download_verify,
-            progress_callback=lambda values: emit("content-progress", **values),
+            working_index_path,
+            remote=args.remote,
+            only_pack_ids=selected_pack_ids,
+            force_pack_ids=forced_pack_ids,
         )
-        emit("drive", uploaded=changed)
-    if args.target in {"github", "all"}:
-        assert_publishable(index)
-        repository = args.repository or os.environ.get("WUKONG_GITHUB_REPOSITORY", "")
-        token = os.environ.get("WUKONG_GITHUB_TOKEN", "")
-        sha = publish_index_to_github(
-            index_path,
-            repository=repository,
-            token=token,
-            branch=args.branch,
-        )
-        emit("github", commit=sha)
-    emit("complete", packs=len(index["packs"]), changed=len(changed))
-    return 0
+        emit("index", packs=len(index["packs"]), changed=changed)
+        if args.target in {"drive", "all"}:
+            upload_changed_packs(
+                install,
+                working_index_path,
+                index,
+                changed,
+                rclone_config=Path(args.rclone_config).resolve(),
+                verify_download=not args.skip_download_verify,
+                progress_callback=lambda values: emit("content-progress", **values),
+            )
+            os.replace(working_index_path, index_path)
+            transaction_path = None
+            emit("drive", uploaded=changed)
+        if args.target in {"github", "all"}:
+            assert_publishable(index)
+            repository = args.repository or os.environ.get("WUKONG_GITHUB_REPOSITORY", "")
+            token = os.environ.get("WUKONG_GITHUB_TOKEN", "")
+            sha = publish_index_to_github(
+                index_path,
+                repository=repository,
+                token=token,
+                branch=args.branch,
+            )
+            emit("github", commit=sha)
+        emit("complete", packs=len(index["packs"]), changed=len(changed))
+        return 0
+    finally:
+        if transaction_path is not None:
+            transaction_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

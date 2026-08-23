@@ -124,7 +124,7 @@ class StudioPathsTests(unittest.TestCase):
             self.assertEqual(paths.script_root, (runtime / "Scripts").resolve())
             self.assertEqual(paths.bin_root, (runtime / "Bin").resolve())
             self.assertEqual(paths.config_root, (runtime / "Config").resolve())
-            self.assertEqual(paths.stark_root, (runtime / "STARK").resolve())
+            self.assertEqual(paths.stark_root, (install / "Content" / "STARK").resolve())
             self.assertEqual(paths.mod_root, (install / "Content" / "MOD").resolve())
             for path in (
                 paths.data_root,
@@ -141,7 +141,7 @@ class StudioPathsTests(unittest.TestCase):
             self.assertTrue((install / "Temp" / "Extraction").is_dir())
             self.assertTrue((install / "Logs" / "crash").is_dir())
 
-    def test_desktop_stark_root_does_not_switch_to_content_shadow_copy(self):
+    def test_desktop_stark_root_is_the_canonical_content_copy(self):
         with tempfile.TemporaryDirectory() as temp:
             install = Path(temp) / "WukongROMStudio"
             runtime = install / "Runtime"
@@ -156,7 +156,7 @@ class StudioPathsTests(unittest.TestCase):
                 source_root=Path(temp) / "source",
             )
 
-            self.assertEqual(paths.stark_root, (runtime / "STARK").resolve())
+            self.assertEqual(paths.stark_root, (install / "Content" / "STARK").resolve())
 
     def test_source_mode_keeps_legacy_layout(self):
         with tempfile.TemporaryDirectory() as temp:

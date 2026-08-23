@@ -84,6 +84,7 @@ public sealed partial class NativeStudioView : UserControl
     private string _contentSyncVisualState = string.Empty;
     private ContentSyncProgressSnapshot? _lastContentSyncProgress;
     private ContentSyncFolderSelection? _contentSyncFolderSelection;
+    private CancellationTokenSource? _contentSyncCancellation;
     private bool _uiPollingActive = true;
     private string? _selectedDeviceOriginalProductName;
     private string? _layoutSourcePath;
@@ -108,7 +109,11 @@ public sealed partial class NativeStudioView : UserControl
         PipelineStepsExpander.Expanding += (_, _) => ScheduleBuildSectionLayoutUpdate();
         PipelineStepsExpander.Collapsed += (_, _) => ScheduleBuildSectionLayoutUpdate();
         ActualThemeChanged += NativeStudioActualThemeChanged;
-        Unloaded += (_, _) => _hybridSourceProbeCancellation?.Cancel();
+        Unloaded += (_, _) =>
+        {
+            _hybridSourceProbeCancellation?.Cancel();
+            _contentSyncCancellation?.Cancel();
+        };
     }
 
     public async Task InitializeAsync(
@@ -871,7 +876,11 @@ public sealed partial class NativeStudioView : UserControl
         }
     }
 
-    private async Task<bool> ConfirmDialogAsync(string title, string message, string primaryButtonText)
+    private async Task<bool> ConfirmDialogAsync(
+        string title,
+        string message,
+        string primaryButtonText,
+        bool destructive = false)
     {
         var dialog = new ContentDialog
         {
@@ -885,7 +894,7 @@ public sealed partial class NativeStudioView : UserControl
             },
             PrimaryButtonText = primaryButtonText,
             CloseButtonText = Localized("Hủy"),
-            DefaultButton = ContentDialogButton.Primary,
+            DefaultButton = destructive ? ContentDialogButton.Close : ContentDialogButton.Primary,
         };
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
@@ -2939,7 +2948,7 @@ public sealed partial class NativeStudioView : UserControl
             ["Metadata sẽ được kiểm tra khi job preflight tải nguồn riêng tư."] = "Metadata will be checked when preflight fetches the private source.",
             ["File local sẽ được kiểm tra quyền truy cập và checksum trước khi build."] = "The local file will be checked for access and checksum before building.",
             ["Đồng bộ nội dung đa nền tảng"] = "Cross-platform content sync",
-            ["Content là nguồn chuẩn duy nhất. Chọn một thư mục để tạo lại toàn bộ content-pack tương ứng, thay thế binary trên Drive và công bố checksum mới lên GitHub."] = "Content is the single source of truth. Choose a folder to rebuild its complete content pack, replace the Drive binary, and publish the new checksum to GitHub.",
+            ["Content là nguồn chuẩn duy nhất. Chọn một thư mục để tạo lại toàn bộ content-pack tương ứng và thay thế binary trên Drive. Công bố manifest GitHub là bước riêng."] = "Content is the single source of truth. Choose a folder to rebuild its complete content pack and replace the Drive binary. Publishing the GitHub manifest is a separate step.",
             ["Chọn thư mục trong Content; Content\\STARK chứa WK_Manager và com."] = "Choose a folder inside Content; Content\\STARK contains WK_Manager and com.",
             ["Đồng bộ binary lên Drive"] = "Sync binaries to Drive",
             ["Chọn thư mục và thay thế trên Drive"] = "Choose folder and replace on Drive",
@@ -2950,8 +2959,13 @@ public sealed partial class NativeStudioView : UserControl
             ["Thư mục đã chọn"] = "Selected folder",
             ["Content-pack sẽ bị thay thế toàn bộ"] = "Content pack that will be fully replaced",
             ["Phạm vi được đóng gói"] = "Packaged scope",
-            ["Archive hiện tại trên Drive sẽ bị ghi đè sau khi upload và checksum được xác minh."] = "The current Drive archive will be overwritten after upload and checksum verification.",
+            ["Archive hiện tại trên Drive sẽ bị ghi đè trong khi upload, sau đó mới được xác minh. Nếu xác minh thất bại, Drive có thể đã chứa archive mới nhưng index cục bộ vẫn giữ bản đã xác minh trước đó."] = "The current Drive archive is overwritten during upload and verified afterward. If verification fails, Drive may already contain the new archive, while the local index retains the previously verified version.",
             ["Thay thế trên Drive"] = "Replace on Drive",
+            ["Hủy upload"] = "Cancel upload",
+            ["Đã hủy đồng bộ"] = "Sync canceled",
+            ["Upload đã dừng; index cục bộ không thay đổi."] = "Upload stopped; the local index was not changed.",
+            ["Không thể hoàn thành tác vụ"] = "Unable to complete the operation",
+            ["Xem log kỹ thuật bên dưới để biết chi tiết và thử lại."] = "Review the technical log below for details, then try again.",
             ["Sẽ thay thế pack"] = "Will replace pack",
             ["Chưa đồng bộ trong phiên này."] = "Not synced in this session.",
             ["Đang chuẩn bị đồng bộ"] = "Preparing sync",
@@ -2982,7 +2996,7 @@ public sealed partial class NativeStudioView : UserControl
             ["Không đổi"] = "Unchanged",
             ["Đồng bộ hoàn tất"] = "Sync complete",
             ["Manifest GitHub đã được công bố"] = "GitHub manifest published",
-            ["Drive và GitHub đã nhận dữ liệu mới"] = "Drive and GitHub received the new data",
+            ["Drive đã nhận và xác minh dữ liệu mới"] = "Drive received and verified the new data",
             ["Không có content-pack thay đổi; manifest hiện tại đã xác minh"] = "No content packs changed; the current manifest is verified",
             ["Checksum đã xác minh"] = "Checksum verified",
             ["Đồng bộ thất bại"] = "Sync failed",
@@ -2994,16 +3008,15 @@ public sealed partial class NativeStudioView : UserControl
             ["Đã bỏ qua upload Drive và xác minh manifest hiện tại."] = "Drive upload was skipped and the current manifest was verified.",
             ["Drive không cần upload binary mới"] = "Drive does not need a new binary upload",
             ["0 B cần upload"] = "0 B to upload",
-            ["Sẽ kiểm tra manifest GitHub"] = "The GitHub manifest will be checked",
+            ["Sẵn sàng công bố manifest GitHub"] = "Ready to publish the GitHub manifest",
             ["giây"] = "sec",
             ["phút"] = "min",
             ["giờ"] = "hr",
             ["Đang đồng bộ Drive, xác minh checksum và công bố manifest GitHub…"] = "Syncing Drive, verifying checksums, and publishing the GitHub manifest…",
-            ["Đang thay thế content-pack trên Drive, xác minh checksum và công bố manifest GitHub…"] = "Replacing the content pack on Drive, verifying checksums, and publishing the GitHub manifest…",
-            ["Drive và manifest GitHub đã đồng bộ; checksum đã được xác minh."] = "Drive and the GitHub manifest are synced; checksums are verified.",
-            ["Thư mục đã chọn đã thay thế content-pack trên Drive; manifest GitHub và checksum đã cập nhật."] = "The selected folder replaced its Drive content pack; the GitHub manifest and checksum are updated.",
+            ["Đang thay thế content-pack trên Drive và xác minh checksum…"] = "Replacing the content pack on Drive and verifying its checksum…",
+            ["Thư mục đã chọn đã thay thế content-pack trên Drive; checksum đã xác minh. Hãy công bố manifest khi sẵn sàng."] = "The selected folder replaced its Drive content pack and the checksum was verified. Publish the manifest when ready.",
             ["Đã thay thế content-pack"] = "Content pack replaced",
-            ["Binary và manifest mới đã sẵn sàng cho Actions và Telegram."] = "The new binary and manifest are ready for Actions and Telegram.",
+            ["Binary mới đã sẵn sàng; công bố manifest để Actions và Telegram sử dụng."] = "The new binary is ready; publish the manifest for Actions and Telegram to use it.",
             ["Đồng bộ content-pack thất bại — xem lỗi chi tiết bên dưới."] = "Content-pack sync failed — review the details below.",
             ["Đang kiểm tra archive và công bố manifest lên GitHub…"] = "Checking archives and publishing the manifest to GitHub…",
             ["Manifest GitHub đã cập nhật; Actions và Telegram sẽ dùng catalog mới."] = "The GitHub manifest is updated; Actions and Telegram will use the new catalog.",
@@ -3335,9 +3348,10 @@ public sealed partial class NativeStudioView : UserControl
         }
         catch (Exception exception)
         {
+            HybridResultBox.Text = exception.Message;
             ShowMessage(
                 Localized("Không thể chọn thư mục này"),
-                $"{Localized("Chỉ chọn thư mục được quản lý bên trong Content.")}\n{exception.Message}",
+                Localized("Chỉ chọn thư mục được quản lý bên trong Content."),
                 InfoBarSeverity.Error);
             return;
         }
@@ -3347,28 +3361,35 @@ public sealed partial class NativeStudioView : UserControl
             $"{Localized("Thư mục đã chọn")}:\n{selection.SelectedFolder}\n\n" +
             $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{selection.PackId}\n\n" +
             $"{Localized("Phạm vi được đóng gói")}:\n{selection.PackRoot}\n\n" +
-            Localized("Archive hiện tại trên Drive sẽ bị ghi đè sau khi upload và checksum được xác minh."),
-            Localized("Thay thế trên Drive"));
+            Localized("Archive hiện tại trên Drive sẽ bị ghi đè trong khi upload, sau đó mới được xác minh. Nếu xác minh thất bại, Drive có thể đã chứa archive mới nhưng index cục bộ vẫn giữ bản đã xác minh trước đó."),
+            Localized("Thay thế trên Drive"),
+            destructive: true);
         if (!confirmed)
         {
             return;
         }
+        _contentSyncCancellation = new CancellationTokenSource();
         await RunBusyActionAsync(async () =>
         {
             BeginContentSyncProgress();
-            ContentSyncStatusText.Text = Localized("Đang thay thế content-pack trên Drive, xác minh checksum và công bố manifest GitHub…");
+            ContentSyncStatusText.Text = Localized("Đang thay thế content-pack trên Drive và xác minh checksum…");
             try
             {
-                var driveOutput = await RunPlatformContentSyncAsync("drive", selection.SelectedFolder);
-                ShowContentSyncPublishing();
-                var githubOutput = await RunPlatformContentSyncAsync("github", selection.SelectedFolder);
-                HybridResultBox.Text = $"{driveOutput.TrimEnd()}\n{githubOutput.TrimEnd()}";
-                ContentSyncStatusText.Text = Localized("Thư mục đã chọn đã thay thế content-pack trên Drive; manifest GitHub và checksum đã cập nhật.");
+                var driveOutput = await RunPlatformContentSyncAsync("drive", selection.SelectedFolder, _contentSyncCancellation.Token);
+                HybridResultBox.Text = driveOutput;
+                ContentSyncStatusText.Text = Localized("Thư mục đã chọn đã thay thế content-pack trên Drive; checksum đã xác minh. Hãy công bố manifest khi sẵn sàng.");
                 CompleteContentSyncProgress();
                 ShowMessage(
                     Localized("Đã thay thế content-pack"),
-                    $"{selection.PackId} · {Localized("Binary và manifest mới đã sẵn sàng cho Actions và Telegram.")}",
+                    $"{selection.PackId} · {Localized("Binary mới đã sẵn sàng; công bố manifest để Actions và Telegram sử dụng.")}",
                     InfoBarSeverity.Success);
+            }
+            catch (OperationCanceledException)
+            {
+                ContentSyncStatusText.Text = Localized("Upload đã dừng; index cục bộ không thay đổi.");
+                HybridResultBox.Text = Localized("Đã hủy đồng bộ");
+                CancelContentSyncProgress();
+                throw;
             }
             catch (Exception exception)
             {
@@ -3378,6 +3399,8 @@ public sealed partial class NativeStudioView : UserControl
                 throw;
             }
         });
+        _contentSyncCancellation.Dispose();
+        _contentSyncCancellation = null;
     }
 
     private async void PublishContentManifestClick(object sender, RoutedEventArgs e)
@@ -3407,7 +3430,10 @@ public sealed partial class NativeStudioView : UserControl
         });
     }
 
-    private async Task<string> RunPlatformContentSyncAsync(string target, string? selectedFolder = null)
+    private async Task<string> RunPlatformContentSyncAsync(
+        string target,
+        string? selectedFolder = null,
+        CancellationToken cancellationToken = default)
     {
         if (_layout is null)
         {
@@ -3425,6 +3451,7 @@ public sealed partial class NativeStudioView : UserControl
             throw new FileNotFoundException("Runtime đồng bộ content-pack chưa được cài đầy đủ. Hãy build/cài lại Wukong ROM Studio.");
         }
         Directory.CreateDirectory(syncDataRoot);
+        CleanupContentSyncArtifacts(syncDataRoot, index, staleOnly: true);
         if (!File.Exists(index))
         {
             File.Copy(templateIndex, index);
@@ -3450,6 +3477,8 @@ public sealed partial class NativeStudioView : UserControl
             startInfo.ArgumentList.Add(_layout.InstallRoot);
             startInfo.ArgumentList.Add("--index");
             startInfo.ArgumentList.Add(index);
+            startInfo.ArgumentList.Add("--baseline-index");
+            startInfo.ArgumentList.Add(templateIndex);
             startInfo.ArgumentList.Add("--remote");
             startInfo.ArgumentList.Add($"{credentials.RcloneRemote.TrimEnd(':')}:WukongROM/content-packs");
             startInfo.ArgumentList.Add("--target");
@@ -3465,7 +3494,10 @@ public sealed partial class NativeStudioView : UserControl
             {
                 startInfo.ArgumentList.Add("--rclone-config");
                 startInfo.ArgumentList.Add(rcloneConfig);
-                startInfo.ArgumentList.Add("--migrate-shared");
+                if (string.IsNullOrWhiteSpace(selectedFolder))
+                {
+                    startInfo.ArgumentList.Add("--migrate-shared");
+                }
             }
             startInfo.Environment["PYTHONUTF8"] = "1";
             startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
@@ -3480,32 +3512,55 @@ public sealed partial class NativeStudioView : UserControl
             {
                 throw new InvalidOperationException("Không thể khởi động tác vụ đồng bộ content-pack.");
             }
-            var errorTask = process.StandardError.ReadToEndAsync();
-            var output = new StringBuilder();
-            while (await process.StandardOutput.ReadLineAsync() is { } line)
+            using var cancellationRegistration = cancellationToken.Register(
+                () => TryTerminateContentSyncProcess(process));
+            try
             {
-                output.AppendLine(line);
-                if (target == "drive" && ContentSyncProgressProtocol.TryParse(line, out var progress))
+                var errorTask = process.StandardError.ReadToEndAsync();
+                var output = new StringBuilder();
+                while (await process.StandardOutput.ReadLineAsync(cancellationToken) is { } line)
                 {
-                    RenderContentSyncProgress(progress!);
-                }
-                else if (target == "drive"
-                    && ContentSyncProgressProtocol.TryReadChangedPackCount(line, out var changedPackCount))
-                {
-                    _contentSyncUploadedChanges = changedPackCount > 0;
-                    if (changedPackCount == 0)
+                    output.AppendLine(line);
+                    if (target == "drive" && ContentSyncProgressProtocol.TryParse(line, out var progress))
                     {
-                        ShowContentSyncNoChanges();
+                        RenderContentSyncProgress(progress!);
+                    }
+                    else if (target == "drive"
+                        && ContentSyncProgressProtocol.TryReadChangedPackCount(line, out var changedPackCount))
+                    {
+                        _contentSyncUploadedChanges = changedPackCount > 0;
+                        if (changedPackCount == 0)
+                        {
+                            ShowContentSyncNoChanges();
+                        }
                     }
                 }
+                await process.WaitForExitAsync(cancellationToken);
+                var error = await errorTask;
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output.ToString() : error);
+                }
+                return output.ToString().Trim();
             }
-            await process.WaitForExitAsync();
-            var error = await errorTask;
-            if (process.ExitCode != 0)
+            catch (OperationCanceledException)
             {
-                throw new InvalidOperationException(string.IsNullOrWhiteSpace(error) ? output.ToString() : error);
+                TryTerminateContentSyncProcess(process);
+                var exited = false;
+                try
+                {
+                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+                    exited = true;
+                }
+                catch (TimeoutException)
+                {
+                }
+                if (exited)
+                {
+                    CleanupContentSyncArtifacts(syncDataRoot, index, staleOnly: false);
+                }
+                throw;
             }
-            return output.ToString().Trim();
         }
         finally
         {
@@ -3513,6 +3568,63 @@ public sealed partial class NativeStudioView : UserControl
             {
                 File.SetAttributes(rcloneConfig, FileAttributes.Normal);
                 File.Delete(rcloneConfig);
+            }
+        }
+    }
+
+    private static void TryTerminateContentSyncProcess(System.Diagnostics.Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (Win32Exception)
+        {
+        }
+        catch (NotSupportedException)
+        {
+        }
+        catch (AggregateException)
+        {
+        }
+    }
+
+    private static void CleanupContentSyncArtifacts(string syncDataRoot, string index, bool staleOnly)
+    {
+        var cutoff = DateTime.UtcNow - TimeSpan.FromHours(1);
+        var candidates = new List<string>();
+        if (Directory.Exists(syncDataRoot))
+        {
+            candidates.AddRange(Directory.EnumerateFiles(
+                syncDataRoot,
+                $".{Path.GetFileName(index)}.*.working",
+                SearchOption.TopDirectoryOnly));
+        }
+        var archiveRoot = Path.Combine(syncDataRoot, "archives");
+        if (Directory.Exists(archiveRoot))
+        {
+            candidates.AddRange(Directory.EnumerateFiles(archiveRoot, "*", SearchOption.TopDirectoryOnly));
+        }
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                if (!staleOnly || File.GetLastWriteTimeUtc(candidate) < cutoff)
+                {
+                    File.Delete(candidate);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
             }
         }
     }
@@ -3530,6 +3642,11 @@ public sealed partial class NativeStudioView : UserControl
         _contentSyncUploadedChanges = false;
         _lastContentSyncProgress = null;
         ContentSyncProgressPanel.Visibility = Visibility.Visible;
+        CancelContentSyncButton.Content = Localized("Hủy upload");
+        CancelContentSyncButton.IsEnabled = !manifestOnly;
+        CancelContentSyncButton.Visibility = manifestOnly ? Visibility.Collapsed : Visibility.Visible;
+        ContentSyncPhaseText.Foreground = null;
+        ContentSyncPercentText.Foreground = (Brush)Resources["PrimaryBrush"];
         ContentSyncPhaseText.Text = manifestOnly
             ? Localized("Đang công bố manifest")
             : Localized("Đang chuẩn bị đồng bộ");
@@ -3629,7 +3746,7 @@ public sealed partial class NativeStudioView : UserControl
         ContentSyncPackText.Text = manifestOnly
             ? Localized("Manifest GitHub đã được công bố")
             : _contentSyncUploadedChanges
-                ? Localized("Drive và GitHub đã nhận dữ liệu mới")
+                ? Localized("Drive đã nhận và xác minh dữ liệu mới")
                 : Localized("Không có content-pack thay đổi; manifest hiện tại đã xác minh");
         ContentSyncProgressBar.IsIndeterminate = false;
         ContentSyncProgressBar.Value = 100;
@@ -3639,6 +3756,7 @@ public sealed partial class NativeStudioView : UserControl
         ContentSyncSpeedText.Text = !manifestOnly && !_contentSyncUploadedChanges
             ? Localized("Đã bỏ qua upload Drive")
             : Localized("Checksum đã xác minh");
+        CancelContentSyncButton.Visibility = Visibility.Collapsed;
     }
 
     private void FailContentSyncProgress()
@@ -3649,10 +3767,31 @@ public sealed partial class NativeStudioView : UserControl
             ContentSyncPackText.Text = ContentSyncPackLabel(_lastContentSyncProgress);
         }
         ContentSyncPhaseText.Text = Localized("Đồng bộ thất bại");
+        ContentSyncPhaseText.Foreground = (Brush)Resources["ErrorBrush"];
         ContentSyncProgressBar.IsIndeterminate = false;
         ContentSyncProgressBar.Value = 0;
         ContentSyncPercentText.Text = Localized("Lỗi");
+        ContentSyncPercentText.Foreground = (Brush)Resources["ErrorBrush"];
         ContentSyncSpeedText.Text = Localized("Xem log chi tiết bên dưới để xử lý");
+        CancelContentSyncButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void CancelContentSyncClick(object sender, RoutedEventArgs e)
+    {
+        CancelContentSyncButton.IsEnabled = false;
+        _contentSyncCancellation?.Cancel();
+    }
+
+    private void CancelContentSyncProgress()
+    {
+        _contentSyncVisualState = "canceled";
+        ContentSyncPhaseText.Text = Localized("Đã hủy đồng bộ");
+        ContentSyncPhaseText.Foreground = (Brush)Resources["MutedBrush"];
+        ContentSyncProgressBar.IsIndeterminate = false;
+        ContentSyncPercentText.Text = "—";
+        ContentSyncPercentText.Foreground = (Brush)Resources["MutedBrush"];
+        ContentSyncSpeedText.Text = Localized("Upload đã dừng; index cục bộ không thay đổi.");
+        CancelContentSyncButton.Visibility = Visibility.Collapsed;
     }
 
     private string ContentSyncPackLabel(ContentSyncProgressSnapshot progress)
@@ -3674,7 +3813,8 @@ public sealed partial class NativeStudioView : UserControl
         ContentSyncProgressBar.Value = 100;
         ContentSyncPercentText.Text = Localized("Không đổi");
         ContentSyncBytesText.Text = Localized("0 B cần upload");
-        ContentSyncSpeedText.Text = Localized("Sẽ kiểm tra manifest GitHub");
+        ContentSyncSpeedText.Text = Localized("Sẵn sàng công bố manifest GitHub");
+        CancelContentSyncButton.Visibility = Visibility.Collapsed;
     }
 
     private void RefreshContentSyncLocalization()
@@ -3699,6 +3839,7 @@ public sealed partial class NativeStudioView : UserControl
             case "complete": CompleteContentSyncProgress(); break;
             case "manifest-complete": CompleteContentSyncProgress(manifestOnly: true); break;
             case "failed": FailContentSyncProgress(); break;
+            case "canceled": CancelContentSyncProgress(); break;
         }
     }
 
@@ -4419,9 +4560,20 @@ public sealed partial class NativeStudioView : UserControl
         {
             await action();
         }
+        catch (OperationCanceledException)
+        {
+            ShowMessage(Localized("Đã hủy đồng bộ"), Localized("Upload đã dừng; index cục bộ không thay đổi."), InfoBarSeverity.Warning);
+        }
         catch (Exception exception)
         {
-            ShowMessage("Không thể hoàn thành tác vụ", exception.Message, InfoBarSeverity.Error);
+            if (HybridPage.Visibility == Visibility.Visible)
+            {
+                HybridResultBox.Text = exception.Message;
+            }
+            ShowMessage(
+                Localized("Không thể hoàn thành tác vụ"),
+                Localized("Xem log kỹ thuật bên dưới để biết chi tiết và thử lại."),
+                InfoBarSeverity.Error);
         }
         finally
         {
@@ -4439,6 +4591,7 @@ public sealed partial class NativeStudioView : UserControl
         StartBuildButton.IsEnabled = !value;
         SyncContentDriveButton.IsEnabled = !value;
         PublishContentManifestButton.IsEnabled = !value;
+        CancelContentSyncButton.IsEnabled = value;
         RenameRomFileButton.IsEnabled = !value;
         RenameRomFolderButton.IsEnabled = !value;
         ClearRomRenameButton.IsEnabled = !value && (_romRenamePreview?.Total ?? 0) > 0;

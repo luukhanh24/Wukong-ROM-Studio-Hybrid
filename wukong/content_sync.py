@@ -157,6 +157,41 @@ def _atomic_write_index(path: Path, index: Mapping[str, Any]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def restore_incomplete_index(index_path: Path, baseline_path: Path) -> int:
+    """Restore interrupted pack records from the last shipped verified index."""
+    index_path = index_path.resolve()
+    baseline_path = baseline_path.resolve()
+    if not index_path.is_file() or not baseline_path.is_file():
+        return 0
+    current = json.loads(index_path.read_text(encoding="utf-8"))
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    validate_content_index(current)
+    validate_content_index(baseline)
+    baseline_by_id = {str(pack["id"]): dict(pack) for pack in baseline["packs"]}
+    repaired = 0
+    packs: list[dict[str, Any]] = []
+    for pack in current["packs"]:
+        current_pack = dict(pack)
+        pack_id = str(current_pack["id"])
+        fallback = baseline_by_id.get(pack_id)
+        if not isinstance(current_pack.get("archive"), Mapping) and isinstance(
+            fallback and fallback.get("archive"), Mapping
+        ):
+            packs.append(fallback)
+            repaired += 1
+        else:
+            packs.append(current_pack)
+    if repaired:
+        restored = {
+            "schemaVersion": 1,
+            "generatedAt": current.get("generatedAt") or baseline.get("generatedAt") or _timestamp(),
+            "packs": sorted(packs, key=lambda pack: str(pack["id"]).casefold()),
+        }
+        validate_content_index(restored)
+        _atomic_write_index(index_path, restored)
+    return repaired
+
+
 def refresh_content_index(
     install_root: Path,
     index_path: Path,

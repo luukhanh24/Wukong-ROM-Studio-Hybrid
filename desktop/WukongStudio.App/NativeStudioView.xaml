@@ -18,6 +18,7 @@
                 <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#F0F3F7" />
                 <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#101722" />
                 <SolidColorBrush x:Key="ConsoleBorderBrush" Color="#263447" />
+                <SolidColorBrush x:Key="ErrorBrush" Color="#C42B1C" />
             </ResourceDictionary>
             <ResourceDictionary x:Key="Dark">
                 <SolidColorBrush x:Key="PageBackgroundBrush" Color="#11161D" />
@@ -30,6 +31,7 @@
                 <SolidColorBrush x:Key="BadgeBackgroundBrush" Color="#273240" />
                 <SolidColorBrush x:Key="ConsoleBackgroundBrush" Color="#090E14" />
                 <SolidColorBrush x:Key="ConsoleBorderBrush" Color="#344255" />
+                <SolidColorBrush x:Key="ErrorBrush" Color="#FF99A4" />
             </ResourceDictionary>
         </ResourceDictionary.ThemeDictionaries>
         <Style x:Key="CardStyle" TargetType="Border">
@@ -66,6 +68,10 @@
     </UserControl.Resources>
 
     <Grid x:Name="RootLayout" Background="{ThemeResource PageBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="ResponsiveLayoutStates">
                 <VisualState x:Name="NarrowLayout">
@@ -100,6 +106,10 @@
                         <Setter Target="DeviceEditorCard.(Grid.Row)" Value="1" />
                         <Setter Target="DeviceEditorCard.(Grid.Column)" Value="0" />
                         <Setter Target="DeviceCatalogGrid.RowSpacing" Value="12" />
+                        <Setter Target="ContentSyncSecondActionColumn.Width" Value="0" />
+                        <Setter Target="PublishContentManifestButton.(Grid.Row)" Value="1" />
+                        <Setter Target="PublishContentManifestButton.(Grid.Column)" Value="0" />
+                        <Setter Target="ContentSyncActionsGrid.RowSpacing" Value="8" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="MediumLayout">
@@ -149,7 +159,8 @@
                 </VisualState>
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
-        <NavigationView
+        <InfoBar x:Name="NativeMessageBar" Margin="16,8" IsOpen="False" IsClosable="True" AutomationProperties.LiveSetting="Assertive" />
+        <NavigationView Grid.Row="1"
             x:Name="StudioNavigation"
             IsPaneOpen="True"
             IsPaneToggleButtonVisible="True"
@@ -199,8 +210,6 @@
                                 <AppBarButton Label="Mở ROM hoàn tất" Click="OpenOutputClick" />
                             </CommandBar>
                         </Grid>
-
-                        <InfoBar x:Name="NativeMessageBar" IsOpen="False" IsClosable="True" />
 
                         <Grid x:Name="KpiGrid" ColumnSpacing="12" RowSpacing="12">
                             <Grid.ColumnDefinitions>
@@ -667,17 +676,25 @@
                                 <Border Style="{StaticResource SubtlePanelStyle}" Padding="14">
                                     <StackPanel Spacing="10">
                                         <TextBlock Text="Đồng bộ nội dung đa nền tảng" Style="{StaticResource SectionTitleStyle}" />
-                                        <TextBlock Text="Content là nguồn chuẩn duy nhất. Chọn một thư mục để tạo lại toàn bộ content-pack tương ứng, thay thế binary trên Drive và công bố checksum mới lên GitHub." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
+                                        <TextBlock Text="Content là nguồn chuẩn duy nhất. Chọn một thư mục để tạo lại toàn bộ content-pack tương ứng và thay thế binary trên Drive. Công bố manifest GitHub là bước riêng." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
                                         <TextBlock x:Name="ContentSyncSelectionText" Text="Chọn thư mục trong Content; Content\STARK chứa WK_Manager và com." Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Button x:Name="SyncContentDriveButton" Content="Chọn thư mục và thay thế trên Drive" Style="{StaticResource AccentButtonStyle}" Click="SyncContentToDriveClick" />
-                                            <Button x:Name="PublishContentManifestButton" Content="Công bố manifest lên GitHub" Click="PublishContentManifestClick" />
-                                        </StackPanel>
+                                        <Grid x:Name="ContentSyncActionsGrid" ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition x:Name="ContentSyncSecondActionColumn" Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Button x:Name="SyncContentDriveButton" Content="Chọn thư mục và thay thế trên Drive" Style="{StaticResource AccentButtonStyle}" Click="SyncContentToDriveClick" HorizontalAlignment="Stretch" />
+                                            <Button x:Name="PublishContentManifestButton" Grid.Column="1" Content="Công bố manifest lên GitHub" Click="PublishContentManifestClick" HorizontalAlignment="Stretch" />
+                                        </Grid>
                                         <Border x:Name="ContentSyncProgressPanel" Background="{ThemeResource CardBackgroundBrush}" CornerRadius="8" Padding="12" Visibility="Collapsed">
                                             <StackPanel Spacing="9">
                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                                     <StackPanel Spacing="2">
-                                                        <TextBlock x:Name="ContentSyncPhaseText" Text="Đang chuẩn bị đồng bộ" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                        <TextBlock x:Name="ContentSyncPhaseText" Text="Đang chuẩn bị đồng bộ" FontWeight="SemiBold" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
                                                         <TextBlock x:Name="ContentSyncPackText" Text="Đang kiểm tra nội dung thay đổi…" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
                                                     </StackPanel>
                                                     <TextBlock x:Name="ContentSyncPercentText" Grid.Column="1" Text="—" Foreground="{ThemeResource PrimaryBrush}" FontFamily="Consolas" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -687,9 +704,10 @@
                                                     <TextBlock x:Name="ContentSyncBytesText" Text="Đang tính dung lượng…" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" />
                                                     <TextBlock x:Name="ContentSyncSpeedText" Grid.Column="1" Text="Tốc độ — · ETA —" Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" FontSize="12" TextAlignment="Right" />
                                                 </Grid>
+                                                <Button x:Name="CancelContentSyncButton" Content="Hủy upload" Click="CancelContentSyncClick" HorizontalAlignment="Left" Visibility="Collapsed" />
                                             </StackPanel>
                                         </Border>
-                                        <TextBlock x:Name="ContentSyncStatusText" Text="Chưa đồng bộ trong phiên này." Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="ContentSyncStatusText" Text="Chưa đồng bộ trong phiên này." Style="{StaticResource MutedTextStyle}" FontFamily="Consolas" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
                                     </StackPanel>
                                 </Border>
                                 <TextBox x:Name="HybridResultBox" Header="Kết quả / log / link artifact" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" FontFamily="Consolas" />

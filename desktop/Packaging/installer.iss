@@ -58,7 +58,7 @@ Name: "{app}\Backups"; Permissions: users-modify
 [Files]
 Source: "{#SourceRoot}\App\*"; DestDir: "{app}\App"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: not IsExistingInstall
+Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: IsFreshInstall
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\App\WebView2"
@@ -87,10 +87,42 @@ Filename: "{app}\App\WukongStudio.exe"; Description: "Khởi động Wukong ROM 
 [Code]
 var
   RemoveAllDataCheckBox: TNewCheckBox;
+  WasExistingInstall: Boolean;
 
-function IsExistingInstall(): Boolean;
+function IsFreshInstall(): Boolean;
 begin
-  Result := FileExists(ExpandConstant('{app}\App\WukongStudio.exe'));
+  Result := not WasExistingInstall;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  OldStark: String;
+  NewStark: String;
+  BackupStark: String;
+begin
+  Result := '';
+  WasExistingInstall := FileExists(ExpandConstant('{app}\App\WukongStudio.exe'));
+  OldStark := ExpandConstant('{app}\Runtime\STARK');
+  NewStark := ExpandConstant('{app}\Content\STARK');
+  if DirExists(OldStark) then
+  begin
+    if not DirExists(NewStark) then
+    begin
+      ForceDirectories(ExpandConstant('{app}\Content'));
+      if not RenameFile(OldStark, NewStark) then
+        Result := 'Không thể chuyển dữ liệu STARK cũ sang Content\STARK. ' +
+          'Hãy đóng Wukong ROM Studio và thử cài đặt lại.';
+    end
+    else
+    begin
+      ForceDirectories(ExpandConstant('{app}\Backups'));
+      BackupStark := ExpandConstant('{app}\Backups\runtime-stark-retired-') +
+        GetDateTimeString('yyyymmdd-hhnnss', '-', ':');
+      if not RenameFile(OldStark, BackupStark) then
+        Result := 'Không thể lưu bản sao Runtime\STARK cũ vào Backups. ' +
+          'Hãy đóng Wukong ROM Studio và thử cài đặt lại.';
+    end;
+  end;
 end;
 
 function InitializeUninstall(): Boolean;
