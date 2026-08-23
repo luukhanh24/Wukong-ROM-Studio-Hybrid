@@ -63,6 +63,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     clipboard_gesture_only = False
     pairing_recovery = False
     server_draft_fallback = False
+    probe_signed_expired = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -123,7 +124,6 @@ window.addEventListener('load', () => {{
       window.__wukongPasteGesture = false;
     }}
     else {{ input.value = {json.dumps(self.source_uri)}; input.dispatchEvent(new Event('input', {{ bubbles: true }})); }}
-    if ({str(self.pairing_recovery).lower()}) document.querySelector('#connect-telegram')?.click();
   }};
   setTimeout(fill, 50);
 }});
@@ -185,6 +185,13 @@ window.addEventListener('load', () => {{
             if payload.get("uri") != OPLUS_TEST_URI:
                 self._send(b'{"error":"unexpected fixture URI"}', "application/json", 400)
                 return
+            if self.probe_signed_expired:
+                self._send(
+                    b'{"error":"signed URL expired","code":"source_signed_url_expired"}',
+                    "application/json",
+                    400,
+                )
+                return
             self._send(json.dumps(OPLUS_TEST_METADATA).encode(), "application/json")
             return
         self._send(b'{"error":"not found"}', "application/json", 404)
@@ -202,6 +209,7 @@ def _render_mini_app_in_chrome(
     signed_launch_authenticated: bool = False,
     pairing_recovery: bool = False,
     server_draft_fallback: bool = False,
+    probe_signed_expired: bool = False,
     initial_view: str = "",
 ) -> tuple[str, int]:
     chrome = _chrome_path()
@@ -219,6 +227,7 @@ def _render_mini_app_in_chrome(
             "clipboard_gesture_only": clipboard_gesture_only,
             "pairing_recovery": pairing_recovery,
             "server_draft_fallback": server_draft_fallback,
+            "probe_signed_expired": probe_signed_expired,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -555,6 +564,15 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="submit-recipe" type="submit" disabled=""', dom)
         self.assertNotIn("SẴN SÀNG KIỂM TRA", dom)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_expired_signed_source_explains_how_to_refresh_the_link(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            probe_signed_expired=True,
+        )
+
+        self.assertIn("Link tải ký trực tiếp đã hết hạn hoặc sai chữ ký", dom)
+        self.assertIn("OPlus downloadCheck", dom)
 
     def test_unauthenticated_preview_keeps_link_and_offers_bot_jump(self) -> None:
         dom, _ = _render_mini_app_in_chrome(api_enabled=True, telegram_authenticated=False)

@@ -8,9 +8,11 @@ import zipfile
 from email.message import Message
 from pathlib import Path
 from unittest import mock
+from urllib.error import URLError
 from urllib.request import Request
 
 from wukong.cli import main as cli_main
+from wukong.adapters import SourceResolutionError
 from wukong.source_probe import probe_http_source
 
 
@@ -87,6 +89,18 @@ class _RangeOpener:
         )
 
 
+class _FlakyInitialOpener(_InitialOpener):
+    def __init__(self, payload: bytes, final_url: str) -> None:
+        super().__init__(payload, final_url)
+        self.calls = 0
+
+    def open(self, request: Request, timeout: float | None = None) -> _Response:
+        self.calls += 1
+        if self.calls == 1:
+            raise URLError("temporary OPlus edge failure")
+        return super().open(request, timeout)
+
+
 def _fixture_zip() -> bytes:
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -109,6 +123,32 @@ def _fixture_zip() -> bytes:
 
 
 class SourceProbeTests(unittest.TestCase):
+    def test_probe_retries_a_transient_initial_oplus_failure(self) -> None:
+        payload = _fixture_zip()
+        resolver = "https://93.184.216.34/downloadCheck?c=abc"
+        final_url = "https://93.184.216.35/rom.zip?expires=9999999999&signature=signed"
+        initial = _FlakyInitialOpener(payload, final_url)
+
+        result = probe_http_source(
+            resolver,
+            opener=initial,
+            opener_factory=lambda: _RangeOpener(payload, final_url),
+            timeout=2,
+        )
+
+        self.assertEqual("PKG110", result.product_name)
+        self.assertEqual(2, initial.calls)
+
+    def test_probe_rejects_an_expired_direct_signed_url_before_network_io(self) -> None:
+        payload = _fixture_zip()
+        expired = "https://93.184.216.35/rom.zip?expires=1700000000&signature=expired"
+        initial = _InitialOpener(payload, expired)
+
+        with self.assertRaisesRegex(SourceResolutionError, "signed.*expired"):
+            probe_http_source(expired, opener=initial, timeout=2)
+
+        self.assertEqual([], initial.requests)
+
     def test_probe_resolves_oplus_and_reads_remote_zip_metadata_without_full_download(self) -> None:
         payload = _fixture_zip()
         resolver = "https://93.184.216.34/downloadCheck?c=abc"

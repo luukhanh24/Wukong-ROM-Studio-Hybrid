@@ -622,7 +622,13 @@ class TelegramMiniAppAPI:
                     self._remember_probe(identity, uri, result)
                 return jsonify({key: value for key, value in result.items() if key != "metadata"})
             except (OSError, RuntimeError, TypeError, ValueError) as exc:
-                return jsonify({"error": str(exc)}), 400
+                message = str(exc)
+                error_code = (
+                    "source_signed_url_expired"
+                    if "signed ROM download URL" in message
+                    else "source_unreachable"
+                )
+                return jsonify({"error": message, "code": error_code}), 400
 
         @app.post("/v1/jobs")
         def create_job() -> Response:

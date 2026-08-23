@@ -222,6 +222,20 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual("PKG110", preview.json["productName"])
         self.assertEqual(401, jobs.status_code)
 
+    def test_source_probe_returns_a_stable_code_for_expired_signed_urls(self) -> None:
+        self.probe.side_effect = ValueError(
+            "The signed ROM download URL has expired; paste the original OPlus downloadCheck"
+        )
+
+        response = self.client.post(
+            "/v1/sources/probe",
+            headers={"Origin": ORIGIN},
+            json={"uri": "https://downloads.example/rom.zip?expires=1700000000&signature=x"},
+        )
+
+        self.assertEqual(400, response.status_code)
+        self.assertEqual("source_signed_url_expired", response.json["code"])
+
     def test_webhook_requires_secret_and_dispatches_authenticated_update(self) -> None:
         delivered = __import__("threading").Event()
         handler = Mock(side_effect=lambda _payload: delivered.set())

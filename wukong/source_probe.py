@@ -7,7 +7,8 @@ import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
-from urllib.parse import unquote, urlparse
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import Request
 
 from .adapters import (
@@ -33,6 +34,50 @@ METADATA_SUFFIXES = (
     "payload_properties.txt",
     "android-info.txt",
 )
+
+
+def _signed_url_expiry(uri: str) -> int | None:
+    query = {
+        key.casefold(): values
+        for key, values in parse_qs(urlparse(uri).query, keep_blank_values=True).items()
+    }
+    for key in ("expires", "x-oss-expires"):
+        values = query.get(key)
+        if not values:
+            continue
+        try:
+            value = int(values[0])
+        except (TypeError, ValueError):
+            continue
+        if value > 1_000_000_000:
+            return value
+    return None
+
+
+def _looks_like_signed_download(uri: str) -> bool:
+    keys = {key.casefold() for key in parse_qs(urlparse(uri).query, keep_blank_values=True)}
+    return bool(keys & {"signature", "x-oss-signature", "x-amz-signature"})
+
+
+def _open_initial_probe(adapter: HttpSourceAdapter, request: Request, timeout: int) -> Any:
+    for attempt in range(1, 4):
+        try:
+            return adapter.opener.open(request, timeout=timeout)
+        except HTTPError as exc:
+            if exc.code in {401, 403} and _looks_like_signed_download(request.full_url):
+                raise SourceResolutionError(
+                    "The signed ROM download URL was rejected or has expired; "
+                    "paste the original OPlus downloadCheck or Daniel Springer page"
+                ) from exc
+            if exc.code not in {408, 425, 429, 500, 502, 503, 504} or attempt == 3:
+                raise
+        except (URLError, TimeoutError, OSError) as exc:
+            if attempt == 3:
+                raise SourceResolutionError(
+                    "The ROM server did not respond after 3 attempts"
+                ) from exc
+        time.sleep(0.2 * attempt)
+    raise AssertionError("unreachable")
 
 
 @dataclass(frozen=True)
@@ -337,10 +382,16 @@ def probe_http_source(
         resolved_input, page_metadata = adapter._resolve_daniel_ota_page_details(uri)
         validate_http_url(resolved_input, resolve_dns=True)
     is_oplus_resolver = adapter._is_oplus_resolver_url(resolved_input)
+    expires_at = _signed_url_expiry(resolved_input)
+    if not is_oplus_resolver and expires_at is not None and expires_at <= int(time.time()) + 15:
+        raise SourceResolutionError(
+            "The signed ROM download URL has expired; "
+            "paste the original OPlus downloadCheck or Daniel Springer page"
+        )
     headers = adapter._request_headers(resolved_input)
     headers["Range"] = "bytes=0-0"
     request = Request(resolved_input, headers=headers)
-    with adapter.opener.open(request, timeout=timeout) as response:
+    with _open_initial_probe(adapter, request, timeout) as response:
         final_url = response.geturl()
         validate_http_url(final_url, resolve_dns=True)
         if is_oplus_resolver and final_url == resolved_input:

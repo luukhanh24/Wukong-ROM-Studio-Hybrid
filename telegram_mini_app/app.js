@@ -18,8 +18,13 @@ function consumeSignedLaunchToken() {
     if (/^v1\.\d+\.\d+\.\d+\.[0-9a-f]{64}$/i.test(supplied)) {
       token = supplied;
       sessionStorage.setItem("wukong-signed-launch", supplied);
+      localStorage.setItem("wukong-signed-launch", supplied);
     } else {
-      token = String(sessionStorage.getItem("wukong-signed-launch") || "");
+      token = String(
+        sessionStorage.getItem("wukong-signed-launch")
+        || localStorage.getItem("wukong-signed-launch")
+        || ""
+      );
     }
     if (url.searchParams.has("wkLaunch")) {
       url.searchParams.delete("wkLaunch");
@@ -27,7 +32,10 @@ function consumeSignedLaunchToken() {
     }
   } catch (_) {}
   const valid = validSignedLaunchToken(token);
-  if (!valid) try { sessionStorage.removeItem("wukong-signed-launch"); } catch (_) {}
+  if (!valid) try {
+    sessionStorage.removeItem("wukong-signed-launch");
+    localStorage.removeItem("wukong-signed-launch");
+  } catch (_) {}
   return valid ? token : "";
 }
 
@@ -36,14 +44,20 @@ let signedTelegramLaunchToken = consumeSignedLaunchToken();
 function setSignedTelegramLaunchToken(token) {
   if (!validSignedLaunchToken(token)) return false;
   signedTelegramLaunchToken = String(token);
-  try { sessionStorage.setItem("wukong-signed-launch", signedTelegramLaunchToken); } catch (_) {}
+  try {
+    sessionStorage.setItem("wukong-signed-launch", signedTelegramLaunchToken);
+    localStorage.setItem("wukong-signed-launch", signedTelegramLaunchToken);
+  } catch (_) {}
   return true;
 }
 
 function activeSignedLaunchToken() {
   if (validSignedLaunchToken(signedTelegramLaunchToken)) return signedTelegramLaunchToken;
   signedTelegramLaunchToken = "";
-  try { sessionStorage.removeItem("wukong-signed-launch"); } catch (_) {}
+  try {
+    sessionStorage.removeItem("wukong-signed-launch");
+    localStorage.removeItem("wukong-signed-launch");
+  } catch (_) {}
   return "";
 }
 
@@ -190,7 +204,7 @@ Object.assign(translations.vi, {
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Lần mở này thiếu phiên Telegram. Bấm Kết nối Telegram để phục hồi an toàn.", apiAuthButton: "Kết nối Telegram", pairingHint: "Telegram không gửi phiên cho lần mở này. Kết nối một lần qua bot; nếu được hỏi, bấm START rồi quay lại Mini App.", pairingButton: "Kết nối Telegram", pairingOpening: "Đã mở bot. Hãy bấm START nếu Telegram yêu cầu rồi quay lại đây…", pairingWaiting: "Đang chờ bot xác nhận tài khoản…", pairingReady: "Đã kết nối Telegram. Mini App API sẵn sàng.", pairingFailed: "Không thể kết nối phiên Telegram. Hãy thử lại.", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.",
-  probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.",
+  probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc sai chữ ký. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để hệ thống tự tạo link mới.",
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
@@ -234,7 +248,7 @@ Object.assign(translations.en, {
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "This launch is missing a Telegram session. Press Connect Telegram to recover securely.", apiAuthButton: "Connect Telegram", pairingHint: "Telegram did not provide a session. Connect once through the bot; press START if prompted, then return to the Mini App.", pairingButton: "Connect Telegram", pairingOpening: "The bot is open. Press START if prompted, then return here…", pairingWaiting: "Waiting for the bot to confirm your account…", pairingReady: "Telegram connected. The Mini App API is ready.", pairingFailed: "Could not connect the Telegram session. Please try again.", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.",
-  probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.",
+  probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or has an invalid signature. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated.",
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
@@ -346,6 +360,7 @@ async function apiRequest(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(payload.error || `HTTP ${response.status}`);
+    error.code = payload.code || "";
     error.status = response.status;
     error.sourceRejected = response.status >= 400 && response.status < 500;
     throw error;
@@ -779,6 +794,7 @@ async function probeSourceViaBackend(uri, signal) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(payload.error || `HTTP ${response.status}`);
+    error.code = payload.code || "";
     error.status = response.status;
     error.sourceRejected = response.status >= 400 && response.status < 500;
     throw error;
@@ -890,8 +906,11 @@ async function probeSourceInPlace() {
     const message = sourceFailed ? "probeFailed" : apiOffline ? "apiOfflineMessage" : "probeDeferred";
     state.sourceProbe = { status: sourceFailed ? "failed" : apiOffline ? "offline" : "deferred" };
     setProbePresentation(status, message);
+    if (error?.code === "source_signed_url_expired") {
+      $("#source-state-message").textContent = t("probeSignedExpired");
+    }
     if (apiOffline) $("#source-kicker").textContent = t("apiOfflineKicker");
-    toast(sourceFailed ? t("probeFailed") : apiOffline ? t("apiOfflineMessage") : error.message, true);
+    toast(error?.code === "source_signed_url_expired" ? t("probeSignedExpired") : sourceFailed ? t("probeFailed") : apiOffline ? t("apiOfflineMessage") : error.message, true);
   } finally {
     clearTimeout(timeout);
     if (requestId === state.sourceProbeRequestId) {
@@ -1129,7 +1148,10 @@ function updateSummary() {
   const recovery = $("#session-recovery");
   if (recovery) recovery.hidden = apiReady || !miniApiEndpoint;
   const connect = $("#connect-telegram");
-  if (connect) connect.disabled = state.pairingInFlight;
+  if (connect) {
+    connect.disabled = state.pairingInFlight;
+    connect.textContent = state.pairingInFlight ? t("pairingWaiting") : t("pairingButton");
+  }
   updateChecklistItem("check-source", sourceVerified, "checklistSourceVerified", sourceReady ? "checklistSourceProbePending" : "checklistSourcePending");
   updateChecklistItem("check-device", Boolean(selectedDevice), "checklistDeviceDone", "checklistDevicePending");
   updateChecklistItem("check-runner", runnerReady, "checklistRunnerDone", "checklistRunnerDone");
@@ -1579,7 +1601,10 @@ function bindEvents() {
   $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) clearTimeout(state.jobsPollTimer);
-    else loadJobs({ force: true }).catch(() => {});
+    else {
+      ensureAutomaticTelegramConnection();
+      loadJobs({ force: true }).catch(() => {});
+    }
   });
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
   $$('input[name="task"]').forEach((input) => input.addEventListener("change", updateSummary));
@@ -1609,6 +1634,23 @@ function activateTelegramApp() {
   } catch (_) {}
 }
 
+function ensureAutomaticTelegramConnection() {
+  const insideTelegram = Boolean(TelegramApp?.platform && TelegramApp.platform !== "unknown");
+  if (miniApiAvailable() || !miniApiEndpoint || !insideTelegram || state.pairingInFlight) return;
+  const pairing = storedPairing();
+  if (pairing) {
+    state.pairingInFlight = true;
+    updateSummary();
+    pollTelegramPairing(pairing).catch(() => {
+      state.pairingInFlight = false;
+      updateSummary();
+      toast(t("pairingFailed"), true);
+    });
+    return;
+  }
+  connectTelegramSession();
+}
+
 function startMiniApp() {
   bindEvents();
   restoreSourceDraft();
@@ -1617,8 +1659,7 @@ function startMiniApp() {
   navigate(location.hash.slice(1) || "build", false);
   loadCatalog();
   renderSessionDiagnostics();
-  const pairing = storedPairing();
-  if (pairing && !miniApiAvailable()) pollTelegramPairing(pairing).catch(() => {});
+  ensureAutomaticTelegramConnection();
   if (miniApiAvailable()) loadJobs().catch(() => {});
 }
 
@@ -1642,6 +1683,7 @@ if (TelegramApp) {
     updateSourceDetection();
     scheduleSourceProbe();
     renderSessionDiagnostics();
+    ensureAutomaticTelegramConnection();
     loadJobs({ force: true }).catch(() => {});
   });
   bridge.addEventListener("error", renderSessionDiagnostics);
