@@ -137,11 +137,13 @@ class LocalJobExecutor:
             storage = self.storage_factory(recipe.storage.remote)
             if recipe.task == "source_mirror":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
+                self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
                 record = storage.store_source(source.path, device=recipe.device, digest=source.sha256)
                 return self._succeed(job_id, [record])
             if recipe.task == "artifact_publish":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
+                self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
                 record = storage.publish_artifact(source.path, device=recipe.device, build="published")
                 return self._succeed(job_id, [record])
@@ -268,6 +270,7 @@ class LocalJobExecutor:
                 raise OrchestrationError("Build completed without an artifact")
             records: list[ArtifactRecord] = []
             self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
+            self._push_cloud_progress(job_id, storage)
             self.actions_ui.begin("upload")
             for output in outputs:
                 if recipe.storage.publish_artifact:

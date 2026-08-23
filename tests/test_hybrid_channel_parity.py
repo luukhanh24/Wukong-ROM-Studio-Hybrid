@@ -357,17 +357,31 @@ class HybridChannelParityContractTests(unittest.TestCase):
                 output.write_bytes(b"artifact")
                 return {"outputZip": str(output)}
 
-            completed = LocalJobExecutor(
+            progress_pushes: list[tuple[JobStatus, str, float]] = []
+            executor = LocalJobExecutor(
                 store=store,
                 workspace_root=root / "jobs",
                 build_workspace_root=root / "build",
                 content_root=content_root,
                 content_index=content_index,
                 legacy_build=legacy_build,
-            ).execute(manifest.job_id)
+            )
+            with patch.object(
+                executor,
+                "_push_cloud_progress",
+                side_effect=lambda job_id, _storage: progress_pushes.append(
+                    (
+                        store.get(job_id).status,
+                        store.get(job_id).stage,
+                        store.get(job_id).progress,
+                    )
+                ),
+            ):
+                completed = executor.execute(manifest.job_id)
 
             self.assertEqual(completed.status, JobStatus.SUCCEEDED, completed.error)
             self.assertEqual(completed.artifacts[0].sha256, sha256_file(Path(completed.artifacts[0].uri)))
+            self.assertIn((JobStatus.UPLOADING, "upload", 0.8), progress_pushes)
 
     @staticmethod
     def _cli_json(arguments: list[str]) -> dict[str, object]:
