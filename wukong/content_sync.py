@@ -254,6 +254,7 @@ def upload_changed_packs(
     rclone_config: Path,
     verify_download: bool = True,
     progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+    run_id: str | None = None,
 ) -> None:
     sources = discover_pack_sources(install_root)
     archive_root = install_root.resolve() / "Data" / "ContentSync" / "archives"
@@ -277,6 +278,7 @@ def upload_changed_packs(
             archive_root=archive_root,
             pack_id=pack_id,
             progress_callback=report if progress_callback is not None else None,
+            run_id=run_id,
         )
         _atomic_write_index(index_path, index)
 

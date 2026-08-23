@@ -3446,12 +3446,12 @@ public sealed partial class NativeStudioView : UserControl
         var templateIndex = Path.Combine(_layout.ScriptsRoot, "content-packs", "index.json");
         var syncDataRoot = Path.Combine(_layout.DataRoot, "ContentSync");
         var index = Path.Combine(syncDataRoot, "index.json");
+        var runId = Guid.NewGuid().ToString("N");
         if (!File.Exists(python) || !File.Exists(script) || !File.Exists(templateIndex))
         {
             throw new FileNotFoundException("Runtime đồng bộ content-pack chưa được cài đầy đủ. Hãy build/cài lại Wukong ROM Studio.");
         }
         Directory.CreateDirectory(syncDataRoot);
-        CleanupContentSyncArtifacts(syncDataRoot, index, staleOnly: true);
         if (!File.Exists(index))
         {
             File.Copy(templateIndex, index);
@@ -3483,6 +3483,8 @@ public sealed partial class NativeStudioView : UserControl
             startInfo.ArgumentList.Add($"{credentials.RcloneRemote.TrimEnd(':')}:WukongROM/content-packs");
             startInfo.ArgumentList.Add("--target");
             startInfo.ArgumentList.Add(target);
+            startInfo.ArgumentList.Add("--run-id");
+            startInfo.ArgumentList.Add(runId);
             if (!string.IsNullOrWhiteSpace(selectedFolder))
             {
                 startInfo.ArgumentList.Add("--folder");
@@ -3545,20 +3547,13 @@ public sealed partial class NativeStudioView : UserControl
             }
             catch (OperationCanceledException)
             {
-                TryTerminateContentSyncProcess(process);
-                var exited = false;
-                try
+                if (!TryTerminateContentSyncProcess(process))
                 {
-                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                    exited = true;
+                    throw new InvalidOperationException(
+                        "Không thể dừng tiến trình đồng bộ. Hãy đóng Studio trước khi xóa file tạm.");
                 }
-                catch (TimeoutException)
-                {
-                }
-                if (exited)
-                {
-                    CleanupContentSyncArtifacts(syncDataRoot, index, staleOnly: false);
-                }
+                await process.WaitForExitAsync();
+                CleanupContentSyncRunArtifacts(syncDataRoot, index, runId);
                 throw;
             }
         }
@@ -3572,7 +3567,7 @@ public sealed partial class NativeStudioView : UserControl
         }
     }
 
-    private static void TryTerminateContentSyncProcess(System.Diagnostics.Process process)
+    private static bool TryTerminateContentSyncProcess(System.Diagnostics.Process process)
     {
         try
         {
@@ -3580,52 +3575,54 @@ public sealed partial class NativeStudioView : UserControl
             {
                 process.Kill(entireProcessTree: true);
             }
+            return true;
         }
         catch (InvalidOperationException)
         {
+            return process.HasExited;
         }
         catch (Win32Exception)
         {
+            return false;
         }
         catch (NotSupportedException)
         {
+            return false;
         }
         catch (AggregateException)
         {
+            return false;
         }
     }
 
-    private static void CleanupContentSyncArtifacts(string syncDataRoot, string index, bool staleOnly)
+    private static void CleanupContentSyncRunArtifacts(string syncDataRoot, string index, string runId)
     {
-        var cutoff = DateTime.UtcNow - TimeSpan.FromHours(1);
-        var candidates = new List<string>();
-        if (Directory.Exists(syncDataRoot))
-        {
-            candidates.AddRange(Directory.EnumerateFiles(
-                syncDataRoot,
-                $".{Path.GetFileName(index)}.*.working",
-                SearchOption.TopDirectoryOnly));
-        }
+        TryDeleteContentSyncArtifact(Path.Combine(syncDataRoot, $".{Path.GetFileName(index)}.{runId}.working"));
         var archiveRoot = Path.Combine(syncDataRoot, "archives");
-        if (Directory.Exists(archiveRoot))
+        if (!Directory.Exists(archiveRoot))
         {
-            candidates.AddRange(Directory.EnumerateFiles(archiveRoot, "*", SearchOption.TopDirectoryOnly));
+            return;
         }
-        foreach (var candidate in candidates)
+        foreach (var artifact in Directory.EnumerateFiles(
+            archiveRoot,
+            $"*.{runId}.tar*",
+            SearchOption.TopDirectoryOnly))
         {
-            try
-            {
-                if (!staleOnly || File.GetLastWriteTimeUtc(candidate) < cutoff)
-                {
-                    File.Delete(candidate);
-                }
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+            TryDeleteContentSyncArtifact(artifact);
+        }
+    }
+
+    private static void TryDeleteContentSyncArtifact(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 

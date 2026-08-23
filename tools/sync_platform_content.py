@@ -36,10 +36,15 @@ def main() -> int:
     parser.add_argument("--migrate-shared", action="store_true")
     parser.add_argument("--skip-download-verify", action="store_true")
     parser.add_argument("--folder", help="Managed Content folder whose complete pack must replace Drive")
+    parser.add_argument("--run-id", help="UUID used to scope transactional artifacts for this run")
     args = parser.parse_args()
 
     if args.folder and args.migrate_shared:
         parser.error("--folder and --migrate-shared cannot be used together")
+    try:
+        run_id = uuid.UUID(args.run_id).hex if args.run_id else uuid.uuid4().hex
+    except ValueError:
+        parser.error("--run-id must be a UUID")
 
     install = Path(args.install_root).resolve()
     index_path = Path(args.index).resolve()
@@ -65,7 +70,7 @@ def main() -> int:
     if args.target in {"drive", "all"}:
         if not args.rclone_config:
             parser.error("--rclone-config is required for Drive sync")
-        transaction_path = index_path.with_name(f".{index_path.name}.{uuid.uuid4().hex}.working")
+        transaction_path = index_path.with_name(f".{index_path.name}.{run_id}.working")
         transaction_path.parent.mkdir(parents=True, exist_ok=True)
         if index_path.is_file():
             shutil.copy2(index_path, transaction_path)
@@ -92,6 +97,7 @@ def main() -> int:
                 rclone_config=Path(args.rclone_config).resolve(),
                 verify_download=not args.skip_download_verify,
                 progress_callback=lambda values: emit("content-progress", **values),
+                run_id=run_id,
             )
             os.replace(working_index_path, index_path)
             transaction_path = None

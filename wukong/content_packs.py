@@ -629,6 +629,7 @@ def upload_content_packs(
     archive_root: Path | None = None,
     pack_id: str | None = None,
     progress_callback: ProgressCallback | None = None,
+    run_id: str | None = None,
 ) -> None:
     validate_content_index(index)
     archive_root = (archive_root or content_root / ".wkstudio" / "content-pack-archives").resolve()
@@ -649,7 +650,8 @@ def upload_content_packs(
         ContentPackManager.verify(content_root / str(pack["target"]), pack)
         archive_root.mkdir(parents=True, exist_ok=True)
         archive_stem = str(pack["id"]).replace("/", "-")
-        archive_path = archive_root / f"{archive_stem}.{uuid.uuid4().hex}.tar.zst"
+        archive_run_id = uuid.UUID(run_id).hex if run_id else uuid.uuid4().hex
+        archive_path = archive_root / f"{archive_stem}.{archive_run_id}.tar.zst"
         try:
             report("archive")
             archive_record = create_content_pack_archive(content_root, pack, archive_path)
