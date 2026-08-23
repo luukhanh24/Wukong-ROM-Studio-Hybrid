@@ -29,6 +29,8 @@ MAX_METADATA_FILE_BYTES = 2 * 1024 * 1024
 MAX_METADATA_FILES = 8
 MAX_METADATA_FIELDS = 256
 MAX_METADATA_TEXT_BYTES = 4 * 1024 * 1024
+SIGNED_URL_CLOCK_SKEW_SECONDS = 15
+MIN_DIRECT_SIGNED_URL_TTL_SECONDS = 30 * 60
 METADATA_SUFFIXES = (
     "meta-inf/com/android/metadata",
     "payload_properties.txt",
@@ -51,12 +53,54 @@ def _signed_url_expiry(uri: str) -> int | None:
             continue
         if value > 1_000_000_000:
             return value
+    for duration_key, date_key in (
+        ("x-amz-expires", "x-amz-date"),
+        ("x-oss-expires", "x-oss-date"),
+    ):
+        duration_values = query.get(duration_key)
+        date_values = query.get(date_key)
+        if not duration_values or not date_values:
+            continue
+        try:
+            duration = int(duration_values[0])
+            signed_at = datetime.strptime(date_values[0], "%Y%m%dT%H%M%SZ").replace(
+                tzinfo=timezone.utc
+            )
+        except (TypeError, ValueError):
+            continue
+        if duration > 0:
+            return int(signed_at.timestamp()) + duration
     return None
 
 
 def _looks_like_signed_download(uri: str) -> bool:
     keys = {key.casefold() for key in parse_qs(urlparse(uri).query, keep_blank_values=True)}
     return bool(keys & {"signature", "x-oss-signature", "x-amz-signature"})
+
+
+def validate_direct_signed_url_ttl(
+    uri: str,
+    *,
+    refreshable: bool = False,
+    now: int | None = None,
+) -> None:
+    """Reject a direct signed URL that cannot safely survive cloud queueing."""
+    if refreshable or not _looks_like_signed_download(uri):
+        return
+    expires_at = _signed_url_expiry(uri)
+    if expires_at is None:
+        return
+    checked_at = int(time.time()) if now is None else int(now)
+    if expires_at <= checked_at + SIGNED_URL_CLOCK_SKEW_SECONDS:
+        raise SourceResolutionError(
+            "The signed ROM download URL has expired; "
+            "paste the original OPlus downloadCheck or Daniel Springer page"
+        )
+    if expires_at <= checked_at + MIN_DIRECT_SIGNED_URL_TTL_SECONDS:
+        raise SourceResolutionError(
+            "The signed ROM download URL expires too soon for a cloud build; "
+            "paste the original OPlus downloadCheck or Daniel Springer page"
+        )
 
 
 def _open_initial_probe(adapter: HttpSourceAdapter, request: Request, timeout: int) -> Any:
@@ -378,16 +422,15 @@ def probe_http_source(
     )
     resolved_input = uri
     page_metadata: dict[str, str] = {}
-    if adapter._is_daniel_ota_page_url(uri):
+    is_daniel_ota_page = adapter._is_daniel_ota_page_url(uri)
+    if is_daniel_ota_page:
         resolved_input, page_metadata = adapter._resolve_daniel_ota_page_details(uri)
         validate_http_url(resolved_input, resolve_dns=True)
     is_oplus_resolver = adapter._is_oplus_resolver_url(resolved_input)
-    expires_at = _signed_url_expiry(resolved_input)
-    if not is_oplus_resolver and expires_at is not None and expires_at <= int(time.time()) + 15:
-        raise SourceResolutionError(
-            "The signed ROM download URL has expired; "
-            "paste the original OPlus downloadCheck or Daniel Springer page"
-        )
+    validate_direct_signed_url_ttl(
+        resolved_input,
+        refreshable=is_daniel_ota_page or is_oplus_resolver,
+    )
     headers = adapter._request_headers(resolved_input)
     headers["Range"] = "bytes=0-0"
     request = Request(resolved_input, headers=headers)

@@ -22,6 +22,7 @@ from .models import BuildRecipe, Identity, JobManifest, JobStatus, RecipeValidat
 from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
+from .source_probe import validate_direct_signed_url_ttl
 from .telegram import TelegramAccessStore
 
 TERMINAL_STATUSES = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
@@ -771,6 +772,10 @@ class TelegramMiniAppAPI:
         preliminary = BuildRecipe.from_dict(clean_payload)
         if preliminary.source.kind not in {"http", "https"}:
             return preliminary
+        # Probe results may remain cached while a direct signed URL continues
+        # counting down. Re-check at submission so it cannot expire in the
+        # cloud queue after an earlier successful preview.
+        validate_direct_signed_url_ttl(preliminary.source.uri)
         result = self._cached_probe(identity, preliminary.source.uri)
         if result is None:
             if not self._probe_slots.acquire(blocking=False):

@@ -514,6 +514,29 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual("submitted", events.json["events"][0]["type"])
         self.assertEqual(404, denied.status_code)
 
+    def test_job_submission_rechecks_cached_signed_url_ttl(self) -> None:
+        now = 1_787_484_600
+        uri = (
+            "https://gauss-compota-c-cn.allawnfs.com/rom.zip?"
+            f"expires={now + 2_000}&Signature=short-lived"
+        )
+        recipe = self.recipe()
+        recipe["source"]["uri"] = uri
+
+        with patch("wukong.source_probe.time.time", return_value=now):
+            preview = self.client.post(
+                "/v1/sources/probe",
+                headers=self.headers(),
+                json={"uri": uri},
+            )
+        with patch("wukong.source_probe.time.time", return_value=now + 300):
+            created = self.client.post("/v1/jobs", headers=self.headers(), json=recipe)
+
+        self.assertEqual(200, preview.status_code)
+        self.assertEqual(400, created.status_code)
+        self.assertIn("expires too soon", created.json["error"])
+        self.runtime.start.assert_not_called()
+
     def test_cache_clear_preserves_admin_boundary(self) -> None:
         inspected = self.client.get("/v1/cache", headers=self.headers())
         denied = self.client.post("/v1/cache/clear", headers=self.headers())

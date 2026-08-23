@@ -64,6 +64,9 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     pairing_recovery = False
     server_draft_fallback = False
     probe_signed_expired = False
+    source_metadata = OPLUS_TEST_METADATA
+    catalog_mod_versions = ("ColorOS_16.0.9",)
+    catalog_mods_by_version = None
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -142,13 +145,18 @@ window.addEventListener('load', () => {{
             )
             return
         if path == "/catalog.json":
+            mod_versions = list(self.catalog_mod_versions)
+            mods_by_version = self.catalog_mods_by_version or {
+                version: ["Gapps", "WK_Manager"] for version in mod_versions
+            }
             catalog = {
                 "schemaVersion": 1,
                 "devices": [{"product": "PKG110", "name": "OnePlus Ace 5"}],
-                "modVersions": ["ColorOS_16.0.9"],
-                "modsByVersion": {"ColorOS_16.0.9": ["Gapps", "WK_Manager"]},
+                "modVersions": mod_versions,
+                "modsByVersion": mods_by_version,
                 "presetDefaultsByVersion": {
-                    "ColorOS_16.0.9": {"lite": [], "plus": ["Gapps"], "both": ["Gapps", "WK_Manager"], "custom": []}
+                    version: {"lite": [], "plus": ["Gapps"], "both": ["Gapps", "WK_Manager"], "custom": []}
+                    for version in mod_versions
                 },
                 "pipelineSteps": [],
                 "defaultDebloatPaths": [],
@@ -192,7 +200,7 @@ window.addEventListener('load', () => {{
                     400,
                 )
                 return
-            self._send(json.dumps(OPLUS_TEST_METADATA).encode(), "application/json")
+            self._send(json.dumps(self.source_metadata).encode(), "application/json")
             return
         self._send(b'{"error":"not found"}', "application/json", 404)
 
@@ -210,6 +218,9 @@ def _render_mini_app_in_chrome(
     pairing_recovery: bool = False,
     server_draft_fallback: bool = False,
     probe_signed_expired: bool = False,
+    source_metadata: dict[str, object] | None = None,
+    catalog_mod_versions: tuple[str, ...] = ("ColorOS_16.0.9",),
+    catalog_mods_by_version: dict[str, list[str]] | None = None,
     initial_view: str = "",
 ) -> tuple[str, int]:
     chrome = _chrome_path()
@@ -228,6 +239,9 @@ def _render_mini_app_in_chrome(
             "pairing_recovery": pairing_recovery,
             "server_draft_fallback": server_draft_fallback,
             "probe_signed_expired": probe_signed_expired,
+            "source_metadata": source_metadata or OPLUS_TEST_METADATA,
+            "catalog_mod_versions": catalog_mod_versions,
+            "catalog_mods_by_version": catalog_mods_by_version,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -517,6 +531,29 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("disabled", submit_tag)
         self.assertGreater(screenshot_size, 10_000)
 
+    def test_probe_selects_the_mod_pack_matching_the_detected_rom_version(self) -> None:
+        metadata = {
+            **OPLUS_TEST_METADATA,
+            "version": "PKG110_16.0.10.500(CN01)",
+            "securityPatch": "2026-08-01",
+            "buildDate": "2026-08-11 09:38:18",
+        }
+
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            source_metadata=metadata,
+            catalog_mod_versions=("ColorOS_16.0.9", "ColorOS_16.0.10"),
+            catalog_mods_by_version={
+                "ColorOS_16.0.9": ["Gapps", "Legacy_marker"],
+                "ColorOS_16.0.10": ["Gapps", "Hasselblad_filter"],
+            },
+        )
+
+        mod_list = dom.split('id="mod-list"', 1)[1].split('<details class="advanced">', 1)[0]
+        self.assertIn("Hasselblad_filter", mod_list)
+        self.assertNotIn("Legacy_marker", mod_list)
+        self.assertIn("PKG110_16.0.10.500(CN01)", dom)
+
     def test_paste_button_reads_clipboard_and_starts_source_analysis(self) -> None:
         dom, _ = _render_mini_app_in_chrome(api_enabled=True, click_paste=True)
 
@@ -571,7 +608,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             probe_signed_expired=True,
         )
 
-        self.assertIn("Link tải ký trực tiếp đã hết hạn hoặc sai chữ ký", dom)
+        self.assertIn("Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud", dom)
         self.assertIn("OPlus downloadCheck", dom)
 
     def test_unauthenticated_preview_keeps_link_and_offers_bot_jump(self) -> None:

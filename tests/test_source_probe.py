@@ -149,6 +149,54 @@ class SourceProbeTests(unittest.TestCase):
 
         self.assertEqual([], initial.requests)
 
+    def test_probe_rejects_a_signed_url_that_will_expire_before_a_cloud_build_can_download_it(self) -> None:
+        payload = _fixture_zip()
+        now = 1_787_484_600
+        near_expiry = (
+            "https://93.184.216.35/rom.zip?"
+            f"expires={now + 633}&signature=short-lived"
+        )
+        initial = _InitialOpener(payload, near_expiry)
+
+        with mock.patch("wukong.source_probe.time.time", return_value=now):
+            with self.assertRaisesRegex(SourceResolutionError, "signed.*expires too soon"):
+                probe_http_source(near_expiry, opener=initial, timeout=2)
+
+        self.assertEqual([], initial.requests)
+
+    def test_probe_does_not_treat_an_unsigned_expires_parameter_as_a_signed_download(self) -> None:
+        payload = _fixture_zip()
+        ordinary = "https://93.184.216.35/rom.zip?expires=1700000000&view=ota"
+        initial = _InitialOpener(payload, ordinary)
+
+        result = probe_http_source(
+            ordinary,
+            opener=initial,
+            opener_factory=lambda: _RangeOpener(payload, ordinary),
+            timeout=2,
+        )
+
+        self.assertEqual("PKG110", result.product_name)
+        self.assertNotEqual([], initial.requests)
+
+    def test_probe_rejects_relative_aws_and_oss_v4_expirations(self) -> None:
+        payload = _fixture_zip()
+        now = 1_787_484_900
+        urls = (
+            "https://93.184.216.35/rom.zip?X-Amz-Date=20260823T113000Z&"
+            "X-Amz-Expires=2000&X-Amz-Signature=short-lived",
+            "https://93.184.216.35/rom.zip?x-oss-date=20260823T113000Z&"
+            "x-oss-expires=2000&x-oss-signature=short-lived",
+        )
+
+        for uri in urls:
+            with self.subTest(uri=uri):
+                initial = _InitialOpener(payload, uri)
+                with mock.patch("wukong.source_probe.time.time", return_value=now):
+                    with self.assertRaisesRegex(SourceResolutionError, "signed.*expires too soon"):
+                        probe_http_source(uri, opener=initial, timeout=2)
+                self.assertEqual([], initial.requests)
+
     def test_probe_resolves_oplus_and_reads_remote_zip_metadata_without_full_download(self) -> None:
         payload = _fixture_zip()
         resolver = "https://93.184.216.34/downloadCheck?c=abc"
