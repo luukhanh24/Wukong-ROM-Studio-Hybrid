@@ -877,6 +877,63 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertIn("GitHub Actions failed", refreshed.error)
         sync.push.assert_called_once_with(job.job_id)
 
+    def test_refresh_marks_active_github_run_running_without_blocking_on_drive(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        store = InMemoryJobStore()
+        orchestrator = HybridOrchestrator(
+            store=store,
+            workspace_root=root / "jobs",
+            inventory_provider=lambda: RunnerInventory(False),
+            access_validator=lambda _recipe, _identity: None,
+        )
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "PKG110",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "execution": {"target": "github-auto"},
+            "storage": {"remote": "wukong-gdrive"},
+        })
+        job = orchestrator.submit(recipe, Identity("telegram", "42", "user"))
+        store.update(
+            job.job_id,
+            status=JobStatus.QUEUED,
+            stage="github-actions",
+            external_run_id=123,
+        )
+        runtime = HybridRuntime(
+            orchestrator=orchestrator,
+            store=store,
+            workspace_root=root / "runtime",
+            data_root=root / "data",
+        )
+        runtime.rclone_config = root / "rclone.conf"
+        runtime.rclone_config.write_text("[wukong-gdrive]\n", encoding="utf-8")
+        runtime.cloud_watchers_enabled = False
+        sync = Mock()
+        github = Mock()
+        github.run_state.return_value = {
+            "status": "in_progress",
+            "conclusion": None,
+            "url": "https://github.example/actions/runs/123",
+        }
+
+        with patch.dict(os.environ, {
+            "WUKONG_GITHUB_TOKEN": "test-token",
+            "WUKONG_GITHUB_REPOSITORY": "owner/repository",
+        }, clear=False), patch("wukong.runtime.CloudJobSync", return_value=sync), patch(
+            "wukong.runtime.GitHubActionsAdapter", return_value=github
+        ), patch("wukong.runtime.threading.Thread") as thread:
+            refreshed = runtime.refresh(store.get(job.job_id))
+
+        sync.pull.assert_not_called()
+        thread.return_value.start.assert_called_once()
+        self.assertEqual(JobStatus.RUNNING, refreshed.status)
+        self.assertEqual("github-actions-running", refreshed.stage)
+        self.assertGreater(refreshed.progress, 0)
+
     def test_runtime_resumes_cloud_watcher_after_daemon_restart(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)

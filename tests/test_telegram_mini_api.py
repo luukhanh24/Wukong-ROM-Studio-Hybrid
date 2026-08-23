@@ -63,7 +63,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             "resume",
             "notify_terminal",
         ])
-        self.runtime.refresh.side_effect = lambda manifest: manifest
+        self.runtime.refresh.side_effect = lambda manifest, **_: manifest
         self.probe = Mock(return_value={
             "provider": "daniel-springer",
             "filename": "PKG110.zip",
@@ -372,7 +372,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(403, denied.status_code)
         self.assertEqual(403, stale.status_code)
         self.assertEqual(200, accepted.status_code)
-        self.runtime.refresh.assert_called_with(self.store.get(job_id))
+        self.runtime.refresh.assert_called_with(self.store.get(job_id), force_cloud=True)
         self.runtime.notify_terminal.assert_called_once()
 
     def test_pre_executor_callback_reconciles_failure_without_waiting_for_drive(self) -> None:
@@ -456,7 +456,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(403, short.status_code)
         self.assertEqual(200, accepted.status_code)
         self.runtime.verify_actions_bearer.assert_called_once_with(token, 555, "success")
-        self.runtime.refresh.assert_called_once_with(self.store.get(job_id))
+        self.runtime.refresh.assert_called_once_with(self.store.get(job_id), force_cloud=True)
         self.runtime.notify_terminal.assert_called_once()
 
     def test_actions_callback_rejects_runner_token_github_does_not_confirm(self) -> None:

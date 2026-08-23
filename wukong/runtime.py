@@ -42,6 +42,8 @@ class HybridRuntime:
         self._notification_lock = threading.RLock()
         self._github_refresh_lock = threading.RLock()
         self._github_refresh_at: dict[str, float] = {}
+        self._cloud_refresh_lock = threading.RLock()
+        self._cloud_refresh_inflight: set[str] = set()
         self.rclone_config = self._materialize_rclone_config(data_root)
         self.cloud_watchers_enabled = os.environ.get(
             "WUKONG_CONTROL_PLANE_BACKGROUND_WATCHERS", "true"
@@ -90,7 +92,7 @@ class HybridRuntime:
             resumed += 1
         return resumed
 
-    def refresh(self, manifest: JobManifest) -> JobManifest:
+    def refresh(self, manifest: JobManifest, *, force_cloud: bool = False) -> JobManifest:
         if manifest.runner == "windows" or not self.rclone_config:
             return self.store.get(manifest.job_id) or manifest
         recipe = self.store.recipe(manifest.job_id)
@@ -101,11 +103,26 @@ class HybridRuntime:
             config_path=self.rclone_config,
         )
         sync = CloudJobSync(self.store, storage)
-        # Prefer the executor's Drive manifest because it contains the exact
-        # failing stage and error. GitHub reconciliation is the fallback for a
-        # workflow that failed before the executor could publish that manifest.
-        refreshed = sync.pull(manifest.job_id) or manifest
+        # Background watchers already keep the durable store synchronized with
+        # the executor's Drive manifest. Avoid blocking every interactive API
+        # request on a fresh rclone process; Render/Drive can occasionally take
+        # the full retry timeout even though the workflow is healthy. Terminal
+        # callbacks force one pull so artifact delivery and notification still
+        # observe the executor's final manifest before returning.
+        refreshed = self.store.get(manifest.job_id) or manifest
+        if force_cloud:
+            refreshed = sync.pull(manifest.job_id) or refreshed
         refreshed = self._refresh_github_state(refreshed, sync=sync)
+        if (
+            not force_cloud
+            and not self.cloud_watchers_enabled
+            and refreshed.status not in {
+                JobStatus.SUCCEEDED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            }
+        ):
+            self._schedule_cloud_refresh(refreshed.job_id, storage)
         if manifest.status not in {
             JobStatus.SUCCEEDED,
             JobStatus.FAILED,
@@ -113,6 +130,36 @@ class HybridRuntime:
         }:
             self.notify_terminal(refreshed)
         return refreshed
+
+    def _schedule_cloud_refresh(
+        self,
+        job_id: str,
+        storage: RcloneStorageAdapter,
+    ) -> None:
+        """Refresh Drive state lazily without delaying an interactive request."""
+        with self._cloud_refresh_lock:
+            if job_id in self._cloud_refresh_inflight:
+                return
+            self._cloud_refresh_inflight.add(job_id)
+        threading.Thread(
+            target=self._refresh_cloud_job_once,
+            args=(job_id, storage),
+            name=f"wukong-cloud-refresh-{job_id[:8]}",
+            daemon=True,
+        ).start()
+
+    def _refresh_cloud_job_once(
+        self,
+        job_id: str,
+        storage: RcloneStorageAdapter,
+    ) -> None:
+        try:
+            refreshed = CloudJobSync(self.store, storage).pull(job_id)
+            if refreshed is not None:
+                self.notify_terminal(refreshed)
+        finally:
+            with self._cloud_refresh_lock:
+                self._cloud_refresh_inflight.discard(job_id)
 
     def reconcile_actions_callback(
         self,
@@ -416,7 +463,23 @@ class HybridRuntime:
                 manifest = self.store.update(manifest.job_id, external_run_id=run_id)
                 self.store.append_event(manifest.job_id, "github_run", runId=run_id)
             state = github.run_state(run_id)
-            if state.get("status") != "completed":
+            github_status = str(state.get("status") or "").casefold()
+            if github_status != "completed":
+                # Drive remains the source of exact stage progress. This
+                # GitHub fallback prevents a temporarily slow Drive pull from
+                # leaving an actively executing workflow displayed as queued.
+                if github_status == "in_progress" and manifest.status == JobStatus.QUEUED:
+                    manifest = self.store.update(
+                        manifest.job_id,
+                        status=JobStatus.RUNNING,
+                        stage="github-actions-running",
+                        progress=max(manifest.progress, 0.02),
+                    )
+                    self.store.append_event(
+                        manifest.job_id,
+                        "running",
+                        stage="github-actions-running",
+                    )
                 return manifest
             conclusion = str(state.get("conclusion") or "failure")
             if conclusion in {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}:

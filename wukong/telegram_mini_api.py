@@ -645,7 +645,7 @@ class TelegramMiniAppAPI:
                     conclusion=conclusion,
                 )
             else:
-                refreshed = self.runtime.refresh(manifest)
+                refreshed = self.runtime.refresh(manifest, force_cloud=True)
                 if run_id is not None:
                     refreshed = self.runtime.reconcile_actions_callback(
                         refreshed,
