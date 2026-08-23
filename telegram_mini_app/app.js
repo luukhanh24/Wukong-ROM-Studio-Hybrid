@@ -3,6 +3,43 @@ const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
 const telegramBotUsername = (document.querySelector('meta[name="wukong-telegram-bot"]')?.content?.trim().replace(/^@/, "") || "");
 
+function parseInitDataFromHash() {
+  try {
+    const raw = location.hash.startsWith("#") ? location.hash.slice(1) : location.hash;
+    if (!raw) return "";
+    const params = new URLSearchParams(raw);
+    const encoded = params.get("tgWebAppData");
+    if (!encoded) return "";
+    // Telegram's tgWebAppData is a URL-encoded query string (query_id=...&user=...&hash=...)
+    try { return decodeURIComponent(encoded); } catch (_) { return encoded; }
+  } catch (_) { return ""; }
+}
+function effectiveInitData() {
+  const direct = String(TelegramApp?.initData || "");
+  if (direct) return direct;
+  return parseInitDataFromHash();
+}
+function effectiveInitDataUnsafe() {
+  const direct = TelegramApp?.initDataUnsafe;
+  if (direct && typeof direct === "object") return direct;
+  // Fallback: parse hash ourselves so start_param still works even if bridge missed it
+  try {
+    const data = effectiveInitData();
+    if (!data) return {};
+    const usp = new URLSearchParams(data);
+    const userRaw = usp.get("user");
+    let user = null;
+    try { user = userRaw ? JSON.parse(userRaw) : null; } catch (_) {}
+    return {
+      query_id: usp.get("query_id") || "",
+      user,
+      auth_date: usp.get("auth_date") || "",
+      hash: usp.get("hash") || "",
+      start_param: usp.get("start_param") || "",
+    };
+  } catch (_) { return {}; }
+}
+
 const translations = {
   vi: {
     connected: "BOT ĐÃ KẾT NỐI", buildTitle: "Chuẩn bị chuyến build", buildIntro: "Kiểm tra nguồn ROM, runner và đầu ra trước khi gửi recipe.",
@@ -219,20 +256,21 @@ function toast(message, error = false) {
 }
 
 function miniApiAvailable() {
-  return Boolean(miniApiEndpoint && TelegramApp?.initData);
+  return Boolean(miniApiEndpoint && effectiveInitData());
 }
 
 function miniApiState() {
   if (!miniApiEndpoint) return "unconfigured";
-  if (!TelegramApp?.initData) return "unauthenticated";
+  if (!effectiveInitData()) return "unauthenticated";
   return "ready";
 }
 
 async function apiRequest(path, options = {}) {
   if (!miniApiEndpoint) throw new Error(t("apiRequired"));
-  if (!TelegramApp?.initData) throw new Error(t("telegramOnly"));
+  const initData = effectiveInitData();
+  if (!initData) throw new Error(t("telegramOnly"));
   const headers = new Headers(options.headers || {});
-  headers.set("Authorization", `tma ${TelegramApp.initData}`);
+  headers.set("Authorization", `tma ${initData}`);
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   let response;
   try {
@@ -435,7 +473,7 @@ function restoreSourceDraft() {
   if (current && !/^https?:\/\//i.test(current)) input.value = "";
   if (input.value.trim()) return;
   let startParam = "";
-  try { startParam = decodeURIComponent(String(TelegramApp?.initDataUnsafe?.start_param || "")); } catch (_) { startParam = String(TelegramApp?.initDataUnsafe?.start_param || ""); }
+  try { startParam = decodeURIComponent(String(effectiveInitDataUnsafe()?.start_param || "")); } catch (_) { startParam = String(effectiveInitDataUnsafe()?.start_param || ""); }
   if (!startParam || !/^https?:\/\//i.test(startParam)) return;
   input.value = startParam;
   updateSourceDetection();
@@ -1323,10 +1361,13 @@ function bindEvents() {
 function renderSessionDiagnostics() {
   const node = $("#session-diag");
   if (!node) return;
-  if (!TelegramApp) { node.textContent = t("sessionDiagNoLib"); return; }
-  const chars = String(TelegramApp.initData || "").length;
+  if (!TelegramApp && !parseInitDataFromHash()) { node.textContent = t("sessionDiagNoLib"); return; }
+  const rawDirect = String(TelegramApp?.initData || "");
+  const fallback = !rawDirect ? parseInitDataFromHash() : "";
+  const chars = String(effectiveInitData() || "").length;
   if (!chars) { node.textContent = t("sessionDiagNoData"); return; }
-  node.textContent = t("sessionDiagOk", { platform: TelegramApp.platform || "?", chars });
+  const via = fallback ? " (từ hash)" : "";
+  node.textContent = t("sessionDiagOk", { platform: (TelegramApp?.platform || "?") + via, chars });
 }
 
 function activateTelegramApp() {
