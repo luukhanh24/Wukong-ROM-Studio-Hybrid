@@ -377,16 +377,32 @@ function presentMissingApi() {
   node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   node.classList.add("probe-unavailable");
   const unconfigured = status === "unconfigured";
+  const insideTelegram = Boolean(TelegramApp?.platform && TelegramApp.platform !== "unknown");
   $("#source-kicker").textContent = t(unconfigured ? "apiUnavailableKicker" : "apiAuthKicker");
   $("#source-state-message").textContent = t(unconfigured ? "apiUnavailableMessage" : "apiAuthMessage");
   const button = $("#probe-source");
-  button.textContent = t(unconfigured ? "apiUnavailableButton" : "apiAuthButton");
-  // Without a Telegram session the probe cannot run, but the pasted link is
-  // kept and the button jumps into the bot so the session can be created.
-  const openBot = !unconfigured && Boolean(telegramBotUsername);
-  button.disabled = !openBot;
-  if (openBot) button.dataset.openBot = "1";
-  else delete button.dataset.openBot;
+  button.textContent = t(unconfigured ? "apiUnavailableButton" : insideTelegram ? "Đóng" : "apiAuthButton");
+  if (unconfigured) {
+    button.disabled = true;
+    delete button.dataset.openBot;
+    delete button.dataset.closeApp;
+    return;
+  }
+  // Always offer a way out: inside Telegram just close and reopen from the
+  // menu button so initData is attached; outside Telegram jump to the bot.
+  if (insideTelegram) {
+    button.disabled = false;
+    button.dataset.closeApp = "1";
+    delete button.dataset.openBot;
+  } else if (telegramBotUsername) {
+    button.disabled = false;
+    button.dataset.openBot = "1";
+    delete button.dataset.closeApp;
+  } else {
+    button.disabled = true;
+    delete button.dataset.openBot;
+    delete button.dataset.closeApp;
+  }
 }
 
 function telegramBotLink() {
@@ -401,11 +417,23 @@ function openTelegramBot() {
   window.open(link, "_blank", "noopener");
 }
 
+function closeTelegramApp() {
+  try { TelegramApp?.close(); } catch (_) {}
+  // Fallback for browsers/testing: just navigate away from the stale entry.
+  setTimeout(() => { try { window.close(); } catch (_) {} }, 120);
+}
+
 function restoreSourceDraft() {
+  // One-time cleanup of the legacy draft that used to persist signed links.
+  try { localStorage.removeItem("wukong-source-draft"); } catch (_) {}
+  try { localStorage.removeItem("wukong-recipe-draft"); } catch (_) {}
+  // Clear a fragment-only paste (e.g. "6a8a..." pasted without https://) that
+  // was left in the textarea by autofill or a previous session.
   const input = $("#source-uri");
-  if (!input || input.value.trim()) return;
-  // Only an explicit start_param hand-off is restored; signed ROM links are
-  // never persisted locally because their signatures expire.
+  if (!input) return;
+  const current = input.value.trim();
+  if (current && !/^https?:\/\//i.test(current)) input.value = "";
+  if (input.value.trim()) return;
   let startParam = "";
   try { startParam = decodeURIComponent(String(TelegramApp?.initDataUnsafe?.start_param || "")); } catch (_) { startParam = String(TelegramApp?.initDataUnsafe?.start_param || ""); }
   if (!startParam || !/^https?:\/\//i.test(startParam)) return;
@@ -1254,7 +1282,9 @@ function bindEvents() {
   $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
   $("#probe-source").addEventListener("click", () => {
     clearTimeout(state.sourceProbeTimer);
-    if ($("#probe-source").dataset.openBot) { openTelegramBot(); return; }
+    const probeButton = $("#probe-source");
+    if (probeButton.dataset.closeApp) { closeTelegramApp(); return; }
+    if (probeButton.dataset.openBot) { openTelegramBot(); return; }
     probeSourceInPlace().catch((error) => toast(error.message, true));
   });
   $("#select-defaults").addEventListener("click", () => setMods("defaults"));

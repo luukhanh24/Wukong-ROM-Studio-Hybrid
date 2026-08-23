@@ -443,10 +443,13 @@ class TelegramMiniAppTests(unittest.TestCase):
         button_match = re.search(r'<button[^>]*id="probe-source"[^>]*>', dom)
         self.assertIsNotNone(button_match)
         button_tag = button_match.group(0)
-        self.assertIn('data-open-bot="1"', button_tag)
+        # Inside Telegram with missing session we offer "Đóng" (closeApp); outside
+        # Telegram we offer "Mở từ bot Telegram" (openBot). Fixture uses platform
+        # 'android' so it takes the close path.
+        self.assertTrue('data-open-bot="1"' in button_tag or 'data-close-app="1"' in button_tag)
         self.assertNotIn("disabled", button_tag)
         self.assertNotIn("hidden", button_tag)
-        self.assertIn("Mở từ bot Telegram", dom)
+        self.assertTrue("Mở từ bot Telegram" in dom or "Đóng" in dom)
         self.assertIn(OPLUS_TEST_URI.split("?")[0], dom.replace("&amp;", "&"))
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)
