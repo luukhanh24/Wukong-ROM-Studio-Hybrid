@@ -157,6 +157,44 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(403, denied.status_code)
 
+    def test_session_pairing_recovers_a_static_mini_app_launch(self) -> None:
+        started = self.client.post(
+            "/v1/session/pair",
+            headers={"Origin": ORIGIN},
+        )
+
+        self.assertEqual(201, started.status_code)
+        self.assertRegex(started.json["botLink"], r"^https://t\.me/WK_build_bot\?start=pair_")
+        self.assertTrue(self.api.session_store.confirm(started.json["pairId"], 42))
+
+        confirmed = self.client.post(
+            "/v1/session/pair/status",
+            headers={"Origin": ORIGIN},
+            json={
+                "pairId": started.json["pairId"],
+                "pairSecret": started.json["pairSecret"],
+            },
+        )
+
+        self.assertEqual(200, confirmed.status_code)
+        launch_token = confirmed.json["launchToken"]
+        self.assertEqual(42, validate_telegram_launch_token(launch_token, TOKEN))
+        jobs = self.client.get(
+            "/v1/jobs",
+            headers={"Origin": ORIGIN, "Authorization": f"wla {launch_token}"},
+        )
+        self.assertEqual(200, jobs.status_code)
+
+    def test_source_draft_is_scoped_to_the_authenticated_telegram_user(self) -> None:
+        uri = "https://downloads.example/private-signed-rom.zip?token=fixture"
+        self.assertTrue(self.api.session_store.remember_source(42, uri))
+
+        owner = self.client.get("/v1/drafts/source", headers=self.headers(42))
+        other = self.client.get("/v1/drafts/source", headers=self.headers(43))
+
+        self.assertEqual(uri, owner.json["uri"])
+        self.assertEqual("", other.json["uri"])
+
     def test_strict_cors_and_allowlist(self) -> None:
         denied_origin = self.client.get("/v1/jobs", headers=self.headers(origin="https://evil.example"))
         denied_user = self.client.get("/v1/jobs", headers={
@@ -185,7 +223,8 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(401, jobs.status_code)
 
     def test_webhook_requires_secret_and_dispatches_authenticated_update(self) -> None:
-        handler = Mock()
+        delivered = __import__("threading").Event()
+        handler = Mock(side_effect=lambda _payload: delivered.set())
         api = TelegramMiniAppAPI(
             bot_token=TOKEN,
             allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
@@ -209,7 +248,37 @@ class TelegramMiniAppAPITests(unittest.TestCase):
 
         self.assertEqual(403, denied.status_code)
         self.assertEqual(204, accepted.status_code)
+        self.assertTrue(delivered.wait(1))
         handler.assert_called_once_with({"update_id": 1})
+
+    def test_webhook_acknowledges_before_slow_bot_processing_finishes(self) -> None:
+        release = __import__("threading").Event()
+        handler = Mock(side_effect=lambda _payload: release.wait(2))
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            telegram_update_handler=handler,
+            telegram_webhook_secret="secret-token",
+        )
+        client = api.app.test_client()
+
+        started = time.monotonic()
+        response = client.post(
+            "/telegram/webhook",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-token"},
+            json={"update_id": 2, "message": {}},
+        )
+        elapsed = time.monotonic() - started
+        release.set()
+
+        self.assertEqual(204, response.status_code)
+        self.assertLess(elapsed, 0.5)
 
     def test_actions_callback_requires_fresh_hmac_and_refreshes_existing_job(self) -> None:
         probe = self.client.post(

@@ -537,3 +537,6 @@ h2 { letter-spacing: -.015em; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+.session-recovery{margin:0 0 14px;padding:12px;border:1px solid color-mix(in srgb,var(--accent,#3567a5) 35%,transparent);background:color-mix(in srgb,var(--accent,#3567a5) 7%,transparent)}
+.session-recovery p{margin:0 0 9px;font-size:12px;line-height:1.5}
+.session-recovery button{width:100%;min-height:42px;border:1px solid var(--ink,#25272d);border-radius:9px;background:transparent;font-weight:700}

@@ -98,6 +98,10 @@
             <li id="check-api"><i aria-hidden="true"></i><span><b data-i18n="checklistApi">Mini App API</b><small data-i18n="checklistApiPending">Chưa kết nối máy chủ</small></span></li>
           </ol>
           <p id="launch-warning" data-i18n="completeSourceHint">Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.</p>
+          <div class="session-recovery" id="session-recovery" hidden>
+            <p data-i18n="pairingHint">Telegram không gửi phiên cho lần mở này. Kết nối một lần qua bot; nếu được hỏi, bấm START rồi quay lại Mini App.</p>
+            <button id="connect-telegram" type="button" data-i18n="pairingButton">Kết nối Telegram</button>
+          </div>
           <button class="primary" id="submit-recipe" type="submit" disabled><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
         </aside>
       </form>

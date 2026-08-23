@@ -61,6 +61,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     source_uri = OPLUS_TEST_URI
     clipboard_fallback = False
     clipboard_gesture_only = False
+    pairing_recovery = False
+    server_draft_fallback = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -88,7 +90,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
                 if self.telegram_authenticated
                 else "initData: '', "
             )
-            clipboard_value = "null" if (self.clipboard_fallback or self.clipboard_gesture_only) else json.dumps(self.source_uri)
+            clipboard_value = "null" if (self.clipboard_fallback or self.clipboard_gesture_only or self.server_draft_fallback) else json.dumps(self.source_uri)
             gesture_guard = "window.__wukongPasteGesture === true" if self.clipboard_gesture_only else "true"
             exec_fallback = f"""
 document.execCommand = (command) => {{
@@ -105,9 +107,9 @@ document.execCommand = (command) => {{
 Object.defineProperty(navigator, 'clipboard', { value: {
   readText() { return Promise.reject(new DOMException('blocked', 'NotAllowedError')); }
 }});
-""" if self.clipboard_gesture_only else ""
+""" if (self.clipboard_gesture_only or self.server_draft_fallback) else ""
             source = f"""
-window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, openTelegramLink() {{}}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
 {exec_fallback}
 {navigator_fallback}
 window.addEventListener('load', () => {{
@@ -121,6 +123,7 @@ window.addEventListener('load', () => {{
       window.__wukongPasteGesture = false;
     }}
     else {{ input.value = {json.dumps(self.source_uri)}; input.dispatchEvent(new Event('input', {{ bubbles: true }})); }}
+    if ({str(self.pairing_recovery).lower()}) document.querySelector('#connect-telegram')?.click();
   }};
   setTimeout(fill, 50);
 }});
@@ -155,10 +158,28 @@ window.addEventListener('load', () => {{
         if path == "/v1/jobs":
             self._send(b'{"jobs":[]}', "application/json")
             return
+        if path == "/v1/drafts/source" and self.server_draft_fallback:
+            self._send(json.dumps({"uri": self.source_uri}).encode(), "application/json")
+            return
         self._send(b"not found", "text/plain", 404)
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
-        if urlsplit(self.path).path == "/v1/sources/probe" and self.api_enabled:
+        path = urlsplit(self.path).path
+        if path == "/v1/session/pair" and self.pairing_recovery:
+            self._send(json.dumps({
+                "pairId": "fixture-pair",
+                "pairSecret": "fixture-secret",
+                "botLink": "https://t.me/WK_build_bot?start=pair_fixture-pair",
+                "expiresIn": 300,
+            }).encode(), "application/json", 201)
+            return
+        if path == "/v1/session/pair/status" and self.pairing_recovery:
+            self._send(json.dumps({
+                "status": "confirmed",
+                "launchToken": f"v1.42.1.9999999999.{'a' * 64}",
+            }).encode(), "application/json")
+            return
+        if path == "/v1/sources/probe" and self.api_enabled:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length) or b"{}")
             if payload.get("uri") != OPLUS_TEST_URI:
@@ -179,6 +200,8 @@ def _render_mini_app_in_chrome(
     clipboard_gesture_only: bool = False,
     telegram_hash_authenticated: bool = False,
     signed_launch_authenticated: bool = False,
+    pairing_recovery: bool = False,
+    server_draft_fallback: bool = False,
     initial_view: str = "",
 ) -> tuple[str, int]:
     chrome = _chrome_path()
@@ -194,6 +217,8 @@ def _render_mini_app_in_chrome(
             "source_uri": source_uri,
             "clipboard_fallback": clipboard_fallback,
             "clipboard_gesture_only": clipboard_gesture_only,
+            "pairing_recovery": pairing_recovery,
+            "server_draft_fallback": server_draft_fallback,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -512,6 +537,16 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("14/14 thông số", dom)
         self.assertNotIn("Ô link đã được chọn", dom)
 
+    def test_paste_button_retrieves_the_private_link_saved_by_the_bot(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            click_paste=True,
+            server_draft_fallback=True,
+        )
+
+        self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
+        self.assertIn("14/14 thông số", dom)
+
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)
 
@@ -559,6 +594,17 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIsNotNone(submit_match)
         self.assertNotIn("disabled", submit_match.group(0))
 
+    def test_static_launch_can_pair_with_bot_and_enable_api(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            telegram_authenticated=False,
+            pairing_recovery=True,
+        )
+
+        self.assertIn('id="connect-telegram"', dom)
+        self.assertIn('<li id="check-api" class="complete">', dom)
+        self.assertIn("phiên dự phòng", dom)
+
     def test_jobs_distinguishes_missing_telegram_session_from_missing_api(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
             api_enabled=True,
@@ -566,7 +612,8 @@ class TelegramMiniAppTests(unittest.TestCase):
             initial_view="jobs",
         )
 
-        self.assertIn("Hãy mở trang này từ nút Mini App trong bot Telegram", dom)
+        self.assertIn("Phiên Telegram chưa được kết nối", dom)
+        self.assertIn('id="connect-telegram"', dom)
         self.assertNotIn("Mini App API chưa được cấu hình", dom)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:

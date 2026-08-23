@@ -19,7 +19,7 @@ from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
 from .telegram import TelegramAccessStore
-from .telegram_mini_api import issue_telegram_launch_token
+from .telegram_mini_api import TelegramMiniAppSessionStore, issue_telegram_launch_token
 
 
 LANGUAGES = {"vi", "en"}
@@ -391,6 +391,7 @@ class TelegramBotController:
         ui_state: TelegramUIStateStore | None = None,
         storage_remote: str | None = None,
         web_app_url: str | None = None,
+        session_store: TelegramMiniAppSessionStore | None = None,
     ) -> None:
         self.access = access
         self.orchestrator = orchestrator
@@ -414,6 +415,7 @@ class TelegramBotController:
             ):
                 raise ValueError("Telegram Mini App URL must be a public HTTPS URL")
         self.web_app_url = configured_web_app
+        self.session_store = session_store
 
     def command_sets(self) -> dict[str, list[dict[str, str]]]:
         return {
@@ -452,10 +454,36 @@ class TelegramBotController:
         if not identity:
             return BotResponse(TEXT[language]["denied"])
         normalized = (text or "").strip()
-        command = normalized.partition(" ")[0].split("@", 1)[0].casefold()
+        command_token, _, command_argument = normalized.partition(" ")
+        command = command_token.split("@", 1)[0].casefold()
+        if command == "/start" and command_argument.startswith("pair_"):
+            pair_id = command_argument.removeprefix("pair_")
+            paired = bool(self.session_store and self.session_store.confirm(pair_id, user_id))
+            if not paired:
+                message = (
+                    "Mã kết nối đã hết hạn. Quay lại Mini App và bấm Kết nối Telegram lần nữa."
+                    if language == "vi"
+                    else "The connection code expired. Return to the Mini App and press Connect Telegram again."
+                )
+                return BotResponse(message, self._back_markup(language))
+            message = (
+                "Đã xác nhận tài khoản. Quay lại Mini App; phiên sẽ tự kết nối mà không cần đóng ứng dụng."
+                if language == "vi"
+                else "Account confirmed. Return to the Mini App; the session will connect automatically."
+            )
+            launcher = self._mini_app_launcher(language)
+            return BotResponse(f"{message}\n\n{launcher.text}", launcher.reply_markup)
         session = self.ui_state.session(user_id)
         if session.get("awaiting") and not normalized.startswith("/"):
             return self._wizard_input(identity, normalized, language, session)
+        if self.session_store and not normalized.startswith("/") and self.session_store.remember_source(user_id, normalized):
+            message = (
+                "Đã lưu link ROM an toàn. Quay lại Mini App và bấm Dán để lấy link này."
+                if language == "vi"
+                else "ROM link saved securely. Return to the Mini App and press Paste to retrieve it."
+            )
+            launcher = self._mini_app_launcher(language)
+            return BotResponse(f"{message}\n\n{launcher.text}", launcher.reply_markup)
         if command in {"/start", "/menu"}:
             self.ui_state.clear_session(user_id)
             return self._main_menu(language)
@@ -800,6 +828,8 @@ class TelegramBotController:
         try:
             if awaiting == "url":
                 source = {"kind": "https" if value.casefold().startswith("https://") else "http", "uri": value}
+                if self.session_store:
+                    self.session_store.remember_source(identity.subject, value)
             elif awaiting == "drive":
                 source = {"kind": "rclone", "uri": value}
             elif awaiting == "local" and identity.role == "admin" and session.get("execution") == "local-windows":
@@ -1356,10 +1386,11 @@ class TelegramLongPollingDaemon:
                 },
                 timeout=20,
             ).raise_for_status()
-        except requests.RequestException:
+        except requests.RequestException as exc:
             # A menu refresh must never prevent the bot from replying. The
             # personalized inline button remains available in the response.
-            pass
+            status = exc.response.status_code if exc.response is not None else "network"
+            print(f"Telegram Mini App menu refresh failed: {status}", flush=True)
 
     def stop(self) -> None:
         self._stop.set()

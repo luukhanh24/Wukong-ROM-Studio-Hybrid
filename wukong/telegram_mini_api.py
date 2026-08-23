@@ -5,7 +5,9 @@ import hashlib
 import hmac
 import json
 import os
+import queue
 import re
+import secrets
 import threading
 import time
 from dataclasses import replace
@@ -43,10 +45,137 @@ SOURCE_METADATA_KEYS = (
 RELEASE_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 ACTIONS_CALLBACK_MAX_AGE_SECONDS = 5 * 60
 TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS = 60 * 60
+TELEGRAM_PAIRING_MAX_AGE_SECONDS = 5 * 60
+TELEGRAM_SOURCE_DRAFT_MAX_AGE_SECONDS = 24 * 60 * 60
 
 
 class TelegramInitDataError(PermissionError):
     pass
+
+
+class TelegramMiniAppSessionStore:
+    """Short-lived bridge for Telegram clients that omit Mini App initData."""
+
+    def __init__(
+        self,
+        *,
+        pairing_max_age_seconds: int = TELEGRAM_PAIRING_MAX_AGE_SECONDS,
+        draft_max_age_seconds: int = TELEGRAM_SOURCE_DRAFT_MAX_AGE_SECONDS,
+    ) -> None:
+        self.pairing_max_age_seconds = max(60, min(int(pairing_max_age_seconds), 15 * 60))
+        self.draft_max_age_seconds = max(60, min(int(draft_max_age_seconds), 7 * 24 * 60 * 60))
+        self._pairs: dict[str, dict[str, object]] = {}
+        self._drafts: dict[str, tuple[int, str]] = {}
+        self._lock = threading.RLock()
+
+    def _cleanup(self, now: int) -> None:
+        self._pairs = {
+            pair_id: record
+            for pair_id, record in self._pairs.items()
+            if int(record.get("expiresAt") or 0) >= now
+        }
+        self._drafts = {
+            user_id: draft
+            for user_id, draft in self._drafts.items()
+            if draft[0] + self.draft_max_age_seconds >= now
+        }
+
+    def begin(self, bot_username: str, *, now: int | None = None) -> dict[str, object]:
+        username = str(bot_username or "").strip().lstrip("@")
+        if not re.fullmatch(r"[A-Za-z0-9_]{5,32}", username):
+            raise ValueError("Telegram bot username is not configured")
+        current = int(time.time()) if now is None else int(now)
+        pair_id = secrets.token_urlsafe(12).rstrip("=")
+        pair_secret = secrets.token_urlsafe(24).rstrip("=")
+        expires_at = current + self.pairing_max_age_seconds
+        with self._lock:
+            self._cleanup(current)
+            self._pairs[pair_id] = {
+                "secretHash": hashlib.sha256(pair_secret.encode("ascii")).digest(),
+                "createdAt": current,
+                "expiresAt": expires_at,
+                "userId": None,
+            }
+            if len(self._pairs) > 512:
+                oldest = min(self._pairs, key=lambda key: int(self._pairs[key].get("createdAt") or 0))
+                self._pairs.pop(oldest, None)
+        return {
+            "pairId": pair_id,
+            "pairSecret": pair_secret,
+            "botLink": f"https://t.me/{username}?start=pair_{pair_id}",
+            "expiresIn": self.pairing_max_age_seconds,
+        }
+
+    def confirm(self, pair_id: str, user_id: int | str, *, now: int | None = None) -> bool:
+        current = int(time.time()) if now is None else int(now)
+        try:
+            subject = int(user_id)
+        except (TypeError, ValueError):
+            return False
+        if subject <= 0:
+            return False
+        with self._lock:
+            self._cleanup(current)
+            record = self._pairs.get(str(pair_id or ""))
+            if not record:
+                return False
+            confirmed_user = record.get("userId")
+            if confirmed_user is not None and int(confirmed_user) != subject:
+                return False
+            record["userId"] = subject
+            return True
+
+    def launch_token(
+        self,
+        pair_id: str,
+        pair_secret: str,
+        bot_token: str,
+        *,
+        now: int | None = None,
+    ) -> str | None:
+        current = int(time.time()) if now is None else int(now)
+        supplied_hash = hashlib.sha256(str(pair_secret or "").encode("utf-8")).digest()
+        with self._lock:
+            self._cleanup(current)
+            record = self._pairs.get(str(pair_id or ""))
+            if not record or not hmac.compare_digest(supplied_hash, record["secretHash"]):
+                raise TelegramInitDataError("Telegram pairing request is invalid or expired")
+            user_id = record.get("userId")
+        if user_id is None:
+            return None
+        return issue_telegram_launch_token(int(user_id), bot_token, now=current)
+
+    def remember_source(self, user_id: int | str, uri: str, *, now: int | None = None) -> bool:
+        value = str(uri or "").strip()
+        try:
+            subject = str(int(user_id))
+            parsed = urlsplit(value)
+        except (TypeError, ValueError):
+            return False
+        if (
+            len(value) > 8192
+            or parsed.scheme.casefold() not in {"http", "https"}
+            or not parsed.netloc
+            or parsed.username
+            or parsed.password
+        ):
+            return False
+        current = int(time.time()) if now is None else int(now)
+        with self._lock:
+            self._cleanup(current)
+            self._drafts[subject] = (current, value)
+        return True
+
+    def source_draft(self, user_id: int | str, *, now: int | None = None) -> str:
+        current = int(time.time()) if now is None else int(now)
+        try:
+            subject = str(int(user_id))
+        except (TypeError, ValueError):
+            return ""
+        with self._lock:
+            self._cleanup(current)
+            draft = self._drafts.get(subject)
+            return draft[1] if draft else ""
 
 
 def _telegram_launch_key(bot_token: str) -> bytes:
@@ -206,6 +335,8 @@ class TelegramMiniAppAPI:
         readiness_provider: Callable[[], bool] | None = None,
         max_init_data_age_seconds: int = 3600,
         probe_cache_seconds: int = 15 * 60,
+        session_store: TelegramMiniAppSessionStore | None = None,
+        bot_username: str | None = None,
     ) -> None:
         self.bot_token = bot_token
         self.allowed_origin = _origin_from_web_app_url(allowed_origin)
@@ -223,13 +354,39 @@ class TelegramMiniAppAPI:
         self.actions_callback_secret = (actions_callback_secret or "").strip()
         if bool(self.telegram_update_handler) != bool(self.telegram_webhook_secret):
             raise ValueError("Telegram webhook handler and secret must be configured together")
+        self._telegram_update_queue: queue.Queue[dict[str, object]] | None = None
+        if self.telegram_update_handler:
+            self._telegram_update_queue = queue.Queue(maxsize=128)
+            threading.Thread(
+                target=self._run_telegram_update_worker,
+                name="wukong-telegram-webhook-worker",
+                daemon=True,
+            ).start()
         self.readiness_provider = readiness_provider or (lambda: True)
         self.max_init_data_age_seconds = max(60, max_init_data_age_seconds)
         self.probe_cache_seconds = max(60, probe_cache_seconds)
+        self.session_store = session_store or TelegramMiniAppSessionStore()
+        self.bot_username = (
+            bot_username or os.environ.get("WUKONG_TELEGRAM_BOT_USERNAME", "WK_build_bot")
+        ).strip().lstrip("@")
         self._probe_cache: dict[tuple[str, str], tuple[float, dict[str, object]]] = {}
         self._probe_lock = threading.RLock()
         self._probe_slots = threading.BoundedSemaphore(2)
         self.app = self._create_app()
+
+    def _run_telegram_update_worker(self) -> None:
+        update_queue = self._telegram_update_queue
+        handler = self.telegram_update_handler
+        if update_queue is None or handler is None:
+            return
+        while True:
+            payload = update_queue.get()
+            try:
+                handler(payload)
+            except Exception as exc:  # noqa: BLE001 - keep the webhook worker alive
+                print(f"Telegram webhook processing failed: {type(exc).__name__}", flush=True)
+            finally:
+                update_queue.task_done()
 
     def _create_app(self) -> Flask:
         app = Flask("wukong-telegram-mini-api", static_folder=None)
@@ -289,6 +446,8 @@ class TelegramMiniAppAPI:
                 return jsonify({"error": "This Mini App origin is not allowed"}), 403
             if request.method == "OPTIONS":
                 return Response(status=204)
+            if request.path in {"/v1/session/pair", "/v1/session/pair/status"}:
+                return None
             # Source inspection is a read-only preview. It remains available
             # when Telegram omits initData, while jobs and private routes
             # below still require a validated Telegram identity.
@@ -349,6 +508,28 @@ class TelegramMiniAppAPI:
                 }
             ), 200 if ready else 503
 
+        @app.post("/v1/session/pair")
+        def begin_session_pairing() -> Response:
+            try:
+                return jsonify(self.session_store.begin(self.bot_username)), 201
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 503
+
+        @app.post("/v1/session/pair/status")
+        def session_pairing_status() -> Response:
+            payload = request.get_json(silent=True) or {}
+            try:
+                launch_token = self.session_store.launch_token(
+                    str(payload.get("pairId") or ""),
+                    str(payload.get("pairSecret") or ""),
+                    self.bot_token,
+                )
+            except TelegramInitDataError as exc:
+                return jsonify({"error": str(exc)}), 404
+            if not launch_token:
+                return jsonify({"status": "pending"}), 202
+            return jsonify({"status": "confirmed", "launchToken": launch_token})
+
         @app.post("/telegram/webhook")
         def telegram_webhook() -> Response:
             if self.telegram_update_handler is None:
@@ -356,7 +537,14 @@ class TelegramMiniAppAPI:
             payload = request.get_json(force=True)
             if not isinstance(payload, dict):
                 return jsonify({"error": "Telegram update must be an object"}), 400
-            self.telegram_update_handler(payload)
+            update_kind = "callback" if payload.get("callback_query") else "message" if payload.get("message") else "other"
+            print(f"Telegram webhook update queued: {update_kind}", flush=True)
+            if self._telegram_update_queue is None:
+                return jsonify({"error": "Telegram webhook is not configured"}), 503
+            try:
+                self._telegram_update_queue.put_nowait(payload)
+            except queue.Full:
+                return jsonify({"error": "Telegram webhook queue is full"}), 503
             return Response(status=204)
 
         @app.post("/internal/actions/callback")
@@ -469,6 +657,11 @@ class TelegramMiniAppAPI:
                     ]
                 }
             )
+
+        @app.get("/v1/drafts/source")
+        def source_draft() -> Response:
+            identity = self._identity()
+            return jsonify({"uri": self.session_store.source_draft(identity.subject)})
 
         @app.get("/v1/jobs/<job_id>")
         def job_detail(job_id: str) -> Response:

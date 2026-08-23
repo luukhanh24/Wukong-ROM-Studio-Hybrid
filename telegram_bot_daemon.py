@@ -46,6 +46,7 @@ from wukong.telegram_mini_api import (
     TelegramJobNotifier,
     TelegramMiniAppAPI,
     TelegramMiniAppAPIServer,
+    TelegramMiniAppSessionStore,
 )
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
@@ -181,6 +182,7 @@ def main() -> int:
         control_plane_catalog = build_control_plane_catalog(index_path)
         catalog_provider = lambda: control_plane_catalog
     diagnostics_provider = lambda: {"system": diagnostics(), "cache": stage_cache_status()}
+    mini_app_sessions = TelegramMiniAppSessionStore()
     controller = TelegramBotController(
         access=access,
         orchestrator=orchestrator,
@@ -195,6 +197,7 @@ def main() -> int:
             DATA_ROOT / "telegram-ui-state.json",
             on_change=on_state_change,
         ),
+        session_store=mini_app_sessions,
     )
     transport = os.environ.get("WUKONG_TELEGRAM_TRANSPORT", "polling").strip().casefold()
     if transport not in {"polling", "webhook"}:
@@ -244,6 +247,8 @@ def main() -> int:
                 max_init_data_age_seconds=int(
                     os.environ.get("WUKONG_TELEGRAM_MINI_APP_MAX_AUTH_AGE", "3600")
                 ),
+                session_store=mini_app_sessions,
+                bot_username=os.environ.get("WUKONG_TELEGRAM_BOT_USERNAME", "WK_build_bot"),
             )
             mini_api_server = TelegramMiniAppAPIServer(
                 mini_api,

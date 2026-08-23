@@ -24,7 +24,7 @@ from wukong.telegram_bot import (
     TelegramLongPollingDaemon,
     TelegramUIStateStore,
 )
-from wukong.telegram_mini_api import validate_telegram_launch_token
+from wukong.telegram_mini_api import TelegramMiniAppSessionStore, validate_telegram_launch_token
 from telegram_bot_daemon import (
     _configured_admin_ids,
     build_control_plane_catalog,
@@ -50,6 +50,7 @@ class TelegramBotUITests(unittest.TestCase):
             ),
             access_validator=lambda _recipe, _identity: None,
         )
+        self.sessions = TelegramMiniAppSessionStore()
         self.controller = TelegramBotController(
             access=self.access,
             orchestrator=self.orchestrator,
@@ -97,6 +98,7 @@ class TelegramBotUITests(unittest.TestCase):
                 "deepInspected": True,
             },
             ui_state=TelegramUIStateStore(self.root / "telegram-ui-state.json"),
+            session_store=self.sessions,
         )
 
     def tearDown(self) -> None:
@@ -138,6 +140,24 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertNotIn("keyboard", response.reply_markup)
         app_button = response.reply_markup["inline_keyboard"][0][0]
         self.assertEqual(self.controller.web_app_url, app_button["web_app"]["url"])
+
+    def test_pair_start_confirms_static_mini_app_session(self) -> None:
+        self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        pairing = self.sessions.begin("WK_build_bot")
+
+        response = self.controller.handle_ui(42, f"/start pair_{pairing['pairId']}")
+
+        self.assertIn("Đã xác nhận tài khoản", response.text)
+        token = self.sessions.launch_token(pairing["pairId"], pairing["pairSecret"], "test-token")
+        self.assertEqual(42, validate_telegram_launch_token(token, "test-token"))
+
+    def test_plain_rom_url_is_saved_for_the_mini_app_paste_fallback(self) -> None:
+        uri = "https://component-ota-cn.allawntech.com/downloadCheck?c=fixture&p=signed"
+
+        response = self.controller.handle_ui(42, uri)
+
+        self.assertIn("Đã lưu link ROM", response.text)
+        self.assertEqual(uri, self.sessions.source_draft(42))
 
     def test_mini_app_submits_recipe_under_authenticated_telegram_identity(self) -> None:
         response = self.controller.handle_web_app_data(42, json.dumps({
