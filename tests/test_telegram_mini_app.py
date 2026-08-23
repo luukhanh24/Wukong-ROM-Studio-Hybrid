@@ -9,7 +9,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from tools.export_mini_app_catalog import export_catalog
 
@@ -163,6 +163,8 @@ def _render_mini_app_in_chrome(
     click_paste: bool = False,
     source_uri: str = OPLUS_TEST_URI,
     clipboard_fallback: bool = False,
+    telegram_hash_authenticated: bool = False,
+    initial_view: str = "",
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -184,6 +186,16 @@ def _render_mini_app_in_chrome(
     try:
         with tempfile.TemporaryDirectory() as profile:
             screenshot = Path(profile) / "mini-app-mobile.png"
+            launch_url = f"http://127.0.0.1:{server.server_port}/"
+            if telegram_hash_authenticated:
+                init_data = (
+                    'query_id=fixture-query&'
+                    'user={"id":42,"first_name":"Fixture"}&'
+                    'auth_date=1787472000&hash=fixture-hash'
+                )
+                launch_url += f"#tgWebAppData={quote(init_data, safe='')}"
+            elif initial_view:
+                launch_url += f"#{initial_view}"
             result = subprocess.run(
                 [
                     chrome,
@@ -200,7 +212,7 @@ def _render_mini_app_in_chrome(
                     f"--user-data-dir={profile}",
                     f"--screenshot={screenshot}",
                     "--dump-dom",
-                    f"http://127.0.0.1:{server.server_port}/",
+                    launch_url,
                 ],
                 capture_output=True,
                 timeout=30,
@@ -489,6 +501,30 @@ class TelegramMiniAppTests(unittest.TestCase):
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)
         self.assertIn("disabled", submit_match.group(0))
+
+    def test_hash_init_data_survives_initial_navigation_and_enables_jobs(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            telegram_authenticated=False,
+            telegram_hash_authenticated=True,
+        )
+
+        self.assertIn("14/14 thông số", dom)
+        self.assertIn('<li id="check-api" class="complete">', dom)
+        self.assertIn("phiên hợp lệ", dom)
+        submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
+        self.assertIsNotNone(submit_match)
+        self.assertNotIn("disabled", submit_match.group(0))
+
+    def test_jobs_distinguishes_missing_telegram_session_from_missing_api(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            telegram_authenticated=False,
+            initial_view="jobs",
+        )
+
+        self.assertIn("Hãy mở trang này từ nút Mini App trong bot Telegram", dom)
+        self.assertNotIn("Mini App API chưa được cấu hình", dom)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
