@@ -2,7 +2,6 @@ let TelegramApp = window.Telegram && window.Telegram.WebApp;
 const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
 const telegramBotUsername = (document.querySelector('meta[name="wukong-telegram-bot"]')?.content?.trim().replace(/^@/, "") || "");
-const SOURCE_DRAFT_KEY = "wukong-source-draft";
 
 const translations = {
   vi: {
@@ -390,19 +389,11 @@ function presentMissingApi() {
   else delete button.dataset.openBot;
 }
 
-function persistSourceDraft() {
-  const uri = $("#source-uri")?.value?.trim();
-  if (uri) {
-    try { localStorage.setItem(SOURCE_DRAFT_KEY, uri.slice(0, 8192)); } catch (_) {}
-  }
-}
-
 function telegramBotLink() {
   return `https://t.me/${telegramBotUsername}`;
 }
 
 function openTelegramBot() {
-  persistSourceDraft();
   const link = telegramBotLink();
   try {
     if (TelegramApp?.openTelegramLink) { TelegramApp.openTelegramLink(link); return; }
@@ -413,13 +404,12 @@ function openTelegramBot() {
 function restoreSourceDraft() {
   const input = $("#source-uri");
   if (!input || input.value.trim()) return;
+  // Only an explicit start_param hand-off is restored; signed ROM links are
+  // never persisted locally because their signatures expire.
   let startParam = "";
   try { startParam = decodeURIComponent(String(TelegramApp?.initDataUnsafe?.start_param || "")); } catch (_) { startParam = String(TelegramApp?.initDataUnsafe?.start_param || ""); }
-  let draft = "";
-  try { draft = localStorage.getItem(SOURCE_DRAFT_KEY) || ""; } catch (_) {}
-  const candidate = /^https?:\/\//i.test(startParam) ? startParam : draft;
-  if (!candidate || !/^https?:\/\//i.test(candidate)) return;
-  input.value = candidate;
+  if (!startParam || !/^https?:\/\//i.test(startParam)) return;
+  input.value = startParam;
   updateSourceDetection();
   scheduleSourceProbe();
 }
@@ -1260,8 +1250,8 @@ function bindEvents() {
     try { await submitRecipe(); } catch (error) { toast(error.message, true); }
     finally { if (button) button.disabled = false; }
   });
-  $("#source-uri").addEventListener("input", () => { persistSourceDraft(); updateSourceDetection(); scheduleSourceProbe(); });
-  $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { persistSourceDraft(); updateSourceDetection(); scheduleSourceProbe(); }));
+  $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
+  $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
   $("#probe-source").addEventListener("click", () => {
     clearTimeout(state.sourceProbeTimer);
     if ($("#probe-source").dataset.openBot) { openTelegramBot(); return; }
