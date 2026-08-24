@@ -68,6 +68,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     source_metadata = OPLUS_TEST_METADATA
     catalog_mod_versions = ("ColorOS_16.0.9",)
     catalog_mods_by_version = None
+    jobs_fixture = False
+    click_job_log = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -130,6 +132,14 @@ window.addEventListener('load', () => {{
     else {{ input.value = {json.dumps(self.source_uri)}; input.dispatchEvent(new Event('input', {{ bubbles: true }})); }}
   }};
   setTimeout(fill, 50);
+  if ({str(self.click_job_log).lower()}) {{
+    const openLog = () => {{
+      const button = document.querySelector('.job-log-toggle');
+      if (!button) {{ setTimeout(openLog, 50); return; }}
+      button.click();
+    }};
+    setTimeout(openLog, 100);
+  }}
 }});
 """
             self._send(source.encode(), "application/javascript; charset=utf-8")
@@ -169,12 +179,36 @@ window.addEventListener('load', () => {{
             self._send(json.dumps(catalog).encode(), "application/json")
             return
         if path == "/v1/jobs":
-            self._send(b'{"jobs":[]}', "application/json")
+            self._send(json.dumps({"jobs": [self._fixture_job()] if self.jobs_fixture else []}).encode(), "application/json")
+            return
+        if path == "/v1/jobs/fixture-job" and self.jobs_fixture:
+            self._send(json.dumps(self._fixture_job()).encode(), "application/json")
+            return
+        if path == "/v1/jobs/fixture-job/events" and self.jobs_fixture:
+            events = [
+                {"sequence": 1, "jobId": "fixture-job", "timestamp": "2026-08-25T01:00:00Z", "type": "submitted", "runner": "github-hosted"},
+                {"sequence": 2, "jobId": "fixture-job", "timestamp": "2026-08-25T01:01:00Z", "type": "plan", "steps": ["inspect_rom", "debloat", "apply_mod"]},
+                {"sequence": 3, "jobId": "fixture-job", "timestamp": "2026-08-25T01:02:00Z", "type": "step", "step": "inspect_rom", "status": "success", "details": {"durationSeconds": 4.2, "phase": "Plus"}},
+                {"sequence": 4, "jobId": "fixture-job", "timestamp": "2026-08-25T01:03:00Z", "type": "step", "step": "debloat", "status": "running", "message": "Đang quét 42 đường dẫn hệ thống", "details": {"removedCount": 17, "notFoundCount": 2, "phase": "Plus"}},
+            ]
+            self._send(json.dumps({"events": events}).encode(), "application/json")
             return
         if path == "/v1/drafts/source" and self.server_draft_fallback:
             self._send(json.dumps({"uri": self.source_uri}).encode(), "application/json")
             return
         self._send(b"not found", "text/plain", 404)
+
+    @staticmethod
+    def _fixture_job() -> dict[str, object]:
+        return {
+            "job_id": "fixture-job", "status": "running", "stage": "debloat", "progress": 0.42,
+            "runner": "github-hosted", "created_at": "2026-08-25T01:00:00Z",
+            "recipe": {
+                "device": "PKG110", "source": {"sizeBytes": 8680370027, "metadata": {"productName": "PKG110", "version": "PKG110_16.0.9.400(CN01)", "androidVersion": "16"}},
+                "build": {"preset": "plus", "modVersion": "ColorOS_16.0.9", "modReleaseVersion": "V5.0", "mods": ["Gapps", "WK_Manager"]},
+            },
+            "artifacts": [],
+        }
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
         path = urlsplit(self.path).path
@@ -227,6 +261,8 @@ def _render_mini_app_in_chrome(
     catalog_mod_versions: tuple[str, ...] = ("ColorOS_16.0.9",),
     catalog_mods_by_version: dict[str, list[str]] | None = None,
     initial_view: str = "",
+    jobs_fixture: bool = False,
+    click_job_log: bool = False,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -247,6 +283,8 @@ def _render_mini_app_in_chrome(
             "source_metadata": source_metadata or OPLUS_TEST_METADATA,
             "catalog_mod_versions": catalog_mod_versions,
             "catalog_mods_by_version": catalog_mods_by_version,
+            "jobs_fixture": jobs_fixture,
+            "click_job_log": click_job_log,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -424,11 +462,14 @@ class TelegramMiniAppTests(unittest.TestCase):
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
-        for surface in ("build", "jobs", "system"):
+        for surface in ("build", "jobs", "catalog", "system"):
             self.assertIn(f'id="{surface}"', html)
             self.assertIn(f'data-nav="{surface}"', html)
-        self.assertNotIn('id="catalog"', html)
         for control in (
+            "catalog-search",
+            "catalog-version",
+            "device-list",
+            "catalog-mod-list",
             "default-preset",
             "pipeline-count",
             "mod-search",
@@ -438,7 +479,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             self.assertIn(f'id="{control}"', html)
         self.assertIn('data-action="cache"', html)
         self.assertIn('data-action="cache_clear"', html)
-        self.assertNotIn("renderCatalog", script)
+        self.assertIn("renderCatalog", script)
         self.assertIn('.contents-rail [data-nav]', script)
         self.assertIn("incompleteLabel", script)
         self.assertIn("chooseDeviceHint", script)
@@ -457,22 +498,25 @@ class TelegramMiniAppTests(unittest.TestCase):
         bottom_nav = re.search(r'<nav class="bottom-nav".*?</nav>', html, re.DOTALL)
         self.assertIsNotNone(bottom_nav)
         bottom_nav_html = bottom_nav.group(0)
-        self.assertEqual(["build", "jobs", "system"], re.findall(r'data-nav="([^"]+)"', bottom_nav_html))
-        self.assertEqual(3, bottom_nav_html.count('class="nav-icon"'))
+        self.assertEqual(["build", "jobs", "catalog", "system"], re.findall(r'data-nav="([^"]+)"', bottom_nav_html))
+        self.assertEqual(4, bottom_nav_html.count('class="nav-icon"'))
         self.assertNotRegex(bottom_nav_html, r"<b>\d{2}</b>")
         self.assertNotIn(".bottom-nav button.active::before", styles)
         self.assertIn("updateDispatchFab", script)
-        self.assertIn('class="sr-only" data-i18n="finishSource"', html)
+        self.assertIn('data-i18n="finishBuild">Hoàn tất cấu hình build', html)
+        self.assertIn("bindLiquidBottomTabs", script)
+        self.assertIn("--liquid-stretch-x", styles)
+        self.assertIn("chromatic", (ROOT / "DESIGN.md").read_text(encoding="utf-8"))
         self.assertIn("prefersReducedMotion", script)
         self.assertIn('"IBM Plex Sans"', styles)
         self.assertIn('"JetBrains Mono"', styles)
         self.assertIn("--accent:", styles)
         self.assertIn("--success:", styles)
         self.assertIn("--radius-sm: 4px", styles)
-        self.assertIn("repeat(3,minmax(0,1fr))", styles)
+        self.assertIn("repeat(var(--tab-count),minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
 
-    def test_build_surface_keeps_only_build_jobs_and_system_actions(self) -> None:
+    def test_build_surface_keeps_build_workflow_separate_from_catalog_and_system(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
@@ -485,6 +529,26 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="mod-release-version-input" maxlength="64"', html)
         self.assertIn("build.modReleaseVersion", script)
         self.assertIn("event-group", script)
+        self.assertIn("viewFullLog", script)
+        self.assertIn("eventDetailEntries", script)
+        self.assertIn("events.slice(-8)", script)
+
+    def test_jobs_full_log_expands_named_steps_and_structured_details(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            click_job_log=True,
+        )
+
+        self.assertIn('class="job-events expanded"', dom)
+        self.assertIn("Toàn bộ nhật ký build", dom)
+        self.assertIn("Gỡ ứng dụng thừa · Đang thực hiện", dom)
+        self.assertIn("Đang quét 42 đường dẫn hệ thống", dom)
+        self.assertIn("removed Count", dom)
+        self.assertIn("17", dom)
+        self.assertIn("Thu gọn nhật ký", dom)
+        self.assertGreater(screenshot_size, 10_000)
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
