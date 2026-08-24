@@ -398,6 +398,7 @@ class TelegramBotController:
         storage_remote: str | None = None,
         web_app_url: str | None = None,
         session_store: TelegramMiniAppSessionStore | None = None,
+        artifact_download_url_provider: Callable[[JobManifest], str] | None = None,
     ) -> None:
         self.access = access
         self.orchestrator = orchestrator
@@ -422,6 +423,7 @@ class TelegramBotController:
                 raise ValueError("Telegram Mini App URL must be a public HTTPS URL")
         self.web_app_url = configured_web_app
         self.session_store = session_store
+        self.artifact_download_url_provider = artifact_download_url_provider
 
     def command_sets(self) -> dict[str, list[dict[str, str]]]:
         return {
@@ -826,8 +828,11 @@ class TelegramBotController:
                 self.access.approve(argument, actor=identity)
                 return f"Đã duyệt Telegram user {argument}."
             if command == "/revoke":
-                self.access.revoke(argument, actor=identity)
-                return f"Đã thu hồi Telegram user {argument}."
+                subject, separator, reason = argument.partition(" ")
+                if not separator or not reason.strip():
+                    return "Cú pháp: /revoke <telegram_id> <lý do>"
+                self.access.revoke(subject, actor=identity, reason=reason.strip())
+                return f"Đã thu hồi Telegram user {subject}."
             if command == "/users":
                 return self._render_json(self.access.list_access(actor=identity))
             return "Lệnh không hợp lệ. Dùng /menu để xem chức năng."
@@ -1121,8 +1126,10 @@ class TelegramBotController:
             if self.runtime:
                 job = self.runtime.refresh(job)
             if action == "artifact":
+                download_url = self._artifact_download_url(job)
                 text = "\n\n".join(
-                    f"{item.name}\n{item.public_url or item.uri}\nSHA-256: {item.sha256}"
+                    f"{item.name}\nSHA-256: {item.sha256}"
+                    + (f"\n{download_url}" if download_url else "")
                     for item in job.artifacts
                 ) or TEXT[language]["no_artifact"]
                 return BotResponse(text, self._job_markup(job, language, identity.subject))
@@ -1202,11 +1209,18 @@ class TelegramBotController:
         job = self.orchestrator.inspect(job_id, identity)
         if self.runtime:
             job = self.runtime.refresh(job)
+        download_url = self._artifact_download_url(job)
         return "\n".join(
-            f"{artifact.name}\n{sanitize_public_value(artifact.public_url or artifact.uri)}"
-            f"\nSHA-256: {artifact.sha256}"
+            f"{artifact.name}\nSHA-256: {artifact.sha256}"
+            + (f"\n{download_url}" if download_url else "")
             for artifact in job.artifacts
         ) or "Job chưa có artifact."
+
+    def _artifact_download_url(self, job: JobManifest) -> str:
+        if not self.artifact_download_url_provider:
+            return ""
+        value = str(self.artifact_download_url_provider(job) or "").strip()
+        return sanitize_public_value(value) if value.startswith("https://") else ""
 
     def _devices(self) -> list[tuple[str, str]]:
         payload = self.catalog_provider()

@@ -2364,6 +2364,7 @@ def create_app(*, start_queue: bool = True) -> Flask:
                 "steps": [
                     {"id": step, "label": label, "required": required}
                     for step, label, required in STEP_DEFINITIONS
+                    if step != "patch_vendor_boot"
                 ],
                 "diagnostics": diagnostics(),
                 "stageCache": stage_cache_status(),

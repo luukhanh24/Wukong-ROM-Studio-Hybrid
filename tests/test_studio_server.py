@@ -320,7 +320,7 @@ class StudioServerTests(unittest.TestCase):
         self.assertTrue(any(mod["name"] == "Fix_noti" for mod in payload["mods"]))
         self.assertNotIn("framework_patch", [step["id"] for step in payload["steps"]])
         self.assertNotIn("region_patch", [step["id"] for step in payload["steps"]])
-        self.assertIn("patch_vendor_boot", [step["id"] for step in payload["steps"]])
+        self.assertNotIn("patch_vendor_boot", [step["id"] for step in payload["steps"]])
         self.assertNotIn("frameworkAssets", payload["diagnostics"])
 
     def test_corrupt_settings_are_quarantined_before_defaults_load(self):

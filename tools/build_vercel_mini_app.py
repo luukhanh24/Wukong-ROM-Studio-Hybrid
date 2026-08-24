@@ -66,7 +66,12 @@ def main() -> int:
             "WUKONG_TELEGRAM_MINI_APP_API_URL",
             "https://wukong-mini-api.onrender.com",
         ),
-        release=os.environ.get("VERCEL_URL", "production"),
+        release=(
+            os.environ.get("WUKONG_RELEASE_SHA")
+            or os.environ.get("VERCEL_GIT_COMMIT_SHA")
+            or os.environ.get("VERCEL_URL")
+            or "production"
+        ),
     )
     print(f"Built privacy-safe Mini App at {output}")
     return 0

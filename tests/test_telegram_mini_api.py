@@ -8,7 +8,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
 from wukong.orchestrator import HybridOrchestrator, InMemoryJobStore
@@ -98,6 +98,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             cache_clearer=lambda: {"entryCount": 0, "totalBytes": 0},
             actions_callback_secret=CALLBACK_SECRET,
         )
+        self.api._notify_access_change = Mock()
         self.client = self.api.app.test_client()
 
     def _save_release_versions(self, values: dict[str, str]) -> dict[str, str]:
@@ -108,7 +109,13 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.temporary.cleanup()
 
     def headers(self, user_id: int = 42, origin: str = ORIGIN) -> dict[str, str]:
-        return {"Origin": origin, "Authorization": f"tma {signed_init_data(user_id)}"}
+        return {
+            "Origin": origin,
+            "Authorization": f"tma {signed_init_data(user_id)}",
+            "X-Wukong-Session-Id": "fixture-session",
+            "X-Wukong-Client-Version": "test-suite",
+            "X-Telegram-Platform": "android",
+        }
 
     def recipe(self) -> dict[str, object]:
         return {
@@ -128,6 +135,117 @@ class TelegramMiniAppAPITests(unittest.TestCase):
                 "notifyTelegram": True,
             },
         }
+
+    def test_pending_user_is_recorded_and_can_read_own_profile(self) -> None:
+        response = self.client.post("/v1/session/open", headers=self.headers(77))
+
+        self.assertEqual(200, response.status_code)
+        profile = response.get_json()["user"]
+        self.assertEqual("77", profile["telegramId"])
+        self.assertEqual("pending", profile["accessStatus"])
+        self.assertEqual(1, profile["miniAppOpenCount"])
+        denied = self.client.get("/v1/jobs", headers=self.headers(77))
+        self.assertEqual(403, denied.status_code)
+        self.assertEqual("access_pending", denied.get_json()["code"])
+
+    def test_me_exposes_quota_and_job_submit_is_idempotent(self) -> None:
+        me = self.client.get("/v1/me", headers=self.headers(42))
+        self.assertEqual(200, me.status_code)
+        self.assertEqual(1, me.get_json()["user"]["buildCredits"])
+
+        headers = {**self.headers(42), "Idempotency-Key": "mini-submit-42"}
+        created = self.client.post("/v1/jobs", headers=headers, json=self.recipe())
+        repeated = self.client.post("/v1/jobs", headers=headers, json=self.recipe())
+
+        self.assertEqual(201, created.status_code)
+        self.assertEqual(200, repeated.status_code)
+        self.assertEqual(created.get_json()["job_id"], repeated.get_json()["job_id"])
+        self.assertEqual(1, self.runtime.start.call_count)
+        self.assertEqual(0, self.access.profile(42)["buildCredits"])
+        exhausted = self.client.post(
+            "/v1/jobs",
+            headers={**self.headers(42), "Idempotency-Key": "mini-submit-43"},
+            json=self.recipe(),
+        )
+        self.assertEqual(403, exhausted.status_code)
+        self.assertEqual("build_quota_exhausted", exhausted.get_json()["code"])
+
+    def test_admin_manages_users_access_allowance_and_audit(self) -> None:
+        created = self.client.post(
+            "/v1/admin/users",
+            headers=self.headers(1),
+            json={"telegramId": "88", "username": "new_user", "displayName": "New User"},
+        )
+        self.assertEqual(201, created.status_code)
+        self.assertEqual("pending", created.get_json()["user"]["accessStatus"])
+
+        approved = self.client.post(
+            "/v1/admin/users/88/approve",
+            headers=self.headers(1),
+            json={"reason": "tester"},
+        )
+        self.assertEqual(200, approved.status_code)
+        self.assertEqual(1, approved.get_json()["user"]["buildCredits"])
+        allowance = self.client.post(
+            "/v1/admin/users/88/allowance",
+            headers=self.headers(1),
+            json={"operation": "add", "value": 4, "reason": "beta allocation"},
+        )
+        self.assertEqual(200, allowance.status_code)
+        self.assertEqual(5, allowance.get_json()["user"]["buildCredits"])
+
+        listing = self.client.get(
+            "/v1/admin/users?query=new_user&status=approved",
+            headers=self.headers(1),
+        )
+        self.assertEqual(1, listing.get_json()["total"])
+        detail = self.client.get("/v1/admin/users/88", headers=self.headers(1))
+        self.assertGreaterEqual(len(detail.get_json()["events"]), 3)
+        missing_reason = self.client.post(
+            "/v1/admin/users/88/revoke",
+            headers=self.headers(1),
+            json={},
+        )
+        self.assertEqual(400, missing_reason.status_code)
+        revoked = self.client.post(
+            "/v1/admin/users/88/revoke",
+            headers=self.headers(1),
+            json={"reason": "access ended"},
+        )
+        self.assertEqual("revoked", revoked.get_json()["user"]["accessStatus"])
+
+        denied = self.client.get("/v1/admin/users", headers=self.headers(42))
+        self.assertEqual(403, denied.status_code)
+        self.assertEqual("admin_required", denied.get_json()["code"])
+
+    def test_artifact_download_uses_short_lived_api_ticket(self) -> None:
+        created = self.client.post(
+            "/v1/jobs",
+            headers={**self.headers(42), "Idempotency-Key": "download-job"},
+            json=self.recipe(),
+        )
+        job_id = created.get_json()["job_id"]
+        self.store.update(
+            job_id,
+            status=JobStatus.SUCCEEDED,
+            artifacts=[
+                ArtifactRecord(
+                    name="PKG110.zip",
+                    uri="wukong-gdrive:artifacts/PKG110.zip",
+                    size_bytes=123,
+                    sha256="a" * 64,
+                    public_url="https://drive.google.com/uc?id=fixture",
+                )
+            ],
+        )
+
+        issued = self.client.get(f"/v1/jobs/{job_id}/download", headers=self.headers(42))
+        self.assertEqual(200, issued.status_code)
+        download_url = issued.get_json()["downloadUrl"]
+        parsed = urlsplit(download_url)
+        followed = self.client.get(f"{parsed.path}?{parsed.query}")
+        self.assertEqual(302, followed.status_code)
+        self.assertEqual("https://drive.google.com/uc?id=fixture", followed.headers["Location"])
 
     def test_validates_signature_and_expiry(self) -> None:
         result = validate_telegram_init_data(signed_init_data(42), TOKEN)
@@ -233,6 +351,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, allowed.status_code)
         self.assertEqual(ORIGIN, allowed.headers["Access-Control-Allow-Origin"])
         self.assertEqual(200, self.client.get("/healthz").status_code)
+        self.assertEqual(200, self.client.get("/readyz").status_code)
 
     def test_source_preview_allows_origin_without_identity_but_jobs_stay_private(self) -> None:
         preview = self.client.post(
@@ -264,6 +383,11 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             repository="luukhanh24/Wukong-ROM-Studio-Hybrid",
             url="https://github.com/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/321",
         )
+        self.store.append_event(
+            job_id,
+            "warning",
+            warning="OTA https://cdn.example/rom.zip?Signature=private-value&Expires=9999999999",
+        )
 
         jobs = self.client.get("/v1/jobs", headers=self.headers())
         events = self.client.get(f"/v1/jobs/{job_id}/events", headers=self.headers())
@@ -278,6 +402,8 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertNotIn('"runid"', public_payload)
         self.assertNotIn("luukhanh24", public_payload)
         self.assertNotIn("github.com", public_payload)
+        self.assertNotIn("private-value", public_payload)
+        self.assertIn("[redacted]", public_payload)
 
     def test_source_probe_returns_a_stable_code_for_expired_signed_urls(self) -> None:
         self.probe.side_effect = ValueError(
@@ -529,12 +655,16 @@ class TelegramMiniAppAPITests(unittest.TestCase):
 
         with patch.dict("os.environ", {"WUKONG_RELEASE_SHA": "c" * 40}):
             starting = client.get("/healthz")
+            readiness_starting = client.get("/readyz")
             ready = True
             healthy = client.get("/healthz")
+            readiness_healthy = client.get("/readyz")
 
         self.assertEqual(503, starting.status_code)
         self.assertEqual("starting", starting.json["status"])
+        self.assertEqual(503, readiness_starting.status_code)
         self.assertEqual(200, healthy.status_code)
+        self.assertEqual(200, readiness_healthy.status_code)
         self.assertEqual("c" * 40, healthy.json["release"])
         self.assertEqual("postgresql", healthy.json["stateBackend"])
 
@@ -671,14 +801,19 @@ class TelegramJobNotifierTests(unittest.TestCase):
             data_root=root / "data",
             terminal_notifier=notifier,
         )
-        runtime.notify_terminal(manifest)
-        runtime.notify_terminal(manifest)
+        with patch.dict(
+            "os.environ",
+            {"WUKONG_TELEGRAM_MINI_APP_API_URL": "https://mini-api.example.com"},
+        ):
+            runtime.notify_terminal(manifest)
+            runtime.notify_terminal(manifest)
 
         post.assert_called_once()
         text = post.call_args.kwargs["json"]["text"]
         self.assertIn("PKG110_16.0.10.500(CN01)", text)
         self.assertIn("Android: 16", text)
-        self.assertIn("https://drive.google.com/download/fixture", text)
+        self.assertIn(f"https://mini-api.example.com/v1/jobs/{job.job_id}/download?ticket=", text)
+        self.assertNotIn("drive.google.com", text)
         self.assertIn("[internal build reference]", text)
         self.assertNotIn("github.com", text.casefold())
         self.assertNotIn("luukhanh24", text.casefold())

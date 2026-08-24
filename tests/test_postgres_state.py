@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import sqlite3
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
 from wukong.models import BuildRecipe, Identity, JobManifest, JobStatus
 from wukong.orchestrator import FileJobStore
 from wukong.postgres_state import (
+    BuildQuotaError,
     PostgresJobStore,
     PostgresTelegramAccessStore,
     PostgresTelegramUIStateStore,
@@ -122,10 +124,203 @@ class PostgresJobStoreTests(unittest.TestCase):
         self.assertEqual("user", restored.identity(99).role)
         self.assertEqual({"admins": ["42"], "users": ["99"]}, restored.list_access(actor=admin))
 
-        restored.revoke(99, actor=admin)
+        with self.assertRaisesRegex(ValueError, "reason"):
+            restored.revoke(99, actor=admin)
+        restored.revoke(99, actor=admin, reason="security review")
         self.assertIsNone(restored.identity(99))
         with self.assertRaises(PermissionError):
             restored.approve(100, actor=Identity("telegram", "99", "user"))
+
+    def test_telegram_user_profile_session_and_build_credit_are_durable_and_idempotent(self) -> None:
+        admin = Identity("telegram", "42", "admin")
+        store = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+
+        pending = store.observe_user(
+            99,
+            username="fixture_user",
+            display_name="Fixture User",
+            language="vi",
+            platform="android",
+            app_version="2026.08",
+        )
+        self.assertEqual("pending", pending["accessStatus"])
+        self.assertIsNone(store.identity(99))
+
+        first_open = store.open_session(99, "launch-1")
+        repeated_open = store.open_session(99, "launch-1")
+        self.assertEqual(1, first_open["miniAppOpenCount"])
+        self.assertEqual(1, repeated_open["miniAppOpenCount"])
+
+        store.approve(99, actor=admin)
+        approved = store.profile(99)
+        self.assertEqual("approved", approved["accessStatus"])
+        self.assertEqual(1, approved["buildCredits"])
+
+        reserved = store.reserve_build(
+            99,
+            job_id="job-credit-1",
+            idempotency_key="request-credit-1",
+        )
+        duplicate = store.reserve_build(
+            99,
+            job_id="different-job-id",
+            idempotency_key="request-credit-1",
+        )
+        self.assertFalse(reserved["existing"])
+        self.assertEqual("job-credit-1", duplicate["jobId"])
+        self.assertTrue(duplicate["existing"])
+        self.assertEqual(0, store.profile(99)["buildCredits"])
+        self.assertEqual(1, store.profile(99)["jobCount"])
+        with self.assertRaises(BuildQuotaError):
+            store.reserve_build(99, job_id="job-credit-2", idempotency_key="request-credit-2")
+
+        self.assertTrue(store.compensate_build(99, "job-credit-1", reason="dispatch failed"))
+        self.assertFalse(store.compensate_build(99, "job-credit-1", reason="retry"))
+        compensated = store.profile(99)
+        self.assertEqual(1, compensated["buildCredits"])
+        self.assertEqual(0, compensated["jobCount"])
+
+        store.revoke(99, actor=admin, reason="manual review")
+        revoked = store.profile(99)
+        self.assertEqual("revoked", revoked["accessStatus"])
+        self.assertEqual(0, revoked["buildCredits"])
+        self.assertIsNone(store.identity(99))
+        store.approve(99, actor=admin)
+        self.assertEqual(1, store.profile(99)["buildCredits"])
+        self.assertGreaterEqual(len(store.user_events(99, actor=admin)), 5)
+
+    def test_configured_admin_is_unlimited_and_cannot_be_revoked(self) -> None:
+        store = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = store.identity(42)
+
+        self.assertEqual("admin", admin.role)
+        self.assertTrue(store.profile(42)["unlimited"])
+        with self.assertRaises(PermissionError):
+            store.revoke(42, actor=admin, reason="not allowed")
+        reservation = store.reserve_build(
+            42,
+            job_id="admin-job",
+            idempotency_key="admin-request",
+        )
+        self.assertFalse(reservation["consumed"])
+        self.assertTrue(store.profile(42)["unlimited"])
+
+    def test_postgres_job_and_credit_are_created_atomically_per_user_key(self) -> None:
+        jobs = PostgresJobStore(connect=self.connect, dialect="sqlite")
+        access = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = access.identity(42)
+        access.approve(99, actor=admin)
+        access.approve(100, actor=admin)
+        recipe = _recipe()
+        first_manifest = JobManifest(
+            job_id="atomic-job-99",
+            owner=Identity("telegram", "99", "user"),
+            recipe_digest=recipe.digest,
+            runner="github-hosted",
+        )
+
+        created = access.reserve_and_create_job(
+            jobs,
+            first_manifest,
+            recipe,
+            idempotency_key="same-client-key",
+        )
+        duplicate = access.reserve_and_create_job(
+            jobs,
+            JobManifest(
+                job_id="ignored-retry-job",
+                owner=first_manifest.owner,
+                recipe_digest=recipe.digest,
+                runner="github-hosted",
+            ),
+            recipe,
+            idempotency_key="same-client-key",
+        )
+        other_user = access.reserve_and_create_job(
+            jobs,
+            JobManifest(
+                job_id="atomic-job-100",
+                owner=Identity("telegram", "100", "user"),
+                recipe_digest=recipe.digest,
+                runner="github-hosted",
+            ),
+            recipe,
+            idempotency_key="same-client-key",
+        )
+
+        self.assertFalse(created["existing"])
+        self.assertTrue(duplicate["existing"])
+        self.assertEqual("atomic-job-99", duplicate["jobId"])
+        self.assertEqual("atomic-job-100", other_user["jobId"])
+        self.assertEqual(0, access.profile(99)["buildCredits"])
+        self.assertEqual(1, access.profile(99)["jobCount"])
+        self.assertEqual("submitted", jobs.events("atomic-job-99")[0].type)
+
+    def test_destructive_allowance_changes_require_a_reason(self) -> None:
+        access = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = access.identity(42)
+        access.approve(99, actor=admin)
+        access.update_allowance(99, actor=admin, operation="add", value=4)
+        with self.assertRaisesRegex(ValueError, "reason"):
+            access.update_allowance(99, actor=admin, operation="set", value=2)
+        access.update_allowance(
+            99,
+            actor=admin,
+            operation="set",
+            value=2,
+            reason="reduce test quota",
+        )
+        access.update_allowance(99, actor=admin, operation="unlimited", unlimited=True)
+        with self.assertRaisesRegex(ValueError, "reason"):
+            access.update_allowance(99, actor=admin, operation="unlimited", unlimited=False)
+
+    def test_one_remaining_credit_accepts_only_one_concurrent_job(self) -> None:
+        store = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        store.approve(99, actor=store.identity(42))
+        barrier = threading.Barrier(3)
+        results: list[str] = []
+
+        def reserve(suffix: str) -> None:
+            barrier.wait()
+            try:
+                store.reserve_build(
+                    99,
+                    job_id=f"race-job-{suffix}",
+                    idempotency_key=f"race-request-{suffix}",
+                )
+                results.append("accepted")
+            except BuildQuotaError:
+                results.append("exhausted")
+
+        threads = [threading.Thread(target=reserve, args=(suffix,)) for suffix in ("a", "b")]
+        for thread in threads:
+            thread.start()
+        barrier.wait()
+        for thread in threads:
+            thread.join(timeout=5)
+
+        self.assertEqual(["accepted", "exhausted"], sorted(results))
+        self.assertEqual(0, store.profile(99)["buildCredits"])
 
     def test_legacy_access_migration_preserves_approved_users(self) -> None:
         admin = Identity("telegram", "42", "admin")
@@ -228,7 +423,7 @@ class PostgresJobStoreTests(unittest.TestCase):
             configured.migration,
         )
 
-        configured.access.revoke(99, actor=admin)
+        configured.access.revoke(99, actor=admin, reason="migration test")
         configured.ui_state.set_language(42, "vi")
         reopened = open_control_plane_stores(
             database_url="postgresql://fixture",

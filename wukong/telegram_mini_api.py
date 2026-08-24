@@ -10,12 +10,13 @@ import re
 import secrets
 import threading
 import time
+import uuid
 from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Callable, Mapping
 from urllib.parse import parse_qsl, urlsplit
 
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, jsonify, redirect, request
 from werkzeug.serving import BaseWSGIServer, make_server
 
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, RecipeValidationError, SourceSpec
@@ -23,7 +24,7 @@ from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
 from .source_probe import validate_direct_signed_url_ttl
-from .telegram import TelegramAccessStore
+from .telegram import BuildQuotaError, TelegramAccessStore
 
 TERMINAL_STATUSES = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
 SOURCE_METADATA_KEYS = (
@@ -48,6 +49,7 @@ ACTIONS_CALLBACK_MAX_AGE_SECONDS = 5 * 60
 TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS = 60 * 60
 TELEGRAM_PAIRING_MAX_AGE_SECONDS = 5 * 60
 TELEGRAM_SOURCE_DRAFT_MAX_AGE_SECONDS = 24 * 60 * 60
+ARTIFACT_DOWNLOAD_TICKET_SECONDS = 5 * 60
 MOD_RELEASE_VERSION_RE = re.compile(r"^[^/\\\x00-\x1f]{1,64}$")
 
 
@@ -250,6 +252,23 @@ def validate_telegram_launch_token(
     return subject
 
 
+def issue_artifact_download_ticket(
+    job_id: str,
+    subject: int | str,
+    bot_token: str,
+    *,
+    now: int | None = None,
+) -> str:
+    expires_at = (int(time.time()) if now is None else int(now)) + ARTIFACT_DOWNLOAD_TICKET_SECONDS
+    payload = f"v1.{subject}.{expires_at}"
+    signature = hmac.new(
+        _telegram_launch_key(bot_token),
+        f"download\0{job_id}\0{payload}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}.{signature}"
+
+
 def validate_telegram_init_data(
     init_data: str,
     bot_token: str,
@@ -304,6 +323,17 @@ def public_job_payload(
     payload = manifest.to_dict()
     payload.pop("owner", None)
     payload.pop("external_run_id", None)
+    artifacts = payload.get("artifacts")
+    if isinstance(artifacts, list):
+        for artifact in artifacts:
+            if isinstance(artifact, dict):
+                downloadable = str(
+                    artifact.get("public_url") or artifact.get("publicUrl") or ""
+                ).startswith("https://")
+                artifact.pop("uri", None)
+                artifact.pop("public_url", None)
+                artifact.pop("publicUrl", None)
+                artifact["downloadAvailable"] = downloadable
     if recipe:
         payload["recipe"] = {
             "task": recipe.task,
@@ -339,10 +369,22 @@ def sanitize_public_value(value: object) -> object:
     """Remove internal GitHub references before data reaches any end user."""
 
     if isinstance(value, str):
-        return re.sub(
+        sanitized = re.sub(
             r"https?://(?:api\.)?github\.com/\S+",
             "[internal build reference]",
             value,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"([?&](?:awsaccesskeyid|credential|expires|s|sign|signature|token|x-amz-[a-z-]+)=)[^&\s]+",
+            r"\1[redacted]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        return re.sub(
+            r"\b(?:authorization:\s*)?(?:bearer|tma|wla)\s+[A-Za-z0-9._~+/=%&-]+",
+            "[redacted authorization]",
+            sanitized,
             flags=re.IGNORECASE,
         )
     if isinstance(value, Mapping):
@@ -394,6 +436,12 @@ class TelegramMiniAppAPI:
     ) -> None:
         self.bot_token = bot_token
         self.allowed_origin = _origin_from_web_app_url(allowed_origin)
+        configured_origins = {
+            _origin_from_web_app_url(value)
+            for value in os.environ.get("WUKONG_ALLOWED_ORIGINS", "").split(",")
+            if value.strip()
+        }
+        self.allowed_origins = {self.allowed_origin, *configured_origins}
         self.access = access
         self.orchestrator = orchestrator
         self.runtime = runtime
@@ -429,6 +477,8 @@ class TelegramMiniAppAPI:
         self._probe_cache: dict[tuple[str, str], tuple[float, dict[str, object]]] = {}
         self._probe_lock = threading.RLock()
         self._probe_slots = threading.BoundedSemaphore(2)
+        self._profile_touch: dict[str, float] = {}
+        self._profile_touch_lock = threading.RLock()
         self.app = self._create_app()
 
     def _run_telegram_update_worker(self) -> None:
@@ -449,9 +499,13 @@ class TelegramMiniAppAPI:
         app = Flask("wukong-telegram-mini-api", static_folder=None)
         app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 
+        @app.errorhandler(TelegramInitDataError)
+        def telegram_permission_error(exc: TelegramInitDataError) -> tuple[Response, int]:
+            return jsonify({"error": str(exc), "code": "admin_required"}), 403
+
         @app.before_request
         def authenticate() -> Response | None:
-            if request.path == "/healthz":
+            if request.path in {"/healthz", "/readyz"}:
                 return None
             if request.path == "/internal/actions/callback":
                 authorization = request.headers.get("Authorization", "")
@@ -498,8 +552,10 @@ class TelegramMiniAppAPI:
                 ):
                     return jsonify({"error": "Telegram webhook authentication failed"}), 403
                 return None
+            if re.fullmatch(r"/v1/jobs/[A-Za-z0-9-]{1,64}/download", request.path) and request.args.get("ticket"):
+                return None
             origin = (request.headers.get("Origin") or "").rstrip("/").casefold()
-            if origin != self.allowed_origin.casefold():
+            if origin not in {value.casefold() for value in self.allowed_origins}:
                 return jsonify({"error": "This Mini App origin is not allowed"}), 403
             if request.method == "OPTIONS":
                 return Response(status=204)
@@ -519,19 +575,55 @@ class TelegramMiniAppAPI:
             if separator != " " or scheme.casefold() not in {"tma", "wla"}:
                 return jsonify({"error": "Telegram Mini App authentication is required"}), 401
             try:
+                user: Mapping[str, object] = {}
+                profile: Mapping[str, object] = {}
                 if scheme.casefold() == "tma":
                     telegram = validate_telegram_init_data(
                         credential,
                         self.bot_token,
                         max_age_seconds=self.max_init_data_age_seconds,
                     )
-                    user = telegram["user"]
-                    user_id = str(user["id"]) if isinstance(user, dict) else ""
+                    user = telegram["user"] if isinstance(telegram["user"], Mapping) else {}
+                    user_id = str(user["id"]) if isinstance(user, Mapping) else ""
                 else:
                     user_id = str(validate_telegram_launch_token(credential, self.bot_token))
+                if user_id:
+                    display_name = " ".join(
+                        value
+                        for value in (
+                            str(user.get("first_name") or "").strip(),
+                            str(user.get("last_name") or "").strip(),
+                        )
+                        if value
+                    )
+                    with self._profile_touch_lock:
+                        last_touch = self._profile_touch.get(user_id, 0.0)
+                        should_touch = time.monotonic() - last_touch >= 60.0
+                    profile = self.access.profile(user_id)
+                    if profile is None or should_touch:
+                        profile = self.access.observe_user(
+                            user_id,
+                            username=str(user.get("username") or ""),
+                            display_name=display_name,
+                            language=str(user.get("language_code") or ""),
+                            platform=request.headers.get("X-Telegram-Platform", ""),
+                            app_version=request.headers.get("X-Wukong-Client-Version", ""),
+                        )
+                        with self._profile_touch_lock:
+                            self._profile_touch[user_id] = time.monotonic()
+                    request.environ["wukong.telegram_subject"] = user_id
+                    request.environ["wukong.telegram_profile"] = profile
                 identity = self.access.identity(user_id) if user_id else None
                 if not identity:
-                    return jsonify({"error": "Telegram account is not approved"}), 403
+                    if request.path in {"/v1/session/open", "/v1/me"}:
+                        return None
+                    status = str(profile.get("accessStatus") or "pending") if user_id else "pending"
+                    return jsonify(
+                        {
+                            "error": "Telegram account is revoked" if status == "revoked" else "Telegram account is awaiting approval",
+                            "code": "access_revoked" if status == "revoked" else "access_pending",
+                        }
+                    ), 403
                 request.environ["wukong.identity"] = identity
             except (TelegramInitDataError, ValueError) as exc:
                 return jsonify({"error": str(exc)}), 401
@@ -540,9 +632,13 @@ class TelegramMiniAppAPI:
         @app.after_request
         def add_cors_headers(response: Response) -> Response:
             origin = (request.headers.get("Origin") or "").rstrip("/").casefold()
-            if origin == self.allowed_origin.casefold():
-                response.headers["Access-Control-Allow-Origin"] = self.allowed_origin
-                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+            allowed = {value.casefold(): value for value in self.allowed_origins}
+            if origin in allowed:
+                response.headers["Access-Control-Allow-Origin"] = allowed[origin]
+                response.headers["Access-Control-Allow-Headers"] = (
+                    "Authorization, Content-Type, Idempotency-Key, X-Wukong-Session-Id, "
+                    "X-Wukong-Client-Version, X-Telegram-Platform"
+                )
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
                 response.headers["Access-Control-Max-Age"] = "600"
                 response.headers["Vary"] = "Origin"
@@ -600,6 +696,28 @@ class TelegramMiniAppAPI:
                     "release": release if RELEASE_SHA_RE.fullmatch(release) else "development",
                 }
             ), 200 if ready else 503
+
+        @app.get("/readyz")
+        def readiness() -> Response:
+            ready = bool(self.readiness_provider())
+            return jsonify({"status": "ready" if ready else "starting"}), 200 if ready else 503
+
+        @app.post("/v1/session/open")
+        def session_open() -> Response:
+            subject = self._telegram_subject()
+            session_id = request.headers.get("X-Wukong-Session-Id", "").strip()
+            try:
+                profile = self.access.open_session(subject, session_id)
+                return jsonify({"user": profile})
+            except ValueError as exc:
+                return jsonify({"error": str(exc), "code": "invalid_session"}), 400
+
+        @app.get("/v1/me")
+        def me() -> Response:
+            profile = self.access.profile(self._telegram_subject())
+            if not profile:
+                return jsonify({"error": "Telegram profile is unavailable"}), 404
+            return jsonify({"user": profile})
 
         @app.post("/v1/session/pair")
         def begin_session_pairing() -> Response:
@@ -693,6 +811,12 @@ class TelegramMiniAppAPI:
                         conclusion=conclusion,
                     )
             self.runtime.notify_terminal(refreshed)
+            if refreshed.owner.channel == "telegram":
+                self.access.update_job_status(
+                    refreshed.owner.subject,
+                    refreshed.job_id,
+                    refreshed.status.value,
+                )
             return jsonify(
                 {
                     "jobId": refreshed.job_id,
@@ -729,14 +853,63 @@ class TelegramMiniAppAPI:
 
         @app.post("/v1/jobs")
         def create_job() -> Response:
+            identity = self._identity()
+            reservation: Mapping[str, object] | None = None
+            job_created = False
             try:
                 payload = request.get_json(force=True) or {}
                 if not isinstance(payload, Mapping):
                     raise RecipeValidationError("Build recipe must be an object")
-                recipe = self._verified_recipe(payload, self._identity())
-                manifest = self.orchestrator.submit(recipe, self._identity())
+                recipe = self._verified_recipe(payload, identity)
+                idempotency_key = request.headers.get("Idempotency-Key", "").strip()
+                if not idempotency_key:
+                    idempotency_key = uuid.uuid4().hex
+                if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", idempotency_key):
+                    raise ValueError("Build idempotency key is invalid")
+                requested_job_id = uuid.uuid4().hex
+                atomic_creator = getattr(self.access, "reserve_and_create_job", None)
+                if callable(atomic_creator):
+                    prepared = self.orchestrator.prepare_submission(
+                        recipe,
+                        identity,
+                        job_id=requested_job_id,
+                    )
+                    reservation = atomic_creator(
+                        self.orchestrator.store,
+                        prepared,
+                        recipe,
+                        idempotency_key=idempotency_key,
+                    )
+                else:
+                    reservation = self.access.reserve_build(
+                        identity.subject,
+                        job_id=requested_job_id,
+                        idempotency_key=idempotency_key,
+                    )
+                job_id = str(reservation["jobId"])
+                if reservation.get("existing"):
+                    existing = self.orchestrator.inspect(job_id, identity)
+                    return jsonify(
+                        public_job_payload(existing, self.orchestrator.store.recipe(job_id))
+                    ), 200
+                manifest_value = reservation.get("manifest")
+                manifest = (
+                    manifest_value
+                    if isinstance(manifest_value, JobManifest)
+                    else self.orchestrator.submit(
+                        recipe,
+                        identity,
+                        job_id=job_id,
+                        reservation_already_made=True,
+                    )
+                )
+                job_created = True
                 self.runtime.start(manifest)
                 return jsonify(public_job_payload(manifest, recipe)), 201
+            except BuildQuotaError as exc:
+                return jsonify({"error": str(exc), "code": "build_quota_exhausted"}), 403
+            except PermissionError as exc:
+                return jsonify({"error": str(exc), "code": "access_denied"}), 403
             except (
                 OSError,
                 RuntimeError,
@@ -746,6 +919,13 @@ class TelegramMiniAppAPI:
                 RunnerUnavailableError,
                 OrchestrationError,
             ) as exc:
+                if reservation and not reservation.get("existing"):
+                    self.access.compensate_build(
+                        identity.subject,
+                        str(reservation["jobId"]),
+                        reason=str(exc),
+                        retain_job=job_created,
+                    )
                 return jsonify({"error": str(exc)}), 400
 
         @app.get("/v1/jobs")
@@ -774,6 +954,8 @@ class TelegramMiniAppAPI:
             try:
                 manifest = self.orchestrator.inspect(job_id, self._identity())
                 refreshed = self.runtime.refresh(manifest)
+                if refreshed.owner.channel == "telegram":
+                    self.access.update_job_status(refreshed.owner.subject, job_id, refreshed.status.value)
                 return jsonify(
                     public_job_payload(refreshed, self.orchestrator.store.recipe(job_id))
                 )
@@ -798,11 +980,159 @@ class TelegramMiniAppAPI:
                 cancelled = self.orchestrator.cancel(job_id, self._identity())
                 self.runtime.cancel_external(current)
                 self.runtime.notify_terminal(cancelled)
+                if cancelled.owner.channel == "telegram":
+                    self.access.update_job_status(cancelled.owner.subject, job_id, cancelled.status.value)
                 return jsonify(
                     public_job_payload(cancelled, self.orchestrator.store.recipe(job_id))
                 )
             except OrchestrationError as exc:
                 return jsonify({"error": str(exc)}), 404
+
+        @app.get("/v1/jobs/<job_id>/download")
+        def job_download(job_id: str) -> Response:
+            ticket = request.args.get("ticket", "")
+            if ticket:
+                try:
+                    subject = self._validate_download_ticket(job_id, ticket)
+                except TelegramInitDataError as exc:
+                    return jsonify({"error": str(exc)}), 403
+                manifest = self.orchestrator.store.get(job_id)
+                identity = self.access.identity(subject)
+                if manifest is None or not identity or not (
+                    identity.role == "admin"
+                    or (manifest.owner.channel == "telegram" and manifest.owner.subject == subject)
+                ):
+                    return jsonify({"error": "Artifact download is not available"}), 404
+            else:
+                try:
+                    manifest = self.orchestrator.inspect(job_id, self._identity())
+                except OrchestrationError as exc:
+                    return jsonify({"error": str(exc)}), 404
+            artifact = next((item for item in manifest.artifacts if item.public_url), None)
+            target = str(artifact.public_url if artifact else "").strip()
+            if not target.startswith("https://"):
+                return jsonify({"error": "Artifact download is not available yet"}), 409
+            if not ticket:
+                download_ticket = self._issue_download_ticket(job_id, self._identity().subject)
+                return jsonify(
+                    {
+                        "downloadUrl": f"{request.host_url.rstrip('/')}/v1/jobs/{job_id}/download?ticket={download_ticket}",
+                        "expiresIn": ARTIFACT_DOWNLOAD_TICKET_SECONDS,
+                    }
+                )
+            return redirect(target, code=302)
+
+        @app.get("/v1/admin/users")
+        def admin_users() -> Response:
+            actor = self._require_admin_identity()
+            try:
+                return jsonify(
+                    self.access.list_users(
+                        actor=actor,
+                        query=request.args.get("query", ""),
+                        status=request.args.get("status", ""),
+                        quota=request.args.get("quota", ""),
+                        activity=request.args.get("activity", ""),
+                        limit=int(request.args.get("limit", "50")),
+                        offset=int(request.args.get("offset", "0")),
+                        sort=request.args.get("sort", "lastSeenAt"),
+                        direction=request.args.get("direction", "desc"),
+                    )
+                )
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+
+        @app.post("/v1/admin/users")
+        def admin_create_user() -> Response:
+            actor = self._require_admin_identity()
+            payload = request.get_json(force=True) or {}
+            try:
+                profile = self.access.create_user(
+                    payload.get("telegramId"),
+                    actor=actor,
+                    username=str(payload.get("username") or ""),
+                    display_name=str(payload.get("displayName") or ""),
+                )
+                return jsonify({"user": profile}), 201
+            except (TypeError, ValueError) as exc:
+                return jsonify({"error": str(exc)}), 400
+
+        @app.get("/v1/admin/users/<telegram_id>")
+        def admin_user_detail(telegram_id: str) -> Response:
+            actor = self._require_admin_identity()
+            profile = self.access.profile(telegram_id)
+            if not profile:
+                return jsonify({"error": "Telegram user was not found"}), 404
+            jobs = [
+                public_job_payload(job, self.orchestrator.store.recipe(job.job_id))
+                for job in self.orchestrator.list(actor)
+                if job.owner.channel == "telegram" and job.owner.subject == str(telegram_id)
+            ][:50]
+            return jsonify(
+                {
+                    "user": profile,
+                    "events": self.access.user_events(telegram_id, actor=actor),
+                    "jobs": jobs,
+                }
+            )
+
+        @app.get("/v1/admin/users/<telegram_id>/events")
+        def admin_user_events(telegram_id: str) -> Response:
+            actor = self._require_admin_identity()
+            try:
+                return jsonify({"events": self.access.user_events(telegram_id, actor=actor)})
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+
+        @app.post("/v1/admin/users/<telegram_id>/approve")
+        def admin_approve_user(telegram_id: str) -> Response:
+            actor = self._require_admin_identity()
+            payload = request.get_json(silent=True) or {}
+            try:
+                self.access.approve(telegram_id, actor=actor, reason=str(payload.get("reason") or ""))
+                self._notify_access_change(telegram_id, "Tài khoản Wukong ROM Studio đã được duyệt. Bạn có 1 lượt build.")
+                return jsonify({"user": self.access.profile(telegram_id)})
+            except (PermissionError, ValueError) as exc:
+                return jsonify({"error": str(exc)}), 409
+
+        @app.post("/v1/admin/users/<telegram_id>/revoke")
+        def admin_revoke_user(telegram_id: str) -> Response:
+            actor = self._require_admin_identity()
+            payload = request.get_json(silent=True) or {}
+            reason = str(payload.get("reason") or "").strip()
+            if not reason:
+                return jsonify({"error": "A reason is required to revoke access"}), 400
+            try:
+                self.access.revoke(telegram_id, actor=actor, reason=reason)
+                self._notify_access_change(telegram_id, f"Quyền truy cập Wukong ROM Studio đã bị thu hồi. Lý do: {reason}")
+                return jsonify({"user": self.access.profile(telegram_id)})
+            except (PermissionError, ValueError) as exc:
+                return jsonify({"error": str(exc)}), 409
+
+        @app.post("/v1/admin/users/<telegram_id>/allowance")
+        def admin_user_allowance(telegram_id: str) -> Response:
+            actor = self._require_admin_identity()
+            payload = request.get_json(force=True) or {}
+            operation = str(payload.get("operation") or "").strip().casefold()
+            reason = str(payload.get("reason") or "").strip()
+            try:
+                value = int(payload["value"]) if payload.get("value") is not None else None
+                unlimited = payload.get("unlimited")
+                if operation == "unlimited" and unlimited is not True and unlimited is not False:
+                    raise ValueError("Unlimited value must be a boolean")
+                profile = self.access.update_allowance(
+                    telegram_id,
+                    actor=actor,
+                    operation=operation,
+                    value=value,
+                    unlimited=unlimited if isinstance(unlimited, bool) else None,
+                    reason=reason,
+                )
+                quota = "không giới hạn" if profile.get("unlimited") else f"{profile.get('buildCredits', 0)} lượt"
+                self._notify_access_change(telegram_id, f"Hạn mức Wukong ROM Studio đã thay đổi: {quota}.")
+                return jsonify({"user": profile})
+            except (PermissionError, TypeError, ValueError) as exc:
+                return jsonify({"error": str(exc)}), 409
 
         @app.post("/v1/jobs/<job_id>/resume")
         def resume_job(job_id: str) -> Response:
@@ -850,6 +1180,63 @@ class TelegramMiniAppAPI:
         if not isinstance(identity, Identity):
             raise TelegramInitDataError("Telegram Mini App authentication is required")
         return identity
+
+    def _telegram_subject(self) -> str:
+        subject = str(request.environ.get("wukong.telegram_subject") or "").strip()
+        if subject:
+            return subject
+        return self._identity().subject
+
+    def _require_admin_identity(self) -> Identity:
+        identity = self._identity()
+        if identity.role != "admin":
+            raise TelegramInitDataError("Admin access is required")
+        return identity
+
+    def _notify_access_change(self, telegram_id: int | str, text: str) -> None:
+        """Send an access/quota update without delaying the admin response."""
+
+        def send() -> None:
+            try:
+                import requests
+
+                response = requests.post(
+                    f"https://api.telegram.org/bot{self.bot_token}/sendMessage",
+                    json={
+                        "chat_id": str(telegram_id),
+                        "text": str(text)[:4096],
+                        "disable_web_page_preview": True,
+                    },
+                    timeout=15,
+                )
+                response.raise_for_status()
+            except Exception as exc:  # noqa: BLE001 - notification is best effort
+                print(f"Telegram access notification failed: {type(exc).__name__}", flush=True)
+
+        threading.Thread(target=send, name="wukong-access-notification", daemon=True).start()
+
+    def _issue_download_ticket(self, job_id: str, subject: str) -> str:
+        return issue_artifact_download_ticket(job_id, subject, self.bot_token)
+
+    def _validate_download_ticket(self, job_id: str, ticket: str) -> str:
+        parts = str(ticket or "").split(".")
+        if (
+            len(parts) != 4
+            or parts[0] != "v1"
+            or not parts[1].isdigit()
+            or not parts[2].isdigit()
+            or not re.fullmatch(r"[0-9a-f]{64}", parts[3], re.IGNORECASE)
+        ):
+            raise TelegramInitDataError("Artifact download ticket is invalid")
+        payload = ".".join(parts[:3])
+        expected = hmac.new(
+            _telegram_launch_key(self.bot_token),
+            f"download\0{job_id}\0{payload}".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(parts[3].casefold(), expected) or int(parts[2]) < int(time.time()):
+            raise TelegramInitDataError("Artifact download ticket is invalid or expired")
+        return parts[1]
 
     def _remember_probe(
         self, identity: Identity, uri: str, result: Mapping[str, object]
@@ -935,6 +1322,7 @@ class TelegramMiniAppAPIServer:
 
 class TelegramJobNotifier:
     def __init__(self, bot_token: str, *, http_post: Callable[..., object] | None = None) -> None:
+        self.bot_token = bot_token
         self.endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         if http_post is None:
             import requests
@@ -968,12 +1356,21 @@ class TelegramJobNotifier:
             lines.extend(["", f"Error: {sanitize_public_value(manifest.error)}"])
         if manifest.artifacts:
             lines.extend(["", "Artifacts:"])
+            public_api_url = os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip().rstrip("/")
             for artifact in manifest.artifacts:
+                download_url = ""
+                if public_api_url.startswith("https://"):
+                    ticket = issue_artifact_download_ticket(
+                        manifest.job_id,
+                        manifest.owner.subject,
+                        self.bot_token,
+                    )
+                    download_url = f"{public_api_url}/v1/jobs/{manifest.job_id}/download?ticket={ticket}"
                 lines.extend(
                     [
                         f"• {artifact.name} ({self._size(artifact.size_bytes)})",
                         f"  SHA-256: {artifact.sha256}",
-                        f"  {artifact.public_url or artifact.uri}",
+                        f"  {download_url}" if download_url else "  Download link is temporarily unavailable.",
                     ]
                 )
         response = self.http_post(

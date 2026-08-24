@@ -49,6 +49,7 @@ from wukong.telegram_mini_api import (
     TelegramMiniAppAPI,
     TelegramMiniAppAPIServer,
     TelegramMiniAppSessionStore,
+    issue_artifact_download_ticket,
 )
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
@@ -176,6 +177,25 @@ def main() -> int:
             local_roots=[WORKSPACE_ROOT],
             allowed_remote=os.environ.get("WUKONG_RCLONE_REMOTE", "wukong-gdrive"),
         ),
+        submission_reserver=lambda identity, job_id: (
+            access.reserve_build(
+                identity.subject,
+                job_id=job_id,
+                idempotency_key=job_id,
+            )
+            if identity.channel == "telegram"
+            else {"jobId": job_id, "existing": False, "consumed": False}
+        ),
+        submission_compensator=lambda identity, job_id, reason, retain_job: (
+            access.compensate_build(
+                identity.subject,
+                job_id,
+                reason=reason,
+                retain_job=retain_job,
+            )
+            if identity.channel == "telegram"
+            else False
+        ),
     )
     content_root = _content_root()
     index_path = Path(__file__).resolve().parent / "content-packs" / "index.json"
@@ -208,6 +228,18 @@ def main() -> int:
         return catalog
     diagnostics_provider = lambda: {"system": diagnostics(), "cache": stage_cache_status()}
     mini_app_sessions = TelegramMiniAppSessionStore()
+
+    def artifact_download_url(manifest) -> str:
+        public_url = os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip().rstrip("/")
+        if not public_url.startswith("https://"):
+            return ""
+        ticket = issue_artifact_download_ticket(
+            manifest.job_id,
+            manifest.owner.subject,
+            token,
+        )
+        return f"{public_url}/v1/jobs/{manifest.job_id}/download?ticket={ticket}"
+
     controller = TelegramBotController(
         access=access,
         orchestrator=orchestrator,
@@ -220,6 +252,7 @@ def main() -> int:
         runtime=runtime,
         ui_state=stores.ui_state,
         session_store=mini_app_sessions,
+        artifact_download_url_provider=artifact_download_url,
     )
     transport = os.environ.get("WUKONG_TELEGRAM_TRANSPORT", "polling").strip().casefold()
     if transport not in {"polling", "webhook"}:

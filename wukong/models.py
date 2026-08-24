@@ -261,6 +261,10 @@ class BuildOptions:
             raise RecipeValidationError(
                 f"Unsupported pipeline step: {', '.join(unknown_steps)}"
             )
+        if "patch_vendor_boot" in steps:
+            raise RecipeValidationError(
+                "patch_vendor_boot is disabled by the system-only modification policy"
+            )
         mod_release_version = str(
             data.get("modReleaseVersion")
             or default_mod_release_version(mod_version)

@@ -1967,6 +1967,10 @@ def plan_steps(spec: BuildSpec, workspace: Path | None = None) -> list[str]:
             selected.update(PLUS_DEFAULT_STEPS)
         if spec.selected_mod_names():
             selected.add("apply_mod")
+    if "patch_vendor_boot" in selected:
+        raise StudioError(
+            "patch_vendor_boot is disabled: Wukong builds use the system-only modification policy"
+        )
     if spec.notifyTelegram:
         selected.add("notify_telegram")
     if "notify_telegram" in selected:
@@ -3175,7 +3179,9 @@ def delete_bloatware(rom_unpack: Path, paths: Iterable[str] | None) -> dict[str,
     deleted_paths: list[str] = []
     skipped_paths: list[str] = []
     modified_partitions: set[str] = set()
-    for relative in validate_debloat_paths(paths):
+    validated_paths = validate_debloat_paths(paths)
+    removed_targets: list[Path] = []
+    for relative in validated_paths:
         partition, inner = relative.split("\\", 1)
         # Catalog paths are platform-neutral and normalized with backslashes.
         # Passing ``inner`` to Path directly works on Windows, but POSIX treats
@@ -3197,10 +3203,26 @@ def delete_bloatware(rom_unpack: Path, paths: Iterable[str] | None) -> dict[str,
             resolved.unlink()
         deleted += 1
         deleted_paths.append(relative)
+        removed_targets.append(resolved)
         modified_partitions.add(partition)
+    remaining = [str(path) for path in removed_targets if path.exists()]
+    if remaining:
+        raise StudioError(
+            "Debloat verification failed; removed targets still exist: " + ", ".join(remaining[:5])
+        )
+    warning = ""
+    if validated_paths and deleted == 0:
+        warning = (
+            "Debloat matched no files. Check the ROM partition layout and configured paths; "
+            "the stage was not treated as an effective removal."
+        )
     return {
+        "requested": len(validated_paths),
         "deleted": deleted,
         "skipped": skipped,
+        "verifiedDeleted": len(removed_targets),
+        "effective": deleted > 0,
+        "warning": warning,
         "deletedPaths": deleted_paths,
         "skippedPaths": skipped_paths,
         "modifiedPartitions": sorted(modified_partitions),
@@ -3516,7 +3538,10 @@ def _stage_unpack(context: BuildContext) -> dict[str, Any]:
 
 
 def _stage_debloat(context: BuildContext) -> dict[str, Any]:
-    return delete_bloatware(context.rom_unpack, context.spec.debloatPaths)
+    report = delete_bloatware(context.rom_unpack, context.spec.debloatPaths)
+    if report["requested"] and not report["effective"]:
+        raise StudioError(str(report["warning"]))
+    return report
 
 
 def _stage_apply_mod(context: BuildContext) -> dict[str, Any]:
@@ -3531,6 +3556,12 @@ def _stage_apply_mod(context: BuildContext) -> dict[str, Any]:
         context.spec.modVersion,
         context.progress_callback,
     )
+    forbidden = sorted(set(details.get("modifiedPartitions") or []).intersection(PASSTHROUGH_PARTITIONS))
+    if forbidden:
+        raise StudioError(
+            "System-only policy blocked MOD changes outside mutable partitions: "
+            + ", ".join(forbidden)
+        )
     context.modified_partitions.update(details.get("modifiedPartitions") or [])
     return details
 

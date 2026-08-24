@@ -113,6 +113,7 @@ jobs:
       runner_kind: ${{ steps.route.outputs.runner_kind }}
       recipe_digest: ${{ steps.route.outputs.recipe_digest }}
       recipe_ref: ${{ steps.route.outputs.recipe_ref }}
+      mod_version: ${{ steps.route.outputs.mod_version }}
     steps:
       - name: "01.1 · Lấy mã điều phối / Checkout orchestrator"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -186,6 +187,8 @@ jobs:
           data = json.load(open('.wkstudio/route.json', encoding='utf-8'))
           print(f"runner_kind={data['runner']['kind']}")
           print(f"recipe_digest={data['recipeDigest']}")
+          recipe = json.load(open('.wkstudio/recipe.json', encoding='utf-8'))
+          print(f"mod_version={recipe['build']['modVersion']}")
           PY
           {
             echo "## 01–02 · Recipe preflight & runner route"
@@ -245,10 +248,13 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
+            MOD
+            STARK
+            Flash_script
             copy-image
             OFX
             TWRP
-          key: wukong-common-content-${{ hashFiles('content-packs/index.json') }}
+          key: wukong-content-${{ needs.route.outputs.mod_version }}-${{ hashFiles('content-packs/index.json') }}
       - name: "05–19 · Chạy pipeline ROM / Execute ROM pipeline"
         uses: ./.github/actions/run-hybrid
         with:

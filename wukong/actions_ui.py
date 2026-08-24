@@ -102,7 +102,11 @@ class GitHubActionsUI:
                 for path in details.get("skippedPaths") or []:
                     _emit(f"  [not found] {path}")
             suffix = f" · {duration}s" if duration is not None else ""
-            _emit(f"::notice title={_command_text(title)}::Hoàn thành / Completed{suffix}")
+            warning = str(details.get("warning") or "") if stage == "debloat" else ""
+            if warning:
+                _emit(f"::warning title={_command_text(title)}::{_command_text(warning)}")
+            else:
+                _emit(f"::notice title={_command_text(title)}::Hoàn thành / Completed{suffix}")
             self.close_group()
         elif status == "failed":
             message = event.get("message") or "Stage failed"

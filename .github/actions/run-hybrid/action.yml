@@ -41,9 +41,18 @@ runs:
         task="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['task'])")"
         if [ "$task" = build ]; then
           mod_version="$(python3 -c "import json; print(json.load(open('.wkstudio/recipe.json'))['build']['modVersion'])")"
-          python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "MOD/$mod_version" --rclone-config "$WUKONG_RCLONE_CONFIG"
+          install_pack() {
+            local pack="$1"
+            if python3 content_pack_tool.py verify --content-root . --index content-packs/index.json --pack "$pack" >/dev/null 2>&1; then
+              echo "[Wukong] Content cache hit: $pack"
+            else
+              echo "[Wukong] Content cache miss: $pack"
+              python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "$pack" --rclone-config "$WUKONG_RCLONE_CONFIG"
+            fi
+          }
+          install_pack "MOD/$mod_version"
           for pack in STARK/common Flash_script/common copy-image/v1 OFX/v1 TWRP/v1; do
-            python3 content_pack_tool.py install --content-root . --index content-packs/index.json --pack "$pack" --rclone-config "$WUKONG_RCLONE_CONFIG"
+            install_pack "$pack"
           done
           # Validate before downloading the multi-GB ROM. Strict mode preserves
           # channel parity: a requested MOD is never silently removed.

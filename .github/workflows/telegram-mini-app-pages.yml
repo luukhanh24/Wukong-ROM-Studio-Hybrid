@@ -1,29 +1,37 @@
-name: Telegram Mini App Pages
+name: Telegram Mini App · Vercel
 
 on:
   push:
     branches: [main]
     paths:
       - "telegram_mini_app/**"
+      - "tools/build_vercel_mini_app.py"
       - "tools/export_mini_app_catalog.py"
       - "content-packs/index.json"
       - "devices_sizes.json"
-      - "studio_core.py"
+      - "vercel.json"
       - ".github/workflows/telegram-mini-app-pages.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: telegram-mini-app-pages
+  group: telegram-mini-app-vercel-production
   cancel-in-progress: true
 
+env:
+  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-mini-api.onrender.com' }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
 jobs:
-  build:
+  deploy:
+    name: Build and deploy private Mini App
     runs-on: ubuntu-24.04
+    environment:
+      name: vercel-production
+      url: https://wukong-rom-studio.vercel.app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,37 +39,67 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - name: Build public Mini App catalog
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+      - name: Validate private deployment settings
+        id: deployment-mode
         env:
-          MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "${MINI_APP_API_URL}" && "${MINI_APP_API_URL}" != https://* ]]; then
-            echo "Repository variable WUKONG_TELEGRAM_MINI_APP_API_URL must be a public HTTPS URL." >&2
-            exit 1
+          [[ -n "$WUKONG_TELEGRAM_MINI_APP_API_URL" ]]
+          [[ "$WUKONG_TELEGRAM_MINI_APP_API_URL" == https://* ]]
+          if [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]]; then
+            echo "mode=cli" >> "$GITHUB_OUTPUT"
+          elif [[ -z "$VERCEL_TOKEN" && -z "$VERCEL_ORG_ID" && -z "$VERCEL_PROJECT_ID" ]]; then
+            echo "mode=git-integration" >> "$GITHUB_OUTPUT"
+            echo "Vercel CLI secrets are absent; using the private Git integration auto-deploy."
+          else
+            echo "VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID must be configured together." >&2
+            exit 2
           fi
-          api_url="${MINI_APP_API_URL%/}"
-          mkdir -p .pages
-          cp telegram_mini_app/index.html telegram_mini_app/styles.css telegram_mini_app/app.js .pages/
-          sed -i "s|__WUKONG_TELEGRAM_MINI_APP_API_URL__|${api_url}|g" .pages/index.html
-          sed -i "s#./styles.css#./styles.css?v=${GITHUB_SHA}#; s#./app.js#./app.js?v=${GITHUB_SHA}#" .pages/index.html
-          python -m tools.export_mini_app_catalog --output .pages/catalog.json
-          ! grep -R '__WUKONG_TELEGRAM_MINI_APP_API_URL__' .pages
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v5.0.0
-      - name: Upload Mini App site
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v4.0.0
-        with:
-          path: .pages
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    needs: build
-    steps:
-      - name: Deploy Telegram Mini App
-        id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v4.0.5
+      - name: Install pinned Vercel CLI
+        if: steps.deployment-mode.outputs.mode == 'cli'
+        run: npm install --global vercel@59.5.0
+      - name: Build production bundle locally
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          WUKONG_RELEASE_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.deployment-mode.outputs.mode }}" == cli ]]; then
+            vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+            vercel build --prod --token "$VERCEL_TOKEN"
+          else
+            python -m tools.build_vercel_mini_app
+          fi
+          ! grep -R -Ei 'github\.com|github\.io|luukhanh24|DATABASE_URL|github_pat_' .vercel-static
+      - name: Deploy prebuilt bundle to Vercel
+        if: steps.deployment-mode.outputs.mode == 'cli'
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="$(vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")"
+          [[ "$deployment_url" == https://* ]]
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Verify stable production domain
+        shell: bash
+        run: |
+          set -euo pipefail
+          domain='https://wukong-rom-studio.vercel.app'
+          for attempt in {1..24}; do
+            if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${GITHUB_SHA}")" \
+              && grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
+              && grep -Fq "app.js?v=${GITHUB_SHA}" <<< "$page"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Vercel production domain did not publish the expected release." >&2
+          exit 1

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import hashlib
 import threading
+import uuid
 from collections.abc import Callable
 from collections.abc import Mapping
 from contextlib import contextmanager
@@ -11,6 +12,7 @@ from typing import Any, Iterator, Protocol
 
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, utc_now
 from .orchestrator import JobEvent, JobStore, OrchestrationError, TERMINAL_STATUSES
+from .telegram import BuildQuotaError, require_sensitive_admin_reason
 
 
 class _Cursor(Protocol):
@@ -235,7 +237,7 @@ class PostgresTelegramUIStateStore(_DatabaseStore):
 
 
 class PostgresTelegramAccessStore(_DatabaseStore):
-    """Telegram allowlist stored in PostgreSQL with configured admins immutable."""
+    """Durable Telegram profiles, access audit and build-credit ledger."""
 
     def __init__(
         self,
@@ -251,7 +253,8 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         }
         self._lock = threading.RLock()
         with self._connection() as connection:
-            connection.cursor().execute(
+            cursor = connection.cursor()
+            cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS wukong_telegram_access (
                     subject TEXT PRIMARY KEY,
@@ -259,6 +262,106 @@ class PostgresTelegramAccessStore(_DatabaseStore):
                 )
                 """
             )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_telegram_users (
+                    subject TEXT PRIMARY KEY,
+                    username TEXT NOT NULL DEFAULT '',
+                    display_name TEXT NOT NULL DEFAULT '',
+                    access_status TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (access_status IN ('pending', 'approved', 'revoked')),
+                    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+                    first_seen_at TEXT NOT NULL,
+                    last_seen_at TEXT NOT NULL,
+                    mini_app_open_count INTEGER NOT NULL DEFAULT 0,
+                    job_count INTEGER NOT NULL DEFAULT 0,
+                    build_credits INTEGER NOT NULL DEFAULT 0 CHECK (build_credits >= 0),
+                    unlimited INTEGER NOT NULL DEFAULT 0,
+                    lifetime_granted INTEGER NOT NULL DEFAULT 0,
+                    lifetime_used INTEGER NOT NULL DEFAULT 0,
+                    last_job_id TEXT NOT NULL DEFAULT '',
+                    last_job_status TEXT NOT NULL DEFAULT '',
+                    approved_at TEXT NOT NULL DEFAULT '',
+                    revoked_at TEXT NOT NULL DEFAULT '',
+                    access_actor TEXT NOT NULL DEFAULT '',
+                    access_reason TEXT NOT NULL DEFAULT '',
+                    language TEXT NOT NULL DEFAULT '',
+                    platform TEXT NOT NULL DEFAULT '',
+                    app_version TEXT NOT NULL DEFAULT '',
+                    configured_admin INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_telegram_user_events (
+                    event_id TEXT PRIMARY KEY,
+                    subject TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    actor_subject TEXT NOT NULL DEFAULT '',
+                    reason TEXT NOT NULL DEFAULT '',
+                    details_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (subject) REFERENCES wukong_telegram_users(subject) ON DELETE CASCADE
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_telegram_sessions (
+                    subject TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    opened_at TEXT NOT NULL,
+                    PRIMARY KEY (subject, session_id),
+                    FOREIGN KEY (subject) REFERENCES wukong_telegram_users(subject) ON DELETE CASCADE
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_telegram_quota_ledger (
+                    ledger_id TEXT PRIMARY KEY,
+                    subject TEXT NOT NULL,
+                    entry_type TEXT NOT NULL,
+                    delta INTEGER NOT NULL,
+                    balance_after INTEGER NOT NULL,
+                    job_id TEXT NOT NULL DEFAULT '',
+                    idempotency_key TEXT UNIQUE,
+                    consumed INTEGER NOT NULL DEFAULT 0,
+                    actor_subject TEXT NOT NULL DEFAULT '',
+                    reason TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (subject) REFERENCES wukong_telegram_users(subject) ON DELETE CASCADE
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS wukong_telegram_users_seen_idx "
+                "ON wukong_telegram_users(last_seen_at DESC)"
+            )
+            now = utc_now()
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_users "
+                    "(subject, access_status, role, first_seen_at, last_seen_at, build_credits, "
+                    "unlimited, lifetime_granted) "
+                    "SELECT subject, 'approved', role, ?, ?, CASE WHEN role = 'user' THEN 1 ELSE 0 END, "
+                    "CASE WHEN role = 'admin' THEN 1 ELSE 0 END, CASE WHEN role = 'user' THEN 1 ELSE 0 END "
+                    "FROM wukong_telegram_access WHERE 1 = 1 ON CONFLICT (subject) DO NOTHING"
+                ),
+                (now, now),
+            )
+            for subject in self._configured_admins:
+                cursor.execute(
+                    self._sql(
+                        "INSERT INTO wukong_telegram_users "
+                        "(subject, access_status, role, first_seen_at, last_seen_at, unlimited, configured_admin) "
+                        "VALUES (?, 'approved', 'admin', ?, ?, 1, 1) "
+                        "ON CONFLICT (subject) DO UPDATE SET access_status = 'approved', role = 'admin', "
+                        "unlimited = 1, build_credits = 0, configured_admin = 1"
+                    ),
+                    (subject, now, now),
+                )
 
     @staticmethod
     def _require_admin(actor: Identity) -> None:
@@ -272,45 +375,257 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         with self._connection() as connection:
             cursor = connection.cursor()
             cursor.execute(
-                self._sql("SELECT role FROM wukong_telegram_access WHERE subject = ?"),
+                self._sql(
+                    "SELECT role FROM wukong_telegram_users "
+                    "WHERE subject = ? AND access_status = 'approved'"
+                ),
                 (subject,),
             )
             row = cursor.fetchone()
         return Identity("telegram", subject, str(row[0])) if row is not None else None
 
-    def approve(self, user_id: int | str, *, actor: Identity) -> None:
-        self._require_admin(actor)
+    @staticmethod
+    def _profile_payload(row: Any) -> dict[str, Any] | None:
+        if row is None:
+            return None
+        keys = (
+            "telegramId", "username", "displayName", "accessStatus", "role",
+            "firstSeenAt", "lastSeenAt", "miniAppOpenCount", "jobCount",
+            "buildCredits", "unlimited", "lifetimeGranted", "lifetimeUsed",
+            "lastJobId", "lastJobStatus", "approvedAt", "revokedAt",
+            "accessActor", "accessReason", "language", "platform", "appVersion",
+            "configuredAdmin",
+        )
+        payload = dict(zip(keys, row))
+        for key in (
+            "miniAppOpenCount", "jobCount", "buildCredits", "lifetimeGranted", "lifetimeUsed"
+        ):
+            payload[key] = int(payload[key] or 0)
+        payload["unlimited"] = bool(payload["unlimited"])
+        payload["configuredAdmin"] = bool(payload["configuredAdmin"])
+        return payload
+
+    @staticmethod
+    def _profile_columns() -> str:
+        return (
+            "subject, username, display_name, access_status, role, first_seen_at, last_seen_at, "
+            "mini_app_open_count, job_count, build_credits, unlimited, lifetime_granted, "
+            "lifetime_used, last_job_id, last_job_status, approved_at, revoked_at, access_actor, "
+            "access_reason, language, platform, app_version, configured_admin"
+        )
+
+    @staticmethod
+    def _subject(user_id: int | str) -> str:
         subject = str(user_id).strip()
-        if not subject:
+        if not subject or not subject.isascii() or not subject.isdigit() or int(subject) <= 0:
             raise ValueError("Telegram user ID is required")
+        return subject
+
+    @staticmethod
+    def _display_name(user: Mapping[str, object]) -> str:
+        return " ".join(
+            value for value in (str(user.get("first_name") or "").strip(), str(user.get("last_name") or "").strip()) if value
+        )[:256]
+
+    def _insert_pending(self, cursor: _Cursor, subject: str, now: str) -> None:
+        cursor.execute(
+            self._sql(
+                "INSERT INTO wukong_telegram_users (subject, first_seen_at, last_seen_at) "
+                "VALUES (?, ?, ?) ON CONFLICT (subject) DO NOTHING"
+            ),
+            (subject, now, now),
+        )
+
+    def _append_event(
+        self,
+        cursor: _Cursor,
+        subject: str,
+        event_type: str,
+        *,
+        actor: str = "",
+        reason: str = "",
+        details: Mapping[str, object] | None = None,
+    ) -> None:
+        cursor.execute(
+            self._sql(
+                "INSERT INTO wukong_telegram_user_events "
+                "(event_id, subject, event_type, actor_subject, reason, details_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)"
+            ),
+            (
+                uuid.uuid4().hex,
+                subject,
+                event_type,
+                actor,
+                str(reason or "")[:1024],
+                json.dumps(dict(details or {}), ensure_ascii=False, separators=(",", ":")),
+                utc_now(),
+            ),
+        )
+
+    def observe_user(
+        self,
+        user_id: int | str,
+        *,
+        username: str = "",
+        display_name: str = "",
+        language: str = "",
+        platform: str = "",
+        app_version: str = "",
+    ) -> dict[str, Any]:
+        subject = self._subject(user_id)
+        now = utc_now()
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                self._sql("SELECT 1 FROM wukong_telegram_users WHERE subject = ?"),
+                (subject,),
+            )
+            created = cursor.fetchone() is None
+            self._insert_pending(cursor, subject, now)
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET last_seen_at = ?, "
+                    "username = CASE WHEN ? <> '' THEN ? ELSE username END, "
+                    "display_name = CASE WHEN ? <> '' THEN ? ELSE display_name END, "
+                    "language = CASE WHEN ? <> '' THEN ? ELSE language END, "
+                    "platform = CASE WHEN ? <> '' THEN ? ELSE platform END, "
+                    "app_version = CASE WHEN ? <> '' THEN ? ELSE app_version END "
+                    "WHERE subject = ?"
+                ),
+                (
+                    now,
+                    str(username or "")[:256], str(username or "")[:256],
+                    str(display_name or "")[:256], str(display_name or "")[:256],
+                    str(language or "")[:16], str(language or "")[:16],
+                    str(platform or "")[:64], str(platform or "")[:64],
+                    str(app_version or "")[:64], str(app_version or "")[:64],
+                    subject,
+                ),
+            )
+            if created:
+                self._append_event(cursor, subject, "first_seen")
+        return self.profile(subject) or {}
+
+    def open_session(self, user_id: int | str, session_id: str) -> dict[str, Any]:
+        subject = self._subject(user_id)
+        normalized = str(session_id or "").strip()
+        if not normalized or len(normalized) > 128:
+            raise ValueError("Mini App session ID is required")
+        now = utc_now()
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            self._insert_pending(cursor, subject, now)
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_sessions (subject, session_id, opened_at) "
+                    "VALUES (?, ?, ?) ON CONFLICT (subject, session_id) DO NOTHING"
+                ),
+                (subject, normalized, now),
+            )
+            inserted = cursor.rowcount > 0
+            if inserted:
+                cursor.execute(
+                    self._sql(
+                        "UPDATE wukong_telegram_users SET mini_app_open_count = mini_app_open_count + 1, "
+                        "last_seen_at = ? WHERE subject = ?"
+                    ),
+                    (now, subject),
+                )
+                self._append_event(cursor, subject, "mini_app_open", details={"sessionId": normalized})
+        return self.profile(subject) or {}
+
+    def profile(self, user_id: int | str) -> dict[str, Any] | None:
+        try:
+            subject = self._subject(user_id)
+        except ValueError:
+            return None
+        with self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                self._sql(
+                    f"SELECT {self._profile_columns()} FROM wukong_telegram_users WHERE subject = ?"
+                ),
+                (subject,),
+            )
+            return self._profile_payload(cursor.fetchone())
+
+    def approve(
+        self,
+        user_id: int | str,
+        *,
+        actor: Identity,
+        reason: str = "",
+    ) -> None:
+        self._require_admin(actor)
+        subject = self._subject(user_id)
         if subject in self._configured_admins:
             return
         with self._lock, self._connection() as connection:
-            connection.cursor().execute(
+            cursor = connection.cursor()
+            now = utc_now()
+            self._insert_pending(cursor, subject, now)
+            cursor.execute(
+                self._sql("SELECT access_status FROM wukong_telegram_users WHERE subject = ?"),
+                (subject,),
+            )
+            row = cursor.fetchone()
+            if row is not None and str(row[0]) == "approved":
+                return
+            cursor.execute(
                 self._sql(
                     "INSERT INTO wukong_telegram_access (subject, role) VALUES (?, 'user') "
                     "ON CONFLICT (subject) DO UPDATE SET role = 'user'"
                 ),
                 (subject,),
             )
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET access_status = 'approved', role = 'user', "
+                    "build_credits = 1, unlimited = 0, lifetime_granted = lifetime_granted + 1, "
+                    "approved_at = ?, revoked_at = '', access_actor = ?, access_reason = ? "
+                    "WHERE subject = ?"
+                ),
+                (now, actor.subject, str(reason or "")[:1024], subject),
+            )
+            self._append_event(cursor, subject, "approved", actor=actor.subject, reason=reason, details={"credits": 1})
 
-    def revoke(self, user_id: int | str, *, actor: Identity) -> None:
+    def revoke(
+        self,
+        user_id: int | str,
+        *,
+        actor: Identity,
+        reason: str = "",
+    ) -> None:
         self._require_admin(actor)
-        subject = str(user_id).strip()
+        reason = require_sensitive_admin_reason(reason, action="revoke")
+        subject = self._subject(user_id)
         if subject in self._configured_admins:
             raise PermissionError("Configured Telegram admins cannot be revoked from the allowlist")
         with self._lock, self._connection() as connection:
-            connection.cursor().execute(
+            cursor = connection.cursor()
+            now = utc_now()
+            self._insert_pending(cursor, subject, now)
+            cursor.execute(
                 self._sql("DELETE FROM wukong_telegram_access WHERE subject = ?"),
                 (subject,),
             )
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET access_status = 'revoked', build_credits = 0, "
+                    "unlimited = 0, revoked_at = ?, access_actor = ?, access_reason = ? WHERE subject = ?"
+                ),
+                (now, actor.subject, reason[:1024], subject),
+            )
+            self._append_event(cursor, subject, "revoked", actor=actor.subject, reason=reason)
 
     def list_access(self, *, actor: Identity) -> dict[str, list[str]]:
         self._require_admin(actor)
         with self._connection() as connection:
             cursor = connection.cursor()
             cursor.execute(
-                "SELECT subject, role FROM wukong_telegram_access ORDER BY subject"
+                "SELECT subject, role FROM wukong_telegram_users "
+                "WHERE access_status = 'approved' ORDER BY subject"
             )
             rows = cursor.fetchall()
         admins = set(self._configured_admins)
@@ -331,12 +646,34 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         if existing and existing.role == normalized_role:
             return False
         with self._lock, self._connection() as connection:
-            connection.cursor().execute(
+            cursor = connection.cursor()
+            now = utc_now()
+            cursor.execute(
                 self._sql(
                     "INSERT INTO wukong_telegram_access (subject, role) VALUES (?, ?) "
                     "ON CONFLICT (subject) DO UPDATE SET role = excluded.role"
                 ),
                 (normalized_subject, normalized_role),
+            )
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_users "
+                    "(subject, access_status, role, first_seen_at, last_seen_at, build_credits, unlimited, lifetime_granted) "
+                    "VALUES (?, 'approved', ?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT (subject) DO UPDATE SET access_status = 'approved', role = excluded.role, "
+                    "build_credits = CASE WHEN wukong_telegram_users.access_status = 'approved' "
+                    "THEN wukong_telegram_users.build_credits ELSE excluded.build_credits END, "
+                    "unlimited = excluded.unlimited"
+                ),
+                (
+                    normalized_subject,
+                    normalized_role,
+                    now,
+                    now,
+                    0 if normalized_role == "admin" else 1,
+                    1 if normalized_role == "admin" else 0,
+                    0 if normalized_role == "admin" else 1,
+                ),
             )
         return True
 
@@ -344,6 +681,495 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         """Return whether an identity is supplied by immutable configuration."""
 
         return str(subject).strip() in self._configured_admins
+
+    def update_allowance(
+        self,
+        user_id: int | str,
+        *,
+        actor: Identity,
+        operation: str,
+        value: int | None = None,
+        unlimited: bool | None = None,
+        reason: str = "",
+    ) -> dict[str, Any]:
+        self._require_admin(actor)
+        subject = self._subject(user_id)
+        if subject in self._configured_admins:
+            raise PermissionError("Configured Telegram admins are always unlimited")
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            lock = "" if self._dialect == "sqlite" else " FOR UPDATE"
+            cursor.execute(
+                self._sql(
+                    "SELECT access_status, build_credits, unlimited, lifetime_granted "
+                    f"FROM wukong_telegram_users WHERE subject = ?{lock}"
+                ),
+                (subject,),
+            )
+            row = cursor.fetchone()
+            if row is None or str(row[0]) != "approved":
+                raise PermissionError("Telegram account is not approved")
+            before = int(row[1])
+            unlimited_before = bool(row[2])
+            current_unlimited = unlimited_before
+            if operation == "add":
+                after = before + int(value or 0)
+            elif operation == "set":
+                after = int(value if value is not None else -1)
+            elif operation == "unlimited":
+                if unlimited is None:
+                    raise ValueError("Unlimited value is required")
+                after = before
+                current_unlimited = bool(unlimited)
+            else:
+                raise ValueError("Unsupported allowance operation")
+            if after < 0:
+                raise ValueError("Build credits cannot be negative")
+            delta = after - before
+            reason = require_sensitive_admin_reason(
+                reason,
+                credits_before=before,
+                credits_after=after,
+                unlimited_before=unlimited_before,
+                unlimited_after=current_unlimited,
+                action="reduce access",
+            )
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET build_credits = ?, unlimited = ?, "
+                    "lifetime_granted = lifetime_granted + ? WHERE subject = ?"
+                ),
+                (after, int(current_unlimited), max(0, delta), subject),
+            )
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_quota_ledger "
+                    "(ledger_id, subject, entry_type, delta, balance_after, actor_subject, reason, created_at) "
+                    "VALUES (?, ?, 'admin_adjustment', ?, ?, ?, ?, ?)"
+                ),
+                (uuid.uuid4().hex, subject, delta, after, actor.subject, str(reason or "")[:1024], utc_now()),
+            )
+            self._append_event(
+                cursor,
+                subject,
+                "allowance_changed",
+                actor=actor.subject,
+                reason=reason,
+                details={"operation": operation, "delta": delta, "balance": after, "unlimited": current_unlimited},
+            )
+        return self.profile(subject) or {}
+
+    def reserve_build(
+        self,
+        user_id: int | str,
+        *,
+        job_id: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        subject = self._subject(user_id)
+        raw_request_key = str(idempotency_key or "").strip()
+        if not raw_request_key or len(raw_request_key) > 128:
+            raise ValueError("Build idempotency key is invalid")
+        request_key = f"{subject}:{raw_request_key}"
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                self._sql(
+                    "SELECT job_id, consumed FROM wukong_telegram_quota_ledger "
+                    "WHERE subject = ? AND idempotency_key IN (?, ?) "
+                    "ORDER BY CASE WHEN idempotency_key = ? THEN 0 ELSE 1 END"
+                ),
+                (subject, request_key, raw_request_key, request_key),
+            )
+            existing = cursor.fetchone()
+            if existing is not None:
+                return {"jobId": str(existing[0]), "existing": True, "consumed": bool(existing[1])}
+            lock = "" if self._dialect == "sqlite" else " FOR UPDATE"
+            cursor.execute(
+                self._sql(
+                    "SELECT access_status, build_credits, unlimited "
+                    f"FROM wukong_telegram_users WHERE subject = ?{lock}"
+                ),
+                (subject,),
+            )
+            row = cursor.fetchone()
+            if row is None or str(row[0]) != "approved":
+                raise PermissionError("Telegram account is not approved")
+            credits = int(row[1])
+            consumed = not bool(row[2])
+            if consumed and credits <= 0:
+                raise BuildQuotaError("No build credits remain")
+            balance = credits - 1 if consumed else credits
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET build_credits = ?, "
+                    "lifetime_used = lifetime_used + ?, job_count = job_count + 1, "
+                    "last_job_id = ?, last_job_status = 'queued' WHERE subject = ?"
+                ),
+                (balance, 1 if consumed else 0, job_id, subject),
+            )
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_quota_ledger "
+                    "(ledger_id, subject, entry_type, delta, balance_after, job_id, idempotency_key, consumed, created_at) "
+                    "VALUES (?, ?, 'consume', ?, ?, ?, ?, ?, ?)"
+                ),
+                (
+                    uuid.uuid4().hex, subject, -1 if consumed else 0, balance,
+                    job_id, request_key, int(consumed), utc_now(),
+                ),
+            )
+            self._append_event(
+                cursor,
+                subject,
+                "build_reserved",
+                details={"jobId": job_id, "consumed": consumed, "balance": balance},
+            )
+        return {"jobId": job_id, "existing": False, "consumed": consumed}
+
+    def reserve_and_create_job(
+        self,
+        store: "PostgresJobStore",
+        manifest: JobManifest,
+        recipe: BuildRecipe,
+        *,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        """Atomically consume one credit and persist the submitted PostgreSQL job."""
+
+        if not isinstance(store, PostgresJobStore) or store._dialect != self._dialect:
+            raise TypeError("Atomic job creation requires the PostgreSQL job store")
+        subject = self._subject(manifest.owner.subject)
+        raw_request_key = str(idempotency_key or "").strip()
+        if not raw_request_key or len(raw_request_key) > 128:
+            raise ValueError("Build idempotency key is invalid")
+        request_key = f"{subject}:{raw_request_key}"
+        with self._lock, store._lock, self._connection() as connection:
+            cursor = connection.cursor()
+
+            def existing_submission() -> dict[str, Any] | None:
+                cursor.execute(
+                    self._sql(
+                        "SELECT job_id, consumed FROM wukong_telegram_quota_ledger "
+                        "WHERE subject = ? AND idempotency_key IN (?, ?) "
+                        "ORDER BY CASE WHEN idempotency_key = ? THEN 0 ELSE 1 END"
+                    ),
+                    (subject, request_key, raw_request_key, request_key),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    return None
+                existing_job_id = str(row[0])
+                cursor.execute(
+                    self._sql("SELECT manifest_json FROM wukong_jobs WHERE job_id = ?"),
+                    (existing_job_id,),
+                )
+                existing_manifest = PostgresJobStore._manifest_from_row(cursor.fetchone())
+                if existing_manifest is None:
+                    raise OrchestrationError("Reserved job is not available")
+                return {
+                    "jobId": existing_job_id,
+                    "existing": True,
+                    "consumed": bool(row[1]),
+                    "manifest": existing_manifest,
+                }
+
+            existing = existing_submission()
+            if existing is not None:
+                return existing
+            lock = "" if self._dialect == "sqlite" else " FOR UPDATE"
+            cursor.execute(
+                self._sql(
+                    "SELECT access_status, build_credits, unlimited "
+                    f"FROM wukong_telegram_users WHERE subject = ?{lock}"
+                ),
+                (subject,),
+            )
+            profile = cursor.fetchone()
+            if profile is None or str(profile[0]) != "approved":
+                raise PermissionError("Telegram account is not approved")
+            # A concurrent retry may have committed while this request waited
+            # for the per-user row lock. Recheck before consuming another credit.
+            existing = existing_submission()
+            if existing is not None:
+                return existing
+            credits = int(profile[1])
+            consumed = not bool(profile[2])
+            if consumed and credits <= 0:
+                raise BuildQuotaError("No build credits remain")
+            balance = credits - 1 if consumed else credits
+            cursor.execute(
+                self._sql("SELECT 1 FROM wukong_jobs WHERE job_id = ?"),
+                (manifest.job_id,),
+            )
+            if cursor.fetchone() is not None:
+                raise OrchestrationError(f"Job already exists: {manifest.job_id}")
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_jobs "
+                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence) "
+                    "VALUES (?, ?, ?, ?, 2)"
+                ),
+                (
+                    manifest.job_id,
+                    PostgresJobStore._manifest_json(manifest),
+                    recipe.canonical_json,
+                    manifest.created_at,
+                ),
+            )
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_job_events "
+                    "(job_id, sequence, timestamp, event_type, payload_json) "
+                    "VALUES (?, 1, ?, 'submitted', ?)"
+                ),
+                (
+                    manifest.job_id,
+                    utc_now(),
+                    json.dumps(
+                        {"runner": manifest.runner, "channel": manifest.owner.channel},
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                ),
+            )
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET build_credits = ?, "
+                    "lifetime_used = lifetime_used + ?, job_count = job_count + 1, "
+                    "last_job_id = ?, last_job_status = 'queued' WHERE subject = ?"
+                ),
+                (balance, 1 if consumed else 0, manifest.job_id, subject),
+            )
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_quota_ledger "
+                    "(ledger_id, subject, entry_type, delta, balance_after, job_id, "
+                    "idempotency_key, consumed, created_at) "
+                    "VALUES (?, ?, 'consume', ?, ?, ?, ?, ?, ?)"
+                ),
+                (
+                    uuid.uuid4().hex,
+                    subject,
+                    -1 if consumed else 0,
+                    balance,
+                    manifest.job_id,
+                    request_key,
+                    int(consumed),
+                    utc_now(),
+                ),
+            )
+            self._append_event(
+                cursor,
+                subject,
+                "build_reserved",
+                details={"jobId": manifest.job_id, "consumed": consumed, "balance": balance},
+            )
+        return {
+            "jobId": manifest.job_id,
+            "existing": False,
+            "consumed": consumed,
+            "manifest": JobManifest.from_dict(manifest.to_dict()),
+        }
+
+    def compensate_build(
+        self,
+        user_id: int | str,
+        job_id: str,
+        *,
+        reason: str,
+        retain_job: bool = False,
+    ) -> bool:
+        subject = self._subject(user_id)
+        compensation_key = f"compensate:{job_id}"
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                self._sql("SELECT 1 FROM wukong_telegram_quota_ledger WHERE idempotency_key = ?"),
+                (compensation_key,),
+            )
+            if cursor.fetchone() is not None:
+                return False
+            cursor.execute(
+                self._sql(
+                    "SELECT consumed FROM wukong_telegram_quota_ledger "
+                    "WHERE subject = ? AND job_id = ? AND entry_type = 'consume'"
+                ),
+                (subject, job_id),
+            )
+            consumed_row = cursor.fetchone()
+            if consumed_row is None:
+                return False
+            consumed = bool(consumed_row[0])
+            lock = "" if self._dialect == "sqlite" else " FOR UPDATE"
+            cursor.execute(
+                self._sql(f"SELECT build_credits FROM wukong_telegram_users WHERE subject = ?{lock}"),
+                (subject,),
+            )
+            profile_row = cursor.fetchone()
+            if profile_row is None:
+                return False
+            balance = int(profile_row[0]) + (1 if consumed else 0)
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET build_credits = ?, "
+                    "lifetime_used = CASE WHEN lifetime_used > 0 AND ? = 1 THEN lifetime_used - 1 ELSE lifetime_used END, "
+                    "job_count = CASE WHEN ? = 0 AND job_count > 0 THEN job_count - 1 ELSE job_count END, "
+                    "last_job_status = CASE WHEN last_job_id = ? THEN 'dispatch_failed' ELSE last_job_status END "
+                    "WHERE subject = ?"
+                ),
+                (balance, int(consumed), int(retain_job), job_id, subject),
+            )
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_quota_ledger "
+                    "(ledger_id, subject, entry_type, delta, balance_after, job_id, idempotency_key, consumed, reason, created_at) "
+                    "VALUES (?, ?, 'compensate', ?, ?, ?, ?, ?, ?, ?)"
+                ),
+                (
+                    uuid.uuid4().hex, subject, 1 if consumed else 0, balance,
+                    job_id, compensation_key, int(consumed), str(reason or "")[:1024], utc_now(),
+                ),
+            )
+            self._append_event(
+                cursor,
+                subject,
+                "build_compensated",
+                reason=reason,
+                details={"jobId": job_id, "retainJob": bool(retain_job)},
+            )
+        return True
+
+    def update_job_status(self, user_id: int | str, job_id: str, status: str) -> None:
+        subject = self._subject(user_id)
+        with self._lock, self._connection() as connection:
+            connection.cursor().execute(
+                self._sql(
+                    "UPDATE wukong_telegram_users SET last_job_id = ?, last_job_status = ? WHERE subject = ?"
+                ),
+                (str(job_id), str(status or "")[:64], subject),
+            )
+
+    def list_users(
+        self,
+        *,
+        actor: Identity,
+        query: str = "",
+        status: str = "",
+        quota: str = "",
+        activity: str = "",
+        limit: int = 50,
+        offset: int = 0,
+        sort: str = "lastSeenAt",
+        direction: str = "desc",
+    ) -> dict[str, Any]:
+        self._require_admin(actor)
+        with self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT {self._profile_columns()} FROM wukong_telegram_users")
+            users = [self._profile_payload(row) for row in cursor.fetchall()]
+        filtered = [user for user in users if user is not None]
+        term = str(query or "").strip().casefold()
+        if term:
+            filtered = [
+                user for user in filtered
+                if term in " ".join(str(user.get(key) or "").casefold() for key in ("telegramId", "username", "displayName"))
+            ]
+        if status in {"pending", "approved", "revoked"}:
+            filtered = [user for user in filtered if user["accessStatus"] == status]
+        if quota == "available":
+            filtered = [user for user in filtered if user["unlimited"] or int(user["buildCredits"] or 0) > 0]
+        elif quota == "exhausted":
+            filtered = [user for user in filtered if not user["unlimited"] and int(user["buildCredits"] or 0) == 0]
+        elif quota == "unlimited":
+            filtered = [user for user in filtered if user["unlimited"]]
+        if activity == "active":
+            filtered = [user for user in filtered if int(user["miniAppOpenCount"] or 0) > 0]
+        elif activity == "never":
+            filtered = [user for user in filtered if int(user["miniAppOpenCount"] or 0) == 0]
+        elif activity == "jobs":
+            filtered = [user for user in filtered if int(user["jobCount"] or 0) > 0]
+        allowed_sort = {"lastSeenAt", "firstSeenAt", "miniAppOpenCount", "jobCount", "buildCredits", "telegramId"}
+        sort_key = sort if sort in allowed_sort else "lastSeenAt"
+        filtered.sort(key=lambda user: (user.get(sort_key) is not None, user.get(sort_key)), reverse=direction != "asc")
+        total = len(filtered)
+        start = max(0, offset)
+        return {"users": filtered[start : start + max(1, min(limit, 100))], "total": total}
+
+    def create_user(
+        self,
+        user_id: int | str,
+        *,
+        actor: Identity,
+        username: str = "",
+        display_name: str = "",
+    ) -> dict[str, Any]:
+        self._require_admin(actor)
+        profile = self.observe_user(user_id, username=username, display_name=display_name)
+        with self._lock, self._connection() as connection:
+            self._append_event(connection.cursor(), profile["telegramId"], "created_by_admin", actor=actor.subject)
+        return profile
+
+    def user_events(self, user_id: int | str, *, actor: Identity) -> list[dict[str, Any]]:
+        self._require_admin(actor)
+        subject = self._subject(user_id)
+        with self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                self._sql(
+                    "SELECT event_id, event_type, actor_subject, reason, details_json, created_at "
+                    "FROM wukong_telegram_user_events WHERE subject = ? ORDER BY created_at DESC, event_id DESC"
+                ),
+                (subject,),
+            )
+            return [
+                {
+                    "eventId": str(row[0]),
+                    "telegramId": subject,
+                    "type": str(row[1]),
+                    "actorTelegramId": str(row[2]),
+                    "reason": str(row[3]),
+                    "details": dict(json.loads(str(row[4]))),
+                    "createdAt": str(row[5]),
+                }
+                for row in cursor.fetchall()
+            ]
+
+    def backfill_jobs(self, manifests: list[JobManifest]) -> int:
+        grouped: dict[str, list[JobManifest]] = {}
+        for manifest in manifests:
+            if manifest.owner.channel == "telegram":
+                grouped.setdefault(manifest.owner.subject, []).append(manifest)
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            for subject, jobs in grouped.items():
+                latest = max(jobs, key=lambda item: item.created_at)
+                now = latest.created_at or utc_now()
+                cursor.execute(
+                    self._sql(
+                        "INSERT INTO wukong_telegram_users "
+                        "(subject, access_status, role, first_seen_at, last_seen_at, build_credits, unlimited, lifetime_granted) "
+                        "VALUES (?, 'approved', ?, ?, ?, ?, ?, ?) ON CONFLICT (subject) DO NOTHING"
+                    ),
+                    (
+                        subject,
+                        latest.owner.role,
+                        now,
+                        now,
+                        0 if latest.owner.role == "admin" else 1,
+                        1 if latest.owner.role == "admin" else 0,
+                        0 if latest.owner.role == "admin" else 1,
+                    ),
+                )
+                cursor.execute(
+                    self._sql(
+                        "UPDATE wukong_telegram_users SET "
+                        "job_count = CASE WHEN job_count < ? THEN ? ELSE job_count END, "
+                        "last_job_id = ?, last_job_status = ? WHERE subject = ?"
+                    ),
+                    (len(jobs), len(jobs), latest.job_id, latest.status.value, subject),
+                )
+        return sum(len(jobs) for jobs in grouped.values())
 
 
 class PostgresJobStore(_DatabaseStore):

@@ -20,6 +20,7 @@ from .telegram_bot import TelegramUIStateStore
 
 
 LEGACY_MIGRATION_KEY = "legacy-file-state-v1"
+TELEGRAM_PROFILE_BACKFILL_KEY = "telegram-profile-backfill-v1"
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ def open_control_plane_stores(
     )
     normalized_url = database_url.strip()
     if not normalized_url:
+        legacy_access.backfill_jobs(legacy_jobs.list())
         return ControlPlaneStores(legacy_jobs, legacy_access, legacy_ui)
 
     shared_options: dict[str, object] = {"dialect": dialect}
@@ -81,4 +83,7 @@ def open_control_plane_stores(
             ),
         }
         jobs.set_metadata(LEGACY_MIGRATION_KEY, "complete")
+    if jobs.metadata(TELEGRAM_PROFILE_BACKFILL_KEY) != "complete":
+        access.backfill_jobs(jobs.list())
+        jobs.set_metadata(TELEGRAM_PROFILE_BACKFILL_KEY, "complete")
     return ControlPlaneStores(jobs, access, ui_state, migration)

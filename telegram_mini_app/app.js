@@ -229,6 +229,27 @@ Object.assign(translations.en, {
   previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button"
 });
 
+Object.assign(translations.vi, {
+  buildAllowance: "LƯỢT BUILD", unlimited: "Không giới hạn", pending: "Chờ duyệt", approved: "Đã duyệt", revoked: "Đã thu hồi",
+  quotaExhausted: "Đã hết lượt", quotaRequiredHint: "Tài khoản chưa được duyệt hoặc đã hết lượt build.",
+  userLedgerKicker: "QUẢN TRỊ TRUY CẬP", userLedgerTitle: "Người dùng & lượt build", userLedgerHint: "Duyệt tài khoản, cấp lượt và xem lịch sử mà không xóa dấu vết.",
+  addUser: "Thêm Telegram ID", addUserKicker: "HỒ SƠ MỚI", searchUsers: "Tìm người dùng", accessStatus: "Trạng thái", allUsers: "Tất cả",
+  sortUsers: "Sắp xếp", lastAccess: "Truy cập gần nhất", firstAccess: "Truy cập đầu tiên", jobCount: "Số job", buildCredits: "Lượt còn lại",
+  activity: "Hoạt động", allowance: "Hạn mức", displayName: "Tên hiển thị", cancelDialog: "Hủy", createPendingUser: "Tạo hồ sơ chờ duyệt", quotaFilter: "Hạn mức", quotaAvailable: "Còn lượt", activityFilter: "Hoạt động", openedMiniApp: "Đã mở Mini App", neverOpened: "Chưa từng mở", hasJobs: "Đã tạo job", subtractCredit: "Trừ lượt", jobHistory: "Lịch sử job",
+  userCreated: "Đã tạo hồ sơ chờ duyệt.", userUpdated: "Đã cập nhật quyền người dùng.", noUsers: "Không có người dùng phù hợp.",
+  openCount: "{count} lần mở", jobsCount: "{count} job", approveUser: "Duyệt + 1 lượt", revokeUser: "Thu hồi", addCredit: "+1 lượt", setCredit: "Đặt số lượt", toggleUnlimited: "Đổi unlimited", auditTitle: "Nhật ký thay đổi"
+});
+Object.assign(translations.en, {
+  buildAllowance: "BUILD CREDIT", unlimited: "Unlimited", pending: "Pending", approved: "Approved", revoked: "Revoked",
+  quotaExhausted: "No credits", quotaRequiredHint: "This account is pending, revoked, or has no build credits left.",
+  userLedgerKicker: "ACCESS CONTROL", userLedgerTitle: "Users & build credits", userLedgerHint: "Approve accounts, allocate credits and retain a complete audit trail.",
+  addUser: "Add Telegram ID", addUserKicker: "NEW PROFILE", searchUsers: "Find user", accessStatus: "Status", allUsers: "All",
+  sortUsers: "Sort", lastAccess: "Last access", firstAccess: "First access", jobCount: "Jobs", buildCredits: "Credits",
+  activity: "Activity", allowance: "Allowance", displayName: "Display name", cancelDialog: "Cancel", createPendingUser: "Create pending profile", quotaFilter: "Quota", quotaAvailable: "Credits available", activityFilter: "Activity", openedMiniApp: "Opened Mini App", neverOpened: "Never opened", hasJobs: "Has jobs", subtractCredit: "Subtract credit", jobHistory: "Job history",
+  userCreated: "Pending profile created.", userUpdated: "User access updated.", noUsers: "No matching users.",
+  openCount: "{count} opens", jobsCount: "{count} jobs", approveUser: "Approve + 1", revokeUser: "Revoke", addCredit: "+1 credit", setCredit: "Set credits", toggleUnlimited: "Toggle unlimited", auditTitle: "Audit history"
+});
+
 Object.assign(translations.en, {
   buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
   releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
@@ -295,7 +316,14 @@ const state = {
   expandedLogJobId: "",
   liquidPosition: 0,
   liquidAnimationFrame: 0,
-  liquidSuppressClick: false
+  liquidSuppressClick: false,
+  me: null,
+  miniSessionId: "",
+  adminUsers: [],
+  adminUsersTotal: 0,
+  adminUsersOffset: 0,
+  adminUsersLoading: false,
+  selectedAdminUserId: ""
 };
 
 function t(key, values = {}) {
@@ -317,6 +345,8 @@ function applyLanguage() {
   const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
   if (activeJob) renderActiveJob(activeJob, state.activeEvents);
   renderSessionDiagnostics();
+  renderAccount();
+  renderAdminUsers();
   updateSummary();
   updateTelegramState();
   updateSourceDetection();
@@ -336,6 +366,22 @@ function miniApiAvailable() {
   return Boolean(miniApiEndpoint && (effectiveInitData() || activeSignedLaunchToken()));
 }
 
+function privateApiAvailable() {
+  return miniApiAvailable() && state.me?.accessStatus === "approved";
+}
+
+function getMiniSessionId() {
+  if (state.miniSessionId) return state.miniSessionId;
+  try {
+    state.miniSessionId = sessionStorage.getItem("wukong-mini-session-id") || "";
+    if (!state.miniSessionId) {
+      state.miniSessionId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      sessionStorage.setItem("wukong-mini-session-id", state.miniSessionId);
+    }
+  } catch (_) { state.miniSessionId = `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+  return state.miniSessionId;
+}
+
 function miniApiState() {
   if (!miniApiEndpoint) return "unconfigured";
   if (!effectiveInitData() && !activeSignedLaunchToken()) return "unauthenticated";
@@ -353,6 +399,9 @@ async function apiRequest(path, options = {}) {
   if (!initData && !launchToken) throw new Error(t("telegramOnly"));
   const headers = new Headers(options.headers || {});
   headers.set("Authorization", initData ? `tma ${initData}` : `wla ${launchToken}`);
+  headers.set("X-Wukong-Session-Id", getMiniSessionId());
+  headers.set("X-Wukong-Client-Version", "2026.08.25");
+  headers.set("X-Telegram-Platform", String(TelegramApp?.platform || "web"));
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   let response;
   try {
@@ -441,6 +490,7 @@ function navigate(name, smooth = true) {
   window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
   updateDispatchFab();
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
+  if (name === "system" && state.me?.role === "admin") loadAdminUsers().catch(() => {});
 }
 
 function bindLiquidBottomTabs() {
@@ -776,8 +826,10 @@ async function pollTelegramPairing(pairing) {
     updateTelegramState();
     updateSummary();
     updateSourceDetection();
-    refreshLiveReleaseVersions();
-    loadJobs({ force: true }).catch(() => {});
+    loadSession().then(() => {
+      refreshLiveReleaseVersions().catch(() => {});
+      loadJobs({ force: true }).catch(() => {});
+    }).catch(() => {});
     toast(t("pairingReady"));
     return;
   }
@@ -1270,13 +1322,17 @@ function updateSummary() {
   const sourceDetection = classifySource(currentUri);
   const sourceReady = Boolean(sourceDetection?.valid);
   const apiReady = miniApiAvailable();
+  const quotaReady = Boolean(
+    state.me?.accessStatus === "approved"
+    && (state.me?.unlimited || Number(state.me?.buildCredits || 0) > 0)
+  );
   const sourceVerified = sourceDetection?.kind === "rclone"
     ? sourceReady
     : sourceReady && state.sourceProbeUri === currentUri && ["analyzed", "partial"].includes(state.sourceProbe?.status);
   const sourceNeedsRefresh = sourceReady && state.sourceProbeUri === currentUri && state.sourceProbe?.status === "preview-only";
   const runnerReady = Boolean($("#execution")?.value);
-  const ready = sourceVerified && Boolean(selectedDevice) && runnerReady && apiReady;
-  const completedChecks = [sourceVerified, Boolean(selectedDevice), runnerReady, apiReady].filter(Boolean).length;
+  const ready = sourceVerified && Boolean(selectedDevice) && runnerReady && apiReady && quotaReady;
+  const completedChecks = [sourceVerified, Boolean(selectedDevice), runnerReady, apiReady && quotaReady].filter(Boolean).length;
   const docket = $(".dispatch-docket");
   docket?.classList.toggle("incomplete", !ready);
   const runtimeState = $("#runtime-pipeline-state");
@@ -1287,7 +1343,7 @@ function updateSummary() {
   if ($("#readiness-label")) $("#readiness-label").textContent = t(ready ? "readyLabel" : "incompleteLabel");
   if ($("#readiness-count")) $("#readiness-count").textContent = t("readinessProgress", { done: completedChecks });
   if ($("#launch-warning")) {
-    const warningKey = ready ? "fallbackWarning" : !apiReady ? "apiRequiredHint" : sourceNeedsRefresh ? "probeSignedPreviewOnly" : sourceReady && !sourceVerified ? "sourceProbePendingHint" : sourceReady ? "chooseDeviceHint" : "completeSourceHint";
+    const warningKey = ready ? "fallbackWarning" : !apiReady ? "apiRequiredHint" : !quotaReady ? "quotaRequiredHint" : sourceNeedsRefresh ? "probeSignedPreviewOnly" : sourceReady && !sourceVerified ? "sourceProbePendingHint" : sourceReady ? "chooseDeviceHint" : "completeSourceHint";
     $("#launch-warning").textContent = t(warningKey);
   }
   const recovery = $("#session-recovery");
@@ -1300,7 +1356,7 @@ function updateSummary() {
   updateChecklistItem("check-source", sourceVerified, "checklistSourceVerified", sourceNeedsRefresh ? "checklistSourceRefreshRequired" : sourceReady ? "checklistSourceProbePending" : "checklistSourcePending");
   updateChecklistItem("check-device", Boolean(selectedDevice), "checklistDeviceDone", "checklistDevicePending");
   updateChecklistItem("check-runner", runnerReady, "checklistRunnerDone", "checklistRunnerDone");
-  updateChecklistItem("check-api", apiReady, "checklistApiDone", miniApiEndpoint ? "checklistApiAuthPending" : "checklistApiPending");
+  updateChecklistItem("check-api", apiReady && quotaReady, "checklistApiDone", miniApiEndpoint ? "checklistApiAuthPending" : "checklistApiPending");
   if ($("#submit-recipe")) $("#submit-recipe").disabled = !ready;
   updateDeliveryStates();
   $$('[data-i18n="launch"], [data-i18n="finishSource"]').forEach((node) => {
@@ -1308,6 +1364,158 @@ function updateSummary() {
     node.textContent = t(ready ? "launch" : "finishSource");
   });
   $("#dispatch-fab")?.setAttribute("aria-label", t("finishBuild"));
+}
+
+function renderAccount() {
+  const profile = state.me;
+  const chip = $("#quota-chip");
+  const value = $("#quota-value");
+  if (!chip || !value) return;
+  chip.hidden = !profile;
+  chip.classList.remove("pending", "revoked", "exhausted");
+  if (!profile) return;
+  if (profile.accessStatus !== "approved") {
+    value.textContent = t(profile.accessStatus === "revoked" ? "revoked" : "pending");
+    chip.classList.add(profile.accessStatus === "revoked" ? "revoked" : "pending");
+  } else if (profile.unlimited) value.textContent = t("unlimited");
+  else if (Number(profile.buildCredits || 0) <= 0) {
+    value.textContent = t("quotaExhausted"); chip.classList.add("exhausted");
+  } else value.textContent = String(profile.buildCredits);
+  const admin = profile.role === "admin";
+  $("#user-admin").hidden = !admin;
+}
+
+async function loadSession({ countOpen = true } = {}) {
+  if (!miniApiAvailable()) return null;
+  const payload = await apiRequest(countOpen ? "/v1/session/open" : "/v1/me", {
+    method: countOpen ? "POST" : "GET"
+  });
+  state.me = payload.user || null;
+  renderAccount();
+  updateSummary();
+  if (state.me?.role === "admin") loadAdminUsers().catch(() => {});
+  return state.me;
+}
+
+function accessLabel(status) { return t(["pending", "approved", "revoked"].includes(status) ? status : "pending"); }
+
+function renderAdminUsers() {
+  const body = $("#user-table-body");
+  if (!body) return;
+  if (!state.adminUsers.length) {
+    const empty = document.createElement("p"); empty.className = "user-empty"; empty.textContent = t("noUsers");
+    body.replaceChildren(empty);
+  } else body.replaceChildren(...state.adminUsers.map((user) => {
+    const row = document.createElement("div"); row.className = "user-row"; row.setAttribute("role", "row");
+    const identity = document.createElement("span");
+    const name = document.createElement("strong"); name.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId);
+    const id = document.createElement("small"); id.textContent = `${user.telegramId}${user.username ? ` · @${user.username}` : ""}`;
+    identity.append(name, id);
+    const activity = document.createElement("span");
+    const opens = document.createElement("strong"); opens.textContent = t("openCount", { count: user.miniAppOpenCount || 0 });
+    const last = document.createElement("small"); last.textContent = `${t("lastAccess")}: ${formatDate(user.lastSeenAt)}`;
+    activity.append(opens, last);
+    const quota = document.createElement("span"); quota.className = "user-quota";
+    quota.textContent = user.unlimited ? t("unlimited") : `${user.buildCredits || 0} · ${t("jobsCount", { count: user.jobCount || 0 })}`;
+    const status = document.createElement("span"); status.className = `access-badge ${user.accessStatus}`; status.textContent = accessLabel(user.accessStatus);
+    const open = document.createElement("button"); open.type = "button"; open.className = "user-open"; open.textContent = "›"; open.setAttribute("aria-label", `${t("displayName")}: ${name.textContent}`);
+    open.addEventListener("click", () => openAdminUser(user.telegramId).catch((error) => toast(error.message, true)));
+    row.append(identity, activity, quota, status, open);
+    return row;
+  }));
+  const start = state.adminUsersTotal ? state.adminUsersOffset + 1 : 0;
+  const end = Math.min(state.adminUsersOffset + state.adminUsers.length, state.adminUsersTotal);
+  $("#user-page-summary").textContent = `${start}–${end} / ${state.adminUsersTotal}`;
+  $("#user-prev").disabled = state.adminUsersOffset <= 0;
+  $("#user-next").disabled = end >= state.adminUsersTotal;
+}
+
+async function loadAdminUsers({ reset = false } = {}) {
+  if (state.me?.role !== "admin" || state.adminUsersLoading) return;
+  if (reset) state.adminUsersOffset = 0;
+  state.adminUsersLoading = true;
+  try {
+    const query = encodeURIComponent($("#user-search")?.value?.trim() || "");
+    const status = encodeURIComponent($("#user-status")?.value || "");
+    const quota = encodeURIComponent($("#user-quota-filter")?.value || "");
+    const activity = encodeURIComponent($("#user-activity-filter")?.value || "");
+    const sort = encodeURIComponent($("#user-sort")?.value || "lastSeenAt");
+    const payload = await apiRequest(`/v1/admin/users?query=${query}&status=${status}&quota=${quota}&activity=${activity}&sort=${sort}&offset=${state.adminUsersOffset}&limit=25`);
+    state.adminUsers = Array.isArray(payload.users) ? payload.users : [];
+    state.adminUsersTotal = Number(payload.total || 0);
+    renderAdminUsers();
+  } finally { state.adminUsersLoading = false; }
+}
+
+function detailFact(label, value) {
+  const box = document.createElement("div"); const small = document.createElement("small"); const strong = document.createElement("strong");
+  small.textContent = label; strong.textContent = value || "—"; box.append(small, strong); return box;
+}
+
+async function runAdminUserAction(user, action) {
+  let path = action; let body = {};
+  if (action === "approve") body.reason = window.prompt("Reason / Lý do", "approved by admin") || "";
+  if (action === "revoke") {
+    body.reason = window.prompt("Reason / Lý do thu hồi", "") || "";
+    if (!body.reason) return;
+  }
+  if (action === "credit-add") { path = "allowance"; body = { operation: "add", value: 1, reason: "admin grant" }; }
+  if (action === "credit-subtract") {
+    path = "allowance";
+    const value = window.prompt("Credits to subtract / Số lượt cần trừ", "1");
+    if (value === null || !/^\d+$/.test(value) || Number(value) <= 0) return;
+    const reason = window.prompt("Reason / Lý do giảm", "") || "";
+    if (!reason) return;
+    body = { operation: "add", value: -Number(value), reason };
+  }
+  if (action === "credit-set") {
+    path = "allowance";
+    const value = window.prompt("Build credits", String(user.buildCredits || 0));
+    if (value === null || !/^\d+$/.test(value)) return;
+    body = { operation: "set", value: Number(value), reason: Number(value) < Number(user.buildCredits || 0) ? (window.prompt("Reason / Lý do giảm", "") || "") : "admin allocation" };
+    if (Number(value) < Number(user.buildCredits || 0) && !body.reason) return;
+  }
+  if (action === "unlimited") {
+    path = "allowance";
+    const next = !user.unlimited;
+    body = { operation: "unlimited", unlimited: next, reason: next ? "admin enabled unlimited" : (window.prompt("Reason / Lý do tắt unlimited", "") || "") };
+    if (!next && !body.reason) return;
+  }
+  if (["revoke", "credit-subtract", "credit-set", "unlimited"].includes(action)
+      && !window.confirm("Confirm sensitive change / Xác nhận thao tác nhạy cảm?")) return;
+  await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/${path}`, { method: "POST", body: JSON.stringify(body) });
+  toast(t("userUpdated"));
+  await loadAdminUsers({ reset: false });
+  await openAdminUser(user.telegramId);
+}
+
+async function openAdminUser(telegramId) {
+  const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}`);
+  const user = payload.user; const events = Array.isArray(payload.events) ? payload.events : []; const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+  state.selectedAdminUserId = user.telegramId;
+  const root = $("#user-detail-content");
+  const header = document.createElement("header");
+  const titleBox = document.createElement("div"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h2"); title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleBox.append(kicker, title);
+  const close = document.createElement("button"); close.type = "button"; close.textContent = "×"; close.addEventListener("click", () => $("#user-detail-dialog").close()); header.append(titleBox, close);
+  const grid = document.createElement("div"); grid.className = "user-detail-grid";
+  grid.append(
+    detailFact(t("accessStatus"), accessLabel(user.accessStatus)), detailFact(t("allowance"), user.unlimited ? t("unlimited") : String(user.buildCredits || 0)),
+    detailFact(t("firstAccess"), formatDate(user.firstSeenAt)), detailFact(t("lastAccess"), formatDate(user.lastSeenAt)),
+    detailFact(t("activity"), `${t("openCount", { count: user.miniAppOpenCount || 0 })} · ${t("jobsCount", { count: user.jobCount || 0 })}`), detailFact("Last job", `${user.lastJobId || "—"} · ${user.lastJobStatus || "—"}`)
+  );
+  const actions = document.createElement("div"); actions.className = "user-detail-actions";
+  const definitions = user.accessStatus === "approved"
+    ? [["credit-add", t("addCredit")], ["credit-subtract", t("subtractCredit")], ["credit-set", t("setCredit")], ["unlimited", t("toggleUnlimited")], ["revoke", t("revokeUser"), "danger"]]
+    : [["approve", t("approveUser")]];
+  definitions.forEach(([action, label, className]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (className) button.className = className; button.disabled = Boolean(user.configuredAdmin); button.addEventListener("click", () => runAdminUserAction(user, action).catch((error) => toast(error.message, true))); actions.append(button); });
+  const auditTitle = document.createElement("h3"); auditTitle.textContent = t("auditTitle");
+  const audit = document.createElement("div"); audit.className = "user-audit";
+  audit.replaceChildren(...events.map((event) => { const article = document.createElement("article"); const name = document.createElement("strong"); name.textContent = event.type; const detail = document.createElement("small"); detail.textContent = `${formatDate(event.createdAt)}${event.actorTelegramId ? ` · ${event.actorTelegramId}` : ""}${event.reason ? ` · ${event.reason}` : ""}`; article.append(name, detail); return article; }));
+  const jobsTitle = document.createElement("h3"); jobsTitle.textContent = t("jobHistory");
+  const jobHistory = document.createElement("div"); jobHistory.className = "user-audit";
+  jobHistory.replaceChildren(...jobs.map((job) => { const article = document.createElement("article"); const name = document.createElement("strong"); name.textContent = `${job.job_id || job.jobId} · ${job.status}`; const detail = document.createElement("small"); detail.textContent = `${formatDate(job.created_at || job.createdAt)} · ${job.stage || "—"}`; article.append(name, detail); return article; }));
+  root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, auditTitle, audit);
+  $("#user-detail-dialog").showModal();
 }
 
 function positiveInteger(input, errorKey) {
@@ -1510,12 +1718,20 @@ function renderArtifacts(job) {
     const size = document.createElement("span"); size.textContent = formatBytes(artifact.size_bytes ?? artifact.sizeBytes);
     header.append(name, size);
     const sha = document.createElement("code"); sha.textContent = `SHA-256 ${artifact.sha256 || "—"}`;
-    const url = String(artifact.public_url || artifact.publicUrl || "");
-    if (/^https:\/\//i.test(url)) {
-      const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = t("artifact");
+    if (artifact.downloadAvailable === true) {
+      const link = document.createElement("button"); link.type = "button"; link.textContent = t("artifact");
+      link.addEventListener("click", async () => {
+        try {
+          const jobId = job.job_id || job.jobId;
+          const payload = await apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/download`);
+          if (!/^https:\/\//i.test(payload.downloadUrl || "")) throw new Error(t("requestFailed"));
+          if (TelegramApp?.openLink) TelegramApp.openLink(payload.downloadUrl);
+          else window.open(payload.downloadUrl, "_blank", "noopener,noreferrer");
+        } catch (error) { toast(error.message, true); }
+      });
       card.append(header, sha, link);
     } else {
-      const uri = document.createElement("code"); uri.textContent = artifact.uri || "—";
+      const uri = document.createElement("code"); uri.textContent = t("noArtifacts");
       card.append(header, sha, uri);
     }
     section.append(card);
@@ -1708,13 +1924,13 @@ async function loadJobDetail(jobId) {
 
 function scheduleJobsPoll(active) {
   clearTimeout(state.jobsPollTimer);
-  if (document.hidden || !miniApiAvailable()) return;
+  if (document.hidden || !privateApiAvailable()) return;
   state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), active ? 5000 : 30000);
 }
 
 async function loadJobs({ force = false } = {}) {
   if (state.jobsLoading && !force) return;
-  if (!miniApiAvailable()) { setJobsConnection(miniApiUnavailableMessageKey(), true); return; }
+  if (!privateApiAvailable()) { setJobsConnection(state.me ? "quotaRequiredHint" : miniApiUnavailableMessageKey(), true); return; }
   state.jobsLoading = true;
   try {
     const payload = await apiRequest("/v1/jobs");
@@ -1746,9 +1962,24 @@ async function submitRecipe() {
   if (!miniApiAvailable()) throw new Error(t(miniApiUnavailableMessageKey()));
   const recipe = buildRecipe();
   localStorage.setItem("wukong-recipe-draft", JSON.stringify(recipe));
-  const job = await apiRequest("/v1/jobs", { method: "POST", body: JSON.stringify(recipe) });
+  const canonical = JSON.stringify(recipe);
+  let pending = null;
+  try { pending = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
+  if (!pending || pending.recipe !== canonical || !pending.key) {
+    pending = { recipe: canonical, key: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` };
+    localStorage.setItem("wukong-submit-request", JSON.stringify(pending));
+  }
+  let job;
+  try {
+    job = await apiRequest("/v1/jobs", { method: "POST", headers: { "Idempotency-Key": pending.key }, body: canonical });
+    localStorage.removeItem("wukong-submit-request");
+  } catch (error) {
+    if (!error.connectionFailed) localStorage.removeItem("wukong-submit-request");
+    throw error;
+  }
   state.activeJobId = job.job_id || job.jobId;
   localStorage.setItem("wukong-active-job", state.activeJobId);
+  await loadSession({ countOpen: false });
   toast(t("buildCreated")); navigate("jobs"); await loadJobs({ force: true });
 }
 
@@ -1774,7 +2005,7 @@ async function loadCatalog() {
     options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
-    if (miniApiAvailable()) await refreshLiveReleaseVersions();
+    if (privateApiAvailable()) await refreshLiveReleaseVersions();
     const count = Object.values(catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
     $("#catalog-status").textContent = t("catalogReady", { mods: count, versions: catalog.modVersions.length });
     $("#catalog-status").closest("div").querySelector("i").classList.add("ok");
@@ -1791,7 +2022,7 @@ async function loadCatalog() {
 }
 
 async function refreshLiveReleaseVersions() {
-  if (!state.catalog || !miniApiAvailable()) return;
+  if (!state.catalog || !privateApiAvailable()) return;
   try {
     const selected = $("#mod-version").value;
     const live = await apiRequest("/v1/mod-release-versions");
@@ -1889,11 +2120,35 @@ function bindEvents() {
     renderMods();
   });
   $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
+  let userSearchTimer;
+  $("#user-search").addEventListener("input", () => { clearTimeout(userSearchTimer); userSearchTimer = setTimeout(() => loadAdminUsers({ reset: true }).catch(() => {}), 250); });
+  $("#user-status").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));
+  $("#user-quota-filter").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));
+  $("#user-activity-filter").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));
+  $("#user-sort").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));
+  $("#user-prev").addEventListener("click", () => { state.adminUsersOffset = Math.max(0, state.adminUsersOffset - 25); loadAdminUsers().catch(() => {}); });
+  $("#user-next").addEventListener("click", () => { state.adminUsersOffset += 25; loadAdminUsers().catch(() => {}); });
+  $("#add-user").addEventListener("click", () => $("#user-create-dialog").showModal());
+  $("#user-create-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await apiRequest("/v1/admin/users", {
+        method: "POST",
+        body: JSON.stringify({
+          telegramId: $("#new-user-id").value.trim(),
+          username: $("#new-user-username").value.trim(),
+          displayName: $("#new-user-display-name").value.trim()
+        })
+      });
+      $("#user-create-form").reset(); $("#user-create-dialog").close(); toast(t("userCreated"));
+      await loadAdminUsers({ reset: true });
+    } catch (error) { toast(error.message, true); }
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) clearTimeout(state.jobsPollTimer);
     else {
       ensureAutomaticTelegramConnection();
-      loadJobs({ force: true }).catch(() => {});
+      loadSession({ countOpen: false }).then(() => loadJobs({ force: true })).catch(() => {});
     }
   });
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
@@ -1959,7 +2214,14 @@ function startMiniApp() {
   loadCatalog().finally(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" })));
   renderSessionDiagnostics();
   ensureAutomaticTelegramConnection();
-  if (miniApiAvailable()) loadJobs().catch(() => {});
+  if (miniApiAvailable()) {
+    loadSession().then(() => {
+      if (privateApiAvailable()) {
+        refreshLiveReleaseVersions().catch(() => {});
+        loadJobs().catch(() => {});
+      }
+    }).catch((error) => toast(error.message, true));
+  }
 }
 
 if (TelegramApp) {

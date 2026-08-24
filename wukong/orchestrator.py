@@ -9,7 +9,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Callable, Protocol
+from typing import Callable, Mapping, Protocol
 
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, utc_now
 from .routing import RunnerDecision, RunnerInventory, RunnerRouter
@@ -225,12 +225,16 @@ class HybridOrchestrator:
         router: RunnerRouter | None = None,
         inventory_provider: InventoryProvider | None = None,
         access_validator: AccessValidator | None = None,
+        submission_reserver: Callable[[Identity, str], Mapping[str, object]] | None = None,
+        submission_compensator: Callable[[Identity, str, str, bool], object] | None = None,
     ) -> None:
         self.store = store
         self.workspace_root = workspace_root.resolve()
         self.router = router or RunnerRouter()
         self.inventory_provider = inventory_provider or (lambda: RunnerInventory(False))
         self.access_validator = access_validator
+        self.submission_reserver = submission_reserver
+        self.submission_compensator = submission_compensator
 
     def validate(self, recipe: BuildRecipe) -> RunnerDecision:
         return self.router.choose(
@@ -239,21 +243,66 @@ class HybridOrchestrator:
             inventory=self.inventory_provider(),
         )
 
-    def submit(self, recipe: BuildRecipe, identity: Identity, *, job_id: str | None = None) -> JobManifest:
+    def submit(
+        self,
+        recipe: BuildRecipe,
+        identity: Identity,
+        *,
+        job_id: str | None = None,
+        reservation_already_made: bool = False,
+    ) -> JobManifest:
+        job_id = job_id or uuid.uuid4().hex
+        manifest = self.prepare_submission(recipe, identity, job_id=job_id)
+        decision_runner = manifest.runner or ""
+        job_id = manifest.job_id
+        reserved = False
+        if self.submission_reserver and not reservation_already_made:
+            reservation = self.submission_reserver(identity, job_id)
+            existing_job_id = str(reservation.get("jobId") or job_id)
+            if reservation.get("existing"):
+                existing = self.store.get(existing_job_id)
+                if existing is not None:
+                    return existing
+                raise OrchestrationError("Reserved job is not available")
+            reserved = True
+        try:
+            self.store.create(manifest, recipe)
+            self.store.append_event(job_id, "submitted", runner=decision_runner, channel=identity.channel)
+        except Exception as exc:
+            if reserved and self.submission_compensator:
+                self.submission_compensator(identity, job_id, str(exc), False)
+            raise
+        return self.store.get(job_id) or manifest
+
+    def prepare_submission(
+        self,
+        recipe: BuildRecipe,
+        identity: Identity,
+        *,
+        job_id: str,
+    ) -> JobManifest:
         self.validate_access(recipe, identity)
         decision = self.validate(recipe)
-        job_id = job_id or uuid.uuid4().hex
         if not job_id.isascii() or not job_id.replace("-", "").isalnum() or len(job_id) > 64:
             raise OrchestrationError("Job ID is invalid")
-        manifest = JobManifest(
+        return JobManifest(
             job_id=job_id,
             owner=identity,
             recipe_digest=recipe.digest,
             runner=decision.runner,
         )
-        self.store.create(manifest, recipe)
-        self.store.append_event(job_id, "submitted", runner=decision.runner, channel=identity.channel)
-        return self.store.get(job_id) or manifest
+
+    def compensate_submission(
+        self,
+        identity: Identity,
+        job_id: str,
+        reason: str,
+        *,
+        retain_job: bool,
+    ) -> object:
+        if not self.submission_compensator:
+            return False
+        return self.submission_compensator(identity, job_id, reason, retain_job)
 
     def validate_access(self, recipe: BuildRecipe, identity: Identity) -> None:
         if self.access_validator:

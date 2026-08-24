@@ -5,6 +5,7 @@
 +(typeattributeset domain (wukong_manager_app))
 +(typeattributeset appdomain (wukong_manager_app))
 +(typeattributeset coredomain (wukong_manager_app))
++(typeattributeset netdomain (wukong_manager_app))
 +(allow wukong_manager_app wukong_manager_app_userfaultfd (anon_inode (ioctl read create)))
 +(allow wukong_manager_app wukong_manager_app (anon_inode (ioctl read create)))
 +(typetransition wukong_manager_app wukong_manager_app anon_inode "[userfaultfd]" wukong_manager_app_userfaultfd)

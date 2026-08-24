@@ -30,6 +30,10 @@ def _recipe() -> BuildRecipe:
 @unittest.skipUnless(POSTGRES_URL, "WUKONG_TEST_POSTGRES_URL is not configured")
 class PostgreSQLIntegrationTests(unittest.TestCase):
     TABLES = (
+        "wukong_telegram_quota_ledger",
+        "wukong_telegram_sessions",
+        "wukong_telegram_user_events",
+        "wukong_telegram_users",
         "wukong_job_events",
         "wukong_jobs",
         "wukong_telegram_access",

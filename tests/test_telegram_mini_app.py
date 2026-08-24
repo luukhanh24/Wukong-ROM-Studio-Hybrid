@@ -70,6 +70,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     catalog_mods_by_version = None
     jobs_fixture = False
     click_job_log = False
+    admin_user = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -181,6 +182,17 @@ window.addEventListener('load', () => {{
         if path == "/v1/jobs":
             self._send(json.dumps({"jobs": [self._fixture_job()] if self.jobs_fixture else []}).encode(), "application/json")
             return
+        if path == "/v1/me":
+            self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
+            return
+        if path == "/v1/admin/users" and self.admin_user:
+            user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
+            self._send(json.dumps({"users": [user], "total": 1}).encode(), "application/json")
+            return
+        if path == "/v1/admin/users/88" and self.admin_user:
+            user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
+            self._send(json.dumps({"user": user, "events": [{"type": "approved", "createdAt": "2026-08-25T01:00:00Z", "actorTelegramId": "42", "reason": "fixture"}]}).encode(), "application/json")
+            return
         if path == "/v1/jobs/fixture-job" and self.jobs_fixture:
             self._send(json.dumps(self._fixture_job()).encode(), "application/json")
             return
@@ -210,6 +222,15 @@ window.addEventListener('load', () => {{
             "artifacts": [],
         }
 
+    @classmethod
+    def _fixture_user(cls) -> dict[str, object]:
+        return {
+            "telegramId": "42", "username": "fixture", "displayName": "Fixture User",
+            "accessStatus": "approved", "role": "admin" if cls.admin_user else "user", "buildCredits": 3,
+            "unlimited": cls.admin_user, "miniAppOpenCount": 2, "jobCount": 1,
+            "firstSeenAt": "2026-08-24T01:00:00Z", "lastSeenAt": "2026-08-25T01:00:00Z",
+        }
+
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
         path = urlsplit(self.path).path
         if path == "/v1/session/pair" and self.pairing_recovery:
@@ -225,6 +246,9 @@ window.addEventListener('load', () => {{
                 "status": "confirmed",
                 "launchToken": f"v1.42.1.9999999999.{'a' * 64}",
             }).encode(), "application/json")
+            return
+        if path == "/v1/session/open" and self.api_enabled:
+            self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
             return
         if path == "/v1/sources/probe" and self.api_enabled:
             length = int(self.headers.get("Content-Length", "0"))
@@ -263,6 +287,7 @@ def _render_mini_app_in_chrome(
     initial_view: str = "",
     jobs_fixture: bool = False,
     click_job_log: bool = False,
+    admin_user: bool = False,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -285,6 +310,7 @@ def _render_mini_app_in_chrome(
             "catalog_mods_by_version": catalog_mods_by_version,
             "jobs_fixture": jobs_fixture,
             "click_job_log": click_job_log,
+            "admin_user": admin_user,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -515,6 +541,21 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--radius-sm: 4px", styles)
         self.assertIn("repeat(var(--tab-count),minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
+
+    def test_admin_system_surface_renders_user_access_and_quota_ledger(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="system",
+            admin_user=True,
+        )
+
+        self.assertIn('id="user-admin"', dom)
+        self.assertNotRegex(dom, r'id="user-admin"[^>]* hidden')
+        self.assertIn("Người dùng &amp; lượt build", dom)
+        self.assertIn("New User", dom)
+        self.assertIn("@new_user", dom)
+        self.assertIn('id="quota-value">Không giới hạn</strong>', dom)
+        self.assertGreater(screenshot_size, 10_000)
 
     def test_build_surface_keeps_build_workflow_separate_from_catalog_and_system(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -790,14 +831,16 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("probeSourceViaBackend", script)
         self.assertNotIn("fetch(uri", script)
 
-    def test_pages_publish_is_not_skipped_when_api_is_not_configured(self) -> None:
+    def test_vercel_publish_binds_the_api_without_github_pages(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "telegram-mini-app-pages.yml").read_text(
             encoding="utf-8"
         )
 
-        self.assertNotIn("if: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL != '' }}", workflow)
-        self.assertIn('[[ -n "${MINI_APP_API_URL}"', workflow)
-        self.assertIn("api_url=\"${MINI_APP_API_URL%/}\"", workflow)
+        self.assertIn("WUKONG_TELEGRAM_MINI_APP_API_URL", workflow)
+        self.assertIn("VERCEL_TOKEN", workflow)
+        self.assertIn("vercel deploy --prebuilt --prod", workflow)
+        self.assertIn("https://wukong-rom-studio.vercel.app", workflow)
+        self.assertNotIn("deploy-pages", workflow)
 
     def test_default_debloat_list_is_embedded_for_recipe_parity(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")

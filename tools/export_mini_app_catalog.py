@@ -76,7 +76,7 @@ def export_catalog(
         "pipelineSteps": [
             {"id": step_id, "label": label, "default": step_id in DEFAULT_PIPELINE_STEPS}
             for step_id, label, _required in PIPELINE_STEP_DEFINITIONS
-            if step_id != "notify_telegram"
+            if step_id not in {"notify_telegram", "patch_vendor_boot"}
         ],
         "presetDefaultsByVersion": {
             version: {

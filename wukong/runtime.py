@@ -304,7 +304,7 @@ class HybridRuntime:
     def _dispatch_github(self, job_id: str) -> None:
         recipe = self.store.recipe(job_id)
         if not recipe:
-            self._fail(job_id, "Job recipe is unavailable")
+            self._fail_before_dispatch(job_id, "Job recipe is unavailable")
             return
         token = self._github_token()
         repository = os.environ.get("WUKONG_GITHUB_REPOSITORY", "").strip()
@@ -316,8 +316,9 @@ class HybridRuntime:
         if not self.rclone_config:
             missing.append("rclone configuration")
         if missing:
-            self._fail(job_id, "Cloud dispatch is not configured: " + "; ".join(missing))
+            self._fail_before_dispatch(job_id, "Cloud dispatch is not configured: " + "; ".join(missing))
             return
+        dispatched = False
         try:
             self.store.update(job_id, status=JobStatus.PREFLIGHT, stage="cloud-dispatch")
             storage = RcloneStorageAdapter(
@@ -357,6 +358,7 @@ class HybridRuntime:
                 recipe_ref=recipe_ref,
                 job_id=job_id,
             )
+            dispatched = True
             self.store.append_event(job_id, "dispatched", recipeRef=recipe_ref)
             # The dispatch request is the point of no return: once GitHub has
             # accepted it, a temporary failure while looking the run back up
@@ -394,7 +396,35 @@ class HybridRuntime:
                 )
                 watcher.start()
         except Exception as exc:
-            self._fail(job_id, str(exc))
+            if dispatched:
+                try:
+                    self.store.append_event(
+                        job_id,
+                        "warning",
+                        warning=f"Workflow was accepted but local dispatch finalization failed: {exc}",
+                    )
+                except Exception:
+                    pass
+            else:
+                self._fail_before_dispatch(job_id, str(exc))
+
+    def _fail_before_dispatch(self, job_id: str, error: str) -> None:
+        manifest = self.store.get(job_id)
+        if manifest is not None:
+            try:
+                self.orchestrator.compensate_submission(
+                    manifest.owner,
+                    job_id,
+                    error,
+                    retain_job=True,
+                )
+            except Exception as exc:
+                self.store.append_event(
+                    job_id,
+                    "warning",
+                    warning=f"Build-credit compensation failed: {exc}",
+                )
+        self._fail(job_id, error)
 
     def _watch_cloud_job(self, job_id: str, storage: RcloneStorageAdapter) -> None:
         sync = CloudJobSync(self.store, storage)

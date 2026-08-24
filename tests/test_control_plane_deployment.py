@@ -104,14 +104,12 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn('WUKONG_TELEGRAM_MINI_APP_API_URL="https://mini-api.example.com"', rendered)
         self.assertNotIn("RCLONE_CONFIG_B64", rendered)
 
-    def test_deployment_contract_has_verified_ssh_health_rollback_and_secret_excludes(self) -> None:
+    def test_deployment_contract_uses_private_render_hook_vercel_and_secret_excludes(self) -> None:
         workflow = (Path(__file__).parents[1] / ".github/workflows/control-plane-production.yml").read_text(
             encoding="utf-8"
         )
         ci = (Path(__file__).parents[1] / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        remote = (Path(__file__).parents[1] / "deploy/control-plane/deploy_remote.sh").read_text(
-            encoding="utf-8"
-        )
+        vercel_workflow = (Path(__file__).parents[1] / ".github/workflows/telegram-mini-app-pages.yml").read_text(encoding="utf-8")
         dockerignore = (Path(__file__).parents[1] / ".dockerignore").read_text(encoding="utf-8")
         dockerfile = (Path(__file__).parents[1] / "deploy/control-plane/Dockerfile").read_text(
             encoding="utf-8"
@@ -122,11 +120,14 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("StrictHostKeyChecking=yes", workflow)
-        self.assertIn("WUKONG_VPS_KNOWN_HOSTS", workflow)
-        self.assertIn("control_plane_preflight --online", remote)
-        self.assertIn("rollback", remote)
-        self.assertIn("release", workflow)
+        self.assertIn("RENDER_DEPLOY_HOOK_URL", workflow)
+        self.assertIn("api.render.com/deploy/", workflow)
+        self.assertIn("/healthz", workflow)
+        self.assertIn("telegram-mini-app-pages.yml", workflow)
+        self.assertNotIn("WUKONG_VPS_SSH_KEY", workflow)
+        self.assertIn("VERCEL_TOKEN", vercel_workflow)
+        self.assertIn("vercel deploy --prebuilt --prod", vercel_workflow)
+        self.assertNotIn("deploy-pages", vercel_workflow)
         self.assertIn("condition: service_started", (Path(__file__).parents[1] / "deploy/control-plane/compose.yml").read_text(encoding="utf-8"))
         self.assertIn("control-plane-container", ci)
         self.assertIn("os.getuid() == 10001", ci)

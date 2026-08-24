@@ -1792,7 +1792,7 @@ class TelegramAccessContractTests(unittest.TestCase):
 
             access.approve(42, actor=access.identity(1))
             self.assertEqual(TelegramAccessStore(path, admin_ids={1}).identity(42).role, "user")
-            access.revoke(42, actor=access.identity(1))
+            access.revoke(42, actor=access.identity(1), reason="contract test")
             self.assertIsNone(access.identity(42))
             self.assertNotIn("token", path.read_text(encoding="utf-8").casefold())
 

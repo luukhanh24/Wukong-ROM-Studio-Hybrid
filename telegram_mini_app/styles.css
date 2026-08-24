@@ -598,3 +598,42 @@ h2 { letter-spacing: -.015em; }
 .session-recovery{margin:0 0 14px;padding:12px;border:1px solid color-mix(in srgb,var(--accent,#3567a5) 35%,transparent);background:color-mix(in srgb,var(--accent,#3567a5) 7%,transparent)}
 .session-recovery p{margin:0 0 9px;font-size:12px;line-height:1.5}
 .session-recovery button{width:100%;min-height:42px;border:1px solid var(--ink,#25272d);border-radius:9px;background:transparent;font-weight:700}
+.quota-chip{display:flex;min-height:34px;align-items:flex-end;justify-content:center;flex-direction:column;padding:4px 9px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-soft)}
+.quota-chip small{color:var(--muted);font:600 7px/1 "JetBrains Mono",monospace;letter-spacing:.06em}
+.quota-chip strong{margin-top:4px;font:700 11px/1 "JetBrains Mono",monospace}
+.quota-chip.pending,.quota-chip.revoked,.quota-chip.exhausted{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.user-admin{margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--surface-raised)}
+.user-admin>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.user-admin>header small,.user-admin>header h2,.user-admin>header p{display:block;margin:0}
+.user-admin>header small{color:var(--muted);font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.06em}
+.user-admin>header h2{margin-top:6px;font-size:19px}
+.user-admin>header p{max-width:60ch;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.5}
+.user-admin-controls{display:grid;grid-template-columns:minmax(210px,1fr) repeat(4,minmax(125px,.45fr));gap:10px;margin-bottom:12px}
+.user-table{overflow:hidden;border:1px solid var(--line);border-radius:var(--radius-md)}
+.user-table-head,.user-row{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(140px,.9fr) minmax(110px,.6fr) minmax(110px,.6fr) 42px;gap:12px;align-items:center;padding:11px 13px}
+.user-table-head{color:var(--muted);background:var(--surface-soft);font:600 8px/1 "JetBrains Mono",monospace;letter-spacing:.05em;text-transform:uppercase}
+.user-row{border-top:1px solid var(--line);background:var(--surface-raised)}
+.user-row:first-child{border-top:0}
+.user-row>span{min-width:0}
+.user-row strong,.user-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-row strong{font-size:12px}.user-row small{margin-top:4px;color:var(--muted);font-size:9px}
+.user-row .user-quota{font:600 11px/1.35 "JetBrains Mono",monospace}
+.access-badge{display:inline-flex!important;width:max-content;min-height:24px;align-items:center;padding:3px 8px;border:1px solid var(--line-strong);border-radius:999px;font:600 8px/1 "JetBrains Mono",monospace!important;text-transform:uppercase}
+.access-badge.approved{border-color:var(--success);color:var(--success);background:var(--success-soft)}
+.access-badge.pending{border-color:var(--sun);color:var(--sun);background:var(--sun-soft)}
+.access-badge.revoked{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.user-row .user-open{width:34px;height:34px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);font-size:16px}
+.user-pagination{display:flex;align-items:center;justify-content:space-between;margin-top:10px;color:var(--muted);font:500 9px/1 "JetBrains Mono",monospace}
+.user-pagination button{width:36px;height:32px;border:1px solid var(--line);background:var(--surface)}
+.user-dialog{width:min(520px,calc(100vw - 24px));padding:0;border:1px solid var(--line-strong);border-radius:12px;color:var(--ink);background:var(--surface-raised);box-shadow:0 24px 70px rgba(20,25,35,.22)}
+.user-dialog::backdrop{background:rgba(20,25,35,.42);backdrop-filter:blur(3px)}
+.user-dialog form,.user-detail-dialog>div{display:grid;gap:14px;padding:20px}
+.user-dialog header,.user-dialog footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.user-dialog header small,.user-dialog header h2{display:block;margin:0}.user-dialog header small{color:var(--muted);font:600 8px/1 "JetBrains Mono",monospace}.user-dialog header h2{margin-top:5px;font-size:18px}
+.user-dialog header>button{width:34px;height:34px;border:1px solid var(--line);border-radius:50%;background:transparent;font-size:20px}
+.user-dialog footer{justify-content:flex-end;margin-top:4px}.user-dialog footer button{min-height:38px;padding:7px 13px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
+.user-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;border:1px solid var(--line);background:var(--line)}
+.user-detail-grid>div{padding:10px;background:var(--surface-raised)}.user-detail-grid small,.user-detail-grid strong{display:block}.user-detail-grid small{color:var(--muted);font-size:8px}.user-detail-grid strong{margin-top:5px;font:600 11px/1.35 "JetBrains Mono",monospace}
+.user-detail-actions{display:flex;flex-wrap:wrap;gap:7px}.user-detail-actions button{min-height:34px;padding:6px 10px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface)}.user-detail-actions button.danger{color:var(--danger);border-color:var(--danger)}
+.user-audit{display:grid;gap:7px;max-height:260px;overflow:auto}.user-audit article{padding:9px;border-left:2px solid var(--line-strong);background:var(--surface-soft)}.user-audit article strong,.user-audit article small{display:block}.user-audit article strong{font-size:10px}.user-audit article small{margin-top:4px;color:var(--muted);font:500 8px/1.35 "JetBrains Mono",monospace}
+@media(max-width:720px){.quota-chip{display:none!important}.user-admin{padding:14px}.user-admin>header{align-items:stretch;flex-direction:column}.user-admin-controls{grid-template-columns:1fr}.user-table-head{display:none}.user-row{grid-template-columns:1fr auto;gap:10px;margin-top:9px;border:1px solid var(--line);border-radius:var(--radius-md)}.user-row>span:nth-child(2),.user-row>span:nth-child(3),.user-row>span:nth-child(4){grid-column:1}.user-row .user-open{grid-column:2;grid-row:1}.user-table{overflow:visible;border:0}.user-detail-grid{grid-template-columns:1fr 1fr}}

@@ -415,14 +415,16 @@ class StudioCoreTests(unittest.TestCase):
                 "package_zip",
             ],
         )
-        steps = studio_core.plan_steps(spec)
+        with self.assertRaisesRegex(studio_core.StudioError, "system-only"):
+            studio_core.plan_steps(spec)
+        steps = []
         self.assertNotIn("region_patch", steps)
         self.assertNotIn("region_patch", studio_core.STEP_ORDER)
         self.assertNotIn("region_patch", studio_core.STAGE_HANDLERS)
         self.assertNotIn("framework_patch", steps)
         self.assertNotIn("framework_patch", studio_core.STEP_ORDER)
         self.assertNotIn("framework_patch", studio_core.STAGE_HANDLERS)
-        self.assertIn("patch_vendor_boot", steps)
+        self.assertNotIn("patch_vendor_boot", steps)
         self.assertIn("patch_vendor_boot", studio_core.STEP_ORDER)
         self.assertIn("patch_vendor_boot", studio_core.STAGE_HANDLERS)
 
@@ -1117,6 +1119,10 @@ class StudioCoreTests(unittest.TestCase):
 
         for rule in studio_core.WK_MANAGER_ART_RUNTIME_POLICY_RULES:
             self.assertIn(f"+{rule}", content)
+        self.assertIn(
+            "+(typeattributeset netdomain (wukong_manager_app))",
+            content,
+        )
         self.assertIn(
             "+(allow wukong_manager_app wukong_system_powerd (unix_stream_socket (connectto)))",
             content,
@@ -1820,6 +1826,23 @@ class StudioCoreTests(unittest.TestCase):
             self.assertEqual(result["deleted"], 1)
             self.assertEqual(result["skipped"], 0)
             self.assertEqual(result["deletedPaths"], [r"my_stock\app\Browser"])
+
+    def test_debloat_stage_fails_when_no_requested_target_exists(self):
+        with tempfile.TemporaryDirectory() as temp:
+            context = studio_core.BuildContext(
+                job_id="debloat-zero",
+                spec=studio_core.BuildSpec(
+                    romPath="fixture.zip",
+                    debloatPaths=[r"system\system\app\Missing"],
+                ),
+                workspace=Path(temp),
+                metadata={},
+                device={},
+            )
+            (context.rom_unpack / "system_unpacked" / "system").mkdir(parents=True)
+
+            with self.assertRaisesRegex(studio_core.StudioError, "matched no files"):
+                studio_core._stage_debloat(context)
 
     def test_shared_stark_mods_are_available_to_every_mod_version(self):
         with tempfile.TemporaryDirectory() as root:

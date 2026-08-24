@@ -24,6 +24,8 @@ services:
         value: webhook
       - key: WUKONG_TELEGRAM_WEB_APP_URL
         value: https://wukong-rom-studio.vercel.app/
+      - key: WUKONG_ALLOWED_ORIGINS
+        sync: false
       - key: WUKONG_GITHUB_REPOSITORY
         sync: false
       - key: WUKONG_CONTROL_PLANE_REQUIRE_POSTGRES
