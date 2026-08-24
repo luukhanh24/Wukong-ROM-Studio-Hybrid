@@ -143,6 +143,7 @@ class GitHubActionsUI:
             lines.extend(
                 [
                     f"| Nền MOD / MOD pack | `{recipe.build.mod_version}` |",
+                    f"| Nhãn phát hành / Release label | `{recipe.build.mod_release_version or '—'}` |",
                     f"| Preset | `{recipe.build.preset}` |",
                     f"| MOD đã chọn / Selected | {len(mods)} |",
                     f"| Danh sách MOD / MOD list | {mod_list} |",

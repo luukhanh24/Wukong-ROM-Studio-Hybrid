@@ -25,12 +25,12 @@
   </header>
 
   <nav class="contents-rail" aria-label="Mini App navigation">
-    <button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="cloud"><b>03</b><span data-i18n="navCloud">Thư viện</span></button><button data-nav="catalog"><b>04</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>05</b><span data-i18n="navSystem">Hệ thống</span></button>
+    <button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><b>03</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>04</b><span data-i18n="navSystem">Hệ thống</span></button>
   </nav>
 
   <main>
     <section class="view active" id="build" aria-labelledby="build-title">
-      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Lập hồ sơ build.</h1><p data-i18n="buildIntro">Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.</p></div></header>
+      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Build từ Telegram.</h1><p data-i18n="buildIntro">Chọn ROM, MOD pack và theo dõi tiến trình trong bot.</p></div></header>
       <section class="runtime-strip" aria-label="Build runtime status">
         <div><i class="status-dot waiting" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
         <div><i class="status-dot waiting" id="runtime-pipeline-dot" aria-hidden="true"></i><span><small data-i18n="runtimePipeline">PIPELINE</small><strong id="runtime-pipeline-state" data-i18n="runtimeWaiting">Chờ recipe hợp lệ</strong></span></div>
@@ -39,7 +39,6 @@
       <form id="recipe-form">
         <section class="dossier-section source-section">
           <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2><p data-i18n="sourceHint">URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.</p></div></header>
-          <div class="task-tabs" role="group" aria-label="Task"><label><input type="radio" name="task" value="build" checked><span data-i18n="taskBuild">Build đầy đủ</span></label><label><input type="radio" name="task" value="source_mirror"><span data-i18n="taskMirror">Lưu ROM gốc</span></label><label><input type="radio" name="task" value="artifact_publish"><span data-i18n="taskPublish">Phát hành file</span></label></div>
           <div class="smart-source">
             <div class="field field-wide source-input-field">
               <div class="source-input-head"><label for="source-uri" data-i18n="sourceUrl">Dán link ROM</label><div><button id="paste-source" type="button" data-i18n="pasteLink">Dán</button><button id="clear-source" type="button" data-i18n="clearLink">Xóa</button></div></div>
@@ -72,12 +71,13 @@
               <div><dt data-i18n="deepInspection">Kiểm tra ZIP</dt><dd id="source-deep-inspection">—</dd></div>
             </dl>
           </div>
-          <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div><label class="field field-wide"><span data-i18n="checksum">SHA-256 (không bắt buộc)</span><input id="source-sha" maxlength="64" autocomplete="off" placeholder="64 ký tự hex"></label></div></details>
+          <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div></div></details>
         </section>
 
         <section class="dossier-section build-options" id="build-options">
           <header class="section-heading"><span>02</span><div><h2 data-i18n="recipeTitle">Cấu hình bản ROM</h2><p data-i18n="recipeHint">Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.</p></div></header>
-          <div class="field-grid three"><label class="field"><span data-i18n="runner">Nơi chạy</span><select id="execution"><option value="github-auto">GitHub Auto</option><option value="github-hosted">GitHub Hosted</option><option value="self-hosted-linux">Self-hosted Linux</option></select></label><label class="field"><span data-i18n="edition">Phiên bản</span><select id="preset"><option value="lite">Lite</option><option value="plus" selected>Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><label class="field"><span data-i18n="modPack">Nền MOD</span><select id="mod-version"></select></label></div>
+          <div class="field-grid three"><label class="field"><span data-i18n="runner">Nơi chạy</span><select id="execution"><option value="github-auto">GitHub Auto</option><option value="github-hosted">GitHub Hosted</option><option value="self-hosted-linux">Self-hosted Linux</option></select></label><label class="field"><span data-i18n="edition">Phiên bản</span><select id="preset"><option value="lite">Lite</option><option value="plus" selected>Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><label class="field"><span data-i18n="modPack">Nền MOD</span><select id="mod-version"></select><small id="mod-release-version">—</small></label></div>
+          <div class="release-version-editor"><div><strong data-i18n="releaseVersion">Phiên bản phát hành</strong><small data-i18n="releaseVersionHint">Nhãn này đi kèm MOD pack trong mỗi job.</small></div><div class="release-version-controls"><label class="sr-only" for="mod-release-version-input" data-i18n="releaseVersion">Phiên bản phát hành</label><input id="mod-release-version-input" maxlength="64" autocomplete="off"><button id="save-mod-release-version" type="button" data-i18n="saveReleaseVersion">Lưu nhãn</button></div></div>
           <div class="selection-bar"><div><strong data-i18n="mods">MOD áp dụng</strong><small id="mod-count">0 đã chọn</small></div><div><button id="select-defaults" type="button" data-i18n="defaults">Mặc định</button><button id="select-all" type="button" data-i18n="selectAll">Tất cả</button><button id="clear-mods" type="button" data-i18n="clear">Bỏ chọn</button></div></div>
           <label class="field mod-search"><span data-i18n="searchMods">Lọc MOD để chọn</span><input id="mod-search" type="search" placeholder="Gapps / Camera / WK…"></label>
           <div class="mod-list" id="mod-list" aria-live="polite"></div>
@@ -119,13 +119,6 @@
       <aside class="process-key"><h2 data-i18n="stageKey">Các trạng thái chuẩn</h2><ol><li data-i18n="stageQueued">Chờ</li><li data-i18n="stagePreflight">Kiểm tra</li><li data-i18n="stageDownloading">Tải ROM</li><li data-i18n="stageRunning">Đang build</li><li data-i18n="stageUploading">Đang upload</li><li data-i18n="stageTerminal">Thành công / Lỗi</li></ol></aside>
     </section>
 
-    <section class="view" id="cloud" aria-labelledby="cloud-title">
-      <header class="page-head"><div><h1 id="cloud-title" data-i18n="cloudTitle">Thư viện ROM.</h1><p data-i18n="cloudIntro">Nguồn, checkpoint và recipe riêng tư. Chỉ artifact đã phát hành có link chia sẻ.</p></div></header>
-      <div class="library-index"><button data-action="cloud"><b>SRC</b><span><strong data-i18n="browseCloud">Duyệt nguồn & artifact</strong><small data-i18n="browseCloudHint">Mở thư viện đã xác thực trong chat</small></span></button><button data-nav="build" data-task="source_mirror"><b>GET</b><span><strong data-i18n="mirrorRom">Tải và lưu ROM gốc</strong><small data-i18n="mirrorHint">Điền URL rồi chỉ chạy tác vụ mirror</small></span></button><button data-nav="jobs"><b>CHK</b><span><strong data-i18n="checkpoints">Checkpoint & lịch sử</strong><small data-i18n="checkpointsHint">Dùng Job ID để xem và resume</small></span></button></div>
-      <section class="cloud-results" id="cloud-results" hidden aria-live="polite"></section>
-      <div class="retention-note"><span>PRIVATE</span><p data-i18n="retention">Source và artifact giữ đến khi admin xóa · checkpoint 7 ngày · log 30 ngày.</p></div>
-    </section>
-
     <section class="view" id="catalog" aria-labelledby="catalog-title">
       <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật.</h1><p data-i18n="catalogIntro">Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.</p></div><div class="catalog-total" id="catalog-total">···</div></header>
       <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
@@ -142,7 +135,8 @@
     </section>
   </main>
 
-  <nav class="bottom-nav" aria-label="Mobile navigation"><button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="cloud"><b>03</b><span data-i18n="navCloud">Thư viện</span></button><button data-nav="catalog"><b>04</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>05</b><span data-i18n="navSystem">Hệ thống</span></button></nav>
+  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-hidden="true" hidden><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+  <nav class="bottom-nav" aria-label="Mobile navigation"><i class="liquid-lens" aria-hidden="true"></i><button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><b>03</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>04</b><span data-i18n="navSystem">Hệ thống</span></button></nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./app.js" type="module"></script>
 </body>

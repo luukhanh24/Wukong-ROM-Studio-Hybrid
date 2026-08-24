@@ -523,14 +523,14 @@ class StudioServerTests(unittest.TestCase):
                 headers=self.headers,
                 json={
                     "studioVersions": {
-                        "ColorOS_16.0.7": "V8.5",
-                        "ColorOS_16.0.8": "invalid",
+                        "ColorOS_16.0.7": "Stable 8",
+                        "ColorOS_16.0.8": "../../invalid",
                     }
                 },
             )
         self.assertEqual(response.status_code, 200)
         settings = response.get_json()
-        self.assertEqual(settings["studioVersions"]["ColorOS_16.0.7"], "V8.5")
+        self.assertEqual(settings["studioVersions"]["ColorOS_16.0.7"], "Stable 8")
         self.assertEqual(settings["studioVersions"]["ColorOS_16.0.8"], "V4.1")
 
     def test_bootstrap_reports_installed_content_pack_health(self):

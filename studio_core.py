@@ -53,6 +53,11 @@ from studio_paths import (
 from src.core.utils import gettype
 from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS, SHARED_MOD_NAMES
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
+from wukong.mod_release_versions import (
+    DEFAULT_MOD_RELEASE_VERSION,
+    DEFAULT_MOD_RELEASE_VERSIONS,
+    default_mod_release_version,
+)
 
 
 ROOT_DIR = SCRIPT_ROOT
@@ -80,12 +85,12 @@ WK_MANAGER_STARK_DIR = STARK_ROOT
 WORKSPACE_MARKER_NAME = ".wkstudio-workspace.json"
 WORKSPACE_MARKER_KIND = "wukong-rom-studio-workspace"
 WORKSPACE_PIPELINE_VERSION = 21
-ROM_STUDIO_VERSION = "V3.4"
-MOD_VERSION_STUDIO_VERSIONS = {
-    "ColorOS_16.0.8": "V4.1",
-    "ColorOS_16.0.9": "V5.0",
-}
-STUDIO_VERSION_RE = re.compile(r"^V[0-9]+(?:\.[0-9]+){1,3}$", re.IGNORECASE)
+ROM_STUDIO_VERSION = DEFAULT_MOD_RELEASE_VERSION
+MOD_VERSION_STUDIO_VERSIONS = DEFAULT_MOD_RELEASE_VERSIONS
+# A release label is presentation metadata, not a directory or a semantic
+# version. Keep it readable while refusing values that could escape into an
+# output path or corrupt a log/manifest.
+STUDIO_VERSION_RE = re.compile(r"^[^/\\\x00-\x1f]{1,64}$")
 MOD_VERSION_ALIASES = {
     "ColorOS_700": "ColorOS_16.0.7",
     "ColorOS_800": "ColorOS_16.0.8",
@@ -408,12 +413,14 @@ def build_edition_name(spec: "BuildSpec") -> str:
 
 
 def default_studio_version(mod_version: str | None) -> str:
-    normalized = normalize_mod_version(mod_version)
-    return MOD_VERSION_STUDIO_VERSIONS.get(normalized, ROM_STUDIO_VERSION)
+    # The static catalog can include a ready remote pack not present under
+    # local Content/MOD yet, so this display fallback must not probe disk.
+    normalized = MOD_VERSION_ALIASES.get(str(mod_version or "").strip(), str(mod_version or "").strip())
+    return default_mod_release_version(normalized)
 
 
 def normalize_studio_version(value: Any, fallback: str = ROM_STUDIO_VERSION) -> str:
-    candidate = str(value or "").strip().upper()
+    candidate = str(value or "").strip()
     if not STUDIO_VERSION_RE.fullmatch(candidate):
         return fallback
     return candidate

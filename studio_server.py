@@ -19,6 +19,7 @@ import time
 import webbrowser
 import zipfile
 from contextlib import closing
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, TextIO
@@ -112,6 +113,7 @@ DB_LOCK = threading.RLock()
 PICKER_LOCK = threading.Lock()
 STEP_UPDATE_LOCK = threading.RLock()
 PACKAGE_LOCK = threading.RLock()
+SETTINGS_LOCK = threading.RLock()
 PACKAGE_SLOT = threading.Semaphore(1)
 PACKAGE_TRACKERS: dict[str, dict[str, Any]] = {}
 PACKAGE_PROCESSES: dict[str, dict[str, subprocess.Popen[str]]] = {}
@@ -513,6 +515,11 @@ def load_settings() -> dict[str, Any]:
 
 
 def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
+    with SETTINGS_LOCK:
+        return _save_settings(payload)
+
+
+def _save_settings(payload: dict[str, Any]) -> dict[str, Any]:
     current = load_settings()
     raw_debloat_paths = payload.get("debloatPaths", current.get("debloatPaths"))
     debloat_paths = (
@@ -575,6 +582,14 @@ def _authorize_rom_path(value: str) -> Path:
         settings["roots"] = _normalize_roots([*settings["roots"], str(path.parent)])
         SETTINGS_PATH.write_text(json.dumps(settings, indent=2), encoding="utf-8")
     return path
+
+
+def bind_recipe_mod_release_version(recipe: BuildRecipe) -> BuildRecipe:
+    label = load_settings()["studioVersions"].get(
+        recipe.build.mod_version,
+        default_studio_version(recipe.build.mod_version),
+    )
+    return replace(recipe, build=replace(recipe.build, mod_release_version=label))
 
 
 def _authorize_layout_source(value: str) -> Path:
@@ -2051,7 +2066,16 @@ def create_app(*, start_queue: bool = True) -> Flask:
             "devices": load_devices(),
             "modVersions": list_mod_versions(),
             "modsByVersion": {version: list_mods(version) for version in list_mod_versions()},
+            "modReleaseVersions": {
+                version: load_settings()["studioVersions"].get(version, default_studio_version(version))
+                for version in list_mod_versions()
+            },
         }
+        def save_telegram_release_versions(values: dict[str, str]) -> dict[str, str]:
+            with SETTINGS_LOCK:
+                current = load_settings()
+                saved = save_settings({**current, "studioVersions": {**current["studioVersions"], **values}})
+            return dict(saved["studioVersions"])
         telegram_diagnostics_provider = lambda: {
             "system": diagnostics(),
             "cache": stage_cache_status(),
@@ -2084,6 +2108,8 @@ def create_app(*, start_queue: bool = True) -> Flask:
                 catalog_provider=telegram_catalog_provider,
                 diagnostics_provider=telegram_diagnostics_provider,
                 source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
+                release_versions_provider=lambda: load_settings()["studioVersions"],
+                release_versions_saver=save_telegram_release_versions,
                 cloud_provider=lambda category: hybrid_runtime.cloud_library(category=category),
                 cache_provider=stage_cache_status,
                 cache_clearer=clear_hybrid_cache,
@@ -2136,7 +2162,9 @@ def create_app(*, start_queue: bool = True) -> Flask:
     @app.post("/api/v1/recipes/validate")
     def hybrid_recipe_validate() -> Response:
         try:
-            recipe = BuildRecipe.from_dict(request.get_json(force=True) or {})
+            recipe = bind_recipe_mod_release_version(
+                BuildRecipe.from_dict(request.get_json(force=True) or {})
+            )
             hybrid_orchestrator.validate_access(recipe, windows_identity)
             decision = hybrid_orchestrator.validate(recipe)
             return jsonify(
@@ -2164,7 +2192,9 @@ def create_app(*, start_queue: bool = True) -> Flask:
     @app.post("/api/v1/jobs")
     def hybrid_job_create() -> Response:
         try:
-            recipe = BuildRecipe.from_dict(request.get_json(force=True) or {})
+            recipe = bind_recipe_mod_release_version(
+                BuildRecipe.from_dict(request.get_json(force=True) or {})
+            )
             manifest = hybrid_orchestrator.submit(recipe, windows_identity)
             if start_queue:
                 hybrid_runtime.start(manifest)

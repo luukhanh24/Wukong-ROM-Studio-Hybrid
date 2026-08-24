@@ -48,6 +48,7 @@ ACTIONS_CALLBACK_MAX_AGE_SECONDS = 5 * 60
 TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS = 60 * 60
 TELEGRAM_PAIRING_MAX_AGE_SECONDS = 5 * 60
 TELEGRAM_SOURCE_DRAFT_MAX_AGE_SECONDS = 24 * 60 * 60
+MOD_RELEASE_VERSION_RE = re.compile(r"^[^/\\\x00-\x1f]{1,64}$")
 
 
 class TelegramInitDataError(PermissionError):
@@ -374,6 +375,8 @@ class TelegramMiniAppAPI:
         orchestrator: HybridOrchestrator,
         runtime: HybridRuntime,
         catalog_provider: Callable[[], dict[str, object]],
+        release_versions_provider: Callable[[], Mapping[str, str]] | None = None,
+        release_versions_saver: Callable[[Mapping[str, str]], Mapping[str, str]] | None = None,
         diagnostics_provider: Callable[[], dict[str, object]],
         source_probe_provider: Callable[[str], dict[str, object]],
         cloud_provider: Callable[[str], dict[str, object]] | None = None,
@@ -395,6 +398,8 @@ class TelegramMiniAppAPI:
         self.orchestrator = orchestrator
         self.runtime = runtime
         self.catalog_provider = catalog_provider
+        self.release_versions_provider = release_versions_provider or (lambda: {})
+        self.release_versions_saver = release_versions_saver
         self.diagnostics_provider = diagnostics_provider
         self.source_probe_provider = source_probe_provider
         self.cloud_provider = cloud_provider
@@ -538,7 +543,7 @@ class TelegramMiniAppAPI:
             if origin == self.allowed_origin.casefold():
                 response.headers["Access-Control-Allow-Origin"] = self.allowed_origin
                 response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
                 response.headers["Access-Control-Max-Age"] = "600"
                 response.headers["Vary"] = "Origin"
             response.headers["Cache-Control"] = "no-store"
@@ -547,6 +552,41 @@ class TelegramMiniAppAPI:
         @app.get("/v1/catalog")
         def catalog() -> Response:
             return jsonify(self.catalog_provider())
+
+        @app.get("/v1/mod-release-versions")
+        def mod_release_versions() -> Response:
+            return jsonify(
+                {
+                    "modReleaseVersions": dict(self.release_versions_provider()),
+                    "editable": self._identity().role == "admin",
+                }
+            )
+
+        @app.put("/v1/mod-release-versions")
+        def save_mod_release_versions() -> Response:
+            if self._identity().role != "admin":
+                return jsonify({"error": "Admin access is required to edit MOD release versions"}), 403
+            if self.release_versions_saver is None:
+                return jsonify({"error": "MOD release version editing is not configured"}), 503
+            payload = request.get_json(force=True) or {}
+            values = payload.get("modReleaseVersions") if isinstance(payload, Mapping) else None
+            if not isinstance(values, Mapping):
+                return jsonify({"error": "modReleaseVersions must be an object"}), 400
+            catalog = self.catalog_provider()
+            known = {str(value) for value in catalog.get("modVersions", [])}
+            if set(values) - known:
+                return jsonify({"error": "Unknown MOD pack in release versions"}), 400
+            normalized: dict[str, str] = {}
+            for pack, label in values.items():
+                value = str(label).strip()
+                if not MOD_RELEASE_VERSION_RE.fullmatch(value):
+                    return jsonify({"error": "Release version must be 1–64 printable characters without / or \\"}), 400
+                normalized[str(pack)] = value
+            try:
+                saved = self.release_versions_saver(normalized)
+                return jsonify({"modReleaseVersions": dict(saved)})
+            except (OSError, RuntimeError, TypeError, ValueError) as exc:
+                return jsonify({"error": str(exc)}), 409
 
         @app.get("/healthz")
         def health() -> Response:
@@ -833,6 +873,14 @@ class TelegramMiniAppAPI:
             raise RecipeValidationError("ROM source is required")
         source_payload.pop("metadata", None)
         preliminary = BuildRecipe.from_dict(clean_payload)
+        release_versions = self.release_versions_provider()
+        release_version = str(release_versions.get(preliminary.build.mod_version) or "").strip()
+        if not MOD_RELEASE_VERSION_RE.fullmatch(release_version):
+            release_version = preliminary.build.mod_release_version or preliminary.build.mod_version
+        preliminary = replace(
+            preliminary,
+            build=replace(preliminary.build, mod_release_version=release_version),
+        )
         if preliminary.source.kind not in {"http", "https"}:
             return preliminary
         # Probe results may remain cached while a direct signed URL continues
@@ -909,7 +957,8 @@ class TelegramJobNotifier:
             f"Android: {metadata.get('androidVersion') or '—'}",
             f"Security patch: {metadata.get('securityPatch') or '—'}",
             f"Build date: {metadata.get('buildDate') or '—'}",
-            f"Preset / MOD pack: {recipe.build.preset} / {recipe.build.mod_version}",
+            f"Preset / MOD pack: {recipe.build.preset} / {recipe.build.mod_version}"
+            f" · release {recipe.build.mod_release_version or '—'}",
             f"Runner: {manifest.runner or '—'}",
         ]
         duration = self._duration(manifest.created_at, manifest.finished_at)

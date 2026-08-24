@@ -112,9 +112,9 @@ components:
     rounded: "{rounded.title-plate}"
     padding: "28px"
   nav-active:
-    backgroundColor: "{colors.action-cobalt}"
-    textColor: "{colors.raised-surface}"
-    rounded: "{rounded.cluster}"
+    backgroundColor: "{colors.action-cobalt-soft}"
+    textColor: "{colors.action-cobalt-strong}"
+    rounded: "{rounded.sheet}"
     height: "54px"
 ---
 
@@ -170,7 +170,7 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 **The Pearl Majority Rule.** Most editable space remains pearl or neutral. Saturated color appears at decisions, categories, and state transitions, never as a blanket fill across every container.
 
-**The No Gradient Rule.** Use solid color, geometric fields, borders, and tonal layering. Do not introduce gradients, blurred blobs, or glass effects.
+**The Solid Workspace Rule.** Work sheets, fields, ledgers, and title surfaces use solid color, borders, and tonal layering. The only glass-and-gradient exception is the compact mobile navigation lens; it must remain local to the dock and must not spread into the working canvas.
 
 ## Typography
 
@@ -198,11 +198,11 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 ## Layout
 
-The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 48px five-destination contents rail create a persistent instrument frame. Each view begins with a 150px ink-violet title plate; a three-cell runtime rail overlaps its lower edge to connect editorial orientation with live state.
+The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 48px four-destination contents rail—Studio, Jobs, Catalog, and System—create a persistent instrument frame. Each view begins with a compact destination heading and a three-cell runtime rail that connects orientation with live state.
 
 The Studio recipe uses a flexible work column and a 320px sticky dispatch docket separated by a 16px gutter. Numbered dossier sections remain in the work column, with four-pixel chromatic spines indicating source, build, and delivery. Controls use compact internal rhythms; source facts form a measured grid rather than separate cards.
 
-At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a five-cell floating bottom instrument. The page reserves at least 108px plus the device safe area so navigation cannot cover fields or actions. At 390px, source facts, catalog results, and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
+At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a four-cell floating liquid bottom instrument. A single lens slides beneath the active destination with a restrained spring-like scale response. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts, catalog results, and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
 
 View changes use a 380ms eased rise-and-fade. Controls transition color, border, shadow, and transform in roughly 180–220ms. Hover movement is limited to one pixel for work elements and two pixels for the active mobile destination. Reduced-motion preference collapses animation and smooth scrolling.
 
@@ -216,7 +216,7 @@ View changes use a 380ms eased rise-and-fade. Controls transition color, border,
 
 ## Elevation & Depth
 
-The atlas uses a restrained hierarchy of violet-tinted shadows. Low elevation separates runtime rails, dossier sheets, and operational ledgers from the cool canvas. Medium elevation belongs to title plates and the dispatch docket. The strongest floating shadow is reserved for the mobile navigation instrument. Inner highlights are limited to framed tools such as Smart Source.
+The atlas uses a restrained hierarchy of violet-tinted shadows. Low elevation separates runtime rails, dossier sheets, and operational ledgers from the cool canvas. Medium elevation belongs to title plates and the dispatch docket. The strongest floating shadow is reserved for the mobile navigation instrument and its out-of-view dispatch shortcut. Inner highlights are limited to framed tools such as Smart Source and the liquid navigation lens.
 
 ### Shadow Vocabulary
 
@@ -232,7 +232,7 @@ The atlas uses a restrained hierarchy of violet-tinted shadows. Low elevation se
 
 ## Shapes
 
-The form language mixes precise controls with selectively softer instruments. Fields and compact controls use four- to ten-pixel corners. Grouped MODs and source instruments use 12–14px corners. Major sheets use 16–18px corners, while the editorial title plate reaches 22px. The mobile navigation is a deliberate floating instrument at 19px, not a global pill convention.
+The form language mixes precise controls with selectively softer instruments. Fields and compact controls use four- to ten-pixel corners. Grouped MODs and source instruments use 12–14px corners. Major sheets use 16–18px corners. The mobile navigation is a deliberate 22px floating instrument with a 17px moving lens; the compact dispatch shortcut may use a capsule because it is a transient edge action, not a global control convention.
 
 Circles are reserved for status lamps, readiness checks, the title-plate ring, and delivery nodes. The wordmark and numbered section markers use compact rounded squares with a slightly tactile, technical feel. One-pixel borders define almost every interactive boundary.
 
@@ -254,8 +254,8 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Chips and Selectors
 
-- **Task tabs:** Three choices share one soft, compact frame; the active task becomes solid cobalt with white text.
 - **MOD selectors:** Groups are categorized. Standard selection uses cobalt, camera uses coral, and interface/core uses aqua. Every selected item gains a matching border, pale surface, and visible check mark.
+- **Release-version editor:** The MOD-pack identity and its operator-facing release label remain visibly paired. Editing uses one compact field and explicit save action; labels may use any validated safe name and must not visually imply that a `V` prefix is mandatory.
 - **Pipeline choices:** Small square marks pair fill and inset contrast, so selection does not depend on hue alone.
 
 ### Cards / Containers
@@ -274,7 +274,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky five-cell contents rail with numbered mono indexes and a two-pixel cobalt active rule. Mobile uses a rounded ink-violet bottom instrument; the active destination becomes cobalt, rises by two pixels, and gains a small aqua node. Desktop and mobile navigation always update together.
+Desktop uses a sticky four-cell contents rail with numbered mono indexes and a two-pixel cobalt active rule. Mobile recreates the LiquidBottomTabs interaction model as a four-cell web control: a translucent, blurred instrument contains one softly highlighted lens that slides beneath the active destination. The active label and index deepen to cobalt and scale only slightly. Desktop and mobile navigation always update together, and reduced-motion preference removes the slide and scale transition.
 
 ### Runtime Rail
 
@@ -290,23 +290,28 @@ ZIP, Drive, and Telegram stages support `pending`, `running`, `complete`, `faile
 
 ### Dispatch Docket
 
-The ink-violet docket is the authoritative recipe summary. It shows three readiness checks, completed count, route summary, recovery copy, and exactly one submit action. An incomplete docket receives a sun border; it does not claim readiness until both source and device are valid.
+The docket is the authoritative recipe summary. It shows three readiness checks, completed count, route summary, recovery copy, and exactly one submit action. An incomplete docket receives a sun border; it does not claim readiness until both source and device are valid. On compact screens, when the docket scrolls out of view, it collapses into a right-edge “Hoàn tất cấu hình” shortcut with a short scale transition. Activating the shortcut returns focus and scroll position to the full docket; the shortcut disappears when the docket is visible.
+
+### Job Context and Events
+
+Every active job exposes its device and ROM facts together with MOD-pack identity, release-version label, and the actual selected MOD names before the event stream. During upload, the progress area identifies the current file, file percentage, transferred bytes, speed, and ETA. Events are grouped by stage in compact ledger rows, while success and failure receive distinct tonal backgrounds. A release label shown in history or logs is the value persisted with that job, not a live reinterpretation of the pack's current label.
 
 ## Do's and Don'ts
 
 ### Do:
 
 - **Do** keep runtime, source, pipeline, delivery, and readiness copy bound to real state.
-- **Do** preserve the atlas reading path: title plate, runtime rail, numbered dossier, dispatch docket.
+- **Do** preserve the atlas reading path: compact destination heading, runtime rail, numbered dossier, dispatch docket.
 - **Do** use cobalt, aqua, coral, sun, green, and red according to the Chromatic Grammar Rule.
 - **Do** group MODs by function and show selection through border, tonal surface, and check mark.
 - **Do** keep Vietnamese and English labels, errors, and recovery actions in parity.
+- **Do** keep MOD-pack identity and its editable release-version label together in selection, job context, history, and logs.
 - **Do** preserve 44px touch targets, visible keyboard focus, safe-area clearance, dark mode, and reduced motion.
 - **Do** keep Smart Source analysis in place and distinguish browser-limited inspection from server-side preflight.
 
 ### Don't:
 
-- **Don't** use gradients, glass surfaces, blurred blobs, neon glows, or generic AI-generated SaaS dashboard chrome.
+- **Don't** use gradients, glass surfaces, blurred blobs, or neon glows outside the intentionally bounded Liquid bottom-navigation instrument.
 - **Don't** turn every information group into the same rounded card with the same shadow.
 - **Don't** add decorative welcome copy, KPI theatre, abstract illustrations, or oversized marketing typography to the operating surface.
 - **Don't** use color without a defined interaction, category, or state meaning.

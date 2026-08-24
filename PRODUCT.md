@@ -16,13 +16,13 @@ Wukong ROM Studio Hybrid is a ROM build and source-mirroring tool with one share
 - Mode: Operate. The primary task is to create and monitor a ROM build with one-handed mobile interaction.
 - Vietnamese is the default language; English can be selected instantly and is remembered per Telegram user ID.
 - Common flows use buttons, a step-by-step chat wizard, or the bilingual Build Control Ledger Mini App. Raw `/submit <JSON>` remains available as an advanced compatibility path.
-- The Mini App maps the Windows operating model into Studio, Jobs, Library, Catalog, and System; the chat menu keeps New build, My jobs, ROM library, Diagnostics, and Language as fast paths.
+- The Mini App maps the Windows operating model into four focused destinations: Studio, Jobs, Catalog, and System. The chat menu keeps New build, My jobs, ROM library, Diagnostics, and Language as fast paths; ROM-library operations do not occupy a Mini App tab.
 - Job details expose refresh, events, artifact, cancel, resume, and back actions only when relevant.
 - Errors name the problem and provide a direct recovery action.
 
 ## Build wizard
 
-The chat wizard and Mini App gather task, execution target, ROM source, device, MOD version, preset, individual MOD selections, pipeline stages, packaging, publishing, notification, and confirmation. Chat MOD selection is paginated for one-handed use; the Mini App exposes the complete searchable flight plan in one responsive surface. Local files are permitted only for eligible Windows/admin jobs; GitHub jobs use HTTP(S) or a private Google Drive reference and only advertise MOD versions backed by a verified private content-pack. Cloud UI state is stored by Telegram user ID in private PostgreSQL (with a local file fallback for Windows development) and never contains credentials.
+The chat wizard gathers the complete task envelope. The Mini App is build-focused: it gathers execution target, ROM source, device, MOD pack, admin-editable release-version label, preset, individual MOD selections, pipeline stages, packaging, publishing, notification, and confirmation without exposing separate source-mirror or artifact-publish task modes. A release-version label belongs to its MOD pack, is not restricted to a `V` prefix, and is copied into each new job so history and logs retain the exact selected context. Chat MOD selection is paginated for one-handed use; the Mini App exposes the complete searchable build plan in one responsive surface. Local files are permitted only for eligible Windows/admin jobs; GitHub jobs use HTTP(S) or a private Google Drive reference and only advertise MOD versions backed by a verified private content-pack. Cloud UI state is stored by Telegram user ID in private PostgreSQL (with a local file fallback for Windows development) and never contains credentials.
 
 ## Product constraints
 

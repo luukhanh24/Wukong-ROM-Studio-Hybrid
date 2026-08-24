@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import os
+import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from .actions_ui import GitHubActionsUI
 from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
@@ -272,10 +273,59 @@ class LocalJobExecutor:
             self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
             self._push_cloud_progress(job_id, storage)
             self.actions_ui.begin("upload")
-            for output in outputs:
+            last_upload_push = 0.0
+            last_upload_event = 0.0
+            for output_index, output in enumerate(outputs):
                 if recipe.storage.publish_artifact:
-                    records.append(
-                        storage.publish_artifact(output, device=recipe.device, build=recipe.build.mod_version)
+                    def report_upload(values: Mapping[str, object], *, current: Path = output) -> None:
+                        nonlocal last_upload_event, last_upload_push
+                        percent = float(values.get("percent") or 0.0)
+                        now = time.monotonic()
+                        if now - last_upload_event < 5.0 and percent < 100.0:
+                            return
+                        last_upload_event = now
+                        overall = (output_index + percent / 100.0) / max(1, len(outputs))
+                        self.store.update(job_id, stage="upload", progress=0.8 + overall * 0.19)
+                        self.store.append_event(
+                            job_id,
+                            "upload_progress",
+                            stage="upload",
+                            fileName=current.name,
+                            fileIndex=output_index + 1,
+                            fileCount=len(outputs),
+                            **dict(values),
+                        )
+                        if now - last_upload_push >= 5.0:
+                            last_upload_push = now
+                            self._push_cloud_progress(job_id, storage)
+
+                    record = (
+                        storage.publish_artifact(
+                            output,
+                            device=recipe.device,
+                            build=recipe.build.mod_version,
+                            progress_callback=report_upload,
+                        )
+                        if isinstance(storage, RcloneStorageAdapter)
+                        else storage.publish_artifact(
+                            output,
+                            device=recipe.device,
+                            build=recipe.build.mod_version,
+                        )
+                    )
+                    records.append(record)
+                    self.store.append_event(
+                        job_id,
+                        "upload_progress",
+                        stage="upload",
+                        fileName=output.name,
+                        fileIndex=output_index + 1,
+                        fileCount=len(outputs),
+                        bytes=record.size_bytes,
+                        totalBytes=record.size_bytes,
+                        speedBytesPerSecond=0.0,
+                        etaSeconds=0.0,
+                        percent=100.0,
                     )
                 else:
                     records.append(

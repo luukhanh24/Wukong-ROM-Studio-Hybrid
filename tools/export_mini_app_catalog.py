@@ -7,6 +7,7 @@ from pathlib import Path
 from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS, SHARED_MOD_NAMES
 from wukong.content_packs import validate_content_index
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
+from wukong.mod_release_versions import default_mod_release_version
 
 
 DEFAULT_DEBLOAT_PATH = Path(__file__).resolve().parents[1] / "config" / "debloat.json"
@@ -67,6 +68,10 @@ def export_catalog(
         "devices": devices,
         "defaultDebloatPaths": default_debloat_paths,
         "modVersions": sorted(mods_by_version, key=str.casefold),
+        "modReleaseVersions": {
+            version: default_mod_release_version(version)
+            for version in sorted(mods_by_version, key=str.casefold)
+        },
         "modsByVersion": mods_by_version,
         "pipelineSteps": [
             {"id": step_id, "label": label, "default": step_id in DEFAULT_PIPELINE_STEPS}

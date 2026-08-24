@@ -72,6 +72,7 @@ class ControlPlaneStateBackupTests(unittest.TestCase):
         (job / "events.jsonl").write_text('{"sequence":1}\n', encoding="utf-8")
         (self.data / "telegram-access.json").write_text('{"users":["42"]}\n', encoding="utf-8")
         (self.data / "telegram-ui-state.json").write_text('{"languages":{}}\n', encoding="utf-8")
+        (self.data / "telegram-mod-release-versions.json").write_text('{"ColorOS_16.0.10":"V6.0"}\n', encoding="utf-8")
         secrets = self.data / "Secrets"
         secrets.mkdir()
         (secrets / "rclone.runtime.conf").write_text("token = secret\n", encoding="utf-8")
@@ -90,6 +91,7 @@ class ControlPlaneStateBackupTests(unittest.TestCase):
                 "jobs/hybrid/job-123/recipe.json",
                 "telegram-access.json",
                 "telegram-ui-state.json",
+                "telegram-mod-release-versions.json",
             },
             names,
         )
