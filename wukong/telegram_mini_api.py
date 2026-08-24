@@ -355,6 +355,7 @@ _PRIVATE_EVENT_KEYS = {
     "actionsurl",
     "externalrunid",
     "githuburl",
+    "githubrepository",
     "htmlurl",
     "repository",
     "repositoryurl",
@@ -364,9 +365,75 @@ _PRIVATE_EVENT_KEYS = {
     "workflowurl",
 }
 
+_PRIVATE_VALUE_KEYS = {
+    "accesstoken",
+    "authorization",
+    "bottoken",
+    "clientsecret",
+    "connectionstring",
+    "credential",
+    "credentials",
+    "databaseuri",
+    "databaseurl",
+    "githubtoken",
+    "initdata",
+    "password",
+    "rcloneconfig",
+    "refreshtoken",
+    "secret",
+    "token",
+}
+
+
+def _private_value_key(key: object) -> bool:
+    normalized = str(key).replace("_", "").replace("-", "").casefold()
+    return (
+        normalized in _PRIVATE_VALUE_KEYS
+        or normalized.startswith(("authorization", "rcloneconfig"))
+        or normalized.endswith(
+            (
+                "apikey",
+                "credential",
+                "credentials",
+                "initdata",
+                "password",
+                "privatekey",
+                "secret",
+                "token",
+            )
+        )
+    )
+
+
+def _redact_public_url_queries(match: re.Match[str]) -> str:
+    url = match.group(0)
+    redact_all = (
+        any(
+            marker in url.casefold()
+            for marker in ("/downloadcheck?", "allawnfs.com/", "allawntech.com/")
+        )
+        or re.search(
+            r"[?&](?:(?:x-amz|x-goog)-)?signature=",
+            url,
+            flags=re.IGNORECASE,
+        )
+        is not None
+    )
+    key_pattern = (
+        r"[A-Za-z0-9_.~-]+"
+        if redact_all
+        else r"(?:(?:[A-Za-z0-9_.~-]+[_-])?(?:access[_-]?key|access[_-]?token|api[_-]?key|client[_-]?secret|credential|password|passwd|private[_-]?key|refresh[_-]?token|secret)|awsaccesskeyid|auth|expires|key|s|sign|signature|token|x-amz-[a-z-]+|x-goog-[a-z-]+)"
+    )
+    return re.sub(
+        rf"([?&]{key_pattern})=[^&\s'\",;)\]]+",
+        r"\1=[redacted]",
+        url,
+        flags=re.IGNORECASE,
+    )
+
 
 def sanitize_public_value(value: object) -> object:
-    """Remove internal GitHub references before data reaches any end user."""
+    """Remove infrastructure identities, paths and credentials from public data."""
 
     if isinstance(value, str):
         sanitized = re.sub(
@@ -376,8 +443,104 @@ def sanitize_public_value(value: object) -> object:
             flags=re.IGNORECASE,
         )
         sanitized = re.sub(
-            r"([?&](?:awsaccesskeyid|credential|expires|s|sign|signature|token|x-amz-[a-z-]+)=)[^&\s]+",
-            r"\1[redacted]",
+            r"\bAuthorization\s*:\s*(?:Basic|Bearer|TMA|WLA)\s+[A-Za-z0-9._~+/=%&-]+",
+            "[redacted authorization]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?<![?&])\b(?:ACCESS_KEY|API_KEY|DATABASE_URL|PASSWORD|PRIVATE_KEY|RCLONE_CONFIG(?:_CONTENT)?_B64|RCLONE_CONFIG_PASS|TELEGRAM_INIT_DATA|WUKONG_GITHUB_REPOSITORY|[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|CREDENTIALS?|API_KEY|PRIVATE_KEY)[A-Z0-9_]*)\b\s*(?:=|:)\s*(?:\"[^\"]*\"|'[^']*'|[^\s,;)\]]+)",
+            "[private setting]=[redacted]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\bpostgres(?:ql)?://[^\s'\",;)\]]+",
+            "[private database reference]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|\d{6,12}:[A-Za-z0-9_-]{20,})\b",
+            "[redacted credential]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?P<quote>['\"])/(?:home/runner/work|(?:[^/'\"]+/)*_work|__w|github/workspace|var/lib/wukong|tmp/wukong-[^/'\"]+)(?:/[^'\"]*)?(?P=quote)",
+            "[internal path]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?<![A-Za-z0-9])/(?:home/runner/work|(?:[^/\s,;:)\]\r\n]+/)*_work|__w|github/workspace|var/lib/wukong|tmp/wukong-[^/\s,;:)\]\r\n]+)(?:/[^\s,;:)\]\r\n]+)*",
+            "[internal path]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?P<quote>['\"])[A-Za-z]:\\(?:Users\\[^\\'\"]+\\AppData\\Local\\Temp|Android\\Auto_Build_WK|WukongROMStudio|a|(?:[^\\'\"]+\\)*_work)(?:\\[^'\"]*)?(?P=quote)",
+            "[internal path]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b[A-Za-z]:\\(?:Users\\[^,;:)\]\r\n]+?\\AppData\\Local\\Temp|Android\\Auto_Build_WK|WukongROMStudio|a|(?:[^\\,;:)\]\r\n]+\\)*_work)(?:\\[^,;:)\]\r\n]+)*",
+            "[internal path]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b(rclone\s+(?:cat|check|copy|copyto|delete|ls|lsd|lsl|md5sum|mkdir|move|moveto|purge|sha1sum|size|sync)(?:\s+[^\s'\",;)]+){0,3}\s+)[A-Za-z][A-Za-z0-9_.-]*:(?!//)[A-Za-z0-9_.@%+=,/-]+",
+            r"\1[private storage]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b((?:remote|storage)\s+)[A-Za-z][A-Za-z0-9_.-]*:(?!//)[A-Za-z0-9_.@%+=,/-]+",
+            r"\1[private storage]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?<![A-Za-z0-9_.-])[A-Za-z][A-Za-z0-9_.-]+:(?!//)(?=[^\s'\",;)\]]*/)[^\s'\",;)\]]+",
+            "[private storage]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b((?:(?:github|repository|repo)(?:\s+|[:=]\s*)|(?:dispatch|workflow|build)\s+failed\s+for\s+|failed\s+checkout\s+of\s+|(?:cannot|could\s+not)\s+access\s+|repository\s+lookup\s+|(?:checkout|clone|fetch|pull|push)\s+))[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\b",
+            r"\1[internal repository]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?<![\w.-])(?:[A-Za-z0-9_.-]+/)?Wukong-ROM-Studio-Hybrid(?![\w.-])",
+            "[internal repository]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b(?:rclone(?:\.runtime)?\.conf|(?:service[-_])?account(?:[-_]key)?\.json)\b",
+            "[private configuration]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b(?:DATABASE_URL|GITHUB_TOKEN|WUKONG_GITHUB_REPOSITORY|WUKONG_TELEGRAM_BOT_TOKEN)\b",
+            "[private setting]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"(?<![A-Za-z0-9_.-])[A-Za-z][A-Za-z0-9_.-]+:(?!//)[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,16}\b",
+            "[private storage]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"https?://[^\s'\",;)\]]+",
+            _redact_public_url_queries,
             sanitized,
             flags=re.IGNORECASE,
         )
@@ -389,7 +552,7 @@ def sanitize_public_value(value: object) -> object:
         )
     if isinstance(value, Mapping):
         return {
-            key: sanitize_public_value(item)
+            key: "[redacted]" if _private_value_key(key) else sanitize_public_value(item)
             for key, item in value.items()
             if str(key).replace("_", "").casefold() not in _PRIVATE_EVENT_KEYS
         }
@@ -400,11 +563,8 @@ def sanitize_public_value(value: object) -> object:
 
 def public_event_payload(event: object) -> dict[str, object]:
     payload = event.to_dict() if hasattr(event, "to_dict") else {}
-    return {
-        key: sanitize_public_value(value)
-        for key, value in payload.items()
-        if key.replace("_", "").casefold() not in _PRIVATE_EVENT_KEYS
-    }
+    sanitized = sanitize_public_value(payload)
+    return dict(sanitized) if isinstance(sanitized, Mapping) else {}
 
 
 class TelegramMiniAppAPI:

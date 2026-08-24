@@ -388,6 +388,87 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             "warning",
             warning="OTA https://cdn.example/rom.zip?Signature=private-value&Expires=9999999999",
         )
+        self.store.append_event(
+            job_id,
+            "warning",
+            warning=(
+                "Cloud sync failed in luukhanh24/Wukong-ROM-Studio-Hybrid: "
+                "rclone copyto /tmp/wukong-job-sync-fixture/manifest.json "
+                "wukong-gdrive:WukongROM/jobs/private-job/manifest.json --config "
+                "/home/runner/work/Wukong-ROM-Studio-Hybrid/"
+                "Wukong-ROM-Studio-Hybrid/.wkstudio/secrets/rclone.conf; fallback "
+                "C:\\Android\\Auto_Build_WK\\.wkstudio\\secrets\\rclone.runtime.conf"
+            ),
+        )
+        self.store.append_event(
+            job_id,
+            "warning",
+            warning=(
+                "repository other-owner/private-repository; "
+                "DATABASE_URL=postgresql://fixture-user:fixture-password@db.example/private; "
+                "GITHUB_TOKEN=github_pat_fixture_secret_value_1234567890; "
+                "WUKONG_TELEGRAM_BOT_TOKEN=123456789:fixture_bot_secret_value; "
+                "PASSWORD=plain-password; AWS_SECRET_ACCESS_KEY=aws-secret-value; "
+                "RCLONE_CONFIG_CONTENT_B64=base64-secret-value; "
+                "RCLONE_CONFIG_PASS=fixture-rclone-password; "
+                "WUKONG_GITHUB_REPOSITORY=private-owner/private-repository; "
+                "Authorization: Basic basic-secret-value; "
+                "paths '/opt/actions-runner/_work/private-repository/private-repository/config.json', "
+                "'/__w/private-repository/private-repository/config.json', "
+                "'/runner/_work/private-repository/private-repository/config.json', "
+                "'/mnt/actions/_work/private-repository/private-repository/config.json', "
+                "'/srv/actions-runner/_work/private-repository/private-repository/config.json', "
+                "'/srv/wukong-agent/_work/private-repository/private-repository/config.json', "
+                "'C:\\Users\\John Doe\\AppData\\Local\\Temp\\private\\config.json', "
+                "'D:\\a\\private-repository\\private-repository\\config.json'; "
+                "'E:\\runner\\_work\\private-repository\\private-repository\\config.json'; "
+                "'E:\\wukong-agent\\_work\\private-repository\\private-repository\\config.json'; "
+                "unquoted C:\\Users\\John Doe\\AppData\\Local\\Temp\\private\\config.json; "
+                "unquoted C:\\WukongROMStudio\\Content Packs\\private.apk; "
+                "failure at /home/runner/work/private-repository/config.json: checksum mismatch; "
+                "rclone lsd drive-private:artifacts; remote drive:WukongROM and drive:file.zip; "
+                "dispatch failed for other-owner/other-private-repository; "
+                "checkout checkout-owner/checkout-private-repository failed; "
+                "failed checkout of third-owner/third-private-repository; "
+                "cannot access fourth-owner/fourth-private-repository; "
+                "could not access fifth-owner/fifth-private-repository; "
+                "repository lookup sixth-owner/sixth-private-repository failed; "
+                "Remote drive-private:artifacts is unavailable; storage drive:private is unavailable; "
+                "rclone size company-production-google-drive-private:artifacts --json; "
+                "rclone md5sum drive-private:artifact; "
+                "rclone failed during stage:download with status:failed"
+            ),
+        )
+        self.store.append_event(
+            job_id,
+            "warning",
+            warning=(
+                "OPlus https://component-ota-cn.allawntech.com/downloadCheck"
+                "?c=client-secret&p=product-secret&d=device-secret&g=group-secret"
+                "&id=id-secret&s=signature-secret&mode=1"
+            ),
+            databaseUrl="postgresql://fixture-user:fixture-password@db.example/private",
+            token="structured-secret-token",
+            rcloneConfigB64="structured-rclone-secret",
+            telegramInitData="structured-init-data-secret",
+            apiKey="structured-api-key-secret",
+            githubRepository="structured-owner/structured-private-repository",
+            diagnosticUrl="https://api.example/status?stage=download&attempt=2",
+            secretUrl=(
+                "https://api.example/status?api_key=query-api-secret"
+                "&private_key=query-private-secret&access_token=query-access-token"
+                "&refresh_token=query-refresh-token&password=query-password"
+            ),
+            signedGoogleUrl=(
+                "https://storage.googleapis.com/private/rom.zip"
+                "?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=credential-secret"
+                "&X-Goog-Expires=3600&X-Goog-Signature=google-signature-secret"
+            ),
+            tokenCount=7,
+            passwordPolicy="strong",
+            credentialStatus="configured",
+            secretary="visible-name",
+        )
 
         jobs = self.client.get("/v1/jobs", headers=self.headers())
         events = self.client.get(f"/v1/jobs/{job_id}/events", headers=self.headers())
@@ -403,6 +484,72 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertNotIn("luukhanh24", public_payload)
         self.assertNotIn("github.com", public_payload)
         self.assertNotIn("private-value", public_payload)
+        self.assertNotIn("wukong-gdrive:", public_payload)
+        self.assertNotIn("/home/runner/work", public_payload)
+        self.assertNotIn("/tmp/wukong-job-sync", public_payload)
+        self.assertNotIn("c:\\android\\auto_build_wk", public_payload)
+        self.assertNotIn("john doe", public_payload)
+        self.assertNotIn("/opt/actions-runner", public_payload)
+        self.assertNotIn("/__w/", public_payload)
+        self.assertNotIn("/runner/_work", public_payload)
+        self.assertNotIn("/mnt/actions/_work", public_payload)
+        self.assertNotIn("/srv/actions-runner/_work", public_payload)
+        self.assertNotIn("/srv/wukong-agent/_work", public_payload)
+        self.assertNotIn("d:\\a\\private-repository", public_payload)
+        self.assertNotIn("e:\\runner\\_work", public_payload)
+        self.assertNotIn("e:\\wukong-agent\\_work", public_payload)
+        self.assertNotIn("content packs\\private.apk", public_payload)
+        self.assertNotIn("wukong-rom-studio-hybrid", public_payload)
+        self.assertNotIn("other-owner/private-repository", public_payload)
+        self.assertNotIn("other-owner/other-private-repository", public_payload)
+        self.assertNotIn("checkout-owner/checkout-private-repository", public_payload)
+        self.assertNotIn("third-owner/third-private-repository", public_payload)
+        self.assertNotIn("fourth-owner/fourth-private-repository", public_payload)
+        self.assertNotIn("fifth-owner/fifth-private-repository", public_payload)
+        self.assertNotIn("sixth-owner/sixth-private-repository", public_payload)
+        self.assertNotIn("private-owner/private-repository", public_payload)
+        self.assertNotIn("structured-owner/structured-private-repository", public_payload)
+        self.assertNotIn("company-production-google-drive-private:", public_payload)
+        self.assertNotIn("drive-private:", public_payload)
+        self.assertNotIn("drive:wukongrom", public_payload)
+        self.assertNotIn("drive:file.zip", public_payload)
+        self.assertNotIn("rclone.conf", public_payload)
+        self.assertNotIn("fixture-password", public_payload)
+        self.assertNotIn("github_pat_fixture", public_payload)
+        self.assertNotIn("fixture_bot_secret", public_payload)
+        self.assertNotIn("structured-secret-token", public_payload)
+        self.assertNotIn("plain-password", public_payload)
+        self.assertNotIn("aws-secret-value", public_payload)
+        self.assertNotIn("base64-secret-value", public_payload)
+        self.assertNotIn("fixture-rclone-password", public_payload)
+        self.assertNotIn("basic-secret-value", public_payload)
+        self.assertNotIn("structured-rclone-secret", public_payload)
+        self.assertNotIn("structured-init-data-secret", public_payload)
+        self.assertNotIn("structured-api-key-secret", public_payload)
+        self.assertNotIn("query-api-secret", public_payload)
+        self.assertNotIn("query-private-secret", public_payload)
+        self.assertNotIn("query-access-token", public_payload)
+        self.assertNotIn("query-refresh-token", public_payload)
+        self.assertNotIn("query-password", public_payload)
+        self.assertNotIn("credential-secret", public_payload)
+        self.assertNotIn("google-signature-secret", public_payload)
+        self.assertNotIn("client-secret", public_payload)
+        self.assertNotIn("product-secret", public_payload)
+        self.assertNotIn("device-secret", public_payload)
+        self.assertNotIn("group-secret", public_payload)
+        self.assertNotIn("id-secret", public_payload)
+        self.assertIn("cloud sync failed", public_payload)
+        self.assertIn("rclone copyto", public_payload)
+        self.assertIn("cdn.example/rom.zip", public_payload)
+        self.assertIn("stage=download", public_payload)
+        self.assertIn("attempt=2", public_payload)
+        self.assertIn("stage:download", public_payload)
+        self.assertIn("status:failed", public_payload)
+        self.assertIn("checksum mismatch", public_payload)
+        self.assertIn('"tokencount": 7', public_payload)
+        self.assertIn('"passwordpolicy": "strong"', public_payload)
+        self.assertIn('"credentialstatus": "configured"', public_payload)
+        self.assertIn('"secretary": "visible-name"', public_payload)
         self.assertIn("[redacted]", public_payload)
 
     def test_source_probe_returns_a_stable_code_for_expired_signed_urls(self) -> None:
