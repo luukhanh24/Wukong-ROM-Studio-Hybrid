@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 from tools.export_mini_app_catalog import export_catalog
+from wukong.mod_release_versions import default_mod_release_version
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -153,6 +154,10 @@ window.addEventListener('load', () => {{
                 "schemaVersion": 1,
                 "devices": [{"product": "PKG110", "name": "OnePlus Ace 5"}],
                 "modVersions": mod_versions,
+                "modReleaseVersions": {
+                    version: default_mod_release_version(version)
+                    for version in mod_versions
+                },
                 "modsByVersion": mods_by_version,
                 "presetDefaultsByVersion": {
                     version: {"lite": [], "plus": ["Gapps"], "both": ["Gapps", "WK_Manager"], "custom": []}
@@ -419,14 +424,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
-        for surface in ("build", "jobs", "catalog", "system"):
+        for surface in ("build", "jobs", "system"):
             self.assertIn(f'id="{surface}"', html)
             self.assertIn(f'data-nav="{surface}"', html)
+        self.assertNotIn('id="catalog"', html)
         for control in (
-            "catalog-search",
-            "catalog-version",
-            "device-list",
-            "catalog-mod-list",
             "default-preset",
             "pipeline-count",
             "mod-search",
@@ -436,7 +438,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             self.assertIn(f'id="{control}"', html)
         self.assertIn('data-action="cache"', html)
         self.assertIn('data-action="cache_clear"', html)
-        self.assertIn("renderCatalog", script)
+        self.assertNotIn("renderCatalog", script)
         self.assertIn('.contents-rail [data-nav]', script)
         self.assertIn("incompleteLabel", script)
         self.assertIn("chooseDeviceHint", script)
@@ -452,7 +454,15 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn('class="mobile-dispatch"', html)
         self.assertIn("backdrop-filter", styles)
         self.assertIn("liquid-lens", styles)
+        bottom_nav = re.search(r'<nav class="bottom-nav".*?</nav>', html, re.DOTALL)
+        self.assertIsNotNone(bottom_nav)
+        bottom_nav_html = bottom_nav.group(0)
+        self.assertEqual(["build", "jobs", "system"], re.findall(r'data-nav="([^"]+)"', bottom_nav_html))
+        self.assertEqual(3, bottom_nav_html.count('class="nav-icon"'))
+        self.assertNotRegex(bottom_nav_html, r"<b>\d{2}</b>")
+        self.assertNotIn(".bottom-nav button.active::before", styles)
         self.assertIn("updateDispatchFab", script)
+        self.assertIn('class="sr-only" data-i18n="finishSource"', html)
         self.assertIn("prefersReducedMotion", script)
         self.assertIn('"IBM Plex Sans"', styles)
         self.assertIn('"JetBrains Mono"', styles)
@@ -461,6 +471,20 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--radius-sm: 4px", styles)
         self.assertIn("repeat(3,minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
+
+    def test_build_surface_keeps_only_build_jobs_and_system_actions(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("Build từ Telegram.", html)
+        self.assertNotIn("Build from Telegram.", script)
+        self.assertNotIn('id="source-sha256"', html)
+        self.assertNotIn("source_mirror", script)
+        self.assertNotIn("artifact_publish", script)
+        self.assertIn('id="mod-release-version"', html)
+        self.assertIn('id="mod-release-version-input" maxlength="64"', html)
+        self.assertIn("build.modReleaseVersion", script)
+        self.assertIn("event-group", script)
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -531,7 +555,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "14/14 thông số",
         ):
             self.assertIn(value, dom)
-        self.assertIn('<strong id="launch-summary">PKG110 / PLUS / GitHub Auto</strong>', dom)
+        self.assertIn('<strong id="launch-summary">PKG110 · V5.0 / PLUS / GitHub Auto</strong>', dom)
         self.assertIn('<li id="check-device" class="complete">', dom)
         self.assertIn('<li id="check-source" class="complete">', dom)
         self.assertIn('<li id="check-api" class="complete">', dom)

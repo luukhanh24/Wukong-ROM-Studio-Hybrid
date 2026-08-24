@@ -3348,15 +3348,20 @@ public sealed partial class NativeStudioView : UserControl
             return;
         }
         string? requestedModReleaseVersion = null;
+        string? currentModReleaseVersion = null;
+        var existingModPack = false;
         try
         {
             _contentSyncFolderSelection = ContentSyncFolderResolver.Resolve(_layout.InstallRoot, folder.Path);
             if (_contentSyncFolderSelection.PackId.StartsWith("MOD/", StringComparison.Ordinal))
             {
                 var packName = _contentSyncFolderSelection.PackId[4..];
+                existingModPack = _bootstrap?.ModVersions.Contains(packName, StringComparer.Ordinal) == true;
+                currentModReleaseVersion = StudioVersionForMod(packName);
                 requestedModReleaseVersion = await PromptModReleaseVersionAsync(
                     packName,
-                    StudioVersionForMod(packName));
+                    currentModReleaseVersion,
+                    existingModPack);
                 if (requestedModReleaseVersion is null) return;
             }
             RenderContentSyncSelection();
@@ -3377,7 +3382,9 @@ public sealed partial class NativeStudioView : UserControl
             $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{selection.PackId}\n\n" +
             (requestedModReleaseVersion is null
                 ? string.Empty
-                : $"{Localized("Nhãn phát hành")}: {requestedModReleaseVersion}\n" +
+                : $"{Localized(existingModPack && string.Equals(currentModReleaseVersion, requestedModReleaseVersion, StringComparison.Ordinal)
+                    ? "Giữ nguyên nhãn phát hành"
+                    : existingModPack ? "Đổi nhãn phát hành" : "Nhãn phát hành cho MOD mới")}: {requestedModReleaseVersion}\n" +
                   $"{Localized("Tên thư mục MOD không thay đổi")}: {selection.PackId[4..]}\n\n") +
             $"{Localized("Phạm vi được đóng gói")}:\n{selection.PackRoot}\n\n" +
             Localized("Archive hiện tại trên Drive sẽ bị ghi đè trong khi upload, sau đó mới được xác minh. Nếu xác minh thất bại, Drive có thể đã chứa archive mới nhưng index cục bộ vẫn giữ bản đã xác minh trước đó."),
@@ -3637,13 +3644,16 @@ public sealed partial class NativeStudioView : UserControl
         PopulateStudioVersionSettings(saved);
     }
 
-    private async Task<string?> PromptModReleaseVersionAsync(string packName, string currentLabel)
+    private async Task<string?> PromptModReleaseVersionAsync(
+        string packName,
+        string currentLabel,
+        bool existingPack)
     {
         var box = new TextBox { Text = currentLabel, PlaceholderText = "V3.4" };
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = Localized("Nhãn phát hành MOD"),
+            Title = Localized(existingPack ? "Xác nhận phiên bản MOD" : "Phiên bản cho MOD mới"),
             Content = new StackPanel
             {
                 Spacing = 8,
@@ -3652,13 +3662,15 @@ public sealed partial class NativeStudioView : UserControl
                     new TextBlock
                     {
                         Text = $"{Localized("Content-pack")}: {packName}\n" +
-                            Localized("Nhập nhãn hiển thị cho job, ZIP và build.prop. Có thể giữ nguyên hoặc sửa V3.4, V5.0 hay tên khác; thư mục MOD không bị đổi tên."),
+                            Localized(existingPack
+                                ? "Pack này đã tồn tại. Giữ nguyên nhãn hiện tại hoặc nhập tên phiên bản khác; không bắt buộc bắt đầu bằng chữ V và thư mục MOD không bị đổi tên."
+                                : "Nhập tên phiên bản sẽ hiển thị trong Mini App, job, ZIP và build.prop. Không bắt buộc bắt đầu bằng chữ V và thư mục MOD không bị đổi tên."),
                         TextWrapping = TextWrapping.Wrap,
                     },
                     box,
                 },
             },
-            PrimaryButtonText = Localized("Tiếp tục"),
+            PrimaryButtonText = Localized(existingPack ? "Dùng phiên bản này" : "Thêm và đồng bộ"),
             CloseButtonText = Localized("Hủy"),
             DefaultButton = ContentDialogButton.Primary,
         };

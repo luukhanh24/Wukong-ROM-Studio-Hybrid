@@ -111,24 +111,22 @@ function effectiveInitDataUnsafe() {
 
 const translations = {
   vi: {
-    connected: "BOT ĐÃ KẾT NỐI", buildTitle: "Chuẩn bị chuyến build", buildIntro: "Kiểm tra nguồn ROM, runner và đầu ra trước khi gửi recipe.",
+    connected: "BOT ĐÃ KẾT NỐI", buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
     routePolicy: "ĐỊNH TUYẾN", sourceTitle: "ROM nguồn", sourceHint: "Dùng URL trực tiếp, trang build Daniel Springer hoặc đường dẫn Drive riêng tư.",
     taskBuild: "Build đầy đủ", sourceUrl: "URL hoặc Drive reference", sourceSecure: "URL ký tạm thời được che khỏi bản tóm tắt và log.",
-    device: "Thiết bị", sourceSize: "Dung lượng ROM (byte)", checksum: "SHA-256 tùy chọn", recipeTitle: "Cấu hình bản ROM",
+    device: "Thiết bị", sourceSize: "Dung lượng ROM (byte)", recipeTitle: "Cấu hình bản ROM",
     recipeHint: "Preset đặt mặc định; bạn vẫn có thể chọn chính xác từng MOD và bước pipeline.", runner: "Runner", edition: "Phiên bản", modPack: "Bộ MOD",
     mods: "MOD áp dụng", defaults: "Mặc định", selectAll: "Chọn tất cả", clear: "Bỏ chọn", advanced: "Thiết đặt pipeline nâng cao",
     debloatPaths: "Đường dẫn cần xóa (mỗi dòng một mục)", workspaceEstimate: "Ước lượng workspace (byte, để trống = tự động)",
-    deliveryTitle: "Đóng gói và phát hành", deliveryHint: "Artifact thành công được kiểm checksum trước khi phát hành.", packageZip: "Tạo ZIP flashable",
+    deliveryTitle: "Kết quả build", deliveryHint: "Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.", packageZip: "Tạo ZIP flashable",
     packageHint: "Đóng gói ROM sau khi repack", publish: "Upload lên Drive", publishHint: "Tạo link tải artifact khi thành công", notify: "Thông báo Telegram",
     notifyHint: "Nhận trạng thái và link ngay trong chat", readyLabel: "RECIPE SẴN SÀNG", fallbackWarning: "Auto ưu tiên runner phù hợp và dùng GitHub Hosted mở rộng đĩa khi self-hosted offline.",
-    launch: "Tạo job build", jobsTitle: "Điều khiển job", jobsIntro: "Các yêu cầu được xác thực bằng tài khoản Telegram đang mở Mini App.", myJobs: "Mở danh sách trong chat",
-    refreshJob: "Làm mới", events: "Nhật ký", artifact: "Artifact", resume: "Tiếp tục", cancel: "Hủy job", cloudTitle: "Cloud library",
-    cloudIntro: "ROM nguồn, checkpoint và artifact vẫn riêng tư; chỉ artifact được phát hành mới có link chia sẻ.", browseCloud: "Duyệt thư viện",
-    browseCloudHint: "Mở danh sách nguồn và artifact trong chat", mirrorRom: "Lưu ROM gốc", mirrorHint: "Chọn “Chỉ lưu ROM gốc” trong màn hình Build",
-    systemTitle: "Tình trạng hệ thống", systemIntro: "Kiểm tra bot, Drive, runner và content-pack trước khi tạo job lớn.", runDiagnostics: "Chạy chẩn đoán",
+    launch: "Tạo job build", jobsTitle: "Tiến trình & lịch sử", jobsIntro: "Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.", myJobs: "Mở danh sách trong chat",
+    refreshJob: "Làm mới", events: "Nhật ký", artifact: "Artifact", resume: "Tiếp tục", cancel: "Hủy job",
+    systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", runDiagnostics: "Chạy chẩn đoán",
     authenticated: "Đã xác thực phiên hiện tại", keyboardConnected: "Kết nối qua nút Telegram · danh tính được xác nhận khi gửi", runnerChecked: "Runner được kiểm tra khi submit", driveChecked: "Quyền truy cập được kiểm tra trước upload",
     navBuild: "Build", navJobs: "Jobs", navSystem: "Hệ thống", selected: "đã chọn", catalogReady: "{mods} MOD · {versions} bộ nội dung sẵn sàng",
-    catalogFailed: "Không tải được catalog. Hãy thử mở lại Mini App.", invalidUrl: "Nhập URL HTTP/HTTPS hoặc đường dẫn rclone hợp lệ.", invalidSha: "SHA-256 phải có đúng 64 ký tự hex.",
+    catalogFailed: "Không tải được catalog. Hãy thử mở lại Mini App.", invalidUrl: "Nhập URL HTTP/HTTPS hoặc đường dẫn rclone hợp lệ.",
     invalidSize: "Dung lượng ROM phải là số nguyên dương.", invalidWorkspace: "Ước lượng workspace phải là số nguyên dương.", jobRequired: "Hãy nhập Job ID.", payloadLarge: "Recipe vượt giới hạn 4096 byte. Hãy giảm MOD hoặc đường dẫn debloat.",
     sent: "Đã gửi yêu cầu sang bot Telegram.", telegramOnly: "Phiên Telegram chưa được kết nối. Hãy bấm Kết nối Telegram để tiếp tục.", noMods: "Bộ nội dung này chưa có MOD sẵn sàng.",
     runnerAuto: "GitHub Auto", runnerHosted: "GitHub Hosted", runnerSelf: "Self-hosted Linux", taskBuildShort: "Build", custom: "Custom",
@@ -139,24 +137,22 @@ const translations = {
     runtimePipeline: "PIPELINE", runtimeWaiting: "Chờ recipe hợp lệ", runtimeReady: "Recipe sẵn sàng gửi", runtimeLastBuild: "BUILD GẦN NHẤT", runtimeJobs: "Xem trong Jobs", checklistSource: "Nguồn ROM", checklistSourcePending: "Chưa có URL hợp lệ", checklistSourceDone: "Đã nhận diện nguồn", checklistDevice: "Thiết bị đích", checklistDevicePending: "Cần chọn thủ công", checklistDeviceDone: "Đã chọn thiết bị", checklistRunner: "Tuyến thực thi", checklistRunnerDone: "Đã cấu hình runner", readinessProgress: "{done}/3 điều kiện", pipelinePending: "Chưa chạy", pipelineRunning: "Đang chạy", pipelineComplete: "Hoàn tất", pipelineFailed: "Lỗi", pipelineSkipped: "Bỏ qua", modGroupGoogle: "Google & ứng dụng", modGroupCamera: "Camera & hình ảnh", modGroupInterface: "Giao diện hệ thống", modGroupSecurity: "Bảo mật & quyền", modGroupCore: "Hệ thống & công cụ", modGroupOther: "Khác"
   },
   en: {
-    connected: "BOT CONNECTED", buildTitle: "Prepare a build flight", buildIntro: "Verify the ROM source, runner and delivery before dispatching the recipe.",
+    connected: "BOT CONNECTED", buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
     routePolicy: "ROUTING", sourceTitle: "Source ROM", sourceHint: "Use a direct URL, Daniel Springer build page, or a private Drive reference.",
     taskBuild: "Full build", sourceUrl: "URL or Drive reference", sourceSecure: "Short-lived signed URLs are hidden from summaries and logs.",
-    device: "Device", sourceSize: "ROM size (bytes)", checksum: "Optional SHA-256", recipeTitle: "ROM configuration",
+    device: "Device", sourceSize: "ROM size (bytes)", recipeTitle: "ROM configuration",
     recipeHint: "Presets provide defaults; every MOD and pipeline stage remains selectable.", runner: "Runner", edition: "Edition", modPack: "MOD pack",
     mods: "Applied MODs", defaults: "Defaults", selectAll: "Select all", clear: "Clear", advanced: "Advanced pipeline settings",
     debloatPaths: "Paths to remove (one per line)", workspaceEstimate: "Estimated workspace bytes (blank = automatic)",
-    deliveryTitle: "Package and publish", deliveryHint: "Successful artifacts are checksum-verified before publishing.", packageZip: "Create flashable ZIP",
+    deliveryTitle: "Build result", deliveryHint: "Package the ZIP, upload it to Drive and send the link through Telegram.", packageZip: "Create flashable ZIP",
     packageHint: "Package the ROM after repacking", publish: "Upload to Drive", publishHint: "Create an artifact download link on success", notify: "Telegram notification",
     notifyHint: "Receive status and the link in chat", readyLabel: "RECIPE READY", fallbackWarning: "Auto selects a suitable runner and uses expanded GitHub Hosted storage when self-hosted is offline.",
-    launch: "Create build job", jobsTitle: "Job control", jobsIntro: "Requests are authenticated with the Telegram account that opened this Mini App.", myJobs: "Open my jobs in chat",
-    refreshJob: "Refresh", events: "Events", artifact: "Artifact", resume: "Resume", cancel: "Cancel job", cloudTitle: "Cloud library",
-    cloudIntro: "Sources, checkpoints and artifacts stay private; only published artifacts receive a share link.", browseCloud: "Browse library",
-    browseCloudHint: "Open source and artifact lists in chat", mirrorRom: "Mirror source ROM", mirrorHint: "Choose “Mirror source only” on the Build screen",
-    systemTitle: "System status", systemIntro: "Check the bot, Drive, runners and content packs before a large build.", runDiagnostics: "Run diagnostics",
+    launch: "Create build job", jobsTitle: "Progress & history", jobsIntro: "Follow every stage, MOD detail and download link for each job.", myJobs: "Open my jobs in chat",
+    refreshJob: "Refresh", events: "Events", artifact: "Artifact", resume: "Resume", cancel: "Cancel job",
+    systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", runDiagnostics: "Run diagnostics",
     authenticated: "Current session authenticated", keyboardConnected: "Connected through the Telegram button · identity is confirmed on send", runnerChecked: "Runner availability checked on submit", driveChecked: "Access verified before upload",
     navBuild: "Build", navJobs: "Jobs", navSystem: "System", selected: "selected", catalogReady: "{mods} MODs · {versions} content packs ready",
-    catalogFailed: "Catalog could not be loaded. Reopen the Mini App and try again.", invalidUrl: "Enter a valid HTTP/HTTPS URL or rclone reference.", invalidSha: "SHA-256 must contain exactly 64 hexadecimal characters.",
+    catalogFailed: "Catalog could not be loaded. Reopen the Mini App and try again.", invalidUrl: "Enter a valid HTTP/HTTPS URL or rclone reference.",
     invalidSize: "ROM size must be a positive integer.", invalidWorkspace: "Workspace estimate must be a positive integer.", jobRequired: "Enter a Job ID.", payloadLarge: "Recipe exceeds Telegram's 4096-byte limit. Reduce MODs or debloat paths.",
     sent: "Request sent to the Telegram bot.", telegramOnly: "The Telegram session is not connected. Press Connect Telegram to continue.", noMods: "No ready MODs are available in this content pack.",
     runnerAuto: "GitHub Auto", runnerHosted: "GitHub Hosted", runnerSelf: "Self-hosted Linux", taskBuildShort: "Build", custom: "Custom",
@@ -169,32 +165,28 @@ const translations = {
 };
 
 Object.assign(translations.vi, {
-  navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Build từ Telegram.",
-  buildIntro: "Một recipe, một pipeline, cùng kết quả trên Windows và GitHub Actions.", routePolicy: "RUNNER",
+  navBuild: "Studio", buildTitle: "Wukong Studio",
+  buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.", routePolicy: "RUNNER",
   sourceHint: "URL trực tiếp, link OPlus chưa resolve, trang OTA Daniel Springer hoặc Drive riêng tư.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.",
   recipeHint: "Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.", runner: "Nơi chạy", modPack: "Nền MOD",
-  deliveryTitle: "Đóng gói & phát hành", deliveryHint: "Kiểm SHA-256 trước khi công bố artifact.",
+  deliveryTitle: "Kết quả build", deliveryHint: "Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.",
   packageZip: "ZIP flashable", packageHint: "Đóng gói sau repack", publish: "Upload Drive", publishHint: "Tạo link tải khi thành công",
   notify: "Báo qua Telegram", notifyHint: "Trạng thái và link trong chat", readyLabel: "HỒ SƠ SẴN SÀNG",
   fallbackWarning: "Auto kiểm tra runner trước khi gửi; không để job treo khi runner offline.",
-  jobsTitle: "Điều khiển job.", jobsIntro: "Xem trạng thái, log, artifact, hủy hoặc tiếp tục từ checkpoint.", myJobs: "Danh sách của tôi",
+  jobsTitle: "Tiến trình & lịch sử", jobsIntro: "Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.", myJobs: "Danh sách của tôi",
   refreshJob: "Làm mới trạng thái", events: "Xem nhật ký", artifact: "Mở artifact", resume: "Tiếp tục checkpoint",
-  stageKey: "Các trạng thái chuẩn", cloudTitle: "Thư viện ROM.", checkpoints: "Checkpoint & lịch sử", checkpointsHint: "Dùng Job ID để xem và resume",
-  retention: "Source và artifact giữ đến khi admin xóa · checkpoint 7 ngày · log 30 ngày.",
-  catalogTitle: "Catalog kỹ thuật.", catalogIntro: "Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.",
-  searchCatalog: "Tìm thiết bị hoặc MOD", catalogPack: "Content-pack", devicesTitle: "Thiết bị", modsTitle: "MOD trong pack",
-  systemTitle: "Hệ thống.", systemIntro: "Kiểm tra kết nối, content-pack và cache trước một job lớn.", maintenance: "Bảo trì & thiết đặt",
+  stageKey: "Các trạng thái chuẩn",
+  systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", maintenance: "Bảo trì & thiết đặt",
   inspectCache: "Xem stage cache", inspectCacheHint: "Dung lượng và lượt tái sử dụng", clearCache: "Xóa cache", adminOnly: "Chỉ admin",
   miniSettings: "Thiết đặt Mini App", defaultPreset: "Preset mặc định",
   secretBoundary: "Token GitHub, Telegram và rclone không hiển thị ở đây. Quản lý chúng trong Windows app hoặc GitHub Secrets.",
-  catalogSummary: "{devices} thiết bị / {mods} MOD", noCatalogMatches: "Không có mục phù hợp. Hãy đổi từ khóa tìm kiếm.",
   searchMods: "Lọc MOD để chọn", jobActionHint: "Nhập ID để mở tác vụ; bot sẽ kiểm tra quyền và trạng thái.",
   stageQueued: "Chờ", stagePreflight: "Kiểm tra", stageDownloading: "Tải ROM", stageRunning: "Đang build", stageUploading: "Đang upload", stageTerminal: "Thành công / Lỗi",
   previewMode: "CHẾ ĐỘ XEM TRƯỚC", authenticatedPreview: "Chưa xác thực — mở từ nút Mini App trong bot"
 });
 
 Object.assign(translations.vi, {
-  buildTitle: "Build từ Telegram.", buildIntro: "Chọn ROM, MOD pack và theo dõi tiến trình ngay trong bot.",
+  buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
   releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự và không được có / hoặc \\.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
   probeDeferred: "Máy chủ đang bận phân tích ROM. Hãy thử lại sau ít phút.",
   probeDeferredKicker: "ĐANG CHỜ MÁY CHỦ"
@@ -215,32 +207,28 @@ Object.assign(translations.vi, {
 });
 
 Object.assign(translations.en, {
-  navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Build from Telegram.",
-  buildIntro: "One recipe and one pipeline, with equivalent results on Windows and GitHub Actions.", routePolicy: "RUNNER",
+  navBuild: "Studio", buildTitle: "Wukong Studio",
+  buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.", routePolicy: "RUNNER",
   sourceHint: "Use a direct URL, unresolved OPlus link, Daniel Springer OTA page, or private Drive reference.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct links, unresolved OPlus links, Daniel Springer and Drive are supported. Signed URLs never appear in logs.",
   recipeHint: "A preset is the starting point; every MOD and stage remains editable.", runner: "Run on", modPack: "MOD base",
-  deliveryTitle: "Package & publish", deliveryHint: "Verify SHA-256 before publishing an artifact.",
+  deliveryTitle: "Build result", deliveryHint: "Package the ZIP, upload it to Drive and send the link through Telegram.",
   packageZip: "Flashable ZIP", packageHint: "Package after repacking", publish: "Upload to Drive", publishHint: "Create a link after success",
   notify: "Telegram report", notifyHint: "Status and link in chat", readyLabel: "DOCKET READY",
   fallbackWarning: "Auto checks runner availability before dispatch so a job never waits on an offline runner.",
-  jobsTitle: "Job control.", jobsIntro: "Inspect status, logs and artifacts, cancel work, or resume a checkpoint.", myJobs: "My job list",
+  jobsTitle: "Progress & history", jobsIntro: "Follow every stage, MOD detail and download link for each job.", myJobs: "My job list",
   refreshJob: "Refresh status", events: "View event log", artifact: "Open artifact", resume: "Resume checkpoint",
-  stageKey: "Canonical states", cloudTitle: "ROM library.", checkpoints: "Checkpoints & history", checkpointsHint: "Use a Job ID to inspect and resume",
-  retention: "Sources and artifacts remain until admin deletion · checkpoints 7 days · logs 30 days.",
-  catalogTitle: "Technical catalog.", catalogIntro: "The same device, content-pack and MOD catalog used by Windows and Actions.",
-  searchCatalog: "Find a device or MOD", catalogPack: "Content pack", devicesTitle: "Devices", modsTitle: "MODs in pack",
-  systemTitle: "System.", systemIntro: "Check connections, content packs and cache before a large job.", maintenance: "Maintenance & settings",
+  stageKey: "Canonical states",
+  systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", maintenance: "Maintenance & settings",
   inspectCache: "Inspect stage cache", inspectCacheHint: "Usage and reuse count", clearCache: "Clear cache", adminOnly: "Admin only",
   miniSettings: "Mini App settings", defaultPreset: "Default preset",
   secretBoundary: "GitHub, Telegram and rclone credentials are never shown here. Manage them in the Windows app or GitHub Secrets.",
-  catalogSummary: "{devices} devices / {mods} MODs", noCatalogMatches: "No matching entries. Change the search term.",
   searchMods: "Filter selectable MODs", jobActionHint: "Enter an ID to reveal actions; the bot verifies ownership and state.",
   stageQueued: "Queued", stagePreflight: "Preflight", stageDownloading: "Downloading", stageRunning: "Running", stageUploading: "Uploading", stageTerminal: "Succeeded / Failed",
   previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button"
 });
 
 Object.assign(translations.en, {
-  buildTitle: "Build from Telegram.", buildIntro: "Choose a ROM and MOD pack, then follow progress in the bot.",
+  buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
   releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
   probeDeferred: "The server is busy analyzing ROMs. Try again in a moment.",
   probeDeferredKicker: "WAITING FOR SERVER"
@@ -295,7 +283,8 @@ const state = {
   pairingPollTimer: null,
   pairingInFlight: false,
   docketInView: true,
-  canEditReleaseVersions: false
+  canEditReleaseVersions: false,
+  dispatchFabHideTimer: null
 };
 
 function t(key, values = {}) {
@@ -312,7 +301,6 @@ function applyLanguage() {
   if (devicePlaceholder) devicePlaceholder.textContent = t("chooseDevice");
   renderMods(false);
   renderPipelineSteps(false);
-  renderCatalog();
   renderJobHistory();
   const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
   if (activeJob) renderActiveJob(activeJob, state.activeEvents);
@@ -419,8 +407,16 @@ function updateDispatchFab() {
   const fab = $("#dispatch-fab");
   if (!fab) return;
   const show = $("#build")?.classList.contains("active") && !state.docketInView;
-  fab.hidden = !show;
-  fab.classList.toggle("visible", show);
+  clearTimeout(state.dispatchFabHideTimer);
+  if (show) {
+    fab.hidden = false;
+    requestAnimationFrame(() => fab.classList.add("visible"));
+  } else {
+    fab.classList.remove("visible");
+    state.dispatchFabHideTimer = setTimeout(() => {
+      if (!fab.classList.contains("visible")) fab.hidden = true;
+    }, prefersReducedMotion() ? 0 : 260);
+  }
   fab.setAttribute("aria-hidden", show ? "false" : "true");
   fab.tabIndex = show ? 0 : -1;
 }
@@ -1085,30 +1081,6 @@ function updatePipelineCount() {
   if ($("#pipeline-count")) $("#pipeline-count").textContent = `${selected}/${all.length}`;
 }
 
-function renderCatalog() {
-  if (!state.catalog || !$("#device-list")) return;
-  const query = ($("#catalog-search")?.value || "").trim().toLocaleLowerCase();
-  const version = $("#catalog-version")?.value || state.catalog.modVersions[0];
-  const devices = state.catalog.devices.filter((item) => `${item.product} ${item.name}`.toLocaleLowerCase().includes(query));
-  const mods = (state.catalog.modsByVersion[version] || []).filter((name) => name.toLocaleLowerCase().includes(query));
-  $("#device-list").replaceChildren(...devices.map((item) => {
-    const row = document.createElement("div"); row.className = "device-row";
-    const code = document.createElement("b"); code.textContent = item.product;
-    const name = document.createElement("span"); name.textContent = item.name;
-    row.append(code, name); return row;
-  }));
-  $("#catalog-mod-list").replaceChildren(...mods.map((name) => {
-    const item = document.createElement("span"); item.textContent = name; return item;
-  }));
-  if (!devices.length && !mods.length) {
-    const empty = document.createElement("span"); empty.textContent = t("noCatalogMatches"); $("#catalog-mod-list").append(empty);
-  }
-  $("#device-count").textContent = String(devices.length);
-  $("#catalog-mod-count").textContent = String(mods.length);
-  const totalMods = Object.values(state.catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
-  $("#catalog-total").textContent = t("catalogSummary", { devices: state.catalog.devices.length, mods: totalMods });
-}
-
 function setMods(mode) {
   const defaults = new Set(defaultMods());
   $$("#mod-list input").forEach((input) => { input.checked = mode === "all" || (mode === "defaults" && defaults.has(input.value)); });
@@ -1150,8 +1122,9 @@ function updateSummary() {
   const device = selectedDevice || "—";
   const preset = $("#preset")?.value || "plus";
   const runner = runnerLabel($("#execution")?.value || "github-auto");
+  const release = selectedReleaseVersion();
   $("#route-label").textContent = runner;
-  const summary = `${device} / ${preset === "custom" ? t("custom") : preset.toUpperCase()} / ${runner}`;
+  const summary = `${device} · ${release} / ${preset === "custom" ? t("custom") : preset.toUpperCase()} / ${runner}`;
   $("#launch-summary").textContent = summary;
   if ($("#mobile-launch-summary")) $("#mobile-launch-summary").textContent = summary;
   $("#mod-count").textContent = `${selectedMods().length} ${t("selected")}`;
@@ -1196,6 +1169,7 @@ function updateSummary() {
     node.dataset.i18n = ready ? "launch" : "finishSource";
     node.textContent = t(ready ? "launch" : "finishSource");
   });
+  $("#dispatch-fab")?.setAttribute("aria-label", t(ready ? "launch" : "finishSource"));
 }
 
 function positiveInteger(input, errorKey) {
@@ -1239,7 +1213,7 @@ async function saveReleaseVersion() {
   state.catalog.modReleaseVersions = { ...(state.catalog.modReleaseVersions || {}), ...(payload.modReleaseVersions || {}) };
   const option = $("#mod-version").selectedOptions[0];
   if (option) option.textContent = `${version} · ${state.catalog.modReleaseVersions[version]}`;
-  renderReleaseVersion(); toast(t("releaseVersionSaved"));
+  renderReleaseVersion(); updateSummary(); toast(t("releaseVersionSaved"));
 }
 
 function sameStringList(left, right) {
@@ -1272,6 +1246,34 @@ function buildRecipe() {
 }
 
 const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled"]);
+const eventTypeLabels = {
+  vi: {
+    submitted: "Đã tạo job", dispatched: "Đã gửi tới runner", github_run: "GitHub Actions",
+    state: "Cập nhật trạng thái", running: "Runner đang xử lý", source: "ROM nguồn sẵn sàng",
+    checkpoint: "Đã lưu checkpoint", upload_progress: "Đang tải artifact", artifacts: "Artifact hoàn tất",
+    warning: "Cảnh báo", error: "Lỗi", cancelled: "Đã hủy job", resumed: "Tiếp tục từ checkpoint"
+  },
+  en: {
+    submitted: "Job created", dispatched: "Sent to runner", github_run: "GitHub Actions",
+    state: "Status update", running: "Runner processing", source: "Source ROM ready",
+    checkpoint: "Checkpoint saved", upload_progress: "Uploading artifact", artifacts: "Artifacts ready",
+    warning: "Warning", error: "Error", cancelled: "Job cancelled", resumed: "Resumed from checkpoint"
+  }
+};
+const eventStageLabels = {
+  vi: { preflight: "Kiểm tra", download: "Tải ROM", build: "Build ROM", upload: "Tải lên", complete: "Hoàn tất", "github-actions": "GitHub Actions", "github-actions-running": "GitHub Actions" },
+  en: { preflight: "Preflight", download: "ROM download", build: "ROM build", upload: "Upload", complete: "Complete", "github-actions": "GitHub Actions", "github-actions-running": "GitHub Actions" }
+};
+
+function readableEventType(value) {
+  const key = String(value || "event");
+  return eventTypeLabels[state.language]?.[key] || key.replaceAll("_", " ");
+}
+
+function readableEventStage(value) {
+  const key = String(value || "");
+  return eventStageLabels[state.language]?.[key] || eventTypeLabels[state.language]?.[key] || key.replaceAll("_", " ");
+}
 
 function statusLabel(status) {
   return t({
@@ -1353,23 +1355,30 @@ function renderEvents(events) {
   } else {
     let currentGroup = "";
     events.slice(-40).reverse().forEach((event) => {
-      const group = String(event.stage || event.status || event.type || t("events"));
+      const group = readableEventStage(event.stage || event.status || event.type || t("events"));
       if (group !== currentGroup) {
         currentGroup = group;
         const divider = document.createElement("li"); divider.className = "event-group";
         divider.textContent = group; list.append(divider);
       }
       const item = document.createElement("li"); item.className = `event-${String(event.type || event.status || "info").replace(/[^a-z0-9_-]/gi, "")}`;
-      const marker = document.createElement("b"); marker.textContent = String(event.sequence || "•").padStart(2, "0");
-      const content = document.createElement("span");
-      const eventTitle = document.createElement("strong"); eventTitle.textContent = event.type || "event";
-      const detail = document.createElement("small");
+      const marker = document.createElement("span"); marker.className = "event-marker";
+      const markerDot = document.createElement("i");
+      const markerSequence = document.createElement("b"); markerSequence.textContent = String(event.sequence || "•").padStart(2, "0");
+      marker.append(markerDot, markerSequence);
+      const content = document.createElement("div"); content.className = "event-copy";
+      const titleRow = document.createElement("div"); titleRow.className = "event-title-row";
+      const eventTitle = document.createElement("strong"); eventTitle.textContent = readableEventType(event.type);
+      const eventTime = document.createElement("time"); eventTime.dateTime = String(event.timestamp || ""); eventTime.textContent = formatDate(event.timestamp);
+      titleRow.append(eventTitle, eventTime);
+      const detail = document.createElement("p");
       const visible = event.message || event.error || event.warning || event.stage || event.status || Object.entries(event)
-        .filter(([key]) => !["sequence", "jobId", "timestamp", "type", "traceback"].includes(key))
+        .filter(([key]) => !["sequence", "jobId", "timestamp", "type", "traceback", "stage", "status", "runId", "externalRunId", "runUrl", "recipeRef"].includes(key))
         .map(([key, value]) => `${key}=${typeof value === "object" ? JSON.stringify(value) : value}`)
         .join(" · ");
-      detail.textContent = `${formatDate(event.timestamp)}${visible ? ` · ${visible}` : ""}`;
-      content.append(eventTitle, detail); item.append(marker, content); list.append(item);
+      detail.textContent = String(visible || readableEventStage(event.stage || event.status || ""));
+      if (!detail.textContent) detail.hidden = true;
+      content.append(titleRow, detail); item.append(marker, content); list.append(item);
     });
   }
   section.append(list); return section;
@@ -1408,7 +1417,11 @@ function renderActiveJob(job, events) {
   const contextLabel = document.createElement("strong"); contextLabel.textContent = t("jobContext");
   const mods = document.createElement("small"); mods.textContent = (build.mods || []).join(" · ") || t("noModsSelected");
   contextTitle.append(contextLabel, mods);
-  const contextCopy = document.createElement("p"); contextCopy.textContent = `${build.modVersion || "—"} · ${build.modReleaseVersion || "—"} · ${(build.mods || []).length} ${t("selected")}`;
+  const contextCopy = document.createElement("div"); contextCopy.className = "job-release-context";
+  const pack = document.createElement("small"); pack.textContent = build.modVersion || "—";
+  const release = document.createElement("b"); release.textContent = build.modReleaseVersion || "—";
+  const count = document.createElement("span"); count.textContent = `${(build.mods || []).length} ${t("selected")}`;
+  contextCopy.append(pack, release, count);
   context.append(contextTitle, contextCopy);
   const upload = [...events].reverse().find((event) => event.type === "upload_progress");
   const uploadDetail = upload
@@ -1557,7 +1570,6 @@ async function loadCatalog() {
     }
     options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
-    options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: value })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     if (miniApiAvailable()) await refreshLiveReleaseVersions();
     const count = Object.values(catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
     $("#catalog-status").textContent = t("catalogReady", { mods: count, versions: catalog.modVersions.length });
@@ -1566,7 +1578,6 @@ async function loadCatalog() {
     $("#mod-release-version-input").readOnly = !state.canEditReleaseVersions;
     $("#save-mod-release-version").disabled = !state.canEditReleaseVersions;
     renderMods();
-    renderCatalog();
     updateSourceDetection();
   } catch (error) {
     $("#catalog-status").textContent = t("catalogFailed");
@@ -1654,8 +1665,6 @@ function bindEvents() {
     state.delivery[input.id] = input.checked ? "pending" : "skipped";
     updateSummary();
   }));
-  $("#catalog-search").addEventListener("input", renderCatalog);
-  $("#catalog-version").addEventListener("change", renderCatalog);
   $("#default-preset").value = state.defaultPreset;
   $("#preset").value = state.defaultPreset;
   $("#default-preset").addEventListener("change", (event) => {
