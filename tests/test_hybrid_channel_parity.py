@@ -133,7 +133,7 @@ class HybridChannelParityContractTests(unittest.TestCase):
                     "type": "download_progress",
                     "step": "download_rom",
                     "status": "running",
-                    "progress": 15,
+                    "details": {"progress": 15, "progressMessage": "ROM 15%"},
                 },
                 previous_stage="download_rom",
                 previous_progress=0.0,

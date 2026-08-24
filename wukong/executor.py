@@ -67,7 +67,7 @@ def cloud_progress_sync_mode(
         return "full"
     if stage != previous_stage:
         return "manifest"
-    progress = event.get("progress")
+    progress = event_progress(event)
     interval_elapsed = now - last_sync_at >= CLOUD_PROGRESS_INTERVAL_SECONDS
     progress_changed = previous_progress is None or (
         isinstance(progress, (int, float))
@@ -76,6 +76,15 @@ def cloud_progress_sync_mode(
     if isinstance(progress, (int, float)) and interval_elapsed and progress_changed:
             return "manifest"
     return None
+
+
+def event_progress(event: Mapping[str, object]) -> float | None:
+    progress = event.get("progress")
+    if not isinstance(progress, (int, float)):
+        details = event.get("details")
+        if isinstance(details, Mapping):
+            progress = details.get("progress")
+    return float(progress) if isinstance(progress, (int, float)) else None
 
 
 def source_target_for(recipe: BuildRecipe, root: Path) -> Path:
@@ -245,10 +254,10 @@ class LocalJobExecutor:
                     raise OrchestrationError("Job was cancelled")
                 event_type = str(event.get("type") or "build")
                 stage = str(event.get("step") or event.get("stage") or "build")
-                progress = event.get("progress")
+                progress = event_progress(event)
                 changes: dict[str, object] = {"stage": stage}
-                if isinstance(progress, (int, float)):
-                    changes["progress"] = max(0.0, min(float(progress) / 100, 0.79))
+                if progress is not None:
+                    changes["progress"] = max(0.0, min(progress / 100, 0.79))
                 self.store.update(job_id, **changes)
                 self.store.append_event(job_id, event_type, **event)
                 self.actions_ui.event(event)
@@ -277,9 +286,9 @@ class LocalJobExecutor:
                     )
                     if synced:
                         cloud_progress_stage = stage
-                        progress_value = event.get("progress")
-                        if isinstance(progress_value, (int, float)):
-                            cloud_progress_value = float(progress_value)
+                        progress_value = event_progress(event)
+                        if progress_value is not None:
+                            cloud_progress_value = progress_value
                         cloud_progress_last_sync_at = now
                         cloud_progress_retry_at = 0.0
                     else:
