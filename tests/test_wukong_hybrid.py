@@ -1305,7 +1305,33 @@ class OrchestratorContractTests(unittest.TestCase):
 
 
 class CloudSyncContractTests(unittest.TestCase):
-    def test_push_retries_a_timed_out_state_copy(self) -> None:
+    def test_manifest_progress_sync_does_not_reupload_event_history(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = InMemoryJobStore()
+            orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
+            source = Path(root, "rom.zip")
+            source.write_bytes(b"rom")
+            recipe = BuildRecipe.from_dict(
+                {
+                    "schemaVersion": 1,
+                    "task": "source_mirror",
+                    "device": "CPH2725",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "local-windows"},
+                }
+            )
+            job = orchestrator.submit(recipe, Identity("windows", "local", "admin"))
+            uploaded: list[str] = []
+
+            def fake_run(args: list[str], **_options: object) -> str:
+                uploaded.append("manifest" if args[3].endswith("manifest.json") else "events")
+                return ""
+
+            CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).push_manifest(job.job_id)
+
+            self.assertEqual(["manifest"], uploaded)
+
+    def test_push_bounds_a_timed_out_state_copy_to_one_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             store = InMemoryJobStore()
             orchestrator = HybridOrchestrator(store=store, workspace_root=Path(root, "workspace"))
@@ -1327,13 +1353,14 @@ class CloudSyncContractTests(unittest.TestCase):
                 state_file = "manifest" if args[3].endswith("manifest.json") else "events"
                 attempts[state_file] += 1
                 self.assertEqual(options.get("timeout"), 15.0)
-                if state_file == "manifest" and attempts[state_file] == 1:
+                if state_file == "manifest":
                     raise subprocess.TimeoutExpired(cmd=args, timeout=15.0)
                 return ""
 
-            CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).push(job.job_id)
+            with self.assertRaises(subprocess.TimeoutExpired):
+                CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).push(job.job_id)
 
-            self.assertEqual(attempts, {"manifest": 2, "events": 1})
+            self.assertEqual(attempts, {"manifest": 1, "events": 0})
 
     def test_pull_imports_remote_events_once(self) -> None:
         with tempfile.TemporaryDirectory() as root:

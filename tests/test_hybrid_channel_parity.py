@@ -19,7 +19,7 @@ from wukong.executor import (
     DEFAULT_CLOUD_CHECKPOINT_STAGES,
     LocalJobExecutor,
     checkpoint_stages_for_environment,
-    should_push_cloud_progress,
+    cloud_progress_sync_mode,
     source_target_for,
 )
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
@@ -110,26 +110,48 @@ class HybridChannelParityContractTests(unittest.TestCase):
         with patch.dict("os.environ", {"GITHUB_ACTIONS": "false"}, clear=False):
             self.assertEqual(CHECKPOINT_STAGES, checkpoint_stages_for_environment())
 
-    def test_actions_cloud_progress_syncs_once_when_the_stage_changes(self) -> None:
+    def test_actions_cloud_progress_uses_lightweight_sync_when_the_stage_changes(self) -> None:
         observations = [
-            should_push_cloud_progress(
+            cloud_progress_sync_mode(
                 {"type": "download_progress", "step": "download_rom", "status": "running"},
                 previous_stage="",
-                success_counter=0,
+                previous_progress=None,
+                sample_counter=0,
+                last_sync_at=0.0,
+                now=0.0,
             ),
-            should_push_cloud_progress(
+            cloud_progress_sync_mode(
                 {"type": "download_progress", "step": "download_rom", "status": "running"},
                 previous_stage="download_rom",
-                success_counter=0,
+                previous_progress=0.0,
+                sample_counter=0,
+                last_sync_at=0.0,
+                now=30.0,
             ),
-            should_push_cloud_progress(
+            cloud_progress_sync_mode(
+                {
+                    "type": "download_progress",
+                    "step": "download_rom",
+                    "status": "running",
+                    "progress": 15,
+                },
+                previous_stage="download_rom",
+                previous_progress=0.0,
+                sample_counter=0,
+                last_sync_at=0.0,
+                now=91.0,
+            ),
+            cloud_progress_sync_mode(
                 {"type": "step", "step": "inspect_rom", "status": "running"},
                 previous_stage="download_rom",
-                success_counter=0,
+                previous_progress=15.0,
+                sample_counter=0,
+                last_sync_at=91.0,
+                now=92.0,
             ),
         ]
 
-        self.assertEqual([True, False, True], observations)
+        self.assertEqual(["manifest", None, "manifest", "manifest"], observations)
 
     def test_actions_checkpoint_failure_does_not_stop_or_repeat_build(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

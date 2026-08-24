@@ -28,6 +28,10 @@ CHECKPOINT_STAGES = set(CHECKPOINT_PIPELINE_STEPS)
 # snapshot (it avoids re-downloading and re-extracting the ROM) and let local
 # runs retain their cheap filesystem checkpoints after every reusable stage.
 DEFAULT_CLOUD_CHECKPOINT_STAGES = {"extract_payload"}
+CLOUD_PROGRESS_RETRY_SECONDS = 30.0
+CLOUD_PROGRESS_INTERVAL_SECONDS = 90.0
+CLOUD_PROGRESS_DELTA_PERCENT = 10.0
+CLOUD_PUSH_WARNING_INTERVAL_SECONDS = 600.0
 
 
 def checkpoint_stages_for_environment() -> set[str]:
@@ -43,22 +47,35 @@ def checkpoint_stages_for_environment() -> set[str]:
     }
 
 
-def should_push_cloud_progress(
+def cloud_progress_sync_mode(
     event: Mapping[str, object],
     *,
     previous_stage: str,
-    success_counter: int,
-) -> bool:
-    """Keep the Mini App current without uploading every progress sample."""
+    previous_progress: float | None,
+    sample_counter: int,
+    last_sync_at: float,
+    now: float,
+) -> str | None:
+    """Select a bounded Drive sync that keeps Mini App progress current."""
 
     stage = str(event.get("step") or event.get("stage") or "build")
-    if stage != previous_stage:
-        return True
     status = str(event.get("status") or "")
     event_type = str(event.get("type") or "build")
     if status == "failed" or event_type in {"error", "checkpoint"}:
-        return True
-    return (status == "success" or event_type == "warning") and success_counter % 2 == 1
+        return "full"
+    if (status == "success" or event_type == "warning") and sample_counter % 2 == 1:
+        return "full"
+    if stage != previous_stage:
+        return "manifest"
+    progress = event.get("progress")
+    interval_elapsed = now - last_sync_at >= CLOUD_PROGRESS_INTERVAL_SECONDS
+    progress_changed = previous_progress is None or (
+        isinstance(progress, (int, float))
+        and abs(float(progress) - previous_progress) >= CLOUD_PROGRESS_DELTA_PERCENT
+    )
+    if isinstance(progress, (int, float)) and interval_elapsed and progress_changed:
+            return "manifest"
+    return None
 
 
 def source_target_for(recipe: BuildRecipe, root: Path) -> Path:
@@ -124,6 +141,7 @@ class LocalJobExecutor:
             content_index or SCRIPT_ROOT / "content-packs" / "index.json"
         ).resolve()
         self.actions_ui = actions_ui or GitHubActionsUI()
+        self._cloud_push_warning_at: dict[str, float] = {}
 
     def execute(self, job_id: str) -> JobManifest:
         manifest = self.store.get(job_id)
@@ -139,6 +157,8 @@ class LocalJobExecutor:
             self.store.append_event(job_id, "state", status=JobStatus.PREFLIGHT.value, stage="preflight")
             self.store.update(job_id, status=JobStatus.DOWNLOADING, stage="download", progress=0.0)
             self.actions_ui.begin("download")
+            storage = self.storage_factory(recipe.storage.remote)
+            self._push_cloud_manifest(job_id, storage)
             adapter = source_adapter_for(recipe.source.kind, config_path=self.rclone_config)
             source = adapter.materialize(recipe.source.uri, source_target, recipe.source.sha256)
             if recipe.source.size_bytes is not None and source.size_bytes != recipe.source.size_bytes:
@@ -153,7 +173,6 @@ class LocalJobExecutor:
                 sha256=source.sha256,
                 sizeBytes=source.size_bytes,
             )
-            storage = self.storage_factory(recipe.storage.remote)
             if recipe.task == "source_mirror":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)
@@ -211,11 +230,16 @@ class LocalJobExecutor:
             checkpoint_stages = checkpoint_stages_for_environment()
             # On Actions, throttle cloud progress pushes: every stage event hits Drive
             # and easily exhausts API quota during long builds.
-            cloud_progress_counter = 0
+            cloud_progress_last_sync_at = 0.0
+            cloud_progress_value: float | None = None
+            cloud_progress_sample_counter = 0
             cloud_progress_stage = ""
+            cloud_progress_retry_at = 0.0
 
             def on_event(event: dict[str, Any]) -> None:
-                nonlocal checkpoint_upload_enabled, cloud_progress_counter, cloud_progress_stage
+                nonlocal checkpoint_upload_enabled, cloud_progress_last_sync_at
+                nonlocal cloud_progress_retry_at, cloud_progress_sample_counter
+                nonlocal cloud_progress_stage, cloud_progress_value
                 current = self.store.get(job_id)
                 if current and current.status == JobStatus.CANCELLED:
                     raise OrchestrationError("Job was cancelled")
@@ -235,14 +259,31 @@ class LocalJobExecutor:
                     "checkpoint",
                 }
                 if terminalish:
-                    cloud_progress_counter += 1
-                if should_push_cloud_progress(
+                    cloud_progress_sample_counter += 1
+                now = time.monotonic()
+                sync_mode = cloud_progress_sync_mode(
                     event,
                     previous_stage=cloud_progress_stage,
-                    success_counter=cloud_progress_counter,
-                ):
-                    self._push_cloud_progress(job_id, storage)
-                cloud_progress_stage = stage
+                    previous_progress=cloud_progress_value,
+                    sample_counter=cloud_progress_sample_counter,
+                    last_sync_at=cloud_progress_last_sync_at,
+                    now=now,
+                )
+                if sync_mode and (sync_mode == "full" or now >= cloud_progress_retry_at):
+                    synced = (
+                        self._push_cloud_manifest(job_id, storage)
+                        if sync_mode == "manifest"
+                        else self._push_cloud_progress(job_id, storage)
+                    )
+                    if synced:
+                        cloud_progress_stage = stage
+                        progress_value = event.get("progress")
+                        if isinstance(progress_value, (int, float)):
+                            cloud_progress_value = float(progress_value)
+                        cloud_progress_last_sync_at = now
+                        cloud_progress_retry_at = 0.0
+                    else:
+                        cloud_progress_retry_at = now + CLOUD_PROGRESS_RETRY_SECONDS
                 if (
                     event.get("status") == "success"
                     and stage in checkpoint_stages
@@ -515,13 +556,42 @@ class LocalJobExecutor:
             )
             return False
 
-    def _push_cloud_progress(self, job_id: str, storage: RcloneStorageAdapter) -> None:
+    def _push_cloud_manifest(self, job_id: str, storage: RcloneStorageAdapter) -> bool:
+        return self._push_cloud_state(job_id, storage, manifest_only=True)
+
+    def _push_cloud_progress(self, job_id: str, storage: RcloneStorageAdapter) -> bool:
+        return self._push_cloud_state(job_id, storage, manifest_only=False)
+
+    def _push_cloud_state(
+        self,
+        job_id: str,
+        storage: RcloneStorageAdapter,
+        *,
+        manifest_only: bool,
+    ) -> bool:
         if os.environ.get("GITHUB_ACTIONS", "").casefold() != "true":
-            return
+            return True
         try:
-            CloudJobSync(self.store, storage).push(job_id)
+            sync = CloudJobSync(self.store, storage)
+            if manifest_only:
+                sync.push_manifest(job_id)
+            else:
+                sync.push(job_id)
+            if job_id in self._cloud_push_warning_at:
+                self._cloud_push_warning_at.pop(job_id, None)
+                self.store.append_event(job_id, "cloud_sync_recovered", stage="cloud_sync")
+            return True
         except Exception as exc:
-            self.store.append_event(job_id, "warning", warning=f"Cloud progress sync failed: {exc}")
+            now = time.monotonic()
+            last_warning = self._cloud_push_warning_at.get(job_id)
+            if last_warning is None or now - last_warning >= CLOUD_PUSH_WARNING_INTERVAL_SECONDS:
+                self._cloud_push_warning_at[job_id] = now
+                self.store.append_event(
+                    job_id,
+                    "warning",
+                    warning=f"Cloud progress sync failed: {exc}",
+                )
+            return False
 
     def _succeed(self, job_id: str, artifacts: list[ArtifactRecord]) -> JobManifest:
         self.store.append_event(

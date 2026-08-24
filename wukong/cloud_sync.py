@@ -20,7 +20,7 @@ class CloudJobSync:
     # attempt to be killed before a healthy request could finish, leaving the
     # Mini App at the GitHub fallback progress for the whole build.
     STATE_OPERATION_TIMEOUT_SECONDS = 15.0
-    STATE_PUSH_ATTEMPTS = 2
+    STATE_PUSH_ATTEMPTS = 1
     STATE_PULL_ATTEMPTS = 2
     PULL_WARNING_INTERVAL_SECONDS = 600.0
     # Instances are short-lived (one per refresh call), so the throttle lives
@@ -38,12 +38,8 @@ class CloudJobSync:
             return
         with tempfile.TemporaryDirectory(prefix="wukong-job-sync-") as root:
             directory = Path(root)
-            manifest_path = directory / "manifest.json"
+            manifest_path = self._write_manifest(directory, manifest)
             events_path = directory / "events.jsonl"
-            manifest_path.write_text(
-                json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-                encoding="utf-8",
-            )
             events_path.write_text(
                 "".join(
                     json.dumps(event.to_dict(), ensure_ascii=False, sort_keys=True) + "\n"
@@ -53,6 +49,25 @@ class CloudJobSync:
             )
             self._push_state_file(manifest_path, f"jobs/{job_id}/manifest.json")
             self._push_state_file(events_path, f"jobs/{job_id}/events.jsonl")
+
+    def push_manifest(self, job_id: str) -> None:
+        """Publish lightweight stage progress without rewriting event history."""
+
+        manifest = self.store.get(job_id)
+        if not manifest:
+            return
+        with tempfile.TemporaryDirectory(prefix="wukong-job-sync-") as root:
+            manifest_path = self._write_manifest(Path(root), manifest)
+            self._push_state_file(manifest_path, f"jobs/{job_id}/manifest.json")
+
+    @staticmethod
+    def _write_manifest(directory: Path, manifest: JobManifest) -> Path:
+        manifest_path = directory / "manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return manifest_path
 
     def _push_state_file(self, source: Path, relative_path: str) -> None:
         for attempt in range(max(1, self.STATE_PUSH_ATTEMPTS)):
