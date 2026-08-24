@@ -1326,9 +1326,9 @@ class CloudSyncContractTests(unittest.TestCase):
             def fake_run(args: list[str], **options: object) -> str:
                 state_file = "manifest" if args[3].endswith("manifest.json") else "events"
                 attempts[state_file] += 1
-                self.assertEqual(options.get("timeout"), 8.0)
+                self.assertEqual(options.get("timeout"), 15.0)
                 if state_file == "manifest" and attempts[state_file] == 1:
-                    raise subprocess.TimeoutExpired(cmd=args, timeout=8.0)
+                    raise subprocess.TimeoutExpired(cmd=args, timeout=15.0)
                 return ""
 
             CloudJobSync(store, RcloneStorageAdapter(run_command=fake_run)).push(job.job_id)
@@ -1370,7 +1370,7 @@ class CloudSyncContractTests(unittest.TestCase):
             imported = [event for event in store.events(job.job_id) if event.payload.get("remoteSequence") == 5]
             self.assertEqual(len(imported), 1)
             self.assertTrue(command_timeouts)
-            self.assertTrue(all(value == 8.0 for value in command_timeouts))
+            self.assertTrue(all(value == 15.0 for value in command_timeouts))
 
     def test_pull_retries_after_a_state_timeout_and_recovers(self) -> None:
         with tempfile.TemporaryDirectory() as root:
@@ -1400,7 +1400,7 @@ class CloudSyncContractTests(unittest.TestCase):
                 if args[2].endswith("manifest.json"):
                     attempts["manifest"] += 1
                     if attempts["manifest"] == 1:
-                        raise subprocess.TimeoutExpired(cmd=args, timeout=8.0)
+                        raise subprocess.TimeoutExpired(cmd=args, timeout=15.0)
                     destination.write_text(json.dumps(remote_manifest), encoding="utf-8")
                 return ""
 
@@ -1458,7 +1458,7 @@ class CloudSyncContractTests(unittest.TestCase):
 
             def fake_run(args: list[str], **options: object) -> str:
                 if args[2].endswith("manifest.json"):
-                    raise subprocess.TimeoutExpired(cmd=args, timeout=8.0)
+                    raise subprocess.TimeoutExpired(cmd=args, timeout=15.0)
                 raise AssertionError("events merge must not run when the pull times out")
 
             CloudJobSync._pull_warning_at.clear()

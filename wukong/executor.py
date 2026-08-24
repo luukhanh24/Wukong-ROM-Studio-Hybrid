@@ -43,6 +43,24 @@ def checkpoint_stages_for_environment() -> set[str]:
     }
 
 
+def should_push_cloud_progress(
+    event: Mapping[str, object],
+    *,
+    previous_stage: str,
+    success_counter: int,
+) -> bool:
+    """Keep the Mini App current without uploading every progress sample."""
+
+    stage = str(event.get("step") or event.get("stage") or "build")
+    if stage != previous_stage:
+        return True
+    status = str(event.get("status") or "")
+    event_type = str(event.get("type") or "build")
+    if status == "failed" or event_type in {"error", "checkpoint"}:
+        return True
+    return (status == "success" or event_type == "warning") and success_counter % 2 == 1
+
+
 def source_target_for(recipe: BuildRecipe, root: Path) -> Path:
     source_name = recipe.source.uri.replace("\\", "/").rsplit("/", 1)[-1].split("?", 1)[0]
     if ":" in source_name:
@@ -194,9 +212,10 @@ class LocalJobExecutor:
             # On Actions, throttle cloud progress pushes: every stage event hits Drive
             # and easily exhausts API quota during long builds.
             cloud_progress_counter = 0
+            cloud_progress_stage = ""
 
             def on_event(event: dict[str, Any]) -> None:
-                nonlocal checkpoint_upload_enabled, cloud_progress_counter
+                nonlocal checkpoint_upload_enabled, cloud_progress_counter, cloud_progress_stage
                 current = self.store.get(job_id)
                 if current and current.status == JobStatus.CANCELLED:
                     raise OrchestrationError("Job was cancelled")
@@ -210,12 +229,20 @@ class LocalJobExecutor:
                 self.store.append_event(job_id, event_type, **event)
                 self.actions_ui.event(event)
                 status = str(event.get("status") or "")
-                should_push = status in {"success", "failed"} or event_type in {"error", "warning", "checkpoint"}
-                if should_push:
+                terminalish = status in {"success", "failed"} or event_type in {
+                    "error",
+                    "warning",
+                    "checkpoint",
+                }
+                if terminalish:
                     cloud_progress_counter += 1
-                    # Always push terminal-ish events; sample intermediate successes lightly.
-                    if status in {"failed"} or event_type in {"error", "checkpoint"} or cloud_progress_counter % 2 == 1:
-                        self._push_cloud_progress(job_id, storage)
+                if should_push_cloud_progress(
+                    event,
+                    previous_stage=cloud_progress_stage,
+                    success_counter=cloud_progress_counter,
+                ):
+                    self._push_cloud_progress(job_id, storage)
+                cloud_progress_stage = stage
                 if (
                     event.get("status") == "success"
                     and stage in checkpoint_stages

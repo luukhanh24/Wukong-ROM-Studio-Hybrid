@@ -15,7 +15,11 @@ from .orchestrator import JobStore
 
 
 class CloudJobSync:
-    STATE_OPERATION_TIMEOUT_SECONDS = 8.0
+    # A fresh rclone process on Render's free instance routinely needs about
+    # 10-12 seconds to authenticate and reach Drive. Eight seconds caused each
+    # attempt to be killed before a healthy request could finish, leaving the
+    # Mini App at the GitHub fallback progress for the whole build.
+    STATE_OPERATION_TIMEOUT_SECONDS = 15.0
     STATE_PUSH_ATTEMPTS = 2
     STATE_PULL_ATTEMPTS = 2
     PULL_WARNING_INTERVAL_SECONDS = 600.0
