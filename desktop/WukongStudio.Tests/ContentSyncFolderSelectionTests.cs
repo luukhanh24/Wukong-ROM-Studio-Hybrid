@@ -35,17 +35,19 @@ public sealed class ContentSyncFolderSelectionTests : IDisposable
     }
 
     [Fact]
-    public void RenamesOnlyDirectModPackToValidatedVersion()
+    public void KeepsPackNameSeparateFromEditableReleaseLabel()
     {
         var selected = Path.Combine(_root, "Content", "MOD", "ColorOS_16.0.9", "Gapps");
         Directory.CreateDirectory(selected);
         var original = ContentSyncFolderResolver.Resolve(_root, selected);
 
-        var renamed = ContentSyncFolderResolver.RenameModPack(_root, original, "ColorOS_16.0.10");
-
-        Assert.Equal("MOD/ColorOS_16.0.10", renamed.PackId);
-        Assert.True(Directory.Exists(renamed.PackRoot));
-        Assert.False(ContentSyncFolderResolver.IsValidModPackName("../unsafe"));
+        Assert.Equal("MOD/ColorOS_16.0.9", original.PackId);
+        Assert.True(ContentSyncFolderResolver.IsValidReleaseLabel("V5.0"));
+        Assert.True(ContentSyncFolderResolver.IsValidReleaseLabel("Build thử nghiệm 2026"));
+        Assert.False(ContentSyncFolderResolver.IsValidReleaseLabel("../unsafe"));
+        Assert.False(ContentSyncFolderResolver.IsValidReleaseLabel("V5\\draft"));
+        Assert.False(ContentSyncFolderResolver.IsValidReleaseLabel("\t"));
+        Assert.True(Directory.Exists(original.PackRoot));
     }
 
     public void Dispose()

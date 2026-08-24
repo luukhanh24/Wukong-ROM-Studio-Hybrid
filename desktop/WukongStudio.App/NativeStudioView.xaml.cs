@@ -3347,14 +3347,17 @@ public sealed partial class NativeStudioView : UserControl
         {
             return;
         }
-        string? requestedModVersion = null;
+        string? requestedModReleaseVersion = null;
         try
         {
             _contentSyncFolderSelection = ContentSyncFolderResolver.Resolve(_layout.InstallRoot, folder.Path);
             if (_contentSyncFolderSelection.PackId.StartsWith("MOD/", StringComparison.Ordinal))
             {
-                requestedModVersion = await PromptModPackVersionAsync(_contentSyncFolderSelection.PackId[4..]);
-                if (requestedModVersion is null) return;
+                var packName = _contentSyncFolderSelection.PackId[4..];
+                requestedModReleaseVersion = await PromptModReleaseVersionAsync(
+                    packName,
+                    StudioVersionForMod(packName));
+                if (requestedModReleaseVersion is null) return;
             }
             RenderContentSyncSelection();
         }
@@ -3368,11 +3371,14 @@ public sealed partial class NativeStudioView : UserControl
             return;
         }
         var selection = _contentSyncFolderSelection!;
-        var targetPackId = requestedModVersion is null ? selection.PackId : $"MOD/{requestedModVersion}";
         var confirmed = await ConfirmDialogAsync(
             Localized("Thay thế content-pack trên Drive?"),
             $"{Localized("Thư mục đã chọn")}:\n{selection.SelectedFolder}\n\n" +
-            $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{targetPackId}\n\n" +
+            $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{selection.PackId}\n\n" +
+            (requestedModReleaseVersion is null
+                ? string.Empty
+                : $"{Localized("Nhãn phát hành")}: {requestedModReleaseVersion}\n" +
+                  $"{Localized("Tên thư mục MOD không thay đổi")}: {selection.PackId[4..]}\n\n") +
             $"{Localized("Phạm vi được đóng gói")}:\n{selection.PackRoot}\n\n" +
             Localized("Archive hiện tại trên Drive sẽ bị ghi đè trong khi upload, sau đó mới được xác minh. Nếu xác minh thất bại, Drive có thể đã chứa archive mới nhưng index cục bộ vẫn giữ bản đã xác minh trước đó."),
             Localized("Thay thế trên Drive"),
@@ -3381,20 +3387,17 @@ public sealed partial class NativeStudioView : UserControl
         {
             return;
         }
-        if (requestedModVersion is not null)
+        if (requestedModReleaseVersion is not null)
         {
             try
             {
-                selection = ContentSyncFolderResolver.RenameModPack(
-                    _layout.InstallRoot, selection, requestedModVersion);
-                _contentSyncFolderSelection = selection;
-                RenderContentSyncSelection();
+                await SaveModReleaseVersionAsync(selection.PackId[4..], requestedModReleaseVersion);
             }
-            catch (Exception exception) when (exception is IOException or InvalidOperationException)
+            catch (Exception exception) when (exception is InvalidDataException or HttpRequestException or InvalidOperationException)
             {
                 HybridResultBox.Text = exception.Message;
                 ShowMessage(
-                    Localized("Không thể đổi phiên bản MOD"),
+                    Localized("Không thể lưu nhãn phát hành MOD"),
                     exception.Message,
                     InfoBarSeverity.Error);
                 return;
@@ -3608,19 +3611,50 @@ public sealed partial class NativeStudioView : UserControl
         }
     }
 
-    private async Task<string?> PromptModPackVersionAsync(string currentName)
+    private string StudioVersionForMod(string modVersion)
     {
-        var box = new TextBox { Text = currentName, PlaceholderText = "ColorOS_16.0.10" };
+        var versions = _bootstrap?.Settings.StudioVersions;
+        return versions is not null && versions.TryGetValue(modVersion, out var configured)
+            ? configured
+            : DefaultStudioVersion(modVersion);
+    }
+
+    private async Task SaveModReleaseVersionAsync(string modVersion, string releaseLabel)
+    {
+        if (_api is null || _bootstrap is null)
+        {
+            throw new InvalidOperationException(Localized("Thiết đặt Studio chưa sẵn sàng để lưu nhãn phát hành."));
+        }
+        var label = ValidateStudioVersion(releaseLabel);
+        var versions = new Dictionary<string, string>(
+            _bootstrap.Settings.StudioVersions ?? new Dictionary<string, string>(),
+            StringComparer.Ordinal)
+        {
+            [modVersion] = label,
+        };
+        var saved = await _api.SaveSettingsAsync(_bootstrap.Settings with { StudioVersions = versions });
+        _bootstrap = _bootstrap with { Settings = saved };
+        PopulateStudioVersionSettings(saved);
+    }
+
+    private async Task<string?> PromptModReleaseVersionAsync(string packName, string currentLabel)
+    {
+        var box = new TextBox { Text = currentLabel, PlaceholderText = "V3.4" };
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = Localized("Phiên bản MOD"),
+            Title = Localized("Nhãn phát hành MOD"),
             Content = new StackPanel
             {
                 Spacing = 8,
                 Children =
                 {
-                    new TextBlock { Text = Localized("Nhập tên phiên bản cho content-pack MOD. Có thể giữ nguyên tên hiện tại."), TextWrapping = TextWrapping.Wrap },
+                    new TextBlock
+                    {
+                        Text = $"{Localized("Content-pack")}: {packName}\n" +
+                            Localized("Nhập nhãn hiển thị cho job, ZIP và build.prop. Có thể giữ nguyên hoặc sửa V3.4, V5.0 hay tên khác; thư mục MOD không bị đổi tên."),
+                        TextWrapping = TextWrapping.Wrap,
+                    },
                     box,
                 },
             },
@@ -3629,8 +3663,8 @@ public sealed partial class NativeStudioView : UserControl
             DefaultButton = ContentDialogButton.Primary,
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
-        if (!ContentSyncFolderResolver.IsValidModPackName(box.Text))
-            throw new InvalidDataException(Localized("Tên MOD chỉ được dùng chữ, số, dấu chấm, gạch ngang hoặc gạch dưới."));
+        if (!ContentSyncFolderResolver.IsValidReleaseLabel(box.Text))
+            throw new InvalidDataException(Localized("Nhãn phát hành dài 1–64 ký tự và không được chứa /, \\ hoặc ký tự điều khiển."));
         return box.Text.Trim();
     }
 
