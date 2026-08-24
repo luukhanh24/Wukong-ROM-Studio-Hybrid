@@ -96,7 +96,7 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
         self.assertEqual("en", stores.ui_state.language(42))
         self.assertTrue(stores.migration)
 
-        stores.access.revoke(99, actor=admin)
+        stores.access.revoke(99, actor=admin, reason="integration test")
         stores.ui_state.set_language(42, "vi")
         reopened = open_control_plane_stores(
             database_url=POSTGRES_URL,

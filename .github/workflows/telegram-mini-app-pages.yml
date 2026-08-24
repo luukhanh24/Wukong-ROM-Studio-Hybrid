@@ -93,7 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           domain='https://wukong-rom-studio.vercel.app'
-          for attempt in {1..24}; do
+          for _ in {1..24}; do
             if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${GITHUB_SHA}")" \
               && grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
               && grep -Fq "app.js?v=${GITHUB_SHA}" <<< "$page"; then
