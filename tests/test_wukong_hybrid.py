@@ -1791,8 +1791,10 @@ class TelegramAccessContractTests(unittest.TestCase):
 
             access.approve(42, actor=access.identity(1))
             self.assertEqual(TelegramAccessStore(path, admin_ids={1}).identity(42).role, "user")
+            self.assertEqual(("1", "42"), access.subjects())
             access.revoke(42, actor=access.identity(1))
             self.assertIsNone(access.identity(42))
+            self.assertEqual(("1",), access.subjects())
             self.assertNotIn("token", path.read_text(encoding="utf-8").casefold())
 
     def test_non_admin_cannot_manage_allowlist(self) -> None:

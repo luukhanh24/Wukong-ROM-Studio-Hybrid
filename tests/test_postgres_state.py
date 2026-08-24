@@ -121,9 +121,11 @@ class PostgresJobStoreTests(unittest.TestCase):
         self.assertEqual("admin", restored.identity(42).role)
         self.assertEqual("user", restored.identity(99).role)
         self.assertEqual({"admins": ["42"], "users": ["99"]}, restored.list_access(actor=admin))
+        self.assertEqual(("42", "99"), restored.subjects())
 
         restored.revoke(99, actor=admin)
         self.assertIsNone(restored.identity(99))
+        self.assertEqual(("42",), restored.subjects())
         with self.assertRaises(PermissionError):
             restored.approve(100, actor=Identity("telegram", "99", "user"))
 

@@ -60,6 +60,14 @@ class TelegramAccessStore:
             "users": sorted(state["users"]),
         }
 
+    def subjects(self) -> tuple[str, ...]:
+        """Return every approved Telegram subject for service-side maintenance."""
+
+        state = self._read()
+        return tuple(sorted(
+            self._configured_admins | set(state["admins"]) | set(state["users"])
+        ))
+
     @staticmethod
     def _require_admin(actor: Identity) -> None:
         if actor.channel != "telegram" or actor.role != "admin":
