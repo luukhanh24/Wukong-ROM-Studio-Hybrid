@@ -406,7 +406,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             warning=(
                 "repository other-owner/private-repository; "
                 "DATABASE_URL=postgresql://fixture-user:fixture-password@db.example/private; "
-                "GITHUB_TOKEN=github_pat_fixture_secret_value_1234567890; "
+                "GITHUB_TOKEN=fixture-github-token; "
                 "WUKONG_TELEGRAM_BOT_TOKEN=123456789:fixture_bot_secret_value; "
                 "PASSWORD=plain-password; AWS_SECRET_ACCESS_KEY=aws-secret-value; "
                 "RCLONE_CONFIG_CONTENT_B64=base64-secret-value; "
@@ -515,7 +515,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertNotIn("drive:file.zip", public_payload)
         self.assertNotIn("rclone.conf", public_payload)
         self.assertNotIn("fixture-password", public_payload)
-        self.assertNotIn("github_pat_fixture", public_payload)
+        self.assertNotIn("fixture-github-token", public_payload)
         self.assertNotIn("fixture_bot_secret", public_payload)
         self.assertNotIn("structured-secret-token", public_payload)
         self.assertNotIn("plain-password", public_payload)
