@@ -21,6 +21,9 @@ colors:
   signal-coral-soft: "#ffebe6"
   signal-sun: "#efb844"
   signal-sun-soft: "#fff4ce"
+  liquid-lens-accent: "#0088ff"
+  liquid-lens-accent-night: "#0091ff"
+  liquid-chromatic-edge: "#ff4660"
   failure-red: "var(--tg-theme-destructive-text-color, #c94f56)"
   failure-red-soft: "#fce9e8"
   night-canvas: "#111222"
@@ -198,11 +201,11 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 ## Layout
 
-The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 52px three-destination contents rail—Studio, Jobs, and System—create a persistent instrument frame. Device and MOD catalog data remains embedded in Studio controls instead of becoming a destination. Each view begins with a compact destination heading and a three-cell runtime rail that connects orientation with live state.
+The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 52px four-destination contents rail—Studio, Jobs, Catalog, and System—create a persistent instrument frame. Catalog is a searchable, read-only inventory of the exact device and MOD data used by Studio and every runner. Each operational view begins with a compact destination heading; Studio adds a three-cell runtime rail that connects orientation with live state.
 
 The Studio recipe uses a flexible work column and a 320px sticky dispatch docket separated by a 16px gutter. Numbered dossier sections remain in the work column, with four-pixel chromatic spines indicating source, build, and delivery. Controls use compact internal rhythms; source facts form a measured grid rather than separate cards.
 
-At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a three-cell floating liquid bottom instrument. A single lens slides beneath the active destination with a restrained spring-like scale response. Icons replace numeric tab indexes, and the active state uses the lens rather than a colored underline. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
+At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a four-cell floating liquid bottom instrument. Its 64px capsule uses locally bounded blur, vibrancy and rim highlights; a 56px lens slides or drags beneath the active destination with damped spring motion, press scaling, velocity stretch, inner depth and subtle chromatic edge separation. Icons replace numeric tab indexes, and the active state uses the lens rather than a colored underline. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
 
 View changes use a 380ms eased rise-and-fade. Controls transition color, border, shadow, and transform in roughly 180–220ms. Hover movement is limited to one pixel for work elements and two pixels for the active mobile destination. Reduced-motion preference collapses animation and smooth scrolling.
 
@@ -274,7 +277,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky three-cell contents rail with consistent line icons and a tonal active surface. Mobile recreates the LiquidBottomTabs interaction model as a three-cell web control: a translucent, blurred instrument contains one softly highlighted lens that slides beneath the active destination. The active icon and label deepen to cobalt and scale only slightly; no underline competes with the moving lens. Desktop and mobile navigation always update together, and reduced-motion preference removes the slide and scale transition.
+Desktop uses a sticky four-cell contents rail with consistent line icons and a tonal active surface. Mobile recreates Kyant0's LiquidBottomTabs interaction model as a four-cell web control: a translucent 64px capsule contains one 56px refractive lens that supports taps and damped horizontal dragging. The lens springs to the nearest destination, grows under pressure, stretches against drag velocity, and uses bounded blur, vibrancy, inner shadow, rim light, and chromatic edge separation. The active icon and label deepen to blue and scale only slightly; no underline competes with the moving lens. Desktop and mobile navigation always update together, and reduced-motion preference removes slide, stretch, and scale transitions.
 
 ### Runtime Rail
 
@@ -290,11 +293,11 @@ ZIP, Drive, and Telegram stages support `pending`, `running`, `complete`, `faile
 
 ### Dispatch Docket
 
-The docket is the authoritative recipe summary. It shows three readiness checks, completed count, route summary, recovery copy, and exactly one submit action. An incomplete docket receives a sun border; it does not claim readiness until both source and device are valid. On compact screens, when the docket scrolls out of view, it collapses into a right-edge “Hoàn tất cấu hình” shortcut with a short scale transition. Activating the shortcut returns focus and scroll position to the full docket; the shortcut disappears when the docket is visible.
+The docket is the authoritative recipe summary. It shows three readiness checks, completed count, route summary, recovery copy, and exactly one submit action. An incomplete docket receives a sun border; it does not claim readiness until both source and device are valid. On compact screens, when the docket scrolls out of view, it collapses into a right-edge “Hoàn tất cấu hình build” shortcut with a short scale transition. The shortcut keeps its text and direction icon instead of collapsing into an ambiguous check mark. Activating it returns focus and scroll position to the full docket; it disappears when the docket is visible.
 
 ### Job Context and Events
 
-Every active job exposes its device and ROM facts together with MOD-pack identity, release-version label, and the actual selected MOD names before the event stream. During upload, the progress area identifies the current file, file percentage, transferred bytes, speed, and ETA. Events are grouped by stage in compact ledger rows, while success and failure receive distinct tonal backgrounds. A release label shown in history or logs is the value persisted with that job, not a live reinterpretation of the pack's current label.
+Every active job exposes its device and ROM facts together with MOD-pack identity, release-version label, and the actual selected MOD names before the event stream. During upload, the progress area identifies the current file, file percentage, transferred bytes, speed, and ETA. Events are grouped by their actual named build step in compact ledger rows, while success and failure receive distinct tonal backgrounds. The default view shows the eight newest events; “View full log” expands every retained sanitized event and its structured details rather than exposing generic “step” labels. A release label shown in history or logs is the value persisted with that job, not a live reinterpretation of the pack's current label.
 
 ## Do's and Don'ts
 

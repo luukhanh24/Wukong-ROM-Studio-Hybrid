@@ -125,7 +125,7 @@ const translations = {
     refreshJob: "Làm mới", events: "Nhật ký", artifact: "Artifact", resume: "Tiếp tục", cancel: "Hủy job",
     systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", runDiagnostics: "Chạy chẩn đoán",
     authenticated: "Đã xác thực phiên hiện tại", keyboardConnected: "Kết nối qua nút Telegram · danh tính được xác nhận khi gửi", runnerChecked: "Runner được kiểm tra khi submit", driveChecked: "Quyền truy cập được kiểm tra trước upload",
-    navBuild: "Build", navJobs: "Jobs", navSystem: "Hệ thống", selected: "đã chọn", catalogReady: "{mods} MOD · {versions} bộ nội dung sẵn sàng",
+    navBuild: "Build", navJobs: "Jobs", navCatalog: "Catalog", navSystem: "Hệ thống", selected: "đã chọn", catalogReady: "{mods} MOD · {versions} bộ nội dung sẵn sàng",
     catalogFailed: "Không tải được catalog. Hãy thử mở lại Mini App.", invalidUrl: "Nhập URL HTTP/HTTPS hoặc đường dẫn rclone hợp lệ.",
     invalidSize: "Dung lượng ROM phải là số nguyên dương.", invalidWorkspace: "Ước lượng workspace phải là số nguyên dương.", jobRequired: "Hãy nhập Job ID.", payloadLarge: "Recipe vượt giới hạn 4096 byte. Hãy giảm MOD hoặc đường dẫn debloat.",
     sent: "Đã gửi yêu cầu sang bot Telegram.", telegramOnly: "Phiên Telegram chưa được kết nối. Hãy bấm Kết nối Telegram để tiếp tục.", noMods: "Bộ nội dung này chưa có MOD sẵn sàng.",
@@ -151,7 +151,7 @@ const translations = {
     refreshJob: "Refresh", events: "Events", artifact: "Artifact", resume: "Resume", cancel: "Cancel job",
     systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", runDiagnostics: "Run diagnostics",
     authenticated: "Current session authenticated", keyboardConnected: "Connected through the Telegram button · identity is confirmed on send", runnerChecked: "Runner availability checked on submit", driveChecked: "Access verified before upload",
-    navBuild: "Build", navJobs: "Jobs", navSystem: "System", selected: "selected", catalogReady: "{mods} MODs · {versions} content packs ready",
+    navBuild: "Build", navJobs: "Jobs", navCatalog: "Catalog", navSystem: "System", selected: "selected", catalogReady: "{mods} MODs · {versions} content packs ready",
     catalogFailed: "Catalog could not be loaded. Reopen the Mini App and try again.", invalidUrl: "Enter a valid HTTP/HTTPS URL or rclone reference.",
     invalidSize: "ROM size must be a positive integer.", invalidWorkspace: "Workspace estimate must be a positive integer.", jobRequired: "Enter a Job ID.", payloadLarge: "Recipe exceeds Telegram's 4096-byte limit. Reduce MODs or debloat paths.",
     sent: "Request sent to the Telegram bot.", telegramOnly: "The Telegram session is not connected. Press Connect Telegram to continue.", noMods: "No ready MODs are available in this content pack.",
@@ -165,7 +165,7 @@ const translations = {
 };
 
 Object.assign(translations.vi, {
-  navBuild: "Studio", buildTitle: "Wukong Studio",
+  navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Wukong Studio",
   buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.", routePolicy: "RUNNER",
   sourceHint: "URL trực tiếp, link OPlus chưa resolve, trang OTA Daniel Springer hoặc Drive riêng tư.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.",
   recipeHint: "Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.", runner: "Nơi chạy", modPack: "Nền MOD",
@@ -176,6 +176,7 @@ Object.assign(translations.vi, {
   jobsTitle: "Tiến trình & lịch sử", jobsIntro: "Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.", myJobs: "Danh sách của tôi",
   refreshJob: "Làm mới trạng thái", events: "Xem nhật ký", artifact: "Mở artifact", resume: "Tiếp tục checkpoint",
   stageKey: "Các trạng thái chuẩn",
+  catalogTitle: "Catalog kỹ thuật", catalogIntro: "Danh mục thiết bị, content-pack và MOD đang sẵn sàng cho mọi runner.", searchCatalog: "Tìm thiết bị hoặc MOD", catalogPack: "Content-pack", devicesTitle: "Thiết bị", modsTitle: "MOD trong pack", catalogSummary: "{devices} thiết bị / {mods} MOD", noCatalogMatches: "Không có mục phù hợp. Hãy đổi từ khóa tìm kiếm.",
   systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", maintenance: "Bảo trì & thiết đặt",
   inspectCache: "Xem stage cache", inspectCacheHint: "Dung lượng và lượt tái sử dụng", clearCache: "Xóa cache", adminOnly: "Chỉ admin",
   miniSettings: "Thiết đặt Mini App", defaultPreset: "Preset mặc định",
@@ -202,12 +203,12 @@ Object.assign(translations.vi, {
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", checklistSourceRefreshRequired: "Cần link gốc để build cloud", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
-  activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
+  activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible}/{total} sự kiện gần nhất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
   retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API."
 });
 
 Object.assign(translations.en, {
-  navBuild: "Studio", buildTitle: "Wukong Studio",
+  navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Wukong Studio",
   buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.", routePolicy: "RUNNER",
   sourceHint: "Use a direct URL, unresolved OPlus link, Daniel Springer OTA page, or private Drive reference.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct links, unresolved OPlus links, Daniel Springer and Drive are supported. Signed URLs never appear in logs.",
   recipeHint: "A preset is the starting point; every MOD and stage remains editable.", runner: "Run on", modPack: "MOD base",
@@ -218,6 +219,7 @@ Object.assign(translations.en, {
   jobsTitle: "Progress & history", jobsIntro: "Follow every stage, MOD detail and download link for each job.", myJobs: "My job list",
   refreshJob: "Refresh status", events: "View event log", artifact: "Open artifact", resume: "Resume checkpoint",
   stageKey: "Canonical states",
+  catalogTitle: "Technical catalog", catalogIntro: "Devices, content packs and MODs currently ready across every runner.", searchCatalog: "Find a device or MOD", catalogPack: "Content pack", devicesTitle: "Devices", modsTitle: "MODs in pack", catalogSummary: "{devices} devices / {mods} MODs", noCatalogMatches: "No matching entries. Change the search term.",
   systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", maintenance: "Maintenance & settings",
   inspectCache: "Inspect stage cache", inspectCacheHint: "Usage and reuse count", clearCache: "Clear cache", adminOnly: "Admin only",
   miniSettings: "Mini App settings", defaultPreset: "Default preset",
@@ -244,7 +246,7 @@ Object.assign(translations.en, {
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", checklistSourceRefreshRequired: "Original link required for cloud build", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
-  activeJob: "ACTIVE JOB", eventTimeline: "Live event log", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
+  activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "Latest {visible}/{total} events", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
   retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API."
 });
 
@@ -255,7 +257,12 @@ const pipelineLabels = {
     repack_partitions: "Đóng gói partition", repack_super: "Tạo super.img", patch_vbmeta: "Vá vbmeta",
     patch_vendor_boot: "Vá vendor_boot", package_zip: "Đóng gói ZIP", notify_telegram: "Báo Telegram"
   },
-  en: {}
+  en: {
+    inspect_rom: "Inspect ROM", extract_payload: "Extract payload", unpack_partitions: "Unpack partitions",
+    debloat: "Remove bloatware", apply_mod: "Apply MODs", sync_configs: "Sync fs_config and SELinux",
+    repack_partitions: "Repack partitions", repack_super: "Build super.img", patch_vbmeta: "Patch vbmeta",
+    patch_vendor_boot: "Patch vendor_boot", package_zip: "Package ZIP", notify_telegram: "Notify Telegram"
+  }
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -284,7 +291,11 @@ const state = {
   pairingInFlight: false,
   docketInView: true,
   canEditReleaseVersions: false,
-  dispatchFabHideTimer: null
+  dispatchFabHideTimer: null,
+  expandedLogJobId: "",
+  liquidPosition: 0,
+  liquidAnimationFrame: 0,
+  liquidSuppressClick: false
 };
 
 function t(key, values = {}) {
@@ -301,6 +312,7 @@ function applyLanguage() {
   if (devicePlaceholder) devicePlaceholder.textContent = t("chooseDevice");
   renderMods(false);
   renderPipelineSteps(false);
+  renderCatalog();
   renderJobHistory();
   const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
   if (activeJob) renderActiveJob(activeJob, state.activeEvents);
@@ -376,6 +388,37 @@ function telegramTransportAvailable() {
   return typeof TelegramApp?.sendData === "function" && Boolean(TelegramApp.platform) && TelegramApp.platform !== "unknown";
 }
 
+function setLiquidPosition(value, velocity = 0, pressed = false) {
+  const nav = $(".bottom-nav");
+  const count = $$(".bottom-nav [data-nav]").length || 1;
+  const position = Math.max(0, Math.min(count - 1, Number(value) || 0));
+  state.liquidPosition = position;
+  nav?.style.setProperty("--liquid-position", String(position));
+  nav?.style.setProperty("--liquid-offset", `${position * 100}%`);
+  nav?.style.setProperty("--liquid-velocity", String(Math.max(-1, Math.min(1, velocity))));
+  nav?.style.setProperty("--liquid-skew", `${Math.max(-3, Math.min(3, -velocity * 3))}deg`);
+  nav?.style.setProperty("--liquid-stretch-x", String(pressed ? Math.min(1.39, 1.22 + Math.abs(velocity) * .17) : 1));
+  nav?.style.setProperty("--liquid-stretch-y", String(pressed ? Math.max(.86, 1.04 - Math.abs(velocity) * .12) : 1));
+}
+
+function animateLiquidPosition(target) {
+  cancelAnimationFrame(state.liquidAnimationFrame);
+  if (prefersReducedMotion()) { setLiquidPosition(target); return; }
+  let position = state.liquidPosition;
+  let velocity = 0;
+  const tick = () => {
+    velocity = velocity * .72 + (target - position) * .2;
+    position += velocity;
+    setLiquidPosition(position, velocity, false);
+    if (Math.abs(target - position) < .001 && Math.abs(velocity) < .001) {
+      setLiquidPosition(target);
+      return;
+    }
+    state.liquidAnimationFrame = requestAnimationFrame(tick);
+  };
+  state.liquidAnimationFrame = requestAnimationFrame(tick);
+}
+
 function navigate(name, smooth = true) {
   if (!document.getElementById(name)) name = "build";
   $$(".view").forEach((node) => node.classList.toggle("active", node.id === name));
@@ -387,6 +430,7 @@ function navigate(name, smooth = true) {
   const bottomNav = $(".bottom-nav");
   const activeIndex = $$(".bottom-nav [data-nav]").findIndex((node) => node.dataset.nav === name);
   bottomNav?.style.setProperty("--active-index", String(Math.max(0, activeIndex)));
+  if (smooth) animateLiquidPosition(Math.max(0, activeIndex)); else setLiquidPosition(Math.max(0, activeIndex));
   bottomNav?.classList.remove("is-shifting");
   if (smooth && !prefersReducedMotion()) {
     void bottomNav?.offsetWidth;
@@ -397,6 +441,75 @@ function navigate(name, smooth = true) {
   window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
   updateDispatchFab();
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
+}
+
+function bindLiquidBottomTabs() {
+  const nav = $(".bottom-nav");
+  const buttons = $$(".bottom-nav [data-nav]");
+  if (!nav || !buttons.length || !("PointerEvent" in window)) return;
+  nav.style.setProperty("--tab-count", String(buttons.length));
+  let pointerId = null;
+  let startX = 0;
+  let startPosition = 0;
+  let lastX = 0;
+  let lastTime = 0;
+  let dragged = false;
+  let velocity = 0;
+
+  nav.addEventListener("click", (event) => {
+    if (!state.liquidSuppressClick) return;
+    state.liquidSuppressClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+  nav.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 && event.pointerType !== "touch") return;
+    cancelAnimationFrame(state.liquidAnimationFrame);
+    pointerId = event.pointerId;
+    startX = lastX = event.clientX;
+    lastTime = performance.now();
+    startPosition = state.liquidPosition;
+    dragged = false;
+    velocity = 0;
+    nav.classList.add("is-pressed");
+    nav.setPointerCapture?.(pointerId);
+    setLiquidPosition(startPosition, 0, true);
+  });
+  nav.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== pointerId) return;
+    const now = performance.now();
+    const tabWidth = Math.max(1, (nav.clientWidth - 8) / buttons.length);
+    const delta = event.clientX - startX;
+    if (Math.abs(delta) > 5) dragged = true;
+    const instantaneous = ((event.clientX - lastX) / Math.max(8, now - lastTime)) * 16 / tabWidth;
+    velocity = velocity * .6 + instantaneous * .4;
+    let position = startPosition + delta / tabWidth;
+    if (position < 0) position *= .18;
+    if (position > buttons.length - 1) position = buttons.length - 1 + (position - buttons.length + 1) * .18;
+    setLiquidPosition(Math.max(-.12, Math.min(buttons.length - .88, position)), velocity, true);
+    nav.style.setProperty("--panel-offset", `${Math.sign(delta) * Math.min(4, Math.abs(delta) / nav.clientWidth * 4)}px`);
+    lastX = event.clientX;
+    lastTime = now;
+  });
+  const finish = (event) => {
+    if (event.pointerId !== pointerId) return;
+    nav.releasePointerCapture?.(pointerId);
+    pointerId = null;
+    nav.classList.remove("is-pressed");
+    nav.style.setProperty("--panel-offset", "0px");
+    const target = Math.max(0, Math.min(buttons.length - 1, Math.round(state.liquidPosition + velocity * .22)));
+    if (dragged) {
+      state.liquidSuppressClick = true;
+      navigate(buttons[target].dataset.nav, false);
+      animateLiquidPosition(target);
+    } else {
+      const active = buttons.findIndex((button) => button.classList.contains("active"));
+      animateLiquidPosition(Math.max(0, active));
+    }
+    setTimeout(() => { state.liquidSuppressClick = false; }, 350);
+  };
+  nav.addEventListener("pointerup", finish);
+  nav.addEventListener("pointercancel", finish);
 }
 
 function prefersReducedMotion() {
@@ -1043,6 +1156,31 @@ function renderPipelineSteps(reset = true) {
   updatePipelineCount();
 }
 
+function renderCatalog() {
+  if (!state.catalog || !$("#device-list")) return;
+  const query = ($("#catalog-search")?.value || "").trim().toLocaleLowerCase();
+  const version = $("#catalog-version")?.value || state.catalog.modVersions[0];
+  const devices = state.catalog.devices.filter((item) => `${item.product} ${item.name}`.toLocaleLowerCase().includes(query));
+  const mods = (state.catalog.modsByVersion[version] || []).filter((name) => name.toLocaleLowerCase().includes(query));
+  $("#device-list").replaceChildren(...devices.map((item) => {
+    const row = document.createElement("div"); row.className = "device-row";
+    const code = document.createElement("b"); code.textContent = item.product;
+    const name = document.createElement("span"); name.textContent = item.name;
+    row.append(code, name); return row;
+  }));
+  $("#catalog-mod-list").replaceChildren(...mods.map((name) => {
+    const item = document.createElement("span"); item.textContent = name; return item;
+  }));
+  if (!devices.length && !mods.length) {
+    const empty = document.createElement("span"); empty.className = "catalog-empty"; empty.textContent = t("noCatalogMatches");
+    $("#catalog-mod-list").append(empty);
+  }
+  $("#device-count").textContent = String(devices.length);
+  $("#catalog-mod-count").textContent = String(mods.length);
+  const totalMods = Object.values(state.catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
+  $("#catalog-total").textContent = t("catalogSummary", { devices: state.catalog.devices.length, mods: totalMods });
+}
+
 function filterMods() {
   const query = ($("#mod-search")?.value || "").trim().toLocaleLowerCase();
   $$("#mod-list label").forEach((label) => {
@@ -1169,7 +1307,7 @@ function updateSummary() {
     node.dataset.i18n = ready ? "launch" : "finishSource";
     node.textContent = t(ready ? "launch" : "finishSource");
   });
-  $("#dispatch-fab")?.setAttribute("aria-label", t(ready ? "launch" : "finishSource"));
+  $("#dispatch-fab")?.setAttribute("aria-label", t("finishBuild"));
 }
 
 function positiveInteger(input, errorKey) {
@@ -1213,7 +1351,9 @@ async function saveReleaseVersion() {
   state.catalog.modReleaseVersions = { ...(state.catalog.modReleaseVersions || {}), ...(payload.modReleaseVersions || {}) };
   const option = $("#mod-version").selectedOptions[0];
   if (option) option.textContent = `${version} · ${state.catalog.modReleaseVersions[version]}`;
-  renderReleaseVersion(); updateSummary(); toast(t("releaseVersionSaved"));
+  const catalogOption = [...$("#catalog-version").options].find((entry) => entry.value === version);
+  if (catalogOption) catalogOption.textContent = `${version} · ${state.catalog.modReleaseVersions[version]}`;
+  renderReleaseVersion(); renderCatalog(); updateSummary(); toast(t("releaseVersionSaved"));
 }
 
 function sameStringList(left, right) {
@@ -1251,13 +1391,15 @@ const eventTypeLabels = {
     submitted: "Đã tạo job", dispatched: "Đã gửi tới runner", github_run: "GitHub Actions",
     state: "Cập nhật trạng thái", running: "Runner đang xử lý", source: "ROM nguồn sẵn sàng",
     checkpoint: "Đã lưu checkpoint", upload_progress: "Đang tải artifact", artifacts: "Artifact hoàn tất",
-    warning: "Cảnh báo", error: "Lỗi", cancelled: "Đã hủy job", resumed: "Tiếp tục từ checkpoint"
+    warning: "Cảnh báo", error: "Lỗi", cancelled: "Đã hủy job", resumed: "Tiếp tục từ checkpoint",
+    plan: "Kế hoạch build", step: "Bước build", telegram_terminal_notified: "Đã gửi thông báo Telegram"
   },
   en: {
     submitted: "Job created", dispatched: "Sent to runner", github_run: "GitHub Actions",
     state: "Status update", running: "Runner processing", source: "Source ROM ready",
     checkpoint: "Checkpoint saved", upload_progress: "Uploading artifact", artifacts: "Artifacts ready",
-    warning: "Warning", error: "Error", cancelled: "Job cancelled", resumed: "Resumed from checkpoint"
+    warning: "Warning", error: "Error", cancelled: "Job cancelled", resumed: "Resumed from checkpoint",
+    plan: "Build plan", step: "Build step", telegram_terminal_notified: "Telegram notification sent"
   }
 };
 const eventStageLabels = {
@@ -1273,6 +1415,41 @@ function readableEventType(value) {
 function readableEventStage(value) {
   const key = String(value || "");
   return eventStageLabels[state.language]?.[key] || eventTypeLabels[state.language]?.[key] || key.replaceAll("_", " ");
+}
+
+function readableStep(value) {
+  const key = String(value || "");
+  return pipelineLabels[state.language]?.[key] || key.replaceAll("_", " ") || t("events");
+}
+
+function readableStepStatus(value) {
+  return t({ running: "eventRunning", success: "eventSucceeded", succeeded: "eventSucceeded", failed: "eventFailed" }[String(value || "").toLowerCase()] || "eventRunning");
+}
+
+function eventTitle(event) {
+  if (event.type === "step" && event.step) return `${readableStep(event.step)} · ${readableStepStatus(event.status)}`;
+  if (event.type === "plan") return `${readableEventType(event.type)} · ${(event.steps || []).length} ${t("eventSteps")}`;
+  return readableEventType(event.type || event.status);
+}
+
+function formatEventValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (Array.isArray(value)) return value.map((item) => typeof item === "object" ? JSON.stringify(item) : String(item)).join(" · ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function eventDetailEntries(event) {
+  const entries = [];
+  const skip = new Set(["sequence", "jobId", "timestamp", "type", "traceback", "message", "error", "warning", "step", "stage", "status"]);
+  Object.entries(event || {}).forEach(([key, value]) => {
+    if (skip.has(key)) return;
+    if (key === "details" && value && typeof value === "object" && !Array.isArray(value)) {
+      Object.entries(value).forEach(([detailKey, detailValue]) => entries.push([detailKey, formatEventValue(detailValue)]));
+    } else entries.push([key, formatEventValue(value)]);
+  });
+  return entries;
 }
 
 function statusLabel(status) {
@@ -1346,16 +1523,22 @@ function renderArtifacts(job) {
   return section;
 }
 
-function renderEvents(events) {
+function renderEvents(events, expanded = false) {
   const section = document.createElement("section"); section.className = "job-events";
-  const title = document.createElement("h3"); title.textContent = t("eventTimeline"); section.append(title);
+  if (expanded) section.classList.add("expanded");
+  const heading = document.createElement("div"); heading.className = "job-events-heading";
+  const title = document.createElement("h3"); title.textContent = expanded ? t("fullLogTitle") : t("eventTimeline");
+  const previewCount = Math.min(events.length, 8);
+  const count = document.createElement("span"); count.textContent = t("eventsPreview", { visible: expanded ? events.length : previewCount, total: events.length });
+  heading.append(title, count); section.append(heading);
   const list = document.createElement("ol");
   if (!events.length) {
     const empty = document.createElement("li"); empty.textContent = t("noEvents"); list.append(empty);
   } else {
     let currentGroup = "";
-    events.slice(-40).reverse().forEach((event) => {
-      const group = readableEventStage(event.stage || event.status || event.type || t("events"));
+    const visibleEvents = expanded ? events : events.slice(-8);
+    visibleEvents.slice().reverse().forEach((event) => {
+      const group = event.step ? readableStep(event.step) : readableEventStage(event.stage || event.status || event.type || t("events"));
       if (group !== currentGroup) {
         currentGroup = group;
         const divider = document.createElement("li"); divider.className = "event-group";
@@ -1368,17 +1551,26 @@ function renderEvents(events) {
       marker.append(markerDot, markerSequence);
       const content = document.createElement("div"); content.className = "event-copy";
       const titleRow = document.createElement("div"); titleRow.className = "event-title-row";
-      const eventTitle = document.createElement("strong"); eventTitle.textContent = readableEventType(event.type);
+      const eventTitleNode = document.createElement("strong"); eventTitleNode.textContent = eventTitle(event);
       const eventTime = document.createElement("time"); eventTime.dateTime = String(event.timestamp || ""); eventTime.textContent = formatDate(event.timestamp);
-      titleRow.append(eventTitle, eventTime);
+      titleRow.append(eventTitleNode, eventTime);
       const detail = document.createElement("p");
-      const visible = event.message || event.error || event.warning || event.stage || event.status || Object.entries(event)
-        .filter(([key]) => !["sequence", "jobId", "timestamp", "type", "traceback", "stage", "status", "runId", "externalRunId", "runUrl", "recipeRef"].includes(key))
-        .map(([key, value]) => `${key}=${typeof value === "object" ? JSON.stringify(value) : value}`)
-        .join(" · ");
-      detail.textContent = String(visible || readableEventStage(event.stage || event.status || ""));
+      const details = eventDetailEntries(event);
+      const visible = event.message || event.error || event.warning || (event.type === "step" ? details.slice(0, 3).map(([key, value]) => `${key}: ${value}`).join(" · ") : "") || event.stage || event.status;
+      detail.textContent = String(visible || readableEventStage(event.stage || event.status || event.type || ""));
       if (!detail.textContent) detail.hidden = true;
-      content.append(titleRow, detail); item.append(marker, content); list.append(item);
+      content.append(titleRow, detail);
+      if (expanded && details.length) {
+        const data = document.createElement("dl"); data.className = "event-data";
+        details.forEach(([key, value]) => {
+          const row = document.createElement("div");
+          const term = document.createElement("dt"); term.textContent = key.replaceAll(/([a-z])([A-Z])/g, "$1 $2").replaceAll("_", " ");
+          const description = document.createElement("dd"); description.textContent = value;
+          row.append(term, description); data.append(row);
+        });
+        content.append(data);
+      }
+      item.append(marker, content); list.append(item);
     });
   }
   section.append(list); return section;
@@ -1441,9 +1633,20 @@ function renderActiveJob(job, events) {
     jobFact(t("sourceSizeDetected"), formatBytes(job.recipe?.source?.sizeBytes))
   );
   const actions = document.createElement("div"); actions.className = "job-controls";
+  const jobId = job.job_id || job.jobId;
+  const logExpanded = state.expandedLogJobId === jobId;
+  const logButton = document.createElement("button"); logButton.type = "button"; logButton.className = "job-log-toggle";
+  logButton.textContent = t(logExpanded ? "hideFullLog" : "viewFullLog");
+  logButton.setAttribute("aria-expanded", String(logExpanded));
+  logButton.addEventListener("click", () => {
+    state.expandedLogJobId = logExpanded ? "" : jobId;
+    renderActiveJob(job, events);
+    if (!logExpanded) requestAnimationFrame(() => $(".job-events")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" }));
+  });
+  actions.append(logButton);
   if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
   if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
-  root.replaceChildren(header, progress, context, facts, actions, renderEvents(events), renderArtifacts(job));
+  root.replaceChildren(header, progress, context, facts, actions, renderEvents(events, logExpanded), renderArtifacts(job));
 }
 
 function renderJobHistory() {
@@ -1496,7 +1699,7 @@ async function loadJobDetail(jobId) {
     const fallback = `${event?.timestamp || ""}|${event?.type || ""}|${JSON.stringify(event || {})}`;
     unique.set(sequence > 0 ? `sequence:${sequence}` : `event:${fallback}`, event);
   });
-  state.activeEvents = [...unique.values()].slice(-100);
+  state.activeEvents = [...unique.values()];
   state.activeEventsJobId = jobId;
   const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
   if (index >= 0) state.jobs[index] = job;
@@ -1570,6 +1773,7 @@ async function loadCatalog() {
     }
     options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
+    options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     if (miniApiAvailable()) await refreshLiveReleaseVersions();
     const count = Object.values(catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
     $("#catalog-status").textContent = t("catalogReady", { mods: count, versions: catalog.modVersions.length });
@@ -1578,6 +1782,7 @@ async function loadCatalog() {
     $("#mod-release-version-input").readOnly = !state.canEditReleaseVersions;
     $("#save-mod-release-version").disabled = !state.canEditReleaseVersions;
     renderMods();
+    renderCatalog();
     updateSourceDetection();
   } catch (error) {
     $("#catalog-status").textContent = t("catalogFailed");
@@ -1597,9 +1802,16 @@ async function refreshLiveReleaseVersions() {
       state.catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })),
       selected,
     );
+    const catalogSelected = $("#catalog-version").value || selected;
+    options(
+      $("#catalog-version"),
+      state.catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })),
+      catalogSelected,
+    );
     $("#mod-release-version-input").readOnly = !state.canEditReleaseVersions;
     $("#save-mod-release-version").disabled = !state.canEditReleaseVersions;
     renderReleaseVersion();
+    renderCatalog();
   } catch (_) { /* static labels remain usable while the authenticated API reconnects */ }
 }
 
@@ -1627,6 +1839,7 @@ async function runQuickAction(action) {
 function bindEvents() {
   $("#language").addEventListener("click", () => { state.language = state.language === "vi" ? "en" : "vi"; localStorage.setItem("wukong-language", state.language); applyLanguage(); });
   $$('[data-nav]').forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
+  bindLiquidBottomTabs();
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
     runQuickAction(button.dataset.action).catch((error) => toast(error.message, true));
   }));
@@ -1660,6 +1873,8 @@ function bindEvents() {
   $("#device").addEventListener("change", updateSummary);
   $("#mod-list").addEventListener("change", updateSummary);
   $("#mod-search").addEventListener("input", filterMods);
+  $("#catalog-search").addEventListener("input", renderCatalog);
+  $("#catalog-version").addEventListener("change", renderCatalog);
   $("#steps").addEventListener("change", updatePipelineCount);
   $$(".switches input").forEach((input) => input.addEventListener("change", () => {
     state.delivery[input.id] = input.checked ? "pending" : "skipped";
