@@ -1526,6 +1526,15 @@ class TelegramLongPollingDaemon:
                 },
                 timeout=20,
             ).raise_for_status()
+            access = getattr(self.controller, "access", None)
+            subjects = getattr(access, "subjects", None)
+            if callable(subjects):
+                approved_subjects = subjects()
+                if not isinstance(approved_subjects, (list, tuple, set, frozenset)):
+                    approved_subjects = ()
+                for subject in approved_subjects:
+                    personalized_url = self._personalized_web_app_url(subject)
+                    self._configure_private_chat_menu(subject, subject, personalized_url)
 
     def process_update(self, update: dict[str, Any]) -> None:
         callback = update.get("callback_query") or {}

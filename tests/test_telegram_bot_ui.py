@@ -569,6 +569,32 @@ class TelegramDaemonUITests(unittest.TestCase):
             menu_call.kwargs["json"],
         )
 
+    def test_register_commands_refreshes_existing_private_chat_menus(self) -> None:
+        controller = Mock()
+        controller.command_sets.return_value = {"vi": [], "en": []}
+        controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
+        controller.access.subjects.return_value = ("42", "43")
+        success = Mock()
+        success.raise_for_status.return_value = None
+        http = Mock()
+        http.post.return_value = success
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+
+        daemon.register_commands()
+
+        menu_calls = [
+            call.kwargs["json"]
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/setChatMenuButton")
+        ]
+        self.assertEqual(3, len(menu_calls))
+        self.assertNotIn("chat_id", menu_calls[0])
+        self.assertEqual(["42", "43"], [payload["chat_id"] for payload in menu_calls[1:]])
+        for payload in menu_calls[1:]:
+            url = payload["menu_button"]["web_app"]["url"]
+            self.assertEqual("wukong-rom-studio.vercel.app", urlsplit(url).hostname)
+            self.assertIn("wkLaunch", parse_qs(urlsplit(url).query))
+
     def test_start_personalizes_mini_app_button_and_chat_menu(self) -> None:
         controller = Mock()
         controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"

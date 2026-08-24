@@ -633,6 +633,17 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         users = sorted(str(row[0]) for row in rows if str(row[1]) == "user")
         return {"admins": sorted(admins), "users": users}
 
+    def subjects(self) -> tuple[str, ...]:
+        """Return every approved Telegram subject for service-side maintenance."""
+
+        with self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute("SELECT subject FROM wukong_telegram_access ORDER BY subject")
+            rows = cursor.fetchall()
+        return tuple(sorted(
+            self._configured_admins | {str(row[0]) for row in rows}
+        ))
+
     def import_identity(self, subject: str, role: str) -> bool:
         """Import one legacy allowlist row, returning False when unchanged."""
 
