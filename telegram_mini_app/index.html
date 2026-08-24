@@ -11,10 +11,15 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+  <svg class="icon-sprite" aria-hidden="true">
+    <symbol id="nav-studio" viewBox="0 0 24 24"><path d="M3.5 11.5 12 4l8.5 7.5M5.5 10.5V20h13v-9.5M9.5 20v-6h5v6"/></symbol>
+    <symbol id="nav-jobs" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="nav-system" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1v-.1h4.05v.1A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5c.2.4.5.75.9 1 .32.2.7.3 1.1.3h.1v4.05h-.1a1.7 1.7 0 0 0-2 1.15Z"/></symbol>
+  </svg>
   <!--
   THESIS: Wukong is a quiet technical workbench: dense ROM work stays legible, direct and confident without looking like a mass-produced SaaS template.
   OWN-WORLD: Warm paper, graphite type, ruled work sheets, restrained cobalt actions, IBM Plex Sans prose and JetBrains Mono measurements.
-  STORY: Identify the ROM in place, compose the build, verify the route, dispatch with confidence, then inspect jobs, artifacts, catalog and system health.
+  STORY: Identify the ROM in place, compose the build, verify the route, dispatch with confidence, then inspect jobs, artifacts and system health.
   FIRST VIEWPORT: A compact masthead opens onto a concise title, live runtime rail and the active source workbench.
   FORM: Editorial technical ledger; information-dense, quiet in motion and explicit about every state.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
@@ -25,12 +30,12 @@
   </header>
 
   <nav class="contents-rail" aria-label="Mini App navigation">
-    <button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><b>03</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>04</b><span data-i18n="navSystem">Hệ thống</span></button>
+    <button class="active" data-nav="build"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button><button data-nav="system"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
   </nav>
 
   <main>
     <section class="view active" id="build" aria-labelledby="build-title">
-      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Build từ Telegram.</h1><p data-i18n="buildIntro">Chọn ROM, MOD pack và theo dõi tiến trình trong bot.</p></div></header>
+      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Wukong Studio</h1><p data-i18n="buildIntro">Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.</p></div></header>
       <section class="runtime-strip" aria-label="Build runtime status">
         <div><i class="status-dot waiting" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
         <div><i class="status-dot waiting" id="runtime-pipeline-dot" aria-hidden="true"></i><span><small data-i18n="runtimePipeline">PIPELINE</small><strong id="runtime-pipeline-state" data-i18n="runtimeWaiting">Chờ recipe hợp lệ</strong></span></div>
@@ -85,7 +90,7 @@
         </section>
 
         <section class="dossier-section delivery-section">
-          <header class="section-heading"><span>03</span><div><h2 data-i18n="deliveryTitle">Đóng gói & phát hành</h2><p data-i18n="deliveryHint">Kiểm SHA-256 trước khi công bố artifact.</p></div></header>
+          <header class="section-heading"><span>03</span><div><h2 data-i18n="deliveryTitle">Kết quả build</h2><p data-i18n="deliveryHint">Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.</p></div></header>
           <div class="switches"><label data-state="pending"><input id="package" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="publish" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="notify" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label></div>
         </section>
         <aside class="dispatch-docket incomplete">
@@ -108,7 +113,7 @@
     </section>
 
     <section class="view" id="jobs" aria-labelledby="jobs-title">
-      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Điều khiển job.</h1><p data-i18n="jobsIntro">Xem trạng thái, log, artifact, hủy hoặc tiếp tục từ checkpoint.</p></div><button class="primary compact" id="refresh-jobs" type="button" data-i18n="refreshJob">Làm mới trạng thái</button></header>
+      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Tiến trình & lịch sử</h1><p data-i18n="jobsIntro">Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.</p></div><button class="primary compact" id="refresh-jobs" type="button" data-i18n="refreshJob">Làm mới trạng thái</button></header>
       <div class="jobs-connection" id="jobs-connection" role="status" aria-live="polite"><i></i><span data-i18n="jobsLoading">Đang đồng bộ lịch sử job…</span></div>
       <section class="active-job" id="active-job" hidden aria-live="polite"></section>
       <section class="job-history-sheet">
@@ -119,15 +124,8 @@
       <aside class="process-key"><h2 data-i18n="stageKey">Các trạng thái chuẩn</h2><ol><li data-i18n="stageQueued">Chờ</li><li data-i18n="stagePreflight">Kiểm tra</li><li data-i18n="stageDownloading">Tải ROM</li><li data-i18n="stageRunning">Đang build</li><li data-i18n="stageUploading">Đang upload</li><li data-i18n="stageTerminal">Thành công / Lỗi</li></ol></aside>
     </section>
 
-    <section class="view" id="catalog" aria-labelledby="catalog-title">
-      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật.</h1><p data-i18n="catalogIntro">Cùng danh mục thiết bị, content-pack và MOD mà Windows và Actions sử dụng.</p></div><div class="catalog-total" id="catalog-total">···</div></header>
-      <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
-      <section class="catalog-sheet"><header><h2 data-i18n="devicesTitle">Thiết bị</h2><span id="device-count">0</span></header><div class="device-table" id="device-list"></div></section>
-      <section class="catalog-sheet"><header><h2 data-i18n="modsTitle">MOD trong pack</h2><span id="catalog-mod-count">0</span></header><div class="catalog-mods" id="catalog-mod-list"></div></section>
-    </section>
-
     <section class="view" id="system" aria-labelledby="system-title">
-      <header class="page-head"><div><h1 id="system-title" data-i18n="systemTitle">Hệ thống.</h1><p data-i18n="systemIntro">Kiểm tra kết nối, content-pack và cache trước một job lớn.</p></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
+      <header class="page-head"><div><h1 id="system-title" data-i18n="systemTitle">Trạng thái dịch vụ</h1><p data-i18n="systemIntro">Telegram, runner, Drive và content-pack trong một màn hình.</p></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
       <div class="system-ledger"><div><b>01</b><i id="telegram-health"></i><span><strong>Telegram</strong><small id="telegram-auth-state" data-i18n="authenticatedPreview">Chưa xác thực. Hãy mở từ nút Mini App trong bot.</small></span></div><div><b>02</b><i></i><span><strong>GitHub Actions</strong><small data-i18n="runnerChecked">Kiểm runner ngay khi submit</small></span></div><div><b>03</b><i></i><span><strong>Google Drive</strong><small data-i18n="driveChecked">Kiểm quyền trước upload</small></span></div><div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div></div>
       <section class="system-actions"><h2 data-i18n="sessionDiagTitle">Phiên Telegram</h2><p id="session-diag" style="margin:4px 0 0;font-size:12px;line-height:1.5;opacity:.85">…</p></section>
       <section class="system-actions"><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div></section>
@@ -135,8 +133,8 @@
     </section>
   </main>
 
-  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-hidden="true" hidden><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
-  <nav class="bottom-nav" aria-label="Mobile navigation"><i class="liquid-lens" aria-hidden="true"></i><button class="active" data-nav="build"><b>01</b><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><b>02</b><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><b>03</b><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><b>04</b><span data-i18n="navSystem">Hệ thống</span></button></nav>
+  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-label="Hoàn tất cấu hình" aria-hidden="true" hidden><span class="sr-only" data-i18n="finishSource">Hoàn tất cấu hình</span><svg class="dispatch-fab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.25 17 19 7"/></svg></button>
+  <nav class="bottom-nav" aria-label="Mobile navigation"><i class="liquid-lens" aria-hidden="true"></i><button class="active" data-nav="build"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button><button data-nav="system"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button></nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./app.js" type="module"></script>
 </body>

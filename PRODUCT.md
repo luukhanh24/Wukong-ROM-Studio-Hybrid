@@ -16,7 +16,7 @@ Wukong ROM Studio Hybrid is a ROM build and source-mirroring tool with one share
 - Mode: Operate. The primary task is to create and monitor a ROM build with one-handed mobile interaction.
 - Vietnamese is the default language; English can be selected instantly and is remembered per Telegram user ID.
 - Common flows use buttons, a step-by-step chat wizard, or the bilingual Build Control Ledger Mini App. Raw `/submit <JSON>` remains available as an advanced compatibility path.
-- The Mini App maps the Windows operating model into four focused destinations: Studio, Jobs, Catalog, and System. The chat menu keeps New build, My jobs, ROM library, Diagnostics, and Language as fast paths; ROM-library operations do not occupy a Mini App tab.
+- The Mini App maps the Windows operating model into three focused destinations: Studio, Jobs, and System. Device and MOD catalog data stays embedded in the Studio selectors; ROM-library operations remain chat fast paths instead of occupying a Mini App tab.
 - Job details expose refresh, events, artifact, cancel, resume, and back actions only when relevant.
 - Errors name the problem and provide a direct recovery action.
 

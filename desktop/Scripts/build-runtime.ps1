@@ -105,8 +105,8 @@ if ($Clean -and (Test-Path -LiteralPath $destination)) {
 
 $paths = @(
     'App', 'Runtime\Python', 'Runtime\Java', 'Runtime\Scripts', 'Runtime\Bin',
-    'Runtime\Config', 'Runtime\Flash_script', 'Runtime\STARK', 'Runtime\Web',
-    'Content\MOD', 'Content\TWRP', 'Content\OFX', 'Content\copy-image',
+    'Runtime\Config', 'Runtime\Flash_script', 'Runtime\Web',
+    'Content\MOD', 'Content\STARK', 'Content\TWRP', 'Content\OFX', 'Content\copy-image',
     'Data\Jobs', 'Data\Recipes', 'Data\Secrets', 'Workspace', 'ROM_BUILD_DONE',
     'Temp\Packages', 'Temp\Downloads', 'Temp\Extraction', 'Logs\crash',
     'Updates', 'Backups'
@@ -130,20 +130,20 @@ Copy-Tree (Join-Path $source 'platform_external_avb-master') (Join-Path $scriptR
 Copy-Tree (Join-Path $source 'bin\Windows') (Join-Path $destination 'Runtime\Bin\Windows')
 Copy-Tree (Join-Path $source 'config') (Join-Path $destination 'Runtime\Config')
 Copy-Tree (Join-Path $source 'Flash_script') (Join-Path $destination 'Runtime\Flash_script')
-Copy-Tree (Join-Path $source 'STARK') (Join-Path $destination 'Runtime\STARK')
+Copy-Tree (Join-Path $source 'STARK') (Join-Path $destination 'Content\STARK')
 Copy-Tree (Join-Path $source 'Flash_script') (Join-Path $destination 'Content\Flash_script')
 $trackedWkPolicy = Join-Path $source 'config\wk_manager_system_policy.cil'
-$runtimeWkPolicy = Join-Path $destination 'Runtime\STARK\WK_Manager\system\system\etc\selinux\stark_plat_sepolicy.cil'
+$contentWkPolicy = Join-Path $destination 'Content\STARK\WK_Manager\system\system\etc\selinux\stark_plat_sepolicy.cil'
 if (-not (Test-Path -LiteralPath $trackedWkPolicy -PathType Leaf)) {
     throw "Tracked WK Manager policy is missing: $trackedWkPolicy"
 }
-New-Item -ItemType Directory -Force -Path (Split-Path -Parent $runtimeWkPolicy) | Out-Null
-Copy-Item -LiteralPath $trackedWkPolicy -Destination $runtimeWkPolicy -Force
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $contentWkPolicy) | Out-Null
+Copy-Item -LiteralPath $trackedWkPolicy -Destination $contentWkPolicy -Force
 $duplicateWkPolicy = Join-Path $destination 'Runtime\Config\wk_manager_system_policy.cil'
 if (Test-Path -LiteralPath $duplicateWkPolicy) {
     Remove-Item -LiteralPath $duplicateWkPolicy -Force
 }
-Assert-FileHashMatch $trackedWkPolicy $runtimeWkPolicy
+Assert-FileHashMatch $trackedWkPolicy $contentWkPolicy
 Copy-Tree (Join-Path $source 'studio_static') (Join-Path $destination 'Runtime\Web')
 Copy-Tree (Join-Path $source 'wukong') (Join-Path $scriptRoot 'wukong')
 Copy-Tree (Join-Path $source 'tools') (Join-Path $scriptRoot 'tools')

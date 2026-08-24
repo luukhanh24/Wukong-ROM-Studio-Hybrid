@@ -198,11 +198,11 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 ## Layout
 
-The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 48px four-destination contents rail—Studio, Jobs, Catalog, and System—create a persistent instrument frame. Each view begins with a compact destination heading and a three-cell runtime rail that connects orientation with live state.
+The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 52px three-destination contents rail—Studio, Jobs, and System—create a persistent instrument frame. Device and MOD catalog data remains embedded in Studio controls instead of becoming a destination. Each view begins with a compact destination heading and a three-cell runtime rail that connects orientation with live state.
 
 The Studio recipe uses a flexible work column and a 320px sticky dispatch docket separated by a 16px gutter. Numbered dossier sections remain in the work column, with four-pixel chromatic spines indicating source, build, and delivery. Controls use compact internal rhythms; source facts form a measured grid rather than separate cards.
 
-At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a four-cell floating liquid bottom instrument. A single lens slides beneath the active destination with a restrained spring-like scale response. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts, catalog results, and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
+At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a three-cell floating liquid bottom instrument. A single lens slides beneath the active destination with a restrained spring-like scale response. Icons replace numeric tab indexes, and the active state uses the lens rather than a colored underline. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
 
 View changes use a 380ms eased rise-and-fade. Controls transition color, border, shadow, and transform in roughly 180–220ms. Hover movement is limited to one pixel for work elements and two pixels for the active mobile destination. Reduced-motion preference collapses animation and smooth scrolling.
 
@@ -274,7 +274,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky four-cell contents rail with numbered mono indexes and a two-pixel cobalt active rule. Mobile recreates the LiquidBottomTabs interaction model as a four-cell web control: a translucent, blurred instrument contains one softly highlighted lens that slides beneath the active destination. The active label and index deepen to cobalt and scale only slightly. Desktop and mobile navigation always update together, and reduced-motion preference removes the slide and scale transition.
+Desktop uses a sticky three-cell contents rail with consistent line icons and a tonal active surface. Mobile recreates the LiquidBottomTabs interaction model as a three-cell web control: a translucent, blurred instrument contains one softly highlighted lens that slides beneath the active destination. The active icon and label deepen to cobalt and scale only slightly; no underline competes with the moving lens. Desktop and mobile navigation always update together, and reduced-motion preference removes the slide and scale transition.
 
 ### Runtime Rail
 

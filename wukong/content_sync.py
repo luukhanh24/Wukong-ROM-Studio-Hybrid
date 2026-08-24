@@ -8,7 +8,7 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -27,7 +27,7 @@ STANDARD_PACKS = {
     "OFX/v1": "OFX",
     "TWRP/v1": "TWRP",
 }
-RUNTIME_PACKS = {
+SHARED_PACKS = {
     "STARK/common": "STARK",
     "Flash_script/common": "Flash_script",
 }
@@ -48,36 +48,11 @@ def _tree_manifest(root: Path) -> list[tuple[str, int, str]]:
     return records
 
 
-def _directory_is_writable(root: Path) -> bool:
-    root.mkdir(parents=True, exist_ok=True)
-    probe = root / f".wukong-write-{uuid.uuid4().hex}"
-    try:
-        probe.mkdir()
-        return True
-    except PermissionError:
-        return False
-    finally:
-        try:
-            probe.rmdir()
-        except FileNotFoundError:
-            pass
-
-
-def _merge_runtime_tree_into_staging(install: Path, name: str) -> Path:
-    runtime_tree = install / "Runtime" / name
-    staged_tree = install / "Content" / name
-    if runtime_tree.is_dir():
-        staged_tree.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(runtime_tree, staged_tree, dirs_exist_ok=True, copy_function=shutil.copy2)
-    return staged_tree
-
-
 def migrate_shared_mods(install_root: Path, *, version: str = "ColorOS_16.0.10") -> list[str]:
-    """Move verified shared MOD trees from a version pack into Runtime/STARK."""
+    """Move verified shared MOD trees into the canonical Content/STARK tree."""
     install = install_root.resolve()
     source_root = install / "Content" / "MOD" / version
-    runtime_target = install / "Runtime" / "STARK"
-    target_root = runtime_target if _directory_is_writable(runtime_target) else _merge_runtime_tree_into_staging(install, "STARK")
+    target_root = install / "Content" / "STARK"
     staging_root = install / "Data" / "ContentSync" / "staging"
     staging_root.mkdir(parents=True, exist_ok=True)
     migrated: list[str] = []
@@ -115,7 +90,6 @@ def discover_pack_sources(install_root: Path) -> dict[str, Path]:
     """Map each available pack ID to the root used by content-pack tooling."""
     install = install_root.resolve()
     content = install / "Content"
-    runtime = install / "Runtime"
     result: dict[str, Path] = {}
     mod_root = content / "MOD"
     if mod_root.is_dir():
@@ -126,22 +100,46 @@ def discover_pack_sources(install_root: Path) -> dict[str, Path]:
         root = content / target
         if root.is_dir() and any(path.is_file() for path in root.rglob("*")):
             result[pack_id] = content
-    for pack_id, target in RUNTIME_PACKS.items():
-        source_base = runtime
-        root = runtime / target
-        if pack_id == "STARK/common":
-            staged = content / "STARK"
-            if staged.is_dir() and any((staged / name).is_dir() for name in SHARED_MOD_NAMES):
-                _merge_runtime_tree_into_staging(install, "STARK")
-                source_base = content
-                root = staged
-        elif pack_id == "Flash_script/common":
-            staged = _merge_runtime_tree_into_staging(install, "Flash_script")
-            source_base = content
-            root = staged
+    for pack_id, target in SHARED_PACKS.items():
+        root = content / target
         if root.is_dir() and any(path.is_file() for path in root.rglob("*")):
-            result[pack_id] = source_base
+            result[pack_id] = content
     return dict(sorted(result.items(), key=lambda item: item[0].casefold()))
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def resolve_selected_content_pack(install_root: Path, selected_folder: Path) -> tuple[str, Path]:
+    """Resolve a picked folder to the complete content-pack that must replace Drive."""
+    install = install_root.resolve()
+    selected = selected_folder.resolve()
+    if not selected.is_dir():
+        raise ValueError(f"Selected sync folder does not exist: {selected}")
+
+    content = install / "Content"
+    candidates = {**STANDARD_PACKS, **SHARED_PACKS}
+    for pack_id, target in candidates.items():
+        pack_root = content / target
+        if pack_root.is_dir() and _is_within(selected, pack_root):
+            return pack_id, pack_root
+
+    mod_root = content / "MOD"
+    if mod_root.is_dir() and _is_within(selected, mod_root) and selected != mod_root:
+        relative = selected.relative_to(mod_root)
+        version_root = mod_root / relative.parts[0]
+        if version_root.is_dir():
+            return f"MOD/{relative.parts[0]}", version_root
+
+    raise ValueError(
+        "Selected folder is not managed by content sync. Choose Content\\STARK, "
+        "Content\\Flash_script, Content\\MOD\\<version>, Content\\copy-image, Content\\OFX, or Content\\TWRP."
+    )
 
 
 def _pack_payload_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
@@ -159,11 +157,48 @@ def _atomic_write_index(path: Path, index: Mapping[str, Any]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def restore_incomplete_index(index_path: Path, baseline_path: Path) -> int:
+    """Restore interrupted pack records from the last shipped verified index."""
+    index_path = index_path.resolve()
+    baseline_path = baseline_path.resolve()
+    if not index_path.is_file() or not baseline_path.is_file():
+        return 0
+    current = json.loads(index_path.read_text(encoding="utf-8"))
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    validate_content_index(current)
+    validate_content_index(baseline)
+    baseline_by_id = {str(pack["id"]): dict(pack) for pack in baseline["packs"]}
+    repaired = 0
+    packs: list[dict[str, Any]] = []
+    for pack in current["packs"]:
+        current_pack = dict(pack)
+        pack_id = str(current_pack["id"])
+        fallback = baseline_by_id.get(pack_id)
+        if not isinstance(current_pack.get("archive"), Mapping) and isinstance(
+            fallback and fallback.get("archive"), Mapping
+        ):
+            packs.append(fallback)
+            repaired += 1
+        else:
+            packs.append(current_pack)
+    if repaired:
+        restored = {
+            "schemaVersion": 1,
+            "generatedAt": current.get("generatedAt") or baseline.get("generatedAt") or _timestamp(),
+            "packs": sorted(packs, key=lambda pack: str(pack["id"]).casefold()),
+        }
+        validate_content_index(restored)
+        _atomic_write_index(index_path, restored)
+    return repaired
+
+
 def refresh_content_index(
     install_root: Path,
     index_path: Path,
     *,
     remote: str = DEFAULT_REMOTE,
+    only_pack_ids: set[str] | None = None,
+    force_pack_ids: set[str] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     existing: dict[str, Any]
     if index_path.is_file():
@@ -172,12 +207,29 @@ def refresh_content_index(
     else:
         existing = {"schemaVersion": 1, "generatedAt": _timestamp(), "packs": []}
     old_by_id = {str(pack["id"]): pack for pack in existing["packs"]}
+    sources = discover_pack_sources(install_root)
+    selected = set(only_pack_ids) if only_pack_ids is not None else None
+    forced = set(force_pack_ids or ())
+    if selected is not None:
+        missing = sorted(selected.difference(sources), key=str.casefold)
+        if missing:
+            raise ValueError("Selected content-pack source is missing: " + ", ".join(missing))
+        if not forced.issubset(selected):
+            raise ValueError("Forced content-packs must also be selected")
     packs: list[dict[str, Any]] = []
     changed: list[str] = []
-    for pack_id, source_root in discover_pack_sources(install_root).items():
+    if selected is not None:
+        packs.extend(dict(pack) for pack in existing["packs"] if str(pack["id"]) not in selected)
+        source_items = ((pack_id, sources[pack_id]) for pack_id in sorted(selected, key=str.casefold))
+    else:
+        source_items = sources.items()
+    for pack_id, source_root in source_items:
         generated = build_content_pack_record(source_root, remote=remote, pack_id=pack_id)
         old = old_by_id.get(pack_id)
-        if old is not None and _pack_payload_equal(old, generated) and old.get("archive") is not None:
+        if (pack_id not in forced
+                and old is not None
+                and _pack_payload_equal(old, generated)
+                and old.get("archive") is not None):
             generated = dict(generated)
             generated["archive"] = dict(old["archive"])
         else:
@@ -201,13 +253,23 @@ def upload_changed_packs(
     *,
     rclone_config: Path,
     verify_download: bool = True,
+    progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+    run_id: str | None = None,
 ) -> None:
     sources = discover_pack_sources(install_root)
     archive_root = install_root.resolve() / "Data" / "ContentSync" / "archives"
-    for pack_id in changed_pack_ids:
+    for pack_index, pack_id in enumerate(changed_pack_ids, start=1):
         source_root = sources.get(pack_id)
         if source_root is None:
             raise KeyError(f"Content-pack source disappeared during sync: {pack_id}")
+        def report(values: Mapping[str, object]) -> None:
+            if progress_callback is not None:
+                progress_callback({
+                    **values,
+                    "packIndex": pack_index,
+                    "packCount": len(changed_pack_ids),
+                })
+
         upload_content_packs(
             source_root,
             index,
@@ -215,6 +277,8 @@ def upload_changed_packs(
             verify_download=verify_download,
             archive_root=archive_root,
             pack_id=pack_id,
+            progress_callback=report if progress_callback is not None else None,
+            run_id=run_id,
         )
         _atomic_write_index(index_path, index)
 

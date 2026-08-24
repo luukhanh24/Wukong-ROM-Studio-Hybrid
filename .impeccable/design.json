@@ -51,9 +51,9 @@
       "name":"Liquid Bottom Navigation",
       "kind":"nav",
       "refersTo":"nav-active",
-      "description":"The four-destination mobile dock with one bounded glass lens beneath the active destination.",
-      "html":"<nav class=\"ds-liquid-nav\"><i></i><button class=\"active\"><b>01</b><span>Studio</span></button><button><b>02</b><span>Jobs</span></button><button><b>03</b><span>Catalog</span></button><button><b>04</b><span>Hệ thống</span></button></nav>",
-      "css":".ds-liquid-nav{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;padding:5px;border:1px solid #aaa79d;border-radius:22px;color:#656861;background:rgba(255,255,255,.88);box-shadow:0 14px 32px rgba(26,33,45,.18),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(18px) saturate(1.2)}.ds-liquid-nav>i{position:absolute;z-index:-1;inset:5px auto 5px 5px;width:calc(25% - 3px);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.88),#e8edf4);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 5px 14px rgba(49,95,158,.18)}.ds-liquid-nav button{min-height:54px;padding:5px 2px;border:0;border-radius:15px;color:inherit;background:transparent;cursor:pointer}.ds-liquid-nav b,.ds-liquid-nav span{display:block}.ds-liquid-nav b{margin-bottom:4px;font:500 8px/1 'JetBrains Mono',monospace}.ds-liquid-nav span{font:600 9px/1.2 'IBM Plex Sans',sans-serif}.ds-liquid-nav button.active{color:#244a7c;transform:scale(1.035)}.ds-liquid-nav button:focus-visible{outline:3px solid #4f76a6;outline-offset:-2px}"
+      "description":"The three-destination mobile dock with icon tabs and one bounded glass lens beneath the active destination.",
+      "html":"<nav class=\"ds-liquid-nav\"><i></i><button class=\"active\"><svg></svg><span>Studio</span></button><button><svg></svg><span>Jobs</span></button><button><svg></svg><span>Hệ thống</span></button></nav>",
+      "css":".ds-liquid-nav{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden;padding:4px;border:1px solid #aaa79d;border-radius:24px;color:#656861;background:rgba(255,255,255,.78);box-shadow:0 18px 42px rgba(26,33,45,.2),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(14px) saturate(1.25)}.ds-liquid-nav>i{position:absolute;z-index:-1;inset:4px auto 4px 4px;width:calc((100% - 8px)/3);border-radius:20px;background:#e8edf4;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 18px rgba(49,95,158,.16)}.ds-liquid-nav button{display:flex;min-height:56px;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:5px 2px;border:0;border-radius:18px;color:inherit;background:transparent;cursor:pointer}.ds-liquid-nav svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8}.ds-liquid-nav span{font:600 10px/1.2 'IBM Plex Sans',sans-serif}.ds-liquid-nav button.active{color:#244a7c}.ds-liquid-nav button.active svg{transform:translateY(-1px) scale(1.08)}.ds-liquid-nav button:focus-visible{outline:3px solid #4f76a6;outline-offset:-2px}"
     },
     {
       "name":"Selected MOD",
@@ -102,7 +102,7 @@
       {"name":"The Two Registers Rule","body":"Sans-serif explains what the operator should understand; monospace carries what the system can identify or measure.","section":"typography"},
       {"name":"The Runtime Before Recipe Rule","body":"The first work viewport exposes runner, pipeline readiness, and job access before asking the operator to configure details.","section":"layout"},
       {"name":"The Work Stays Reachable Rule","body":"Fixed navigation always receives matching content clearance; the compact dispatch shortcut stays above the dock and returns the operator to the full docket.","section":"layout"},
-      {"name":"The Liquid Dock Boundary Rule","body":"Glass, blur, and gradient are reserved for the four-destination mobile navigation instrument and must not spread into the working canvas.","section":"layout"},
+      {"name":"The Liquid Dock Boundary Rule","body":"Glass and blur are reserved for the three-destination mobile navigation instrument and must not spread into the working canvas.","section":"layout"},
       {"name":"The Border Before Shadow Rule","body":"Use a divider or tonal shift to explain hierarchy. Do not add soft card shadows to make neutral containers feel important.","section":"elevation"}
     ],
     "dos":[

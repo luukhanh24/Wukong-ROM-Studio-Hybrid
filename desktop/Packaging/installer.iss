@@ -36,6 +36,7 @@ RestartApplications=no
 Name: "{app}"; Permissions: users-readexec
 Name: "{app}\Content"; Permissions: users-modify
 Name: "{app}\Content\MOD"; Permissions: users-modify
+Name: "{app}\Content\STARK"; Permissions: users-modify
 Name: "{app}\Content\TWRP"; Permissions: users-modify
 Name: "{app}\Content\OFX"; Permissions: users-modify
 Name: "{app}\Content\copy-image"; Permissions: users-modify
@@ -57,12 +58,12 @@ Name: "{app}\Backups"; Permissions: users-modify
 [Files]
 Source: "{#SourceRoot}\App\*"; DestDir: "{app}\App"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceRoot}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: not IsUpdateOnly
+Source: "{#SourceRoot}\Content\*"; DestDir: "{app}\Content"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist uninsneveruninstall; Check: IsFreshInstall
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\App\WebView2"
 Type: files; Name: "{app}\Runtime\Config\wk_manager_system_policy.cil"
-Type: files; Name: "{app}\Content\STARK\WK_Manager\system\system\etc\selinux\stark_plat_sepolicy.cil"
+Type: filesandordirs; Name: "{app}\Runtime\STARK"
 
 [Icons]
 Name: "{autoprograms}\Wukong ROM Studio"; Filename: "{app}\App\WukongStudio.exe"; WorkingDir: "{app}\App"; AppUserModelID: "WukongROMStudio.Desktop"
@@ -79,25 +80,47 @@ Filename: "{sys}\icacls.exe"; Parameters: """{app}\App"" /reset /T /C"; Flags: r
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\App"" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX"; Flags: runhidden waituntilterminated
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime"" /reset /T /C"; Flags: runhidden waituntilterminated
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime"" /inheritance:r /grant:r *S-1-5-18:(OI)(CI)F *S-1-5-32-544:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX"; Flags: runhidden waituntilterminated
-Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime\STARK"" /grant:r *S-1-5-32-545:(OI)(CI)M"; Flags: runhidden waituntilterminated
+Filename: "{sys}\icacls.exe"; Parameters: """{app}\Content\STARK"" /grant:r *S-1-5-32-545:(OI)(CI)M"; Flags: runhidden waituntilterminated
 Filename: "{sys}\icacls.exe"; Parameters: """{app}\Runtime\Flash_script"" /grant:r *S-1-5-32-545:(OI)(CI)M"; Flags: runhidden waituntilterminated
 Filename: "{app}\App\WukongStudio.exe"; Description: "Khởi động Wukong ROM Studio"; Flags: postinstall nowait skipifsilent runasoriginaluser
 
 [Code]
 var
   RemoveAllDataCheckBox: TNewCheckBox;
+  WasExistingInstall: Boolean;
 
-function IsUpdateOnly(): Boolean;
-var
-  I: Integer;
+function IsFreshInstall(): Boolean;
 begin
-  Result := False;
-  for I := 1 to ParamCount do
+  Result := not WasExistingInstall;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  OldStark: String;
+  NewStark: String;
+  BackupStark: String;
+begin
+  Result := '';
+  WasExistingInstall := FileExists(ExpandConstant('{app}\App\WukongStudio.exe'));
+  OldStark := ExpandConstant('{app}\Runtime\STARK');
+  NewStark := ExpandConstant('{app}\Content\STARK');
+  if DirExists(OldStark) then
   begin
-    if CompareText(ParamStr(I), '/UPDATEONLY') = 0 then
+    if not DirExists(NewStark) then
     begin
-      Result := True;
-      Exit;
+      ForceDirectories(ExpandConstant('{app}\Content'));
+      if not RenameFile(OldStark, NewStark) then
+        Result := 'Không thể chuyển dữ liệu STARK cũ sang Content\STARK. ' +
+          'Hãy đóng Wukong ROM Studio và thử cài đặt lại.';
+    end
+    else
+    begin
+      ForceDirectories(ExpandConstant('{app}\Backups'));
+      BackupStark := ExpandConstant('{app}\Backups\runtime-stark-retired-') +
+        GetDateTimeString('yyyymmdd-hhnnss', '-', ':');
+      if not RenameFile(OldStark, BackupStark) then
+        Result := 'Không thể lưu bản sao Runtime\STARK cũ vào Backups. ' +
+          'Hãy đóng Wukong ROM Studio và thử cài đặt lại.';
     end;
   end;
 end;
