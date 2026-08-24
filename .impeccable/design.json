@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-20T20:05:00+07:00",
+  "generatedAt": "2026-08-24T23:04:52+07:00",
   "title": "Design System: Wukong ROM Studio Hybrid",
   "extensions": {
     "colorMeta": {
@@ -48,12 +48,12 @@
       "css":".ds-field{display:grid;gap:6px;color:#66676b;font:500 9px/1.2 'JetBrains Mono',monospace;letter-spacing:.05em}.ds-field input{min-height:44px;padding:9px 11px;border:1px solid #aaa59b;border-radius:4px;color:#202124;background:#fff;font:500 12px/1.4 'JetBrains Mono',monospace}.ds-field input:hover{border-color:#77746e}.ds-field input:focus{border-color:#d97706;outline:3px solid #2563eb;outline-offset:2px}"
     },
     {
-      "name":"Active Destination",
+      "name":"Liquid Bottom Navigation",
       "kind":"nav",
       "refersTo":"nav-active",
-      "description":"The indexed active state shared by desktop and mobile navigation.",
-      "html":"<button class=\"ds-nav-active\"><b>01</b><span>Studio</span></button>",
-      "css":".ds-nav-active{position:relative;min-height:54px;padding:6px 12px;border:0;border-radius:4px;color:#202124;background:#fff0d2;font:600 12px/1.2 'IBM Plex Sans',sans-serif;cursor:pointer}.ds-nav-active:before{content:'';position:absolute;top:0;right:9px;left:9px;height:2px;background:#d97706}.ds-nav-active b{margin-right:8px;color:#b45309;font:500 9px/1 'JetBrains Mono',monospace}.ds-nav-active:focus-visible{outline:3px solid #2563eb;outline-offset:2px}"
+      "description":"The four-destination mobile dock with one bounded glass lens beneath the active destination.",
+      "html":"<nav class=\"ds-liquid-nav\"><i></i><button class=\"active\"><b>01</b><span>Studio</span></button><button><b>02</b><span>Jobs</span></button><button><b>03</b><span>Catalog</span></button><button><b>04</b><span>Hệ thống</span></button></nav>",
+      "css":".ds-liquid-nav{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;padding:5px;border:1px solid #aaa79d;border-radius:22px;color:#656861;background:rgba(255,255,255,.88);box-shadow:0 14px 32px rgba(26,33,45,.18),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(18px) saturate(1.2)}.ds-liquid-nav>i{position:absolute;z-index:-1;inset:5px auto 5px 5px;width:calc(25% - 3px);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.88),#e8edf4);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 5px 14px rgba(49,95,158,.18)}.ds-liquid-nav button{min-height:54px;padding:5px 2px;border:0;border-radius:15px;color:inherit;background:transparent;cursor:pointer}.ds-liquid-nav b,.ds-liquid-nav span{display:block}.ds-liquid-nav b{margin-bottom:4px;font:500 8px/1 'JetBrains Mono',monospace}.ds-liquid-nav span{font:600 9px/1.2 'IBM Plex Sans',sans-serif}.ds-liquid-nav button.active{color:#244a7c;transform:scale(1.035)}.ds-liquid-nav button:focus-visible{outline:3px solid #4f76a6;outline-offset:-2px}"
     },
     {
       "name":"Selected MOD",
@@ -101,7 +101,8 @@
       {"name":"The Neutral Majority Rule","body":"Most of every screen remains neutral. Accent rarity is what makes status readable.","section":"colors"},
       {"name":"The Two Registers Rule","body":"Sans-serif explains what the operator should understand; monospace carries what the system can identify or measure.","section":"typography"},
       {"name":"The Runtime Before Recipe Rule","body":"The first work viewport exposes runner, pipeline readiness, and job access before asking the operator to configure details.","section":"layout"},
-      {"name":"The Work Stays Reachable Rule","body":"Fixed navigation always receives matching content clearance and never shares space with a floating submit control.","section":"layout"},
+      {"name":"The Work Stays Reachable Rule","body":"Fixed navigation always receives matching content clearance; the compact dispatch shortcut stays above the dock and returns the operator to the full docket.","section":"layout"},
+      {"name":"The Liquid Dock Boundary Rule","body":"Glass, blur, and gradient are reserved for the four-destination mobile navigation instrument and must not spread into the working canvas.","section":"layout"},
       {"name":"The Border Before Shadow Rule","body":"Use a divider or tonal shift to explain hierarchy. Do not add soft card shadows to make neutral containers feel important.","section":"elevation"}
     ],
     "dos":[
@@ -113,7 +114,7 @@
       "Do keep Telegram identity at the channel boundary and treat empty initData as valid only for a known keyboard-button transport."
     ],
     "donts":[
-      "Don't restore purple/indigo hero panels, blurred blobs, glass surfaces, or generic SaaS dashboard chrome.",
+      "Don't use blurred blobs or glass surfaces outside the intentionally bounded Liquid bottom-navigation instrument.",
       "Don't add decorative welcome banners or abstract illustrations to an operating surface.",
       "Don't make selected and unselected MODs differ only by fill intensity.",
       "Don't use large pill radii or repeat the same soft shadow on every card and control.",

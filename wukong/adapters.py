@@ -18,7 +18,7 @@ from html.parser import HTMLParser
 from http.cookiejar import CookieJar
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Mapping, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
@@ -833,6 +833,67 @@ def _run_text(args: list[str], **kwargs: object) -> str:
     return completed.stdout
 
 
+def _parse_rclone_progress(line: str) -> dict[str, object] | None:
+    try:
+        payload = json.loads(line)
+    except json.JSONDecodeError:
+        return None
+    stats = payload.get("stats")
+    if not isinstance(stats, Mapping):
+        return None
+    transfers = stats.get("transferring")
+    active = transfers[0] if isinstance(transfers, list) and transfers and isinstance(transfers[0], Mapping) else {}
+    transferred = int(active.get("bytes", stats.get("bytes", 0)) or 0)
+    total = int(active.get("size", stats.get("totalBytes", 0)) or 0)
+    speed = float(active.get("speed", stats.get("speed", 0)) or 0)
+    eta_value = active.get("eta", stats.get("eta"))
+    eta = float(eta_value) if isinstance(eta_value, (int, float)) else None
+    return {
+        "bytes": transferred,
+        "totalBytes": total,
+        "speedBytesPerSecond": speed,
+        "etaSeconds": eta,
+        "percent": min(100.0, max(0.0, transferred * 100.0 / total if total > 0 else 0.0)),
+    }
+
+
+def _run_rclone_copy_with_progress(
+    args: list[str],
+    progress_callback: Callable[[Mapping[str, object]], None],
+) -> str:
+    process = subprocess.Popen(
+        [
+            *args,
+            "--use-json-log",
+            "--stats", "500ms",
+            "--stats-one-line",
+            "--stats-log-level", "NOTICE",
+            "--log-level", "NOTICE",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    output: list[str] = []
+    assert process.stdout is not None
+    try:
+        for line in process.stdout:
+            output.append(line)
+            progress = _parse_rclone_progress(line)
+            if progress is not None:
+                progress_callback(progress)
+        return_code = process.wait()
+    except Exception:
+        process.kill()
+        process.wait()
+        raise
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, args, output="".join(output))
+    return "".join(output)
+
+
 class RcloneSourceAdapter:
     def __init__(self, *, run_command: RunCommand = _run_text, config_path: Path | None = None) -> None:
         self.run_command = run_command
@@ -887,13 +948,15 @@ class RcloneStorageAdapter:
         relative_path: str,
         *,
         timeout: float | None = None,
+        progress_callback: Callable[[Mapping[str, object]], None] | None = None,
     ) -> str:
         uri = self.remote_uri(relative_path)
         options = {"timeout": timeout} if timeout is not None else {}
-        self.run_command(
-            self._args("copyto", str(source), uri, "--retries", "3"),
-            **options,
-        )
+        args = self._args("copyto", str(source), uri, "--retries", "3")
+        if progress_callback is not None and self.run_command is _run_text and timeout is None:
+            _run_rclone_copy_with_progress(args, progress_callback)
+        else:
+            self.run_command(args, **options)
         return uri
 
     def copy_tree(self, source: Path, relative_path: str) -> str:
@@ -1235,7 +1298,14 @@ class RcloneStorageAdapter:
                 f"unsafe checkpoint archive member: {member.name!r}"
             )
 
-    def publish_artifact(self, artifact: Path, *, device: str, build: str) -> ArtifactRecord:
+    def publish_artifact(
+        self,
+        artifact: Path,
+        *,
+        device: str,
+        build: str,
+        progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+    ) -> ArtifactRecord:
         artifact = artifact.resolve()
         if not artifact.is_file():
             raise FileNotFoundError(artifact)
@@ -1249,7 +1319,7 @@ class RcloneStorageAdapter:
         metadata_path = artifact.with_name(artifact.name + ".metadata.json")
         metadata_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         relative = f"artifacts/{device}/{build}/{artifact.name}"
-        uri = self.copy_file(artifact, relative)
+        uri = self.copy_file(artifact, relative, progress_callback=progress_callback)
         self.copy_file(metadata_path, relative + ".metadata.json")
         public_url = self.run_command(self._args("link", uri)).strip() or None
         return ArtifactRecord(

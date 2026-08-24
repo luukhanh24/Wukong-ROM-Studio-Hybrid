@@ -15,7 +15,11 @@ MAX_STATE_ARCHIVE_BYTES = 128 * 1024 * 1024
 MAX_STATE_FILE_BYTES = 32 * 1024 * 1024
 MAX_STATE_FILES = 10_000
 STATE_FILE_NAMES = {"manifest.json", "recipe.json", "events.jsonl"}
-STATE_ROOT_FILES = {"telegram-access.json", "telegram-ui-state.json"}
+STATE_ROOT_FILES = {
+    "telegram-access.json",
+    "telegram-ui-state.json",
+    "telegram-mod-release-versions.json",
+}
 SAFE_JOB_ID = re.compile(r"[A-Za-z0-9._-]{1,128}\Z")
 
 

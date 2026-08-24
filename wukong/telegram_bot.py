@@ -7,7 +7,7 @@ import os
 import tempfile
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -526,7 +526,7 @@ class TelegramBotController:
                 payload = request.get("recipe")
                 if not isinstance(payload, dict):
                     raise ValueError("Mini App build recipe is missing")
-                recipe = BuildRecipe.from_dict(payload)
+                recipe = self._with_mod_release_version(BuildRecipe.from_dict(payload))
                 job = self.orchestrator.submit(recipe, identity)
                 if self.runtime:
                     self.runtime.start(job)
@@ -813,7 +813,7 @@ class TelegramBotController:
             if command == "/submit":
                 if not argument:
                     return "Cú pháp: /submit <recipe JSON>"
-                recipe = BuildRecipe.from_dict(json.loads(argument))
+                recipe = self._with_mod_release_version(BuildRecipe.from_dict(json.loads(argument)))
                 job = self.orchestrator.submit(recipe, identity)
                 if self.runtime:
                     self.runtime.start(job)
@@ -1062,7 +1062,21 @@ class TelegramBotController:
                 "package": True,
                 "notifyTelegram": True,
             }
-        return BuildRecipe.from_dict(payload)
+        return self._with_mod_release_version(BuildRecipe.from_dict(payload))
+
+    def _with_mod_release_version(self, recipe: BuildRecipe) -> BuildRecipe:
+        catalog = self.catalog_provider()
+        versions = catalog.get("modReleaseVersions", {}) if isinstance(catalog, Mapping) else {}
+        label = (
+            str(
+                versions.get(recipe.build.mod_version)
+                or recipe.build.mod_release_version
+                or recipe.build.mod_version
+            ).strip()
+            if isinstance(versions, Mapping)
+            else recipe.build.mod_version
+        )
+        return replace(recipe, build=replace(recipe.build, mod_release_version=label))
 
     def _jobs_menu(self, identity: Identity, language: str) -> BotResponse:
         jobs = self.orchestrator.list(identity)[:12]

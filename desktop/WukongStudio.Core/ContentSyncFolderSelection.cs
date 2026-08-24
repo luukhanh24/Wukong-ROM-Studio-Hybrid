@@ -7,6 +7,9 @@ public sealed record ContentSyncFolderSelection(
 
 public static class ContentSyncFolderResolver
 {
+    private static readonly System.Text.RegularExpressions.Regex ModPackName = new(
+        "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     private static readonly (string RelativePath, string PackId)[] FixedPacks =
     [
         (Path.Combine("Content", "STARK"), "STARK/common"),
@@ -49,6 +52,36 @@ public static class ContentSyncFolderResolver
         throw new InvalidOperationException(
             "Folder is not managed by content sync. Choose Content\\STARK, Content\\Flash_script, " +
             "Content\\MOD\\<version>, Content\\copy-image, Content\\OFX, or Content\\TWRP.");
+    }
+
+    public static bool IsValidModPackName(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && ModPackName.IsMatch(value.Trim());
+
+    /// <summary>Renames only a direct Content/MOD pack, never an arbitrary selected child.</summary>
+    public static ContentSyncFolderSelection RenameModPack(
+        string installRoot,
+        ContentSyncFolderSelection selection,
+        string requestedName)
+    {
+        if (!selection.PackId.StartsWith("MOD/", StringComparison.Ordinal)
+            || !IsValidModPackName(requestedName))
+        {
+            throw new InvalidOperationException("MOD pack name must contain only letters, digits, dot, dash, or underscore.");
+        }
+        var targetName = requestedName.Trim();
+        var currentName = selection.PackId[4..];
+        if (string.Equals(currentName, targetName, StringComparison.OrdinalIgnoreCase))
+        {
+            return selection;
+        }
+        var modRoot = Path.GetFullPath(Path.Combine(Path.GetFullPath(installRoot), "Content", "MOD"));
+        var target = Path.GetFullPath(Path.Combine(modRoot, targetName));
+        if (!IsWithin(target, modRoot) || Directory.Exists(target) || File.Exists(target))
+        {
+            throw new IOException($"MOD pack already exists: {targetName}");
+        }
+        Directory.Move(selection.PackRoot, target);
+        return Resolve(installRoot, target);
     }
 
     private static bool IsWithin(string path, string root) =>

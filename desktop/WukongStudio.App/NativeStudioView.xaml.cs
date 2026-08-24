@@ -1215,15 +1215,21 @@ public sealed partial class NativeStudioView : UserControl
             : DefaultStudioVersion(modVersion);
     }
 
-    private static string DefaultStudioVersion(string modVersion) =>
-        string.Equals(modVersion, "ColorOS_16.0.8", StringComparison.OrdinalIgnoreCase) ? "V4.1" : "V3.4";
+    private static string DefaultStudioVersion(string modVersion) => modVersion switch
+    {
+        "ColorOS_16.0.10" => "V6.0",
+        "ColorOS_16.0.8" => "V4.1",
+        "ColorOS_16.0.9" or "RealmeUI_16.0.9" => "V5.0",
+        _ => "V3.4",
+    };
 
     private static string ValidateStudioVersion(string value)
     {
-        var normalized = value.Trim().ToUpperInvariant();
-        if (!Regex.IsMatch(normalized, "^V[0-9]+(?:\\.[0-9]+){1,3}$", RegexOptions.CultureInvariant))
+        var normalized = value.Trim();
+        if (string.IsNullOrWhiteSpace(normalized) || normalized.Length > 64
+            || normalized.Any(char.IsControl) || normalized.Contains('/') || normalized.Contains('\\'))
         {
-            throw new InvalidDataException("Số phiên bản phải có dạng V3.4, V4.1 hoặc tương tự.");
+            throw new InvalidDataException("Nhãn phát hành dài 1–64 ký tự và không được chứa /, \\ hoặc ký tự điều khiển.");
         }
         return normalized;
     }
@@ -3341,9 +3347,15 @@ public sealed partial class NativeStudioView : UserControl
         {
             return;
         }
+        string? requestedModVersion = null;
         try
         {
             _contentSyncFolderSelection = ContentSyncFolderResolver.Resolve(_layout.InstallRoot, folder.Path);
+            if (_contentSyncFolderSelection.PackId.StartsWith("MOD/", StringComparison.Ordinal))
+            {
+                requestedModVersion = await PromptModPackVersionAsync(_contentSyncFolderSelection.PackId[4..]);
+                if (requestedModVersion is null) return;
+            }
             RenderContentSyncSelection();
         }
         catch (Exception exception)
@@ -3356,10 +3368,11 @@ public sealed partial class NativeStudioView : UserControl
             return;
         }
         var selection = _contentSyncFolderSelection!;
+        var targetPackId = requestedModVersion is null ? selection.PackId : $"MOD/{requestedModVersion}";
         var confirmed = await ConfirmDialogAsync(
             Localized("Thay thế content-pack trên Drive?"),
             $"{Localized("Thư mục đã chọn")}:\n{selection.SelectedFolder}\n\n" +
-            $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{selection.PackId}\n\n" +
+            $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{targetPackId}\n\n" +
             $"{Localized("Phạm vi được đóng gói")}:\n{selection.PackRoot}\n\n" +
             Localized("Archive hiện tại trên Drive sẽ bị ghi đè trong khi upload, sau đó mới được xác minh. Nếu xác minh thất bại, Drive có thể đã chứa archive mới nhưng index cục bộ vẫn giữ bản đã xác minh trước đó."),
             Localized("Thay thế trên Drive"),
@@ -3367,6 +3380,25 @@ public sealed partial class NativeStudioView : UserControl
         if (!confirmed)
         {
             return;
+        }
+        if (requestedModVersion is not null)
+        {
+            try
+            {
+                selection = ContentSyncFolderResolver.RenameModPack(
+                    _layout.InstallRoot, selection, requestedModVersion);
+                _contentSyncFolderSelection = selection;
+                RenderContentSyncSelection();
+            }
+            catch (Exception exception) when (exception is IOException or InvalidOperationException)
+            {
+                HybridResultBox.Text = exception.Message;
+                ShowMessage(
+                    Localized("Không thể đổi phiên bản MOD"),
+                    exception.Message,
+                    InfoBarSeverity.Error);
+                return;
+            }
         }
         _contentSyncCancellation = new CancellationTokenSource();
         await RunBusyActionAsync(async () =>
@@ -3574,6 +3606,32 @@ public sealed partial class NativeStudioView : UserControl
                 File.Delete(rcloneConfig);
             }
         }
+    }
+
+    private async Task<string?> PromptModPackVersionAsync(string currentName)
+    {
+        var box = new TextBox { Text = currentName, PlaceholderText = "ColorOS_16.0.10" };
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = Localized("Phiên bản MOD"),
+            Content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock { Text = Localized("Nhập tên phiên bản cho content-pack MOD. Có thể giữ nguyên tên hiện tại."), TextWrapping = TextWrapping.Wrap },
+                    box,
+                },
+            },
+            PrimaryButtonText = Localized("Tiếp tục"),
+            CloseButtonText = Localized("Hủy"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
+        if (!ContentSyncFolderResolver.IsValidModPackName(box.Text))
+            throw new InvalidDataException(Localized("Tên MOD chỉ được dùng chữ, số, dấu chấm, gạch ngang hoặc gạch dưới."));
+        return box.Text.Trim();
     }
 
     private static bool TryTerminateContentSyncProcess(System.Diagnostics.Process process)

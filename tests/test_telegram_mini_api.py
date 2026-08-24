@@ -82,13 +82,16 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             "deepInspected": True,
             "warning": None,
         })
+        self.release_versions = {"ColorOS_16.0.10": "V6.0"}
         self.api = TelegramMiniAppAPI(
             bot_token=TOKEN,
             allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
             access=self.access,
             orchestrator=self.orchestrator,
             runtime=self.runtime,
-            catalog_provider=lambda: {"devices": []},
+            catalog_provider=lambda: {"devices": [], "modVersions": ["ColorOS_16.0.10"]},
+            release_versions_provider=lambda: self.release_versions,
+            release_versions_saver=self._save_release_versions,
             diagnostics_provider=lambda: {"ready": True},
             source_probe_provider=self.probe,
             cache_provider=lambda: {"entryCount": 3, "totalBytes": 1024},
@@ -96,6 +99,10 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             actions_callback_secret=CALLBACK_SECRET,
         )
         self.client = self.api.app.test_client()
+
+    def _save_release_versions(self, values: dict[str, str]) -> dict[str, str]:
+        self.release_versions.update(values)
+        return self.release_versions
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -131,6 +138,23 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             validate_telegram_init_data(
                 signed_init_data(42, auth_date=int(time.time()) - 7200), TOKEN
             )
+
+    def test_admin_edits_release_label_and_job_uses_server_value(self) -> None:
+        response = self.client.put(
+            "/v1/mod-release-versions",
+            headers=self.headers(1),
+            json={"modReleaseVersions": {"ColorOS_16.0.10": "Stable 6"}},
+        )
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("Stable 6", response.get_json()["modReleaseVersions"]["ColorOS_16.0.10"])
+        denied = self.client.put(
+            "/v1/mod-release-versions",
+            headers=self.headers(42),
+            json={"modReleaseVersions": {"ColorOS_16.0.10": "Nope"}},
+        )
+        self.assertEqual(403, denied.status_code)
+        created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        self.assertEqual("Stable 6", created.get_json()["recipe"]["build"]["modReleaseVersion"])
 
     def test_signed_bot_launch_token_is_user_bound_and_expires(self) -> None:
         token = issue_telegram_launch_token(42, TOKEN, now=1_000, lifetime_seconds=300)

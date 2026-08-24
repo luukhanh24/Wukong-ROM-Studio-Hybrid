@@ -11,6 +11,7 @@ from typing import Any, Mapping
 from urllib.parse import parse_qsl, urlparse
 
 from .pipeline import PIPELINE_STEP_NAMES
+from .mod_release_versions import SAFE_RELEASE_LABEL, default_mod_release_version
 
 
 SCHEMA_VERSION = 1
@@ -235,6 +236,7 @@ class BuildOptions:
     preset: str = "lite"
     mods: tuple[str, ...] = ()
     mod_version: str = "ColorOS_16.0.7"
+    mod_release_version: str | None = None
     enabled_steps: tuple[str, ...] = ()
     debloat_paths: tuple[str, ...] | None = None
     package: bool = True
@@ -259,6 +261,12 @@ class BuildOptions:
             raise RecipeValidationError(
                 f"Unsupported pipeline step: {', '.join(unknown_steps)}"
             )
+        mod_release_version = str(
+            data.get("modReleaseVersion")
+            or default_mod_release_version(mod_version)
+        ).strip()
+        if not SAFE_RELEASE_LABEL.fullmatch(mod_release_version):
+            raise RecipeValidationError("MOD release version must be 1–64 printable path-safe characters")
         raw_debloat = data.get("debloatPaths")
         debloat = None
         if raw_debloat is not None:
@@ -269,6 +277,7 @@ class BuildOptions:
             preset=preset,
             mods=mods,
             mod_version=mod_version,
+            mod_release_version=mod_release_version,
             enabled_steps=steps,
             debloat_paths=debloat,
             package=_boolean(data, "package", True),
@@ -282,6 +291,8 @@ class BuildOptions:
             "modVersion": self.mod_version,
             "package": self.package,
         }
+        if self.mod_release_version:
+            result["modReleaseVersion"] = self.mod_release_version
         if self.enabled_steps:
             result["enabledSteps"] = list(self.enabled_steps)
         if self.debloat_paths is not None:

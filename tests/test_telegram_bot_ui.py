@@ -74,6 +74,7 @@ class TelegramBotUITests(unittest.TestCase):
                         "both": ["Fix_Metis", "WK_Installer", "Camera_mod"],
                     }
                 },
+                "modReleaseVersions": {"ColorOS_16.0.8": "Stable 4"},
             },
             diagnostics_provider=lambda: {"runner": "ready"},
             cloud_provider=lambda category: {
@@ -286,6 +287,7 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual("github-auto", recipe.execution.target)
         self.assertEqual("PKG110", recipe.device)
         self.assertEqual("ColorOS_16.0.8", recipe.build.mod_version)
+        self.assertEqual("Stable 4", recipe.build.mod_release_version)
         self.assertEqual(("Fix_Metis", "WK_Installer"), recipe.build.mods)
 
     def test_telegram_wizard_exposes_only_always_available_cloud_runner(self) -> None:

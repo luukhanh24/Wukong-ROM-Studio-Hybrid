@@ -358,6 +358,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             exported = output.read_text(encoding="utf-8")
 
         self.assertEqual(["ColorOS_16.0.9"], payload["modVersions"])
+        self.assertEqual("V5.0", payload["modReleaseVersions"]["ColorOS_16.0.9"])
         self.assertEqual(["Gapps", "WK_Installer", "WK_Manager"], payload["modsByVersion"]["ColorOS_16.0.9"])
         self.assertEqual(["Gapps", "WK_Installer", "WK_Manager"], payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"])
         self.assertIn("sync_configs", [item["id"] for item in payload["pipelineSteps"]])
@@ -394,10 +395,14 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("sameStringList(paths, state.catalog.defaultDebloatPaths)", script)
         self.assertIn("catalog.json", script)
         self.assertIn("const translations", script)
-        self.assertIn("source_mirror", script)
+        self.assertNotIn("source_mirror", script)
+        self.assertNotIn("artifact_publish", script)
         self.assertIn("loadJobs", script)
         self.assertIn("scheduleJobsPoll", script)
         self.assertIn("renderArtifacts", script)
+        self.assertIn("upload_progress", script)
+        self.assertIn("speedBytesPerSecond", script)
+        self.assertIn("event-group", script)
         self.assertIn("activeEventsJobId", script)
         self.assertIn("events?after=${after}", script)
         self.assertIn("const unique = new Map()", script)
@@ -407,14 +412,14 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("github.com", script)
 
         exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")
-        self.assertNotIn("from studio_core import", exporter)
+        self.assertIn("modReleaseVersions", exporter)
 
     def test_mini_app_maps_windows_operating_surfaces_without_saas_chrome(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
-        for surface in ("build", "jobs", "cloud", "catalog", "system"):
+        for surface in ("build", "jobs", "catalog", "system"):
             self.assertIn(f'id="{surface}"', html)
             self.assertIn(f'data-nav="{surface}"', html)
         for control in (
@@ -426,7 +431,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "pipeline-count",
             "mod-search",
             "telegram-auth-state",
-            "cloud-results",
+            "mod-release-version-input",
         ):
             self.assertIn(f'id="{control}"', html)
         self.assertIn('data-action="cache"', html)
@@ -445,8 +450,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("runtimeReady", script)
         self.assertIn('className = "mod-group"', script)
         self.assertNotIn('class="mobile-dispatch"', html)
-        self.assertNotIn("backdrop-filter", styles)
-        self.assertNotIn("linear-gradient", styles)
+        self.assertIn("backdrop-filter", styles)
+        self.assertIn("liquid-lens", styles)
+        self.assertIn("updateDispatchFab", script)
+        self.assertIn("prefersReducedMotion", script)
         self.assertIn('"IBM Plex Sans"', styles)
         self.assertIn('"JetBrains Mono"', styles)
         self.assertIn("--accent:", styles)
