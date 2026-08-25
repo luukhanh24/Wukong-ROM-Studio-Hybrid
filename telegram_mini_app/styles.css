@@ -107,7 +107,7 @@ h2 { letter-spacing: -.015em; }
 .runtime-strip span, .runtime-strip small, .runtime-strip strong { display: block; }
 .runtime-strip small { margin-bottom: 5px; color: var(--muted); font: 500 9px/1 "JetBrains Mono", monospace; letter-spacing: .08em; }
 .runtime-strip strong { font: 500 12px/1.25 "JetBrains Mono", monospace; }
-.runtime-jobs-link{display:block;width:100%;padding:0;border:0;color:inherit;background:transparent;font:500 12px/1.25 "JetBrains Mono",monospace;text-align:left}
+.runtime-jobs-link{display:block;width:100%;min-height:44px;padding:6px 0;border:0;color:inherit;background:transparent;font:500 12px/1.25 "JetBrains Mono",monospace;text-align:left}
 .runtime-jobs-link:hover{color:var(--accent-strong);text-decoration:underline;text-underline-offset:3px}
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
 .status-dot.online { background: var(--success); }
