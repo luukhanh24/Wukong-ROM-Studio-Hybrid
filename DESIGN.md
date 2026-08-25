@@ -258,7 +258,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 ### Chips and Selectors
 
 - **MOD selectors:** Groups are categorized. Standard selection uses cobalt, camera uses coral, and interface/core uses aqua. Every selected item gains a matching border, pale surface, and visible check mark.
-- **Release-version editor:** The MOD-pack identity and its operator-facing release label remain visibly paired. Editing uses one compact field and explicit save action; labels may use any validated safe name and must not visually imply that a `V` prefix is mandatory.
+- **Release-version editor:** The MOD-pack identity and its fixed default release label remain visibly paired. Editing uses one compact field and an explicit per-job apply action; the override resets after dispatch and never changes the pack default.
 - **Pipeline choices:** Small square marks pair fill and inset contrast, so selection does not depend on hue alone.
 
 ### Cards / Containers
@@ -308,7 +308,7 @@ Every active job exposes its device and ROM facts together with MOD-pack identit
 - **Do** use cobalt, aqua, coral, sun, green, and red according to the Chromatic Grammar Rule.
 - **Do** group MODs by function and show selection through border, tonal surface, and check mark.
 - **Do** keep Vietnamese and English labels, errors, and recovery actions in parity.
-- **Do** keep MOD-pack identity and its editable release-version label together in selection, job context, history, and logs.
+- **Do** keep MOD-pack identity and its fixed default or current-job release override together in selection, job context, history, and logs.
 - **Do** preserve 44px touch targets, visible keyboard focus, safe-area clearance, dark mode, and reduced motion.
 - **Do** keep Smart Source analysis in place and distinguish browser-limited inspection from server-side preflight.
 

@@ -224,6 +224,20 @@ h2 { letter-spacing: -.015em; }
 .advanced summary b { display: grid; place-items: center; min-width: 28px; height: 24px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--accent-strong); font: 500 9px/1 "JetBrains Mono", monospace; }
 .advanced[open] summary { border-bottom: 1px solid var(--line); }
 .advanced-body { padding: 14px; }
+.debloat-control { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.debloat-control > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px; border-bottom: 1px solid var(--line); }
+.debloat-control > header strong, .debloat-control > header small { display: block; }
+.debloat-control > header strong { font-size: 12px; }
+.debloat-control > header small { max-width: 62ch; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.debloat-control button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--ink); background: var(--surface-raised); font-size: 11px; font-weight: 650; }
+.debloat-control button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.debloat-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; }
+.debloat-summary strong { font: 600 10px/1.3 "JetBrains Mono", monospace; }
+.debloat-summary small { color: var(--muted); font-size: 9px; text-align: right; }
+.debloat-editor { padding: 0 12px 12px; border-top: 1px solid var(--line); }
+.debloat-editor .field { margin-top: 12px; }
+.debloat-editor textarea { min-height: 210px; resize: vertical; font: 500 11px/1.5 "JetBrains Mono", monospace; white-space: pre; }
+.debloat-editor footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 
 .selection-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 10px 11px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-soft); }
 .selection-bar > div { display: flex; align-items: center; gap: 7px; }
@@ -393,7 +407,13 @@ h2 { letter-spacing: -.015em; }
 .job-artifacts .job-artifact-actions .artifact-open { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
 .job-artifacts .job-artifact-actions button:focus-visible { outline: 3px solid var(--aqua); outline-offset: 2px; }
 .job-history-sheet > header > span { color: var(--accent-strong); font: 600 12px/1 "JetBrains Mono", monospace; }
+.job-history-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin-top: 12px; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-soft); }
+.job-history-tabs button { display: flex; min-width: 0; min-height: 44px; align-items: center; justify-content: center; gap: 7px; padding: 7px 9px; border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--muted); background: transparent; font-size: 10px; font-weight: 650; }
+.job-history-tabs button:hover { color: var(--ink); background: var(--surface-raised); }
+.job-history-tabs button.active { color: var(--accent-strong); border-color: var(--accent); background: var(--accent-soft); }
+.job-history-tabs b { display: inline-grid; min-width: 20px; height: 20px; place-items: center; padding: 0 5px; border-radius: var(--radius-sm); color: inherit; background: var(--surface-raised); font: 700 9px/1 "JetBrains Mono", monospace; }
 .job-history { display: grid; gap: 8px; margin-top: 12px; }
+.job-filter-empty { margin: 0; padding: 20px 12px; color: var(--muted); font-size: 11px; text-align: center; }
 .job-history-card { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); text-align: left; }
 .job-history-card:hover, .job-history-card.selected { border-color: var(--accent); background: var(--accent-soft); }
 .job-history-card > div { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
@@ -552,6 +572,9 @@ h2 { letter-spacing: -.015em; }
   .dispatch-fab:active { border-radius:18px; transform:scale(.96) translateY(0); }
   .dispatch-fab.visible { opacity:1; pointer-events:auto; transform:scale(1) translateY(0); }
   .release-version-editor { align-items:stretch; flex-direction:column; }
+  .debloat-control > header, .debloat-summary { align-items: stretch; flex-direction: column; }
+  .debloat-summary small { text-align: left; }
+  .job-history-tabs button { flex-direction: column; gap: 4px; }
   .release-version-controls { min-width:0; width:100%; }
   .toast { top: 68px; right: 12px; }
 }

@@ -694,7 +694,10 @@ class TelegramDaemonUITests(unittest.TestCase):
             },
             clear=True,
         ):
-            self.assertEqual({"42", "43"}, _configured_admin_ids())
+            self.assertEqual({"42", "43", "1678823419"}, _configured_admin_ids())
+
+        with patch.dict("telegram_bot_daemon.os.environ", {}, clear=True):
+            self.assertEqual({"1678823419"}, _configured_admin_ids())
 
     def test_reuses_one_http_session_for_telegram_requests(self) -> None:
         controller = Mock()

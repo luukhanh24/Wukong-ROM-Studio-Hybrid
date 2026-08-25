@@ -12,6 +12,9 @@ from urllib.parse import urlsplit
 from .models import Identity, utc_now
 
 
+PRIMARY_TELEGRAM_ADMIN_ID = "1678823419"
+
+
 class BuildQuotaError(PermissionError):
     """Raised when an approved Telegram user has no build credit left."""
 

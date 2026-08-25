@@ -211,6 +211,14 @@ class TelegramMiniAppSessionStore:
             draft = self._drafts.get(subject)
             return draft[1] if draft else ""
 
+    def forget_source(self, user_id: int | str) -> None:
+        try:
+            subject = str(int(user_id))
+        except (TypeError, ValueError):
+            return
+        with self._lock:
+            self._drafts.pop(subject, None)
+
 
 def _telegram_launch_key(bot_token: str) -> bytes:
     return hmac.new(
@@ -881,7 +889,7 @@ class TelegramMiniAppAPI:
                     "Authorization, Content-Type, Idempotency-Key, X-Wukong-Session-Id, "
                     "X-Wukong-Client-Version, X-Telegram-Platform"
                 )
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
                 response.headers["Access-Control-Max-Age"] = "600"
                 response.headers["Vary"] = "Origin"
             response.headers["Cache-Control"] = "no-store"
@@ -896,7 +904,10 @@ class TelegramMiniAppAPI:
             return jsonify(
                 {
                     "modReleaseVersions": dict(self.release_versions_provider()),
-                    "editable": self._identity().role == "admin",
+                    "editable": (
+                        self._identity().role == "admin"
+                        and self.release_versions_saver is not None
+                    ),
                 }
             )
 
@@ -1192,6 +1203,12 @@ class TelegramMiniAppAPI:
         def source_draft() -> Response:
             identity = self._identity()
             return jsonify({"uri": self.session_store.source_draft(identity.subject)})
+
+        @app.delete("/v1/drafts/source")
+        def clear_source_draft() -> Response:
+            identity = self._identity()
+            self.session_store.forget_source(identity.subject)
+            return Response(status=204)
 
         @app.get("/v1/jobs/<job_id>")
         def job_detail(job_id: str) -> Response:
@@ -1541,8 +1558,17 @@ class TelegramMiniAppAPI:
             raise RecipeValidationError("ROM source is required")
         source_payload.pop("metadata", None)
         preliminary = BuildRecipe.from_dict(clean_payload)
+        raw_build = clean_payload.get("build")
+        has_job_release_override = (
+            isinstance(raw_build, Mapping)
+            and "modReleaseVersion" in raw_build
+        )
         release_versions = self.release_versions_provider()
-        release_version = str(release_versions.get(preliminary.build.mod_version) or "").strip()
+        release_version = (
+            preliminary.build.mod_release_version
+            if has_job_release_override
+            else str(release_versions.get(preliminary.build.mod_version) or "").strip()
+        )
         if not MOD_RELEASE_VERSION_RE.fullmatch(release_version):
             release_version = preliminary.build.mod_release_version or preliminary.build.mod_version
         preliminary = replace(

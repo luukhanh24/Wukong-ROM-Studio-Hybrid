@@ -423,6 +423,18 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(403, denied.status_code)
         created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
         self.assertEqual("Stable 6", created.get_json()["recipe"]["build"]["modReleaseVersion"])
+        one_job_recipe = self.recipe()
+        one_job_recipe["build"]["modReleaseVersion"] = "V6.1 Preview"
+        overridden = self.client.post(
+            "/v1/jobs",
+            headers=self.headers(43),
+            json=one_job_recipe,
+        )
+        self.assertEqual(
+            "V6.1 Preview",
+            overridden.get_json()["recipe"]["build"]["modReleaseVersion"],
+        )
+        self.assertEqual("Stable 6", self.release_versions["ColorOS_16.0.10"])
 
     def test_signed_bot_launch_token_is_user_bound_and_expires(self) -> None:
         token = issue_telegram_launch_token(42, TOKEN, now=1_000, lifetime_seconds=300)
@@ -486,6 +498,12 @@ class TelegramMiniAppAPITests(unittest.TestCase):
 
         self.assertEqual(uri, owner.json["uri"])
         self.assertEqual("", other.json["uri"])
+        cleared = self.client.delete("/v1/drafts/source", headers=self.headers(42))
+        self.assertEqual(204, cleared.status_code)
+        self.assertEqual(
+            "",
+            self.client.get("/v1/drafts/source", headers=self.headers(42)).json["uri"],
+        )
 
     def test_strict_cors_and_allowlist(self) -> None:
         denied_origin = self.client.get("/v1/jobs", headers=self.headers(origin="https://evil.example"))

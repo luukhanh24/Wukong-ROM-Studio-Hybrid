@@ -70,6 +70,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     catalog_mods_by_version = None
     jobs_fixture = False
     click_job_log = False
+    click_mod_toggle = False
+    click_other_job = False
     artifact_fixture = False
     click_artifact_actions = False
     admin_user = False
@@ -161,6 +163,31 @@ window.addEventListener('load', () => {{
     }};
     setTimeout(useArtifactActions, 100);
   }}
+  if ({str(self.click_mod_toggle).lower()}) {{
+    const customizeMod = () => {{
+      const input = document.querySelector('#mod-list input[type="checkbox"]');
+      const preset = document.querySelector('#preset');
+      if (!input || !preset) {{ setTimeout(customizeMod, 50); return; }}
+      input.click();
+      document.body.dataset.presetAfterMod = preset.value;
+    }};
+    setTimeout(customizeMod, 100);
+  }}
+  if ({str(self.click_other_job).lower()}) {{
+    const selectArchivedJob = () => {{
+      const tab = document.querySelector('[data-job-filter="succeeded"]');
+      if (!tab) {{ setTimeout(selectArchivedJob, 50); return; }}
+      tab.click();
+      const card = document.querySelector('.job-history-card');
+      if (!card) {{ setTimeout(selectArchivedJob, 50); return; }}
+      card.click();
+    }};
+    setTimeout(selectArchivedJob, 300);
+  }}
+  setTimeout(() => {{
+    document.body.dataset.viewportWidth = String(document.documentElement.clientWidth);
+    document.body.dataset.documentWidth = String(document.documentElement.scrollWidth);
+  }}, 1200);
 }});
 """
             self._send(source.encode(), "application/javascript; charset=utf-8")
@@ -200,7 +227,10 @@ window.addEventListener('load', () => {{
             self._send(json.dumps(catalog).encode(), "application/json")
             return
         if path == "/v1/jobs":
-            self._send(json.dumps({"jobs": [self._fixture_job()] if self.jobs_fixture else []}).encode(), "application/json")
+            jobs = [self._fixture_job()] if self.jobs_fixture else []
+            if self.jobs_fixture and self.click_other_job:
+                jobs.append(self._fixture_archived_job())
+            self._send(json.dumps({"jobs": jobs}).encode(), "application/json")
             return
         if path == "/v1/me":
             self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
@@ -224,6 +254,15 @@ window.addEventListener('load', () => {{
                 {"sequence": 4, "jobId": "fixture-job", "timestamp": "2026-08-25T01:03:00Z", "type": "step", "step": "debloat", "status": "running", "message": "Đang quét 42 đường dẫn hệ thống", "details": {"removedCount": 17, "notFoundCount": 2, "phase": "Plus"}},
             ]
             self._send(json.dumps({"events": events}).encode(), "application/json")
+            return
+        if path == "/v1/jobs/archived-job" and self.jobs_fixture and self.click_other_job:
+            self._send(json.dumps(self._fixture_archived_job()).encode(), "application/json")
+            return
+        if path == "/v1/jobs/archived-job/events" and self.jobs_fixture and self.click_other_job:
+            self._send(json.dumps({"events": [
+                {"sequence": 1, "jobId": "archived-job", "timestamp": "2026-08-24T01:00:00Z", "type": "submitted"},
+                {"sequence": 2, "jobId": "archived-job", "timestamp": "2026-08-24T01:04:00Z", "type": "step", "step": "package", "status": "success"},
+            ]}).encode(), "application/json")
             return
         if path == "/v1/drafts/source" and self.server_draft_fallback:
             self._send(json.dumps({"uri": self.source_uri}).encode(), "application/json")
@@ -265,6 +304,35 @@ window.addEventListener('load', () => {{
             "unlimited": cls.admin_user, "miniAppOpenCount": 2, "jobCount": 1,
             "lifetimeGranted": 5, "lifetimeUsed": 2, "language": "vi", "platform": "android", "appVersion": "1.0",
             "firstSeenAt": "2026-08-24T01:00:00Z", "lastSeenAt": "2026-08-25T01:00:00Z",
+        }
+
+    @classmethod
+    def _fixture_archived_job(cls) -> dict[str, object]:
+        return {
+            "job_id": "archived-job",
+            "status": "succeeded",
+            "stage": "complete",
+            "progress": 1,
+            "runner": "github-hosted",
+            "created_at": "2026-08-24T01:00:00Z",
+            "recipe": {
+                "device": "PKG110",
+                "source": {
+                    "sizeBytes": 8680370027,
+                    "metadata": {
+                        "productName": "PKG110",
+                        "version": "ARCHIVED_16.0.8.300(CN01)",
+                        "androidVersion": "16",
+                    },
+                },
+                "build": {
+                    "preset": "custom",
+                    "modVersion": "ColorOS_16.0.8",
+                    "modReleaseVersion": "V4.0",
+                    "mods": ["WK_Manager"],
+                },
+            },
+            "artifacts": [],
         }
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
@@ -323,6 +391,8 @@ def _render_mini_app_in_chrome(
     initial_view: str = "",
     jobs_fixture: bool = False,
     click_job_log: bool = False,
+    click_mod_toggle: bool = False,
+    click_other_job: bool = False,
     artifact_fixture: bool = False,
     click_artifact_actions: bool = False,
     admin_user: bool = False,
@@ -349,6 +419,8 @@ def _render_mini_app_in_chrome(
             "catalog_mods_by_version": catalog_mods_by_version,
             "jobs_fixture": jobs_fixture,
             "click_job_log": click_job_log,
+            "click_mod_toggle": click_mod_toggle,
+            "click_other_job": click_other_job,
             "artifact_fixture": artifact_fixture,
             "click_artifact_actions": click_artifact_actions,
             "admin_user": admin_user,
@@ -499,6 +571,10 @@ class TelegramMiniAppTests(unittest.TestCase):
             "active-job",
             "job-history",
             "job-history-count",
+            "job-history-tabs",
+            "debloat-editor",
+            "save-debloat-paths",
+            "cancel-debloat-paths",
         ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("Telegram.WebApp", script)
@@ -511,7 +587,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("!TelegramApp.initData", script)
         self.assertIn("keyboardConnected", script)
         self.assertIn("4096", script)
-        self.assertIn("sameStringList(paths, state.catalog.defaultDebloatPaths)", script)
+        self.assertIn("state.debloatPaths", script)
+        self.assertIn("resetJobDraft", script)
+        self.assertIn('apiRequest("/v1/drafts/source", { method: "DELETE" })', script)
+        self.assertNotIn('id="workspace-estimate"', html)
         self.assertIn("catalog.json", script)
         self.assertIn("const translations", script)
         self.assertNotIn("source_mirror", script)
@@ -528,6 +607,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("speedBytesPerSecond", script)
         self.assertIn("event-group", script)
         self.assertIn("activeEventsJobId", script)
+        self.assertIn("jobDetailRequestId", script)
         self.assertIn("events?after=${after}", script)
         self.assertIn("const unique = new Map()", script)
         self.assertNotIn("githubRunLink", script)
@@ -610,6 +690,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("New User", dom)
         self.assertIn("@new_user", dom)
         self.assertIn('id="quota-value">Không giới hạn</strong>', dom)
+        self.assertIn("Không giới hạn lượt còn lại", dom)
         self.assertGreater(screenshot_size, 10_000)
 
     def test_build_surface_keeps_build_workflow_separate_from_catalog_and_system(self) -> None:
@@ -911,6 +992,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("@fixture", dom)
         self.assertIn('<dd id="access-id">42</dd>', dom)
         self.assertIn('class="profile-avatar profile-avatar-large"', dom)
+        self.assertNotIn("2 lần mở", dom)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
@@ -934,13 +1016,68 @@ class TelegramMiniAppTests(unittest.TestCase):
         config = json.loads((ROOT / "config" / "debloat.json").read_text(encoding="utf-8"))
 
         self.assertIn("defaultDebloatPaths", script)
-        self.assertTrue(config["default"])
+        self.assertEqual(38, len(config["default"]))
         partitions = {path.split("\\", 1)[0] for path in config["default"]}
-        self.assertEqual({"my_product", "my_stock", "system"}, partitions)
-        self.assertIn(r"my_product\app\OplusCamera", config["default"])
+        self.assertEqual({"my_product", "my_stock"}, partitions)
+        self.assertIn(r"my_product\app\BaiduInput_U_Product", config["default"])
         self.assertIn(r"my_stock\del-app\OPBreathMode", config["default"])
-        self.assertIn(r"my_stock\priv-app\OppoGallery2", config["default"])
-        self.assertIn(r"system\system\framework\services.jar.prof", config["default"])
+        self.assertIn(r"my_stock\app\AIMemory", config["default"])
+        self.assertNotIn(r"my_product\app\OplusCamera", config["default"])
+
+    def test_job_history_is_partitioned_into_counted_status_tabs(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+        )
+
+        self.assertIn('id="job-history-tabs"', dom)
+        self.assertIn('data-job-filter="active"', dom)
+        self.assertIn('data-job-filter="succeeded"', dom)
+        self.assertIn('data-job-filter="failed"', dom)
+        self.assertRegex(
+            dom,
+            r'(?s)data-job-filter="active"[^>]*>.*?<b id="job-count-active">1</b>',
+        )
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_manual_mod_selection_switches_the_recipe_to_custom(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            click_mod_toggle=True,
+        )
+
+        self.assertIn('data-preset-after-mod="custom"', dom)
+
+    def test_selected_archived_job_log_is_not_replaced_by_running_job_poll(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            click_other_job=True,
+        )
+
+        self.assertIn("ARCHIVED_16.0.8.300(CN01)", dom)
+        self.assertIn('class="job-history-card selected"', dom)
+        self.assertIn("ColorOS_16.0.8", dom)
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_mobile_operating_surfaces_do_not_overflow_horizontally(self) -> None:
+        for route, flags in (
+            ("", {"click_mod_toggle": True}),
+            ("jobs", {"jobs_fixture": True, "click_other_job": True}),
+        ):
+            with self.subTest(route=route or "studio"):
+                dom, _ = _render_mini_app_in_chrome(
+                    api_enabled=True,
+                    initial_view=route,
+                    **flags,
+                )
+                viewport = re.search(r'data-viewport-width="(\d+)"', dom)
+                document = re.search(r'data-document-width="(\d+)"', dom)
+                self.assertIsNotNone(viewport)
+                self.assertIsNotNone(document)
+                self.assertEqual(viewport.group(1), document.group(1))
 
 
 if __name__ == "__main__":

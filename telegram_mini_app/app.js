@@ -263,6 +263,47 @@ Object.assign(translations.en, {
   lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason"
 });
 
+Object.assign(translations.vi, {
+  allowanceUnlimitedSummary: "Không giới hạn lượt còn lại · {used} đã dùng · {jobs} job",
+  releaseVersionHint: "Mặc định cố định theo MOD pack; thay đổi chỉ áp dụng cho job hiện tại.",
+  saveReleaseVersion: "Áp dụng cho job",
+  releaseVersionSaved: "Đã áp dụng nhãn phát hành cho job hiện tại.",
+  debloatPathsHint: "Danh sách tùy chỉnh chỉ dùng cho job hiện tại và tự khôi phục sau khi gửi build.",
+  editDebloatPaths: "Tùy chỉnh",
+  debloatEditorHint: "Mỗi dòng là một đường dẫn tương đối",
+  saveDebloatPaths: "Lưu cho job này",
+  debloatDefaultState: "Đang dùng danh sách mặc định",
+  debloatCustomState: "Tùy chỉnh cho job hiện tại",
+  debloatPathCount: "{count} đường dẫn",
+  debloatSaved: "Đã lưu đường dẫn cho job hiện tại.",
+  debloatPaths: "Đường dẫn cần xóa",
+  jobTabActive: "Đang chạy",
+  jobTabSucceeded: "Hoàn tất",
+  jobTabFailed: "Lỗi / hủy",
+  noJobsInTab: "Không có job trong nhóm này.",
+  historicalJob: "JOB LỊCH SỬ"
+});
+Object.assign(translations.en, {
+  allowanceUnlimitedSummary: "Unlimited credits remaining · {used} used · {jobs} jobs",
+  releaseVersionHint: "The MOD pack default stays fixed; an edit applies only to the current job.",
+  saveReleaseVersion: "Apply to job",
+  releaseVersionSaved: "Release label applied to the current job.",
+  debloatPathsHint: "Custom paths apply only to the current job and reset after dispatch.",
+  editDebloatPaths: "Customize",
+  debloatEditorHint: "Enter one relative path per line",
+  saveDebloatPaths: "Save for this job",
+  debloatDefaultState: "Using the default path list",
+  debloatCustomState: "Customized for the current job",
+  debloatPathCount: "{count} paths",
+  debloatSaved: "Paths saved for the current job.",
+  debloatPaths: "Paths to remove",
+  jobTabActive: "Active",
+  jobTabSucceeded: "Completed",
+  jobTabFailed: "Failed / cancelled",
+  noJobsInTab: "No jobs in this group.",
+  historicalJob: "HISTORICAL JOB"
+});
+
 Object.assign(translations.en, {
   buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
   releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
@@ -317,6 +358,8 @@ const state = {
   activeEventsJobId: "",
   jobsPollTimer: null,
   jobsLoading: false,
+  jobDetailRequestId: 0,
+  jobHistoryFilter: "",
   sourceProbeTimer: null,
   sourceProbeUri: "",
   sourceInputUri: "",
@@ -325,7 +368,9 @@ const state = {
   pairingPollTimer: null,
   pairingInFlight: false,
   docketInView: true,
-  canEditReleaseVersions: false,
+  releaseVersionOverrides: {},
+  debloatPaths: [],
+  debloatPathsCustomized: false,
   dispatchFabHideTimer: null,
   expandedLogJobId: "",
   liquidPosition: 0,
@@ -358,10 +403,14 @@ function applyLanguage() {
   renderCatalog();
   renderJobHistory();
   const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
-  if (activeJob) renderActiveJob(activeJob, state.activeEvents);
+  if (activeJob) {
+    const activeId = activeJob.job_id || activeJob.jobId;
+    renderActiveJob(activeJob, state.activeEventsJobId === activeId ? state.activeEvents : []);
+  }
   renderSessionDiagnostics();
   renderAccount();
   renderAdminUsers();
+  renderDebloatSummary();
   updateSummary();
   updateTelegramState();
   updateSourceDetection();
@@ -1294,6 +1343,7 @@ function updatePipelineCount() {
 function setMods(mode) {
   const defaults = new Set(defaultMods());
   $$("#mod-list input").forEach((input) => { input.checked = mode === "all" || (mode === "defaults" && defaults.has(input.value)); });
+  if (mode !== "defaults") $("#preset").value = "custom";
   updateSummary();
 }
 
@@ -1446,8 +1496,7 @@ function renderAccessGate() {
     $("#access-meta").textContent = [
       profile.language ? profile.language.toUpperCase() : "",
       profile.platform || "",
-      profile.appVersion ? `v${profile.appVersion}` : "",
-      `${t("openCount", { count: profile.miniAppOpenCount || 0 })}`
+      profile.appVersion ? `v${profile.appVersion}` : ""
     ].filter(Boolean).join(" · ") || "—";
     $("#access-avatar").replaceWith(profileAvatar(profile, "profile-avatar-large"));
     const avatar = $(".access-card .profile-avatar");
@@ -1472,12 +1521,16 @@ function renderAccount() {
   } else value.textContent = String(profile.buildCredits);
   const runtimeAllowance = $("#runtime-build-allowance");
   if (runtimeAllowance) {
-    const remaining = profile.unlimited ? t("unlimited") : String(Number(profile.buildCredits || 0));
-    runtimeAllowance.textContent = t("allowanceSummary", {
-      remaining,
+    const values = {
       used: Number(profile.lifetimeUsed || 0),
       jobs: Number(profile.jobCount || 0)
-    });
+    };
+    runtimeAllowance.textContent = profile.unlimited
+      ? t("allowanceUnlimitedSummary", values)
+      : t("allowanceSummary", {
+          ...values,
+          remaining: String(Number(profile.buildCredits || 0))
+        });
   }
   const admin = profile.role === "admin";
   $("#user-admin").hidden = !admin;
@@ -1672,7 +1725,12 @@ function sourceSpec() {
 
 function selectedReleaseVersion() {
   const version = $("#mod-version")?.value || "";
-  return String(state.catalog?.modReleaseVersions?.[version] || version || "—");
+  return String(
+    state.releaseVersionOverrides[version]
+    || state.catalog?.modReleaseVersions?.[version]
+    || version
+    || "—"
+  );
 }
 
 function renderReleaseVersion() {
@@ -1684,24 +1742,78 @@ function renderReleaseVersion() {
 }
 
 async function saveReleaseVersion() {
-  if (!miniApiAvailable()) throw new Error(t("apiRequiredHint"));
   const version = $("#mod-version").value;
   const label = $("#mod-release-version-input").value.trim();
   if (!label || label.length > 64 || /[\\/\x00-\x1f]/.test(label)) throw new Error(t("invalidReleaseVersion"));
-  const payload = await apiRequest("/v1/mod-release-versions", {
-    method: "PUT", body: JSON.stringify({ modReleaseVersions: { [version]: label } })
-  });
-  state.catalog.modReleaseVersions = { ...(state.catalog.modReleaseVersions || {}), ...(payload.modReleaseVersions || {}) };
-  const option = $("#mod-version").selectedOptions[0];
-  if (option) option.textContent = `${version} · ${state.catalog.modReleaseVersions[version]}`;
-  const catalogOption = [...$("#catalog-version").options].find((entry) => entry.value === version);
-  if (catalogOption) catalogOption.textContent = `${version} · ${state.catalog.modReleaseVersions[version]}`;
-  renderReleaseVersion(); renderCatalog(); updateSummary(); toast(t("releaseVersionSaved"));
+  const defaultLabel = String(state.catalog?.modReleaseVersions?.[version] || version);
+  if (label === defaultLabel) delete state.releaseVersionOverrides[version];
+  else state.releaseVersionOverrides[version] = label;
+  renderReleaseVersion();
+  updateSummary();
+  toast(t("releaseVersionSaved"));
 }
 
 function sameStringList(left, right) {
   if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
+}
+
+function normalizedDebloatPaths(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function renderDebloatSummary() {
+  const count = $("#debloat-path-count");
+  const status = $("#debloat-path-state");
+  if (count) count.textContent = t("debloatPathCount", { count: state.debloatPaths.length });
+  if (status) status.textContent = t(state.debloatPathsCustomized ? "debloatCustomState" : "debloatDefaultState");
+}
+
+function openDebloatEditor() {
+  const editor = $("#debloat-editor");
+  const input = $("#debloat-paths");
+  if (!editor || !input) return;
+  input.value = state.debloatPaths.join("\n");
+  editor.hidden = false;
+  $("#edit-debloat-paths").hidden = true;
+  requestAnimationFrame(() => input.focus({ preventScroll: true }));
+}
+
+function closeDebloatEditor() {
+  const editor = $("#debloat-editor");
+  if (editor) editor.hidden = true;
+  $("#edit-debloat-paths").hidden = false;
+}
+
+function saveDebloatPaths() {
+  state.debloatPaths = normalizedDebloatPaths($("#debloat-paths").value);
+  state.debloatPathsCustomized = !sameStringList(
+    state.debloatPaths,
+    state.catalog?.defaultDebloatPaths || []
+  );
+  closeDebloatEditor();
+  renderDebloatSummary();
+  toast(t("debloatSaved"));
+}
+
+function resetJobDraft() {
+  const source = $("#source-uri");
+  if (source) {
+    source.value = "";
+    source.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  const size = $("#source-size");
+  if (size) size.value = "";
+  state.releaseVersionOverrides = {};
+  state.debloatPaths = [...(state.catalog?.defaultDebloatPaths || [])];
+  state.debloatPathsCustomized = false;
+  closeDebloatEditor();
+  renderDebloatSummary();
+  renderReleaseVersion();
+  try { localStorage.removeItem("wukong-recipe-draft"); } catch (_) {}
 }
 
 function buildRecipe() {
@@ -1711,19 +1823,17 @@ function buildRecipe() {
     execution: { target: $("#execution").value },
     storage: { remote: "wukong-gdrive", publishArtifact: $("#publish").checked }
   };
-  const workspace = positiveInteger($("#workspace-estimate"), "invalidWorkspace");
-  if (workspace) recipe.execution.estimatedWorkspaceBytes = workspace;
   recipe.build = {
       preset: $("#preset").value, modVersion: $("#mod-version").value, mods: selectedMods(),
+      modReleaseVersion: selectedReleaseVersion(),
       enabledSteps: $$("#steps input:checked").map((input) => input.value),
       package: $("#package").checked, notifyTelegram: $("#notify").checked
     };
-    const paths = $("#debloat-paths").value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
     // The shared default list is intentionally visible/editable in the Mini App.
     // Omitting an unchanged list is lossless: every runner resolves a missing
     // debloatPaths field from the same versioned config/debloat.json catalog.
-    if (paths.length && !sameStringList(paths, state.catalog.defaultDebloatPaths)) {
-      recipe.build.debloatPaths = paths;
+    if (!sameStringList(state.debloatPaths, state.catalog.defaultDebloatPaths)) {
+      recipe.build.debloatPaths = [...state.debloatPaths];
     }
   return recipe;
 }
@@ -1995,7 +2105,8 @@ function renderActiveJob(job, events) {
   const metadata = jobMetadata(job);
   const header = document.createElement("header");
   const title = document.createElement("div");
-  const kicker = document.createElement("small"); kicker.textContent = t("activeJob");
+  const kicker = document.createElement("small");
+  kicker.textContent = t(terminalJobStatuses.has(job.status) ? "historicalJob" : "activeJob");
   const heading = document.createElement("h2"); heading.textContent = metadata.version || `${job.recipe?.device || "ROM"} · ${String(job.job_id || job.jobId).slice(0, 12)}`;
   title.append(kicker, heading);
   const badge = document.createElement("span"); badge.className = `job-status ${job.status}`; badge.textContent = statusLabel(job.status);
@@ -2056,10 +2167,28 @@ function renderActiveJob(job, events) {
 function renderJobHistory() {
   const history = $("#job-history");
   const jobs = state.jobs;
+  const grouped = {
+    active: jobs.filter((job) => !terminalJobStatuses.has(job.status)),
+    succeeded: jobs.filter((job) => job.status === "succeeded"),
+    failed: jobs.filter((job) => ["failed", "cancelled"].includes(job.status))
+  };
+  if (!["active", "succeeded", "failed"].includes(state.jobHistoryFilter)) {
+    state.jobHistoryFilter = ["active", "succeeded", "failed"].find((key) => grouped[key].length) || "active";
+  }
+  $$("[data-job-filter]").forEach((button) => {
+    const selected = button.dataset.jobFilter === state.jobHistoryFilter;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", String(selected));
+  });
+  for (const key of ["active", "succeeded", "failed"]) {
+    const count = $(`#job-count-${key}`);
+    if (count) count.textContent = String(grouped[key].length);
+  }
+  const visibleJobs = grouped[state.jobHistoryFilter] || [];
   $("#job-history-count").textContent = String(jobs.length);
   $("#job-empty").hidden = jobs.length > 0;
   history.hidden = jobs.length === 0;
-  history.replaceChildren(...jobs.map((job) => {
+  const cards = visibleJobs.map((job) => {
     const metadata = jobMetadata(job);
     const card = document.createElement("button"); card.type = "button"; card.className = "job-history-card";
     if ((job.job_id || job.jobId) === state.activeJobId) card.classList.add("selected");
@@ -2073,10 +2202,19 @@ function renderJobHistory() {
     card.append(header, details, footer);
     card.addEventListener("click", () => {
       state.activeJobId = job.job_id || job.jobId; localStorage.setItem("wukong-active-job", state.activeJobId);
+      state.activeEvents = [];
+      state.activeEventsJobId = "";
+      renderActiveJob(job, []);
       loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true)); renderJobHistory();
     });
     return card;
-  }));
+  });
+  if (!cards.length && jobs.length) {
+    const empty = document.createElement("p");
+    empty.className = "job-filter-empty";
+    empty.textContent = t("noJobsInTab");
+    history.replaceChildren(empty);
+  } else history.replaceChildren(...cards);
 }
 
 function setJobsConnection(key, error = false) {
@@ -2087,6 +2225,7 @@ function setJobsConnection(key, error = false) {
 
 async function loadJobDetail(jobId) {
   if (!jobId) return;
+  const requestId = ++state.jobDetailRequestId;
   const sameJob = state.activeEventsJobId === jobId;
   const after = sameJob
     ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
@@ -2095,6 +2234,7 @@ async function loadJobDetail(jobId) {
     apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}`),
     apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/events?after=${after}`)
   ]);
+  if (requestId !== state.jobDetailRequestId || state.activeJobId !== jobId) return;
   const incoming = Array.isArray(eventsPayload.events) ? eventsPayload.events : [];
   const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
   const unique = new Map();
@@ -2125,8 +2265,7 @@ async function loadJobs({ force = false } = {}) {
     state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
     const running = state.jobs.find((job) => !terminalJobStatuses.has(job.status));
     const selectedExists = state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
-    if (running) state.activeJobId = running.job_id || running.jobId;
-    else if (!selectedExists) state.activeJobId = state.jobs[0]?.job_id || state.jobs[0]?.jobId || "";
+    if (!selectedExists) state.activeJobId = (running?.job_id || running?.jobId) || state.jobs[0]?.job_id || state.jobs[0]?.jobId || "";
     if (state.activeJobId) localStorage.setItem("wukong-active-job", state.activeJobId);
     else localStorage.removeItem("wukong-active-job");
     renderJobHistory();
@@ -2149,7 +2288,6 @@ async function runJobAction(action, jobId) {
 async function submitRecipe() {
   if (!miniApiAvailable()) throw new Error(t(miniApiUnavailableMessageKey()));
   const recipe = buildRecipe();
-  localStorage.setItem("wukong-recipe-draft", JSON.stringify(recipe));
   const canonical = JSON.stringify(recipe);
   let pending = null;
   try { pending = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
@@ -2167,6 +2305,8 @@ async function submitRecipe() {
   }
   state.activeJobId = job.job_id || job.jobId;
   localStorage.setItem("wukong-active-job", state.activeJobId);
+  resetJobDraft();
+  await apiRequest("/v1/drafts/source", { method: "DELETE" }).catch(() => {});
   await loadSession({ countOpen: false });
   toast(t("buildCreated")); navigate("jobs"); await loadJobs({ force: true });
 }
@@ -2187,9 +2327,8 @@ async function loadCatalog() {
     if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.devices) || !Array.isArray(catalog.modVersions)) throw new Error("Invalid catalog");
     state.catalog = catalog;
     state.catalog.modReleaseVersions ||= {};
-    if (!$("#debloat-paths").value.trim() && Array.isArray(catalog.defaultDebloatPaths)) {
-      $("#debloat-paths").value = catalog.defaultDebloatPaths.join("\n");
-    }
+    state.debloatPaths = Array.isArray(catalog.defaultDebloatPaths) ? [...catalog.defaultDebloatPaths] : [];
+    state.debloatPathsCustomized = false;
     options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
@@ -2198,9 +2337,8 @@ async function loadCatalog() {
     $("#catalog-status").textContent = t("catalogReady", { mods: count, versions: catalog.modVersions.length });
     $("#catalog-status").closest("div").querySelector("i").classList.add("ok");
     renderPipelineSteps();
-    $("#mod-release-version-input").readOnly = !state.canEditReleaseVersions;
-    $("#save-mod-release-version").disabled = !state.canEditReleaseVersions;
     renderMods();
+    renderDebloatSummary();
     renderCatalog();
     updateSourceDetection();
   } catch (error) {
@@ -2215,7 +2353,6 @@ async function refreshLiveReleaseVersions() {
     const selected = $("#mod-version").value;
     const live = await apiRequest("/v1/mod-release-versions");
     state.catalog.modReleaseVersions = { ...state.catalog.modReleaseVersions, ...(live.modReleaseVersions || {}) };
-    state.canEditReleaseVersions = live.editable === true;
     options(
       $("#mod-version"),
       state.catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })),
@@ -2227,8 +2364,6 @@ async function refreshLiveReleaseVersions() {
       state.catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })),
       catalogSelected,
     );
-    $("#mod-release-version-input").readOnly = !state.canEditReleaseVersions;
-    $("#save-mod-release-version").disabled = !state.canEditReleaseVersions;
     renderReleaseVersion();
     renderCatalog();
   } catch (_) { /* static labels remain usable while the authenticated API reconnects */ }
@@ -2294,11 +2429,17 @@ function bindEvents() {
   $("#preset").addEventListener("change", () => renderMods());
   $("#execution").addEventListener("change", updateSummary);
   $("#device").addEventListener("change", updateSummary);
-  $("#mod-list").addEventListener("change", updateSummary);
+  $("#mod-list").addEventListener("change", (event) => {
+    if (event.target.matches('input[type="checkbox"]')) $("#preset").value = "custom";
+    updateSummary();
+  });
   $("#mod-search").addEventListener("input", filterMods);
   $("#catalog-search").addEventListener("input", renderCatalog);
   $("#catalog-version").addEventListener("change", renderCatalog);
   $("#steps").addEventListener("change", updatePipelineCount);
+  $("#edit-debloat-paths").addEventListener("click", openDebloatEditor);
+  $("#save-debloat-paths").addEventListener("click", saveDebloatPaths);
+  $("#cancel-debloat-paths").addEventListener("click", closeDebloatEditor);
   $$(".switches input").forEach((input) => input.addEventListener("change", () => {
     state.delivery[input.id] = input.checked ? "pending" : "skipped";
     updateSummary();
@@ -2312,6 +2453,10 @@ function bindEvents() {
     renderMods();
   });
   $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
+  $$("[data-job-filter]").forEach((button) => button.addEventListener("click", () => {
+    state.jobHistoryFilter = button.dataset.jobFilter;
+    renderJobHistory();
+  }));
   let userSearchTimer;
   $("#user-search").addEventListener("input", () => { clearTimeout(userSearchTimer); userSearchTimer = setTimeout(() => loadAdminUsers({ reset: true }).catch(() => {}), 250); });
   $("#user-status").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));

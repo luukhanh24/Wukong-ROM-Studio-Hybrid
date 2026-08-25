@@ -93,7 +93,7 @@ from wukong.github import GitHubActionsAdapter
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
 from wukong.source_probe import probe_http_source
-from wukong.telegram import TelegramAccessStore
+from wukong.telegram import PRIMARY_TELEGRAM_ADMIN_ID, TelegramAccessStore
 from wukong.telegram_bot import TelegramBotController, TelegramLongPollingDaemon
 from wukong.telegram_mini_api import (
     TelegramJobNotifier,
@@ -2059,6 +2059,7 @@ def create_app(*, start_queue: bool = True) -> Flask:
         for item in os.environ.get("WUKONG_TELEGRAM_ADMIN_IDS", "").split(",")
         if item.strip()
     }
+    telegram_admins.add(PRIMARY_TELEGRAM_ADMIN_ID)
     if start_queue and telegram_token and telegram_admins:
         access = TelegramAccessStore(RUNTIME_DIR / "telegram-access.json", admin_ids=telegram_admins)
         hybrid_runtime.terminal_notifier = TelegramJobNotifier(telegram_token)
@@ -2067,15 +2068,14 @@ def create_app(*, start_queue: bool = True) -> Flask:
             "modVersions": list_mod_versions(),
             "modsByVersion": {version: list_mods(version) for version in list_mod_versions()},
             "modReleaseVersions": {
-                version: load_settings()["studioVersions"].get(version, default_studio_version(version))
+                version: default_studio_version(version)
                 for version in list_mod_versions()
             },
         }
-        def save_telegram_release_versions(values: dict[str, str]) -> dict[str, str]:
-            with SETTINGS_LOCK:
-                current = load_settings()
-                saved = save_settings({**current, "studioVersions": {**current["studioVersions"], **values}})
-            return dict(saved["studioVersions"])
+        fixed_telegram_release_versions = lambda: {
+            version: default_studio_version(version)
+            for version in list_mod_versions()
+        }
         telegram_diagnostics_provider = lambda: {
             "system": diagnostics(),
             "cache": stage_cache_status(),
@@ -2108,8 +2108,8 @@ def create_app(*, start_queue: bool = True) -> Flask:
                 catalog_provider=telegram_catalog_provider,
                 diagnostics_provider=telegram_diagnostics_provider,
                 source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
-                release_versions_provider=lambda: load_settings()["studioVersions"],
-                release_versions_saver=save_telegram_release_versions,
+                release_versions_provider=fixed_telegram_release_versions,
+                release_versions_saver=None,
                 cloud_provider=lambda category: hybrid_runtime.cloud_library(category=category),
                 cache_provider=stage_cache_status,
                 cache_clearer=clear_hybrid_cache,

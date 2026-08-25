@@ -37,9 +37,9 @@ from wukong.orchestrator import HybridOrchestrator
 from wukong.content_packs import validate_content_index
 from wukong.control_plane_storage import open_control_plane_stores
 from wukong.control_plane_state import ControlPlaneStateBackup, ControlPlaneStateError
-from wukong.mod_release_versions import ModReleaseVersionStore
 from wukong.render_binding import RenderBinding, RenderOriginBinder
 from wukong.routing import RunnerInventory
+from wukong.telegram import PRIMARY_TELEGRAM_ADMIN_ID
 from wukong.telegram_bot import (
     TelegramBotController,
     TelegramLongPollingDaemon,
@@ -62,10 +62,11 @@ def _ids(value: str) -> set[str]:
 
 def _configured_admin_ids() -> set[str]:
     configured = _ids(os.environ.get("WUKONG_TELEGRAM_ADMIN_IDS", ""))
-    if configured:
-        return configured
     private_chat = os.environ.get("WUKONG_TELEGRAM_CHAT_ID", "").strip()
-    return {private_chat} if private_chat.isdigit() and int(private_chat) > 0 else set()
+    if private_chat.isdigit() and int(private_chat) > 0:
+        configured.add(private_chat)
+    configured.add(PRIMARY_TELEGRAM_ADMIN_ID)
+    return configured
 
 
 def _content_root() -> Path:
@@ -216,15 +217,15 @@ def main() -> int:
     else:
         control_plane_catalog = build_control_plane_catalog(index_path)
         base_catalog_provider = lambda: control_plane_catalog
-    release_versions = ModReleaseVersionStore(
-        DATA_ROOT / "telegram-mod-release-versions.json",
-        versions_provider=lambda: list(base_catalog_provider().get("modVersions", [])),
-        default_provider=default_studio_version,
-        on_change=on_state_change,
-    )
+    def fixed_release_versions() -> dict[str, str]:
+        return {
+            str(version): default_studio_version(str(version))
+            for version in base_catalog_provider().get("modVersions", [])
+        }
+
     def catalog_provider() -> dict[str, object]:
         catalog = dict(base_catalog_provider())
-        catalog["modReleaseVersions"] = release_versions.load()
+        catalog["modReleaseVersions"] = fixed_release_versions()
         return catalog
     diagnostics_provider = lambda: {"system": diagnostics(), "cache": stage_cache_status()}
     mini_app_sessions = TelegramMiniAppSessionStore()
@@ -288,8 +289,8 @@ def main() -> int:
                 orchestrator=orchestrator,
                 runtime=runtime,
                 catalog_provider=catalog_provider,
-                release_versions_provider=release_versions.load,
-                release_versions_saver=release_versions.save,
+                release_versions_provider=fixed_release_versions,
+                release_versions_saver=None,
                 diagnostics_provider=diagnostics_provider,
                 source_probe_provider=lambda uri: probe_http_source(uri).to_dict(),
                 cloud_provider=lambda category: runtime.cloud_library(category=category),
