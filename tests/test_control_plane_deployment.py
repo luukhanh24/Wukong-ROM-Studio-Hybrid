@@ -203,6 +203,14 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertNotIn("github.com", combined)
         self.assertNotIn("github.io", combined)
         self.assertNotIn("./assets/", combined)
+        self.assertEqual(
+            (
+                Path(__file__).parents[1]
+                / "telegram_mini_app"
+                / "WukongStudio.svg"
+            ).read_text(encoding="utf-8"),
+            (output / "WukongStudio.svg").read_text(encoding="utf-8"),
+        )
         self.assertIn('"outputDirectory": ".vercel-static"', vercel)
         self.assertIn("X-Robots-Tag", vercel)
 
