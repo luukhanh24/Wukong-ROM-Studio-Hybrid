@@ -202,6 +202,10 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertNotIn("luukhanh24", combined)
         self.assertNotIn("github.com", combined)
         self.assertNotIn("github.io", combined)
+        bundled_assets = output / "assets"
+        self.assertTrue((bundled_assets / "wukong-studio.svg").is_file())
+        self.assertTrue((bundled_assets / "service-telegram.svg").is_file())
+        self.assertTrue((bundled_assets / "device-wukong.svg").is_file())
         self.assertIn('"outputDirectory": ".vercel-static"', vercel)
         self.assertIn("X-Robots-Tag", vercel)
 

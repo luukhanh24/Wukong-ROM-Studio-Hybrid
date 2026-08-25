@@ -41,6 +41,7 @@ def build_site(
     source = root / "telegram_mini_app"
     for name in ASSET_NAMES:
         shutil.copyfile(source / name, destination / name)
+    shutil.copytree(source / "assets", destination / "assets", dirs_exist_ok=True)
     safe_release = quote(release.strip() or "production", safe="-._")
     index_path = destination / "index.html"
     index = index_path.read_text(encoding="utf-8")
