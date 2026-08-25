@@ -205,7 +205,7 @@ The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px
 
 The Studio recipe uses a flexible work column and a 320px sticky dispatch docket separated by a 16px gutter. Numbered dossier sections remain in the work column, with four-pixel chromatic spines indicating source, build, and delivery. Controls use compact internal rhythms; source facts form a measured grid rather than separate cards.
 
-At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a five-slot floating liquid bottom instrument. Four slots remain destinations; the center slot is a raised circular Telegram avatar that opens the authenticated profile. The capsule uses locally bounded blur, vibrancy and rim highlights; one refractive lens slides or drags only among destination slots 0, 1, 3 and 4 with damped spring motion, press scaling, velocity stretch, inner depth and subtle chromatic edge separation. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
+At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a five-slot floating liquid bottom instrument. Studio, Jobs, Profile, Catalog and System are equal destinations; Profile uses the authenticated Telegram avatar as its tab mark. The capsule and moving lens use locally bounded translucency, backdrop blur, vibrancy, rim highlights and chromatic edge separation. The lens slides or drags among all five slots with damped spring motion, press scaling, velocity stretch and elastic overscroll. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
 
 View changes use a 380ms eased rise-and-fade. Controls transition color, border, shadow, and transform in roughly 180–220ms. Hover movement is limited to one pixel for work elements and two pixels for the active mobile destination. Reduced-motion preference collapses animation and smooth scrolling.
 
@@ -277,15 +277,15 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky four-cell contents rail with consistent line icons and a profile action in the masthead. Mobile recreates Kyant0's LiquidBottomTabs interaction model as a five-slot web control: a translucent capsule contains one refractive lens for the four destinations plus a raised center avatar. The lens springs to the nearest valid destination, grows under pressure, stretches against drag velocity, and uses bounded blur, vibrancy, inner shadow, rim light, and chromatic edge separation. The avatar is never treated as a destination or drag stop. Desktop and mobile navigation always update together, and reduced-motion preference removes slide, stretch, scale and rotating greeting transitions.
+Desktop uses a sticky four-cell contents rail with consistent line icons. Mobile recreates Kyant0's LiquidBottomTabs interaction model as a five-slot web control: a highly translucent capsule contains one refractive lens and a raised center avatar for the Profile destination. The lens springs to every destination, grows under pressure, stretches against drag velocity, and uses bounded backdrop blur, vibrancy, inner depth, rim light and chromatic edge separation. Reduced-motion preference removes slide, stretch, scale and rotating greeting transitions.
 
 ### Authenticated Profile
 
-The avatar opens a centered dialog on desktop and a bottom sheet on compact screens. The avatar image becomes a bounded, enlarged blur behind the profile facts; initials use a deterministic Telegram-ID color. Every user-facing profile field remains visible except Mini App Open count, while the raw photo URL remains visual data rather than copy.
+The center avatar opens a full Profile destination rather than an interrupting popup. On mobile the view fills the working canvas behind the dock. The avatar is centered and its enlarged image becomes a saturated, bounded blur behind grouped glass facts; initials use a deterministic Telegram-ID color. Highlight facts and two-column detail groups create hierarchy without table styling. Every user-facing profile field remains visible except Mini App Open count, while the raw photo URL remains visual data rather than copy.
 
 ### Masthead Greeting
 
-The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. On scroll it compacts progressively through opacity and bounded blur while the logo and essential controls remain usable. The greeting stops while the document is hidden and becomes static under reduced motion.
+The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. Each message uses one fitting emoji instead of an image asset. On scroll the surface becomes more transparent while backdrop blur increases, so underlying content remains visible and the foreground controls stay crisp. The greeting stops while the document is hidden and becomes static under reduced motion.
 
 ### Runtime Rail
 

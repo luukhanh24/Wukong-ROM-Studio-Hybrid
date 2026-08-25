@@ -194,7 +194,8 @@ window.addEventListener('load', () => {{
       const button = document.querySelector('#dock-profile');
       if (!button || button.hidden) {{ setTimeout(openProfile, 50); return; }}
       button.click();
-      document.body.dataset.profileOpened = String(document.querySelector('#profile-dialog')?.open === true);
+      document.body.dataset.profileOpened = String(document.querySelector('#profile')?.classList.contains('active') === true);
+      document.body.dataset.activeProfileTab = document.querySelector('.bottom-nav [aria-current="page"]')?.dataset.nav || '';
     }};
     setTimeout(openProfile, 250);
   }}
@@ -202,6 +203,7 @@ window.addEventListener('load', () => {{
     const selectDark = () => {{
       const button = document.querySelector('[data-theme-value="dark"]');
       if (!button) {{ setTimeout(selectDark, 50); return; }}
+      button.scrollIntoView({{ block: 'center' }});
       button.click();
       document.body.dataset.selectedTheme = document.documentElement.dataset.colorScheme || '';
     }};
@@ -236,7 +238,9 @@ window.addEventListener('load', () => {{
       if (!greeting || !jobs || jobs.hidden) {{ setTimeout(exerciseDockHeader, 50); return; }}
       document.body.dataset.greetingInitial = greeting.textContent;
       setTimeout(() => {{
-        window.scrollTo(0, 120);
+        document.documentElement.scrollTop = 120;
+        document.body.scrollTop = 120;
+        window.dispatchEvent(new Event('scroll'));
         setTimeout(() => {{
           document.body.dataset.mastheadProgress = document.documentElement.style.getPropertyValue('--masthead-scroll');
           jobs.click();
@@ -257,6 +261,18 @@ window.addEventListener('load', () => {{
 }});
 """
             self._send(source.encode(), "application/javascript; charset=utf-8")
+            return
+        if path == "/fixture-avatar.svg":
+            self._send(
+                (
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">'
+                    '<defs><radialGradient id="a"><stop stop-color="#56d6ff"/>'
+                    '<stop offset=".46" stop-color="#3159d9"/><stop offset="1" stop-color="#120b35"/></radialGradient></defs>'
+                    '<rect width="200" height="200" fill="url(#a)"/><circle cx="100" cy="100" r="48" fill="none" '
+                    'stroke="#ff8bd2" stroke-width="13"/><circle cx="116" cy="82" r="26" fill="#fff" opacity=".72"/></svg>'
+                ).encode(),
+                "image/svg+xml",
+            )
             return
         if path == "/styles.css":
             styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
@@ -373,7 +389,7 @@ window.addEventListener('load', () => {{
     def _fixture_user(cls) -> dict[str, object]:
         return {
             "telegramId": "42", "username": "fixture", "displayName": "Fixture User",
-            "photoUrl": "https://cdn.example/fixture-avatar.jpg",
+            "photoUrl": "/fixture-avatar.svg",
             "accessStatus": "pending" if cls.pending_user else "approved", "role": "admin" if cls.admin_user else "user", "buildCredits": 3,
             "unlimited": cls.admin_user, "miniAppOpenCount": 2, "jobCount": 1,
             "lifetimeGranted": 5, "lifetimeUsed": 2, "language": "vi", "platform": "android", "appVersion": "1.0",
@@ -479,6 +495,8 @@ def _render_mini_app_in_chrome(
     exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
+    screenshot_output: Path | None = None,
+    window_width: int = 390,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -543,7 +561,7 @@ def _render_mini_app_in_chrome(
                     "--hide-scrollbars",
                     "--no-first-run",
                     "--no-default-browser-check",
-                    "--window-size=390,1400",
+                    f"--window-size={window_width},1400",
                     "--virtual-time-budget=8000",
                     f"--user-data-dir={profile}",
                     f"--screenshot={screenshot}",
@@ -556,6 +574,9 @@ def _render_mini_app_in_chrome(
             )
             if result.returncode != 0:
                 raise AssertionError(result.stderr.decode("utf-8", errors="replace"))
+            if screenshot_output is not None:
+                screenshot_output.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(screenshot, screenshot_output)
             return result.stdout.decode("utf-8", errors="replace"), screenshot.stat().st_size
     finally:
         server.shutdown()
@@ -746,7 +767,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         bottom_nav = re.search(r'<nav class="bottom-nav".*?</nav>', html, re.DOTALL)
         self.assertIsNotNone(bottom_nav)
         bottom_nav_html = bottom_nav.group(0)
-        self.assertEqual(["build", "jobs", "catalog", "system"], re.findall(r'data-nav="([^"]+)"', bottom_nav_html))
+        self.assertEqual(["build", "jobs", "profile", "catalog", "system"], re.findall(r'data-nav="([^"]+)"', bottom_nav_html))
         self.assertEqual(4, bottom_nav_html.count('class="nav-icon"'))
         self.assertNotRegex(bottom_nav_html, r"<b>\d{2}</b>")
         self.assertNotIn(".bottom-nav button.active::before", styles)
@@ -761,7 +782,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--accent:", styles)
         self.assertIn("--success:", styles)
         self.assertIn("--radius-sm: 4px", styles)
-        self.assertIn("repeat(var(--tab-count),minmax(0,1fr))", styles)
+        self.assertIn("repeat(var(--dock-slot-count),minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
 
     def test_mini_app_exposes_branded_liquid_profile_theme_and_cache_safety(self) -> None:
@@ -772,31 +793,35 @@ class TelegramMiniAppTests(unittest.TestCase):
         bottom_nav = re.search(r'<nav class="bottom-nav".*?</nav>', html, re.DOTALL)
         self.assertIsNotNone(bottom_nav)
         dock = bottom_nav.group(0)
-        self.assertEqual(["0", "1", "3", "4"], re.findall(r'data-slot="([^"]+)"', dock))
+        self.assertEqual(["0", "1", "2", "3", "4"], re.findall(r'data-slot="([^"]+)"', dock))
         self.assertIn('id="dock-profile"', dock)
-        self.assertIn('id="header-profile"', html)
-        self.assertIn('id="profile-dialog"', html)
+        self.assertIn('data-nav="profile"', dock)
+        self.assertNotIn('id="header-profile"', html)
+        self.assertIn('class="view profile-view" id="profile"', html)
+        self.assertNotIn('id="profile-dialog"', html)
         self.assertIn('id="cache-clear-dialog"', html)
         self.assertIn('id="theme-selector"', html)
         self.assertIn('data-theme-value="system"', html)
         self.assertIn('data-theme-value="light"', html)
         self.assertIn('data-theme-value="dark"', html)
-        self.assertIn('src="./assets/wukong-studio.svg"', html)
+        self.assertNotIn("./assets/", html)
         self.assertNotIn("ROM STUDIO / HYBRID", html)
         self.assertIn("wukong-theme", script)
-        self.assertIn("renderProfileDialog", script)
+        self.assertIn("renderProfileView", script)
         self.assertIn("openCacheClearDialog", script)
         self.assertIn("miniAppOpenCount", script)
-        self.assertIn('key === "miniAppOpenCount"', script)
+        self.assertIn('!["miniAppOpenCount", "photoUrl"].includes(key)', script)
         self.assertIn("greetingTimer", script)
         self.assertIn("updateMastheadScroll", script)
         self.assertIn("HapticFeedback?.selectionChanged", script)
         self.assertIn("Chỉ quản trị viên", html)
         self.assertIn("activateTelegramApp();\n    applyTheme(state.theme);", script)
         self.assertIn("--dock-slot-count:5", styles)
-        self.assertIn(".profile-dialog-backdrop", styles)
+        self.assertIn(".profile-scene-backdrop", styles)
+        self.assertIn("backdrop-filter:blur(24px)", styles)
         self.assertIn('data-color-scheme="dark"', styles)
-        self.assertIn("assets/service-telegram.svg", html)
+        self.assertIn('id="greeting-emoji"', html)
+        self.assertIn('class="language-button"', html)
 
     def test_admin_system_surface_renders_user_access_and_quota_ledger(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
@@ -824,7 +849,8 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('data-profile-opened="true"', dom)
         self.assertIn('data-selected-theme="dark"', dom)
-        profile = re.search(r'<dialog class="profile-dialog"[^>]*open.*?</dialog>', dom, re.DOTALL)
+        self.assertIn('data-active-profile-tab="profile"', dom)
+        profile = re.search(r'<section class="view profile-view active" id="profile".*?</section>\s*</main>', dom, re.DOTALL)
         self.assertIsNotNone(profile)
         self.assertIn("Fixture User", profile.group(0))
         self.assertNotIn("2 lần mở", profile.group(0))

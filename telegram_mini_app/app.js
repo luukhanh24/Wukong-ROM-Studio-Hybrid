@@ -273,7 +273,9 @@ Object.assign(translations.vi, {
   confirmClearCache: "Xóa cache", cacheClearing: "Đang xóa cache…", cacheCleared: "Đã xóa {count} mục cache.",
   greetingMorning: "Chào buổi sáng, {name}", greetingAfternoon: "Buổi chiều hiệu quả nhé, {name}", greetingEvening: "Chào buổi tối, {name}",
   greetingWish: "Chúc bạn có một bản build thật mượt", greetingAllowance: "{remaining} lượt còn lại · {jobs} job",
-  greetingUnlimited: "Không giới hạn lượt build · {jobs} job"
+  greetingUnlimited: "Không giới hạn lượt build · {jobs} job",
+  profileIdentityGroup: "Danh tính", profileAccessGroup: "Quyền & lượt build", profileActivityGroup: "Hoạt động", profileClientGroup: "Thiết bị & phiên",
+  profileMoreGroup: "Thông tin khác", profileBuilds: "Lượt build", profileJobs: "Jobs", profileAccess: "Truy cập"
 });
 Object.assign(translations.en, {
   openProfile: "Open profile", profileKicker: "TELEGRAM PROFILE", profileStatus: "Access status",
@@ -285,7 +287,9 @@ Object.assign(translations.en, {
   confirmClearCache: "Clear cache", cacheClearing: "Clearing cache…", cacheCleared: "Cleared {count} cache entries.",
   greetingMorning: "Good morning, {name}", greetingAfternoon: "Have a focused afternoon, {name}", greetingEvening: "Good evening, {name}",
   greetingWish: "Wishing you a beautifully smooth build", greetingAllowance: "{remaining} credits left · {jobs} jobs",
-  greetingUnlimited: "Unlimited build allowance · {jobs} jobs"
+  greetingUnlimited: "Unlimited build allowance · {jobs} jobs",
+  profileIdentityGroup: "Identity", profileAccessGroup: "Access & builds", profileActivityGroup: "Activity", profileClientGroup: "Device & session",
+  profileMoreGroup: "More details", profileBuilds: "Builds", profileJobs: "Jobs", profileAccess: "Access"
 });
 
 Object.assign(translations.vi, {
@@ -440,8 +444,6 @@ function applyLanguage() {
   }
   renderSessionDiagnostics();
   renderAccount();
-  renderGreeting();
-  if ($("#profile-dialog")?.open) renderProfileDialog();
   renderAdminUsers();
   renderDebloatSummary();
   updateSummary();
@@ -492,9 +494,9 @@ function greetingMessages() {
   const timeKey = hour < 12 ? "greetingMorning" : hour < 18 ? "greetingAfternoon" : "greetingEvening";
   const values = { name: greetingName(), jobs: Number(state.me?.jobCount || 0), remaining: Number(state.me?.buildCredits || 0) };
   return [
-    { key: timeKey, icon: "./assets/wukong-studio.svg" },
-    { key: "greetingWish", icon: "./assets/service-pack.svg" },
-    { key: state.me?.unlimited ? "greetingUnlimited" : "greetingAllowance", icon: "./assets/service-github.svg", values }
+    { key: timeKey, emoji: hour < 12 ? "☀️" : hour < 18 ? "✨" : "🌙" },
+    { key: "greetingWish", emoji: "🚀" },
+    { key: state.me?.unlimited ? "greetingUnlimited" : "greetingAllowance", emoji: state.me?.unlimited ? "♾️" : "⚡", values }
   ].map((item) => ({ ...item, text: t(item.key, { ...values, ...(item.values || {}) }) }));
 }
 
@@ -505,7 +507,7 @@ function renderGreeting() {
   if (!state.me) return;
   const messages = greetingMessages();
   const item = messages[state.greetingIndex % messages.length];
-  $("#greeting-icon").src = item.icon;
+  $("#greeting-emoji").textContent = item.emoji;
   $("#greeting-kicker").textContent = state.me?.unlimited ? t("unlimited") : t("buildAllowance");
   const message = $("#greeting-message");
   if (!message) return;
@@ -534,12 +536,10 @@ function updateMastheadScroll() {
     const root = document.documentElement.style;
     root.setProperty("--masthead-scroll", progress.toFixed(3));
     root.setProperty("--masthead-height", `${Math.round((window.innerWidth <= 860 ? 60 : 64) - progress * 6)}px`);
-    root.setProperty("--masthead-copy-opacity", String(1 - progress * .62));
-    root.setProperty("--masthead-copy-blur", `${(progress * 2).toFixed(2)}px`);
-    root.setProperty("--masthead-copy-offset", `${(-progress * 2).toFixed(2)}px`);
-    root.setProperty("--masthead-greeting-opacity", String(1 - progress * .88));
-    root.setProperty("--masthead-greeting-blur", `${(progress * 3).toFixed(2)}px`);
-    root.setProperty("--masthead-greeting-offset", `${(-progress * 3).toFixed(2)}px`);
+    root.setProperty("--masthead-surface-mix", `${Math.round(88 - progress * 36)}%`);
+    root.setProperty("--masthead-backdrop-blur", `${Math.round(10 + progress * 14)}px`);
+    root.setProperty("--masthead-greeting-opacity", String(1 - progress * .42));
+    root.setProperty("--masthead-greeting-offset", `${(-progress * 2).toFixed(2)}px`);
     document.body.classList.toggle("masthead-compact", progress > .82);
   });
 }
@@ -619,7 +619,7 @@ function telegramTransportAvailable() {
   return typeof TelegramApp?.sendData === "function" && Boolean(TelegramApp.platform) && TelegramApp.platform !== "unknown";
 }
 
-const liquidSlots = [0, 1, 3, 4];
+const liquidSlots = [0, 1, 2, 3, 4];
 
 function nearestLiquidSlot(value) {
   return liquidSlots.reduce((best, slot) => Math.abs(slot - value) < Math.abs(best - value) ? slot : best, liquidSlots[0]);
@@ -679,6 +679,7 @@ function navigate(name, smooth = true) {
   window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
   updateDispatchFab();
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
+  if (name === "profile") renderProfileView();
   if (name === "system" && state.me?.role === "admin") loadAdminUsers().catch(() => {});
 }
 
@@ -701,7 +702,6 @@ function bindLiquidBottomTabs() {
     event.stopImmediatePropagation();
   }, true);
   nav.addEventListener("pointerdown", (event) => {
-    if (event.target.closest("[data-profile-trigger]")) return;
     if (event.button !== 0 && event.pointerType !== "touch") return;
     cancelAnimationFrame(state.liquidAnimationFrame);
     pointerId = event.pointerId;
@@ -1413,24 +1413,10 @@ function renderCatalog() {
   const mods = (state.catalog.modsByVersion[version] || []).filter((name) => name.toLocaleLowerCase().includes(query));
   $("#device-list").replaceChildren(...devices.map((item) => {
     const row = document.createElement("div"); row.className = "device-row";
-    const image = document.createElement("img");
-    const identity = `${item.product} ${item.name}`.toLocaleLowerCase();
-    const brand = identity.includes("realme") || item.product.startsWith("RMX") ? "realme"
-      : identity.includes("oppo") || item.product.startsWith("CPH") ? "oppo"
-      : identity.includes("oneplus") ? "oneplus" : "wukong";
-    const deviceAssets = {
-      oneplus: "./assets/device-oneplus.svg",
-      oppo: "./assets/device-oppo.svg",
-      realme: "./assets/device-realme.svg",
-      wukong: "./assets/device-wukong.svg"
-    };
-    image.src = deviceAssets[brand];
-    image.alt = brand === "wukong" ? "Wukong device" : brand;
-    image.width = 42; image.height = 42;
     const code = document.createElement("b"); code.textContent = item.product;
     const name = document.createElement("span"); name.textContent = item.name;
     const copy = document.createElement("span"); copy.className = "device-copy"; copy.append(code, name);
-    row.append(image, copy); return row;
+    row.append(copy); return row;
   }));
   $("#catalog-mod-list").replaceChildren(...mods.map((name) => {
     const item = document.createElement("span"); item.textContent = name; return item;
@@ -1656,31 +1642,81 @@ function profileLabel(key) {
   return labels[key] || key;
 }
 
-function renderProfileDialog() {
-  const profile = state.me;
-  if (!profile) return;
-  const avatarRoot = $("#profile-dialog-avatar");
-  const avatar = profileAvatar(profile, "profile-avatar-large");
-  avatar.id = "profile-dialog-avatar";
-  avatarRoot?.replaceWith(avatar);
-  $("#profile-dialog-name").textContent = profile.displayName || profile.username || profile.telegramId;
-  $("#profile-dialog-handle").textContent = profile.username ? `@${profile.username} · ${profile.telegramId}` : profile.telegramId;
-  const dialog = $("#profile-dialog");
-  dialog?.style.setProperty("--profile-image", profile.photoUrl ? `url("${String(profile.photoUrl).replaceAll('"', '\\"')}")` : "none");
-  dialog?.style.setProperty("--avatar-hue", avatar.style.getPropertyValue("--avatar-hue"));
-  const keys = Object.keys(profile).filter((key) => {
-    if (key === "miniAppOpenCount") return false;
-    return !["photoUrl"].includes(key);
-  });
-  $("#profile-detail-grid")?.replaceChildren(...keys.map((key) => detailFact(profileLabel(key), profileValue(key, profile))));
+function profileFact(key, profile) {
+  const fact = document.createElement("div");
+  fact.className = "profile-fact";
+  const label = document.createElement("small");
+  label.textContent = profileLabel(key);
+  const value = document.createElement("strong");
+  value.textContent = profileValue(key, profile);
+  fact.append(label, value);
+  return fact;
 }
 
-function openProfileDialog() {
-  if (!state.me) return;
-  renderProfileDialog();
-  const dialog = $("#profile-dialog");
-  if (dialog && !dialog.open) dialog.showModal();
-  TelegramApp?.HapticFeedback?.impactOccurred?.("light");
+function profileGroup(titleKey, keys, profile) {
+  const section = document.createElement("section");
+  section.className = "profile-fact-group";
+  const title = document.createElement("h2");
+  title.textContent = t(titleKey);
+  const facts = document.createElement("div");
+  facts.className = "profile-fact-list";
+  facts.append(...keys.map((key) => profileFact(key, profile)));
+  section.append(title, facts);
+  return section;
+}
+
+function profileHighlight(label, value, tone) {
+  const node = document.createElement("div");
+  node.className = `profile-highlight ${tone}`;
+  const small = document.createElement("small");
+  small.textContent = label;
+  const strong = document.createElement("strong");
+  strong.textContent = value;
+  node.append(small, strong);
+  return node;
+}
+
+function renderProfileView() {
+  const profile = state.me;
+  if (!profile) return;
+  const avatarRoot = $("#profile-view-avatar");
+  const avatar = profileAvatar(profile, "profile-avatar-hero");
+  avatar.id = "profile-view-avatar";
+  avatarRoot?.replaceWith(avatar);
+  $("#profile-view-name").textContent = profile.displayName || profile.username || profile.telegramId;
+  $("#profile-view-handle").textContent = profile.username ? `@${profile.username} · ${profile.telegramId}` : profile.telegramId;
+  const scene = $("#profile-scene");
+  scene?.style.setProperty("--profile-image", profile.photoUrl ? `url("${String(profile.photoUrl).replaceAll('"', '\\"')}")` : "none");
+  scene?.style.setProperty("--avatar-hue", avatar.style.getPropertyValue("--avatar-hue"));
+
+  const badgeRoot = $("#profile-view-badges");
+  const access = document.createElement("span");
+  access.className = `profile-badge ${profile.accessStatus || "pending"}`;
+  access.textContent = accessLabel(profile.accessStatus);
+  const role = document.createElement("span");
+  role.className = "profile-badge";
+  role.textContent = t(profile.role === "admin" ? "roleAdmin" : "roleUser");
+  badgeRoot?.replaceChildren(access, role);
+
+  $("#profile-highlights")?.replaceChildren(
+    profileHighlight(t("profileBuilds"), profile.unlimited ? "∞" : String(profile.buildCredits || 0), "builds"),
+    profileHighlight(t("profileJobs"), String(profile.jobCount || 0), "jobs"),
+    profileHighlight(t("profileAccess"), accessLabel(profile.accessStatus), "access")
+  );
+
+  const groups = [
+    ["profileIdentityGroup", ["telegramId", "username", "displayName", "role"]],
+    ["profileAccessGroup", ["accessStatus", "buildCredits", "unlimited", "lifetimeGranted", "lifetimeUsed", "configuredAdmin"]],
+    ["profileActivityGroup", ["jobCount", "firstSeenAt", "lastSeenAt", "lastJobId", "lastJobStatus", "approvedAt", "revokedAt"]],
+    ["profileClientGroup", ["language", "platform", "appVersion", "accessActor", "accessReason"]]
+  ];
+  const grouped = new Set(groups.flatMap(([, keys]) => keys));
+  const extra = Object.keys(profile).filter((key) => !grouped.has(key) && !["miniAppOpenCount", "photoUrl"].includes(key));
+  const nodes = groups
+    .map(([title, keys]) => profileGroup(title, keys.filter((key) => key in profile), profile))
+    .filter((group) => group.querySelector(".profile-fact"));
+  if (extra.length) nodes.push(profileGroup("profileMoreGroup", extra, profile));
+  $("#profile-detail-grid")?.replaceChildren(...nodes);
 }
 
 function initializeApprovedWorkspace() {
@@ -1730,8 +1766,8 @@ function renderAccessGate() {
 
 function renderAccount() {
   const profile = state.me;
-  renderProfileTrigger($("#header-profile"), profile);
   renderProfileTrigger($("#dock-profile"), profile);
+  renderProfileView();
   renderGreeting();
   scheduleGreeting();
   if (!profile) return;
@@ -2639,9 +2675,6 @@ function bindEvents() {
   $("#language").addEventListener("click", () => { state.language = state.language === "vi" ? "en" : "vi"; localStorage.setItem("wukong-language", state.language); applyLanguage(); });
   $$('[data-nav]').forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
   bindLiquidBottomTabs();
-  $("#header-profile")?.addEventListener("click", openProfileDialog);
-  $("#dock-profile")?.addEventListener("click", openProfileDialog);
-  $("#profile-dialog-close")?.addEventListener("click", () => $("#profile-dialog")?.close());
   $("#cache-clear-confirm")?.addEventListener("click", () => performCacheClear());
   $$("[data-theme-value]").forEach((button) => button.addEventListener("click", () => applyTheme(button.dataset.themeValue, true)));
   themeMedia?.addEventListener?.("change", () => { if (state.theme === "system") applyTheme("system"); });
