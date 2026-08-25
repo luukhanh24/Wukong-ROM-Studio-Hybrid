@@ -861,7 +861,11 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn("defaultDebloatPaths", script)
         self.assertTrue(config["default"])
-        self.assertTrue(all(path.startswith("system\\") for path in config["default"]))
+        partitions = {path.split("\\", 1)[0] for path in config["default"]}
+        self.assertEqual({"my_product", "my_stock", "system"}, partitions)
+        self.assertIn(r"my_product\app\OplusCamera", config["default"])
+        self.assertIn(r"my_stock\del-app\OPBreathMode", config["default"])
+        self.assertIn(r"my_stock\priv-app\OppoGallery2", config["default"])
         self.assertIn(r"system\system\framework\services.jar.prof", config["default"])
 
 
