@@ -12,7 +12,12 @@ from typing import Any, Iterator, Protocol
 
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, utc_now
 from .orchestrator import JobEvent, JobStore, OrchestrationError, TERMINAL_STATUSES
-from .telegram import BuildConcurrencyError, BuildQuotaError, require_sensitive_admin_reason
+from .telegram import (
+    BuildConcurrencyError,
+    BuildQuotaError,
+    normalize_telegram_photo_url,
+    require_sensitive_admin_reason,
+)
 
 
 class _Cursor(Protocol):
@@ -356,6 +361,7 @@ class PostgresTelegramAccessStore(_DatabaseStore):
                     subject TEXT PRIMARY KEY,
                     username TEXT NOT NULL DEFAULT '',
                     display_name TEXT NOT NULL DEFAULT '',
+                    photo_url TEXT NOT NULL DEFAULT '',
                     access_status TEXT NOT NULL DEFAULT 'pending'
                         CHECK (access_status IN ('pending', 'approved', 'revoked')),
                     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
@@ -380,6 +386,18 @@ class PostgresTelegramAccessStore(_DatabaseStore):
                 )
                 """
             )
+            if self._dialect == "postgresql":
+                cursor.execute(
+                    "ALTER TABLE wukong_telegram_users "
+                    "ADD COLUMN IF NOT EXISTS photo_url TEXT NOT NULL DEFAULT ''"
+                )
+            else:
+                cursor.execute("PRAGMA table_info(wukong_telegram_users)")
+                if "photo_url" not in {str(row[1]) for row in cursor.fetchall()}:
+                    cursor.execute(
+                        "ALTER TABLE wukong_telegram_users "
+                        "ADD COLUMN photo_url TEXT NOT NULL DEFAULT ''"
+                    )
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS wukong_telegram_user_events (
@@ -477,7 +495,7 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         if row is None:
             return None
         keys = (
-            "telegramId", "username", "displayName", "accessStatus", "role",
+            "telegramId", "username", "displayName", "photoUrl", "accessStatus", "role",
             "firstSeenAt", "lastSeenAt", "miniAppOpenCount", "jobCount",
             "buildCredits", "unlimited", "lifetimeGranted", "lifetimeUsed",
             "lastJobId", "lastJobStatus", "approvedAt", "revokedAt",
@@ -496,7 +514,7 @@ class PostgresTelegramAccessStore(_DatabaseStore):
     @staticmethod
     def _profile_columns() -> str:
         return (
-            "subject, username, display_name, access_status, role, first_seen_at, last_seen_at, "
+            "subject, username, display_name, photo_url, access_status, role, first_seen_at, last_seen_at, "
             "mini_app_open_count, job_count, build_credits, unlimited, lifetime_granted, "
             "lifetime_used, last_job_id, last_job_status, approved_at, revoked_at, access_actor, "
             "access_reason, language, platform, app_version, configured_admin"
@@ -560,6 +578,7 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         language: str = "",
         platform: str = "",
         app_version: str = "",
+        photo_url: str = "",
     ) -> dict[str, Any]:
         subject = self._subject(user_id)
         now = utc_now()
@@ -576,6 +595,7 @@ class PostgresTelegramAccessStore(_DatabaseStore):
                     "UPDATE wukong_telegram_users SET last_seen_at = ?, "
                     "username = CASE WHEN ? <> '' THEN ? ELSE username END, "
                     "display_name = CASE WHEN ? <> '' THEN ? ELSE display_name END, "
+                    "photo_url = CASE WHEN ? <> '' THEN ? ELSE photo_url END, "
                     "language = CASE WHEN ? <> '' THEN ? ELSE language END, "
                     "platform = CASE WHEN ? <> '' THEN ? ELSE platform END, "
                     "app_version = CASE WHEN ? <> '' THEN ? ELSE app_version END "
@@ -585,6 +605,7 @@ class PostgresTelegramAccessStore(_DatabaseStore):
                     now,
                     str(username or "")[:256], str(username or "")[:256],
                     str(display_name or "")[:256], str(display_name or "")[:256],
+                    normalize_telegram_photo_url(photo_url), normalize_telegram_photo_url(photo_url),
                     str(language or "")[:16], str(language or "")[:16],
                     str(platform or "")[:64], str(platform or "")[:64],
                     str(app_version or "")[:64], str(app_version or "")[:64],

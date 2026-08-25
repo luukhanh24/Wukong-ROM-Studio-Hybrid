@@ -148,8 +148,10 @@ class PostgresJobStoreTests(unittest.TestCase):
             language="vi",
             platform="android",
             app_version="2026.08",
+            photo_url="https://cdn.example/fixture-user.jpg",
         )
         self.assertEqual("pending", pending["accessStatus"])
+        self.assertEqual("https://cdn.example/fixture-user.jpg", pending["photoUrl"])
         self.assertIsNone(store.identity(99))
 
         first_open = store.open_session(99, "launch-1")

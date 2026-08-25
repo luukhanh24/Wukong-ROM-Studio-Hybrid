@@ -849,6 +849,7 @@ class TelegramMiniAppAPI:
                             language=str(user.get("language_code") or ""),
                             platform=request.headers.get("X-Telegram-Platform", ""),
                             app_version=request.headers.get("X-Wukong-Client-Version", ""),
+                            photo_url=str(user.get("photo_url") or ""),
                         )
                         with self._profile_touch_lock:
                             self._profile_touch[user_id] = time.monotonic()

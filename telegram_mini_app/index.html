@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body>
+<body class="access-checking">
   <svg class="icon-sprite" aria-hidden="true">
     <symbol id="nav-studio" viewBox="0 0 24 24"><path d="M3.5 11.5 12 4l8.5 7.5M5.5 10.5V20h13v-9.5M9.5 20v-6h5v6"/></symbol>
     <symbol id="nav-jobs" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
@@ -30,6 +30,22 @@
     <div class="masthead-meta"><span class="quota-chip" id="quota-chip" hidden><small data-i18n="buildAllowance">LƯỢT BUILD</small><strong id="quota-value">—</strong></span><span class="connection" id="telegram-state"><i></i><span data-i18n="previewMode">PREVIEW MODE</span></span><button id="language" class="language-button" type="button">VI / EN</button></div>
   </header>
 
+  <section class="access-gate" id="access-gate" aria-live="polite">
+    <article class="access-card">
+      <div class="profile-avatar profile-avatar-large" id="access-avatar" aria-hidden="true"><span>WK</span></div>
+      <small class="access-kicker" id="access-kicker" data-i18n="accessChecking">ĐANG XÁC THỰC TÀI KHOẢN</small>
+      <h1 id="access-title" data-i18n="accessCheckingTitle">Đang kiểm tra quyền truy cập</h1>
+      <p id="access-message" data-i18n="accessCheckingMessage">Wukong đang đọc hồ sơ Telegram đã ký trước khi mở Studio.</p>
+      <dl class="access-profile" id="access-profile" hidden>
+        <div><dt data-i18n="displayName">Tên hiển thị</dt><dd id="access-name">—</dd></div>
+        <div><dt>Username</dt><dd id="access-username">—</dd></div>
+        <div><dt>Telegram ID</dt><dd id="access-id">—</dd></div>
+        <div><dt data-i18n="accountDetails">Thông tin tài khoản</dt><dd id="access-meta">—</dd></div>
+      </dl>
+      <button id="refresh-access" class="primary compact" type="button" data-i18n="refreshAccess">Kiểm tra lại quyền</button>
+    </article>
+  </section>
+
   <nav class="contents-rail" aria-label="Mini App navigation">
     <button class="active" data-nav="build"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><svg class="nav-icon" aria-hidden="true"><use href="#nav-catalog"/></svg><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
   </nav>
@@ -40,7 +56,7 @@
       <section class="runtime-strip" aria-label="Build runtime status">
         <div><i class="status-dot waiting" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
         <div><i class="status-dot waiting" id="runtime-pipeline-dot" aria-hidden="true"></i><span><small data-i18n="runtimePipeline">PIPELINE</small><strong id="runtime-pipeline-state" data-i18n="runtimeWaiting">Chờ recipe hợp lệ</strong></span></div>
-        <div><i class="status-dot neutral" aria-hidden="true"></i><span><small data-i18n="runtimeLastBuild">BUILD GẦN NHẤT</small><strong data-i18n="runtimeJobs">Xem trong Jobs</strong></span></div>
+        <div><i class="status-dot neutral" aria-hidden="true"></i><span><small data-i18n="runtimeAllowance">LƯỢT BUILD · JOBS</small><button class="runtime-jobs-link" id="runtime-build-allowance" type="button" data-nav="jobs">—</button></span></div>
       </section>
       <form id="recipe-form">
         <section class="dossier-section source-section">

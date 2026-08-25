@@ -91,6 +91,7 @@ TEXT = {
         "welcome": "Wukong ROM Studio\n\nMở Mini App để tạo build, theo dõi tiến trình và lấy link tải. Bot giữ vai trò thông báo và truy cập nhanh.",
         "new": "Mở Wukong Mini App",
         "jobs": "Công việc của tôi",
+        "account": "Tài khoản",
         "library": "Kho ROM",
         "diagnostics": "Chẩn đoán",
         "mini_app": "Mở Wukong Mini App",
@@ -141,7 +142,8 @@ TEXT = {
         "no_jobs": "Bạn chưa có job nào. Mở Wukong Mini App để tạo bản build đầu tiên.",
         "no_roms": "Kho ROM chưa có file phù hợp hoặc Drive chưa sẵn sàng.",
         "expired": "Nút này đã hết hạn hoặc không còn hợp lệ. Hãy mở lại menu để tiếp tục.",
-        "denied": "Bạn chưa được cấp quyền. Hãy gửi Telegram user ID của bạn cho quản trị viên.",
+        "denied": "Yêu cầu truy cập của bạn đã được ghi nhận. Vui lòng chờ quản trị viên duyệt tài khoản; bot sẽ tự thông báo khi quyền được cấp.",
+        "account_summary": "Tài khoản Telegram\n\nTên: {name}\nID: {telegram_id}\nUsername: {username}\nTrạng thái: {status}\nLượt build còn lại: {credits}\nTổng job: {jobs}\nLượt build đã dùng: {used}",
         "failed": "Không thể thực hiện: {error}\n\nBạn có thể quay lại menu và thử lại.",
         "job_not_found": "Không thể mở job này. Job không tồn tại hoặc không thuộc tài khoản của bạn.",
         "input_invalid": "Dữ liệu chưa hợp lệ: {error}\nHãy gửi lại giá trị đúng hoặc quay về menu.",
@@ -157,6 +159,7 @@ TEXT = {
         "welcome": "Wukong ROM Studio\n\nOpen the Mini App to create builds, monitor progress and collect download links. The bot handles notifications and quick access.",
         "new": "Open Wukong Mini App",
         "jobs": "My jobs",
+        "account": "Account",
         "library": "ROM library",
         "diagnostics": "Diagnostics",
         "mini_app": "Open Wukong Mini App",
@@ -207,7 +210,8 @@ TEXT = {
         "no_jobs": "You do not have any jobs yet. Open Wukong Mini App to create the first build.",
         "no_roms": "No suitable ROM files were found or Drive is unavailable.",
         "expired": "This button has expired or is no longer valid. Open the menu to continue.",
-        "denied": "You do not have access yet. Send your Telegram user ID to an administrator.",
+        "denied": "Your access request has been recorded. Please wait for administrator approval; the bot will notify you when access is granted.",
+        "account_summary": "Telegram account\n\nName: {name}\nID: {telegram_id}\nUsername: {username}\nStatus: {status}\nBuilds remaining: {credits}\nTotal jobs: {jobs}\nBuilds used: {used}",
         "failed": "Unable to complete the action: {error}\n\nReturn to the menu and try again.",
         "job_not_found": "This job cannot be opened. It does not exist or belongs to another user.",
         "input_invalid": "That value is not valid: {error}\nSend a corrected value or return to the menu.",
@@ -228,6 +232,7 @@ HELP_USER_VI = """Wukong ROM Studio Hybrid
 /jobs - công việc của tôi / my jobs
 /cloud - kho ROM / ROM library
 /diagnostics - chẩn đoán / diagnostics
+/account - tài khoản và lượt build / account and build allowance
 /language - đổi ngôn ngữ / change language
 /job <job_id> - trạng thái job
 /events <job_id> - nhật ký job
@@ -247,6 +252,7 @@ HELP_USER_EN = """Wukong ROM Studio Hybrid
 /jobs - view my jobs
 /cloud - browse the ROM library
 /diagnostics - view system diagnostics
+/account - account and build allowance
 /language - switch language
 /job <job_id> - inspect a job
 /events <job_id> - view job events
@@ -447,6 +453,7 @@ class TelegramBotController:
                 {"command": "jobs", "description": "Công việc của tôi"},
                 {"command": "cloud", "description": "Kho ROM trên Drive"},
                 {"command": "diagnostics", "description": "Chẩn đoán hệ thống"},
+                {"command": "account", "description": "Tài khoản và lượt build"},
                 {"command": "language", "description": "Đổi sang English"},
                 {"command": "help", "description": "Xem trợ giúp"},
             ],
@@ -456,6 +463,7 @@ class TelegramBotController:
                 {"command": "jobs", "description": "View my jobs"},
                 {"command": "cloud", "description": "Browse the ROM library"},
                 {"command": "diagnostics", "description": "View diagnostics"},
+                {"command": "account", "description": "Account and build allowance"},
                 {"command": "language", "description": "Switch to Tiếng Việt"},
                 {"command": "help", "description": "Show help"},
             ],
@@ -528,6 +536,8 @@ class TelegramBotController:
             return self._cloud_menu(language)
         if command == "/diagnostics":
             return self._diagnostics_menu(language)
+        if command in {"/account", "/me"}:
+            return BotResponse(self._account_summary(identity, language), self._back_markup(language))
         if command == "/language":
             return self.handle_callback(user_id, f"v1:lang:{'en' if language == 'vi' else 'vi'}")
         if command in {"/help", ""}:
@@ -799,6 +809,8 @@ class TelegramBotController:
                 return self._cloud_menu(language)
             if action == "diag":
                 return self._diagnostics_menu(language)
+            if action == "account":
+                return BotResponse(self._account_summary(identity, language), self._back_markup(language))
             return self._recovery(language)
         except ExpiredCallbackError:
             return self._recovery(language)
@@ -816,6 +828,8 @@ class TelegramBotController:
                 return self._render_json(self.catalog_provider())
             if command == "/diagnostics":
                 return self._render_json(self.diagnostics_provider())
+            if command in {"/account", "/me"}:
+                return self._account_summary(identity, self.ui_state.language(identity.subject))
             if command == "/cache":
                 return self._render_json(self.cache_provider())
             if command == "/cache_clear":
@@ -1343,7 +1357,8 @@ class TelegramBotController:
 
     def _main_menu(self, language: str) -> BotResponse:
         rows = [
-            [(TEXT[language]["jobs"], "v1:jobs"), (TEXT[language]["library"], "v1:cloud")],
+            [(TEXT[language]["jobs"], "v1:jobs"), (TEXT[language]["account"], "v1:account")],
+            [(TEXT[language]["library"], "v1:cloud")],
             [(TEXT[language]["diagnostics"], "v1:diag"), (TEXT[language]["language"], f"v1:lang:{'en' if language == 'vi' else 'vi'}")],
         ]
         if self.allow_chat_build and not self.web_app_url:
@@ -1357,6 +1372,27 @@ class TelegramBotController:
                 }]
             )
         return BotResponse(TEXT[language]["welcome"], markup)
+
+    def _account_summary(self, identity: Identity, language: str) -> str:
+        profile = self.access.profile(identity.subject) or {}
+        username = str(profile.get("username") or "").strip()
+        raw_status = str(profile.get("accessStatus") or "approved")
+        status_labels = {
+            "vi": {"pending": "chờ duyệt", "approved": "đã duyệt", "revoked": "đã thu hồi"},
+            "en": {"pending": "pending", "approved": "approved", "revoked": "revoked"},
+        }
+        credits = (
+            "Không giới hạn" if language == "vi" else "Unlimited"
+        ) if profile.get("unlimited") else str(int(profile.get("buildCredits") or 0))
+        return TEXT[language]["account_summary"].format(
+            name=profile.get("displayName") or "—",
+            telegram_id=profile.get("telegramId") or identity.subject,
+            username=f"@{username}" if username else "—",
+            status=status_labels[language].get(raw_status, raw_status),
+            credits=credits,
+            jobs=int(profile.get("jobCount") or 0),
+            used=int(profile.get("lifetimeUsed") or 0),
+        )
 
     def _mini_app_launcher(self, language: str) -> BotResponse:
         if not self.web_app_url:
@@ -1465,6 +1501,31 @@ class TelegramLongPollingDaemon:
         self._reply_keyboard_cleanup_messages: dict[str, int] = {}
         self._reply_keyboard_cleanup_attempts: dict[str, int] = {}
         self._reply_keyboard_cleanup_timers: dict[str, threading.Timer] = {}
+
+    def _observe_sender(self, sender: Mapping[str, object]) -> None:
+        access = getattr(self.controller, "access", None)
+        observe = getattr(access, "observe_user", None)
+        if not callable(observe) or not sender.get("id"):
+            return
+        display_name = " ".join(
+            value
+            for value in (
+                str(sender.get("first_name") or "").strip(),
+                str(sender.get("last_name") or "").strip(),
+            )
+            if value
+        )
+        try:
+            observe(
+                sender["id"],
+                username=str(sender.get("username") or ""),
+                display_name=display_name,
+                language=str(sender.get("language_code") or ""),
+            )
+        except (OSError, RuntimeError, TypeError, ValueError):
+            # User interaction should still receive a response if profile
+            # enrichment is temporarily unavailable.
+            return
 
     def _personalized_web_app_url(self, user_id: int | str) -> str:
         configured = getattr(self.controller, "web_app_url", "")
@@ -1795,6 +1856,7 @@ class TelegramLongPollingDaemon:
             callback_id = callback.get("id")
             if not sender.get("id") or not chat.get("id") or not isinstance(data, str):
                 return
+            self._observe_sender(sender)
             if callback_id:
                 try:
                     self._http.post(
@@ -1836,6 +1898,7 @@ class TelegramLongPollingDaemon:
         chat = message.get("chat") or {}
         if not sender.get("id") or not chat.get("id"):
             return
+        self._observe_sender(sender)
         self._remove_reply_keyboard(chat["id"])
         web_app_data = message.get("web_app_data") or {}
         if (

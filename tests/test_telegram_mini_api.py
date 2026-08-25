@@ -29,11 +29,18 @@ CALLBACK_SECRET = "github-token-" + "x" * 32
 ORIGIN = "https://luukhanh24.github.io"
 
 
-def signed_init_data(user_id: int, *, auth_date: int | None = None, token: str = TOKEN) -> str:
+def signed_init_data(
+    user_id: int,
+    *,
+    auth_date: int | None = None,
+    token: str = TOKEN,
+    user_extra: dict[str, object] | None = None,
+) -> str:
+    user = {"id": user_id, "first_name": "Fixture", **(user_extra or {})}
     values = {
         "auth_date": str(int(time.time()) if auth_date is None else auth_date),
         "query_id": "fixture-query",
-        "user": json.dumps({"id": user_id, "first_name": "Fixture"}, separators=(",", ":")),
+        "user": json.dumps(user, separators=(",", ":")),
     }
     data_check = "\n".join(f"{key}={values[key]}" for key in sorted(values))
     secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()
@@ -109,10 +116,16 @@ class TelegramMiniAppAPITests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
-    def headers(self, user_id: int = 42, origin: str = ORIGIN) -> dict[str, str]:
+    def headers(
+        self,
+        user_id: int = 42,
+        origin: str = ORIGIN,
+        *,
+        user_extra: dict[str, object] | None = None,
+    ) -> dict[str, str]:
         return {
             "Origin": origin,
-            "Authorization": f"tma {signed_init_data(user_id)}",
+            "Authorization": f"tma {signed_init_data(user_id, user_extra=user_extra)}",
             "X-Wukong-Session-Id": "fixture-session",
             "X-Wukong-Client-Version": "test-suite",
             "X-Telegram-Platform": "android",
@@ -138,13 +151,26 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         }
 
     def test_pending_user_is_recorded_and_can_read_own_profile(self) -> None:
-        response = self.client.post("/v1/session/open", headers=self.headers(77))
+        response = self.client.post(
+            "/v1/session/open",
+            headers=self.headers(
+                77,
+                user_extra={
+                    "last_name": "Pending",
+                    "username": "pending_user",
+                    "photo_url": "https://cdn.example/pending.jpg",
+                },
+            ),
+        )
 
         self.assertEqual(200, response.status_code)
         profile = response.get_json()["user"]
         self.assertEqual("77", profile["telegramId"])
         self.assertEqual("pending", profile["accessStatus"])
         self.assertEqual(1, profile["miniAppOpenCount"])
+        self.assertEqual("Fixture Pending", profile["displayName"])
+        self.assertEqual("pending_user", profile["username"])
+        self.assertEqual("https://cdn.example/pending.jpg", profile["photoUrl"])
         denied = self.client.get("/v1/jobs", headers=self.headers(77))
         self.assertEqual(403, denied.status_code)
         self.assertEqual("access_pending", denied.get_json()["code"])

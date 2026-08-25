@@ -129,6 +129,32 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertIn("Công việc của tôi", labels)
         self.assertIn("English", labels)
 
+    def test_pending_start_records_profile_and_asks_user_to_wait(self) -> None:
+        daemon = TelegramLongPollingDaemon("123:test", self.controller)
+        daemon._observe_sender({
+            "id": 77,
+            "first_name": "Pending",
+            "last_name": "User",
+            "username": "pending_user",
+            "language_code": "vi",
+        })
+
+        response = self.controller.handle_ui(77, "/start")
+        profile = self.access.profile(77)
+
+        self.assertIsNotNone(profile)
+        self.assertEqual("Pending User", profile["displayName"])
+        self.assertEqual("pending_user", profile["username"])
+        self.assertIn("chờ quản trị viên duyệt", response.text.casefold())
+        self.assertNotIn("gửi telegram user id", response.text.casefold())
+
+    def test_account_command_shows_build_allowance_and_usage(self) -> None:
+        response = self.controller.handle_ui(42, "/account")
+
+        self.assertIn("Lượt build còn lại: 1", response.text)
+        self.assertIn("Tổng job: 0", response.text)
+        self.assertIn("Lượt build đã dùng: 0", response.text)
+
     def test_new_command_opens_the_mini_app_instead_of_the_chat_wizard(self) -> None:
         self.controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
 

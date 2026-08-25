@@ -73,6 +73,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     artifact_fixture = False
     click_artifact_actions = False
     admin_user = False
+    pending_user = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -259,8 +260,10 @@ window.addEventListener('load', () => {{
     def _fixture_user(cls) -> dict[str, object]:
         return {
             "telegramId": "42", "username": "fixture", "displayName": "Fixture User",
-            "accessStatus": "approved", "role": "admin" if cls.admin_user else "user", "buildCredits": 3,
+            "photoUrl": "https://cdn.example/fixture-avatar.jpg",
+            "accessStatus": "pending" if cls.pending_user else "approved", "role": "admin" if cls.admin_user else "user", "buildCredits": 3,
             "unlimited": cls.admin_user, "miniAppOpenCount": 2, "jobCount": 1,
+            "lifetimeGranted": 5, "lifetimeUsed": 2, "language": "vi", "platform": "android", "appVersion": "1.0",
             "firstSeenAt": "2026-08-24T01:00:00Z", "lastSeenAt": "2026-08-25T01:00:00Z",
         }
 
@@ -323,6 +326,7 @@ def _render_mini_app_in_chrome(
     artifact_fixture: bool = False,
     click_artifact_actions: bool = False,
     admin_user: bool = False,
+    pending_user: bool = False,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
     if not chrome:
@@ -348,6 +352,7 @@ def _render_mini_app_in_chrome(
             "artifact_fixture": artifact_fixture,
             "click_artifact_actions": click_artifact_actions,
             "admin_user": admin_user,
+            "pending_user": pending_user,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -810,10 +815,9 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)
 
-        self.assertIn("API CHƯA KẾT NỐI", dom)
-        self.assertIn("Không thể đọc metadata sâu hoặc tạo job", dom)
-        self.assertIn('id="submit-recipe" type="submit" disabled=""', dom)
-        self.assertNotIn("SẴN SÀNG KIỂM TRA", dom)
+        self.assertIn('class="access-limited"', dom)
+        self.assertIn("Kết nối tài khoản để tiếp tục", dom)
+        self.assertIn('id="refresh-access"', dom)
         self.assertGreater(screenshot_size, 10_000)
 
     def test_expired_signed_source_explains_how_to_refresh_the_link(self) -> None:
@@ -844,12 +848,9 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_unauthenticated_preview_keeps_link_and_offers_bot_jump(self) -> None:
         dom, _ = _render_mini_app_in_chrome(api_enabled=True, telegram_authenticated=False)
 
-        self.assertNotIn("CẦN PHIÊN TELEGRAM", dom)
-        self.assertIn("14/14 thông số", dom)
-        self.assertIn(OPLUS_TEST_URI.split("?")[0], dom.replace("&amp;", "&"))
-        submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
-        self.assertIsNotNone(submit_match)
-        self.assertIn("disabled", submit_match.group(0))
+        self.assertIn('class="access-limited"', dom)
+        self.assertIn("Kết nối tài khoản để tiếp tục", dom)
+        self.assertNotIn("14/14 thông số", dom)
 
     def test_hash_init_data_survives_initial_navigation_and_enables_jobs(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
@@ -897,9 +898,19 @@ class TelegramMiniAppTests(unittest.TestCase):
             initial_view="jobs",
         )
 
-        self.assertIn("Phiên Telegram chưa được kết nối", dom)
-        self.assertIn('id="connect-telegram"', dom)
+        self.assertIn("Kết nối tài khoản để tiếp tục", dom)
+        self.assertIn('id="refresh-access"', dom)
         self.assertNotIn("Mini App API chưa được cấu hình", dom)
+
+    def test_pending_user_only_sees_account_and_approval_waiting_gate(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, pending_user=True)
+
+        self.assertIn('class="access-limited"', dom)
+        self.assertIn("Chờ quản trị viên cấp quyền", dom)
+        self.assertIn("Fixture User", dom)
+        self.assertIn("@fixture", dom)
+        self.assertIn('<dd id="access-id">42</dd>', dom)
+        self.assertIn('class="profile-avatar profile-avatar-large"', dom)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")

@@ -238,7 +238,13 @@ Object.assign(translations.vi, {
   sortUsers: "Sắp xếp", lastAccess: "Truy cập gần nhất", firstAccess: "Truy cập đầu tiên", jobCount: "Số job", buildCredits: "Lượt còn lại",
   activity: "Hoạt động", allowance: "Hạn mức", displayName: "Tên hiển thị", cancelDialog: "Hủy", createPendingUser: "Tạo hồ sơ chờ duyệt", quotaFilter: "Hạn mức", quotaAvailable: "Còn lượt", activityFilter: "Hoạt động", openedMiniApp: "Đã mở Mini App", neverOpened: "Chưa từng mở", hasJobs: "Đã tạo job", subtractCredit: "Trừ lượt", jobHistory: "Lịch sử job",
   userCreated: "Đã tạo hồ sơ chờ duyệt.", userUpdated: "Đã cập nhật quyền người dùng.", noUsers: "Không có người dùng phù hợp.",
-  openCount: "{count} lần mở", jobsCount: "{count} job", approveUser: "Duyệt + 1 lượt", revokeUser: "Thu hồi", addCredit: "+1 lượt", setCredit: "Đặt số lượt", toggleUnlimited: "Đổi unlimited", auditTitle: "Nhật ký thay đổi", loadMoreAudit: "Tải thêm nhật ký"
+  openCount: "{count} lần mở", jobsCount: "{count} job", approveUser: "Duyệt + 1 lượt", revokeUser: "Thu hồi", addCredit: "+1 lượt", setCredit: "Đặt số lượt", toggleUnlimited: "Đổi unlimited", auditTitle: "Nhật ký thay đổi", loadMoreAudit: "Tải thêm nhật ký",
+  accessChecking: "ĐANG XÁC THỰC TÀI KHOẢN", accessCheckingTitle: "Đang kiểm tra quyền truy cập", accessCheckingMessage: "Wukong đang đọc hồ sơ Telegram đã ký trước khi mở Studio.",
+  accessPendingKicker: "YÊU CẦU ĐÃ ĐƯỢC GHI NHẬN", accessPendingTitle: "Chờ quản trị viên cấp quyền", accessPendingMessage: "Tài khoản của bạn đang ở hàng chờ duyệt. Bot sẽ tự thông báo khi quyền được cấp; bạn không cần gửi ID thủ công.",
+  accessRevokedKicker: "QUYỀN TRUY CẬP ĐÃ THU HỒI", accessRevokedTitle: "Tài khoản chưa thể mở Studio", accessRevokedMessage: "Liên hệ quản trị viên nếu bạn cần khôi phục quyền truy cập.",
+  accessConnectKicker: "CHƯA KẾT NỐI TELEGRAM", accessConnectTitle: "Kết nối tài khoản để tiếp tục", accessConnectMessage: "Mở Mini App từ bot hoặc kết nối Telegram để xác thực an toàn.",
+  accountDetails: "Thông tin tài khoản", refreshAccess: "Kiểm tra lại quyền", runtimeAllowance: "LƯỢT BUILD · JOBS", allowanceSummary: "{remaining} còn lại · {used} đã dùng · {jobs} job",
+  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do"
 });
 Object.assign(translations.en, {
   buildAllowance: "BUILD CREDIT", unlimited: "Unlimited", pending: "Pending", approved: "Approved", revoked: "Revoked",
@@ -248,7 +254,13 @@ Object.assign(translations.en, {
   sortUsers: "Sort", lastAccess: "Last access", firstAccess: "First access", jobCount: "Jobs", buildCredits: "Credits",
   activity: "Activity", allowance: "Allowance", displayName: "Display name", cancelDialog: "Cancel", createPendingUser: "Create pending profile", quotaFilter: "Quota", quotaAvailable: "Credits available", activityFilter: "Activity", openedMiniApp: "Opened Mini App", neverOpened: "Never opened", hasJobs: "Has jobs", subtractCredit: "Subtract credit", jobHistory: "Job history",
   userCreated: "Pending profile created.", userUpdated: "User access updated.", noUsers: "No matching users.",
-  openCount: "{count} opens", jobsCount: "{count} jobs", approveUser: "Approve + 1", revokeUser: "Revoke", addCredit: "+1 credit", setCredit: "Set credits", toggleUnlimited: "Toggle unlimited", auditTitle: "Audit history", loadMoreAudit: "Load more audit events"
+  openCount: "{count} opens", jobsCount: "{count} jobs", approveUser: "Approve + 1", revokeUser: "Revoke", addCredit: "+1 credit", setCredit: "Set credits", toggleUnlimited: "Toggle unlimited", auditTitle: "Audit history", loadMoreAudit: "Load more audit events",
+  accessChecking: "AUTHENTICATING ACCOUNT", accessCheckingTitle: "Checking access", accessCheckingMessage: "Wukong is reading the signed Telegram profile before opening Studio.",
+  accessPendingKicker: "REQUEST RECORDED", accessPendingTitle: "Waiting for administrator approval", accessPendingMessage: "Your account is in the approval queue. The bot will notify you automatically; you do not need to send your ID manually.",
+  accessRevokedKicker: "ACCESS REVOKED", accessRevokedTitle: "Studio is not available for this account", accessRevokedMessage: "Contact an administrator if you need access restored.",
+  accessConnectKicker: "TELEGRAM NOT CONNECTED", accessConnectTitle: "Connect your account to continue", accessConnectMessage: "Open the Mini App from the bot or connect Telegram for secure authentication.",
+  accountDetails: "Account details", refreshAccess: "Check access again", runtimeAllowance: "BUILD ALLOWANCE · JOBS", allowanceSummary: "{remaining} left · {used} used · {jobs} jobs",
+  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason"
 });
 
 Object.assign(translations.en, {
@@ -325,7 +337,8 @@ const state = {
   adminUsersTotal: 0,
   adminUsersOffset: 0,
   adminUsersLoading: false,
-  selectedAdminUserId: ""
+  selectedAdminUserId: "",
+  workspaceLoaded: false
 };
 
 function t(key, values = {}) {
@@ -835,8 +848,7 @@ async function pollTelegramPairing(pairing) {
     updateSummary();
     updateSourceDetection();
     loadSession().then(() => {
-      refreshLiveReleaseVersions().catch(() => {});
-      loadJobs({ force: true }).catch(() => {});
+      initializeApprovedWorkspace();
     }).catch(() => {});
     toast(t("pairingReady"));
     return;
@@ -1374,6 +1386,75 @@ function updateSummary() {
   $("#dispatch-fab")?.setAttribute("aria-label", t("finishBuild"));
 }
 
+function profileInitials(profile) {
+  const label = String(profile?.displayName || profile?.username || profile?.telegramId || "WK").trim();
+  const parts = label.split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts.at(-1)[0]}` : label.slice(0, 2)).toUpperCase();
+}
+
+function profileAvatar(profile, className = "") {
+  const root = document.createElement("div");
+  root.className = `profile-avatar ${className}`.trim();
+  const fallback = document.createElement("span");
+  fallback.textContent = profileInitials(profile);
+  root.append(fallback);
+  if (profile?.photoUrl) {
+    const image = document.createElement("img");
+    image.src = profile.photoUrl;
+    image.alt = "";
+    image.referrerPolicy = "no-referrer";
+    image.addEventListener("error", () => image.remove(), { once: true });
+    root.prepend(image);
+  }
+  return root;
+}
+
+function initializeApprovedWorkspace() {
+  if (state.me?.accessStatus !== "approved") return;
+  document.body.classList.remove("access-checking", "access-limited");
+  $("#access-gate").hidden = true;
+  if (state.workspaceLoaded) return;
+  state.workspaceLoaded = true;
+  navigate(location.hash.slice(1) || "build", false);
+  loadCatalog().finally(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" })));
+  refreshLiveReleaseVersions().catch(() => {});
+  loadJobs({ force: true }).catch(() => {});
+}
+
+function renderAccessGate() {
+  const profile = state.me;
+  const gate = $("#access-gate");
+  if (!gate) return;
+  const approved = profile?.accessStatus === "approved";
+  if (approved) {
+    initializeApprovedWorkspace();
+    return;
+  }
+  document.body.classList.remove("access-checking");
+  document.body.classList.add("access-limited");
+  gate.hidden = false;
+  const status = profile?.accessStatus === "revoked" ? "Revoked" : profile ? "Pending" : "Connect";
+  $("#access-kicker").textContent = t(`access${status}Kicker`);
+  $("#access-title").textContent = t(`access${status}Title`);
+  $("#access-message").textContent = t(`access${status}Message`);
+  const facts = $("#access-profile");
+  facts.hidden = !profile;
+  if (profile) {
+    $("#access-name").textContent = profile.displayName || "—";
+    $("#access-username").textContent = profile.username ? `@${profile.username}` : "—";
+    $("#access-id").textContent = profile.telegramId || "—";
+    $("#access-meta").textContent = [
+      profile.language ? profile.language.toUpperCase() : "",
+      profile.platform || "",
+      profile.appVersion ? `v${profile.appVersion}` : "",
+      `${t("openCount", { count: profile.miniAppOpenCount || 0 })}`
+    ].filter(Boolean).join(" · ") || "—";
+    $("#access-avatar").replaceWith(profileAvatar(profile, "profile-avatar-large"));
+    const avatar = $(".access-card .profile-avatar");
+    if (avatar) avatar.id = "access-avatar";
+  }
+}
+
 function renderAccount() {
   const profile = state.me;
   const chip = $("#quota-chip");
@@ -1389,8 +1470,18 @@ function renderAccount() {
   else if (Number(profile.buildCredits || 0) <= 0) {
     value.textContent = t("quotaExhausted"); chip.classList.add("exhausted");
   } else value.textContent = String(profile.buildCredits);
+  const runtimeAllowance = $("#runtime-build-allowance");
+  if (runtimeAllowance) {
+    const remaining = profile.unlimited ? t("unlimited") : String(Number(profile.buildCredits || 0));
+    runtimeAllowance.textContent = t("allowanceSummary", {
+      remaining,
+      used: Number(profile.lifetimeUsed || 0),
+      jobs: Number(profile.jobCount || 0)
+    });
+  }
   const admin = profile.role === "admin";
   $("#user-admin").hidden = !admin;
+  renderAccessGate();
 }
 
 async function loadSession({ countOpen = true } = {}) {
@@ -1415,10 +1506,12 @@ function renderAdminUsers() {
     body.replaceChildren(empty);
   } else body.replaceChildren(...state.adminUsers.map((user) => {
     const row = document.createElement("div"); row.className = "user-row"; row.setAttribute("role", "row");
-    const identity = document.createElement("span");
+    const identity = document.createElement("span"); identity.className = "user-identity";
+    identity.append(profileAvatar(user, "profile-avatar-small"));
+    const identityCopy = document.createElement("span");
     const name = document.createElement("strong"); name.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId);
     const id = document.createElement("small"); id.textContent = `${user.telegramId}${user.username ? ` · @${user.username}` : ""}`;
-    identity.append(name, id);
+    identityCopy.append(name, id); identity.append(identityCopy);
     const activity = document.createElement("span");
     const opens = document.createElement("strong"); opens.textContent = t("openCount", { count: user.miniAppOpenCount || 0 });
     const last = document.createElement("small"); last.textContent = `${t("lastAccess")}: ${formatDate(user.lastSeenAt)}`;
@@ -1512,13 +1605,18 @@ async function openAdminUser(telegramId) {
   state.selectedAdminUserId = user.telegramId;
   const root = $("#user-detail-content");
   const header = document.createElement("header");
-  const titleBox = document.createElement("div"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h2"); title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleBox.append(kicker, title);
+  const titleBox = document.createElement("div"); titleBox.className = "user-detail-title"; titleBox.append(profileAvatar(user));
+  const titleCopy = document.createElement("span"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h2"); title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleCopy.append(kicker, title); titleBox.append(titleCopy);
   const close = document.createElement("button"); close.type = "button"; close.textContent = "×"; close.addEventListener("click", () => $("#user-detail-dialog").close()); header.append(titleBox, close);
   const grid = document.createElement("div"); grid.className = "user-detail-grid";
   grid.append(
     detailFact(t("accessStatus"), accessLabel(user.accessStatus)), detailFact(t("allowance"), user.unlimited ? t("unlimited") : String(user.buildCredits || 0)),
     detailFact(t("firstAccess"), formatDate(user.firstSeenAt)), detailFact(t("lastAccess"), formatDate(user.lastSeenAt)),
-    detailFact(t("activity"), `${t("openCount", { count: user.miniAppOpenCount || 0 })} · ${t("jobsCount", { count: user.jobCount || 0 })}`), detailFact("Last job", `${user.lastJobId || "—"} · ${user.lastJobStatus || "—"}`)
+    detailFact(t("activity"), `${t("openCount", { count: user.miniAppOpenCount || 0 })} · ${t("jobsCount", { count: user.jobCount || 0 })}`), detailFact(t("lastJob"), `${user.lastJobId || "—"} · ${user.lastJobStatus || "—"}`),
+    detailFact("Username", user.username ? `@${user.username}` : "—"), detailFact(t("role"), user.role || "user"),
+    detailFact(t("lifetime"), t("lifetimeSummary", { granted: user.lifetimeGranted || 0, used: user.lifetimeUsed || 0 })), detailFact(t("client"), [user.language, user.platform, user.appVersion].filter(Boolean).join(" · ")),
+    detailFact(t("approvedAt"), formatDate(user.approvedAt)), detailFact(t("revokedAt"), formatDate(user.revokedAt)),
+    detailFact(t("accessActor"), user.accessActor || "—"), detailFact(t("accessReason"), user.accessReason || "—")
   );
   const actions = document.createElement("div"); actions.className = "user-detail-actions";
   const definitions = user.accessStatus === "approved"
@@ -2175,6 +2273,10 @@ function bindEvents() {
   $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
   $("#paste-source").addEventListener("click", () => pasteSourceFromClipboard().catch((error) => toast(error.message, true)));
   $("#connect-telegram").addEventListener("click", () => connectTelegramSession());
+  $("#refresh-access").addEventListener("click", () => {
+    if (!miniApiAvailable()) { connectTelegramSession(); return; }
+    loadSession({ countOpen: false }).catch((error) => toast(error.message, true));
+  });
   $("#clear-source").addEventListener("click", clearSource);
   $("#probe-source").addEventListener("click", () => {
     clearTimeout(state.sourceProbeTimer);
@@ -2238,7 +2340,7 @@ function bindEvents() {
     if (document.hidden) clearTimeout(state.jobsPollTimer);
     else {
       ensureAutomaticTelegramConnection();
-      loadSession({ countOpen: false }).then(() => loadJobs({ force: true })).catch(() => {});
+      loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
     }
   });
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
@@ -2299,19 +2401,14 @@ function startMiniApp() {
   restoreSourceDraft();
   window.WukongMiniApp = Object.freeze({ setDeliveryState });
   applyLanguage();
-  navigate(location.hash.slice(1) || "build", false);
   history.scrollRestoration = "manual";
-  loadCatalog().finally(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" })));
   renderSessionDiagnostics();
   ensureAutomaticTelegramConnection();
   if (miniApiAvailable()) {
     loadSession().then(() => {
-      if (privateApiAvailable()) {
-        refreshLiveReleaseVersions().catch(() => {});
-        loadJobs().catch(() => {});
-      }
+      initializeApprovedWorkspace();
     }).catch((error) => toast(error.message, true));
-  }
+  } else renderAccessGate();
 }
 
 if (TelegramApp) {
@@ -2335,7 +2432,9 @@ if (TelegramApp) {
     scheduleSourceProbe();
     renderSessionDiagnostics();
     ensureAutomaticTelegramConnection();
-    loadJobs({ force: true }).catch(() => {});
+    if (miniApiAvailable()) {
+      loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
+    } else renderAccessGate();
   });
   bridge.addEventListener("error", renderSessionDiagnostics);
   document.head.append(bridge);

@@ -7,6 +7,7 @@ import threading
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
+from urllib.parse import urlsplit
 
 from .models import Identity, utc_now
 
@@ -17,6 +18,27 @@ class BuildQuotaError(PermissionError):
 
 class BuildConcurrencyError(RuntimeError):
     """Raised when a user or device already has an active build."""
+
+
+def normalize_telegram_photo_url(value: object) -> str:
+    """Keep only safe Telegram-hosted-style HTTPS avatar URLs."""
+
+    candidate = str(value or "").strip()
+    if not candidate:
+        return ""
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return ""
+    if (
+        parsed.scheme.casefold() != "https"
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+        or len(candidate) > 2048
+    ):
+        return ""
+    return candidate
 
 
 def require_sensitive_admin_reason(
@@ -89,6 +111,7 @@ class TelegramAccessStore:
             "telegramId": subject,
             "username": "",
             "displayName": "",
+            "photoUrl": "",
             "accessStatus": "pending",
             "role": "user",
             "firstSeenAt": now,
@@ -182,6 +205,7 @@ class TelegramAccessStore:
         language: str = "",
         platform: str = "",
         app_version: str = "",
+        photo_url: str = "",
     ) -> dict[str, Any]:
         subject = self._subject(user_id)
         with self._lock:
@@ -199,6 +223,9 @@ class TelegramAccessStore:
                 cleaned = str(value or "").strip()[:256]
                 if cleaned:
                     profile[key] = cleaned
+            normalized_photo = normalize_telegram_photo_url(photo_url)
+            if normalized_photo:
+                profile["photoUrl"] = normalized_photo
             if subject in self._configured_admins:
                 profile.update(
                     {
