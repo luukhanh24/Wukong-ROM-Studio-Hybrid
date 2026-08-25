@@ -206,6 +206,8 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertTrue((bundled_assets / "wukong-studio.svg").is_file())
         self.assertTrue((bundled_assets / "service-telegram.svg").is_file())
         self.assertTrue((bundled_assets / "device-wukong.svg").is_file())
+        self.assertIn("data:image/svg+xml,", combined)
+        self.assertNotIn("./assets/", combined)
         self.assertIn('"outputDirectory": ".vercel-static"', vercel)
         self.assertIn("X-Robots-Tag", vercel)
 

@@ -1418,7 +1418,13 @@ function renderCatalog() {
     const brand = identity.includes("realme") || item.product.startsWith("RMX") ? "realme"
       : identity.includes("oppo") || item.product.startsWith("CPH") ? "oppo"
       : identity.includes("oneplus") ? "oneplus" : "wukong";
-    image.src = `./assets/device-${brand}.svg`;
+    const deviceAssets = {
+      oneplus: "./assets/device-oneplus.svg",
+      oppo: "./assets/device-oppo.svg",
+      realme: "./assets/device-realme.svg",
+      wukong: "./assets/device-wukong.svg"
+    };
+    image.src = deviceAssets[brand];
     image.alt = brand === "wukong" ? "Wukong device" : brand;
     image.width = 42; image.height = 42;
     const code = document.createElement("b"); code.textContent = item.product;

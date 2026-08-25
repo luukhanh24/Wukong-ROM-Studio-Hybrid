@@ -12,6 +12,16 @@ from tools.export_mini_app_catalog import export_catalog
 ASSET_NAMES = ("index.html", "styles.css", "app.js")
 
 
+def _inline_svg_assets(content: str, asset_directory: Path) -> str:
+    for asset in sorted(asset_directory.glob("*.svg")):
+        encoded = quote(asset.read_text(encoding="utf-8"), safe="")
+        content = content.replace(
+            f"./assets/{asset.name}",
+            f"data:image/svg+xml,{encoded}",
+        )
+    return content
+
+
 def _api_origin(value: str) -> str:
     normalized = value.strip().rstrip("/")
     parsed = urlsplit(normalized)
@@ -44,11 +54,20 @@ def build_site(
     shutil.copytree(source / "assets", destination / "assets", dirs_exist_ok=True)
     safe_release = quote(release.strip() or "production", safe="-._")
     index_path = destination / "index.html"
-    index = index_path.read_text(encoding="utf-8")
+    index = _inline_svg_assets(
+        index_path.read_text(encoding="utf-8"),
+        source / "assets",
+    )
     index = index.replace("__WUKONG_TELEGRAM_MINI_APP_API_URL__", _api_origin(api_url))
     index = re.sub(r"\./styles\.css(?:\?v=[^\"']+)?", f"./styles.css?v={safe_release}", index)
     index = re.sub(r"\./app\.js(?:\?v=[^\"']+)?", f"./app.js?v={safe_release}", index)
     index_path.write_text(index, encoding="utf-8", newline="\n")
+    app_path = destination / "app.js"
+    app_path.write_text(
+        _inline_svg_assets(app_path.read_text(encoding="utf-8"), source / "assets"),
+        encoding="utf-8",
+        newline="\n",
+    )
     export_catalog(
         root / "content-packs" / "index.json",
         root / "devices_sizes.json",
