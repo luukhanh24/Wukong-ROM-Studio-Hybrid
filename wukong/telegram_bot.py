@@ -1460,6 +1460,11 @@ class TelegramLongPollingDaemon:
         self._stop = threading.Event()
         self._probe_threads: set[threading.Thread] = set()
         self._probe_threads_lock = threading.Lock()
+        self._reply_keyboard_cleanup_lock = threading.RLock()
+        self._reply_keyboard_removed_chats: set[str] = set()
+        self._reply_keyboard_cleanup_messages: dict[str, int] = {}
+        self._reply_keyboard_cleanup_attempts: dict[str, int] = {}
+        self._reply_keyboard_cleanup_timers: dict[str, threading.Timer] = {}
 
     def _personalized_web_app_url(self, user_id: int | str) -> str:
         configured = getattr(self.controller, "web_app_url", "")
@@ -1475,10 +1480,8 @@ class TelegramLongPollingDaemon:
         if not web_app_url or not response.reply_markup:
             return response
         markup = copy.deepcopy(response.reply_markup)
-        for keyboard_name in ("inline_keyboard", "keyboard"):
-            rows = markup.get(keyboard_name)
-            if not isinstance(rows, list):
-                continue
+        rows = markup.get("inline_keyboard")
+        if isinstance(rows, list):
             for row in rows:
                 if not isinstance(row, list):
                     continue
@@ -1486,6 +1489,167 @@ class TelegramLongPollingDaemon:
                     if isinstance(button, dict) and isinstance(button.get("web_app"), dict):
                         button["web_app"]["url"] = web_app_url
         return BotResponse(response.text, markup)
+
+    @staticmethod
+    def _without_reply_keyboard(response: BotResponse) -> BotResponse:
+        if "keyboard" not in response.reply_markup:
+            return response
+        inline_keyboard = response.reply_markup.get("inline_keyboard")
+        markup = (
+            {"inline_keyboard": copy.deepcopy(inline_keyboard)}
+            if isinstance(inline_keyboard, list)
+            else {}
+        )
+        return BotResponse(response.text, markup)
+
+    @staticmethod
+    def _telegram_api_payload(response: requests.Response) -> dict[str, Any]:
+        response.raise_for_status()
+        try:
+            payload = response.json()
+        except (TypeError, ValueError) as exc:
+            raise requests.RequestException(
+                "Telegram returned an invalid JSON response",
+                response=response,
+            ) from exc
+        if not isinstance(payload, dict) or payload.get("ok") is not True:
+            description = payload.get("description") if isinstance(payload, dict) else None
+            raise requests.RequestException(
+                str(description or "Telegram rejected the request"),
+                response=response,
+            )
+        return payload
+
+    @staticmethod
+    def _is_terminal_cleanup_delete_error(exc: requests.RequestException) -> bool:
+        response = exc.response
+        if response is None:
+            return False
+        status = response.status_code
+        if isinstance(status, int) and status in {400, 401, 403, 404}:
+            return True
+        try:
+            payload = response.json()
+        except (TypeError, ValueError):
+            return False
+        description = (
+            str(payload.get("description") or "").casefold()
+            if isinstance(payload, dict)
+            else ""
+        )
+        return any(
+            phrase in description
+            for phrase in (
+                "message to delete not found",
+                "message can't be deleted",
+                "message can not be deleted",
+            )
+        )
+
+    def _mark_reply_keyboard_removed(self, chat_key: str) -> None:
+        self._reply_keyboard_cleanup_messages.pop(chat_key, None)
+        self._reply_keyboard_cleanup_attempts.pop(chat_key, None)
+        timer = self._reply_keyboard_cleanup_timers.pop(chat_key, None)
+        if timer is not None:
+            timer.cancel()
+        self._reply_keyboard_removed_chats.add(chat_key)
+
+    def _schedule_reply_keyboard_cleanup_retry(self, chat_id: int | str) -> None:
+        chat_key = str(chat_id)
+        if self._stop.is_set() or chat_key in self._reply_keyboard_cleanup_timers:
+            return
+        attempt = self._reply_keyboard_cleanup_attempts.get(chat_key, 0) + 1
+        if attempt > 5:
+            print(
+                f"Telegram reply keyboard background cleanup paused after retries: {chat_key}",
+                flush=True,
+            )
+            self._reply_keyboard_cleanup_attempts.pop(chat_key, None)
+            return
+        self._reply_keyboard_cleanup_attempts[chat_key] = attempt
+        timer = threading.Timer(
+            min(2 ** (attempt - 1), 16),
+            self._retry_reply_keyboard_cleanup,
+            args=(chat_id,),
+        )
+        timer.name = f"wukong-telegram-keyboard-cleanup-{chat_key}"
+        timer.daemon = True
+        self._reply_keyboard_cleanup_timers[chat_key] = timer
+        timer.start()
+
+    def _retry_reply_keyboard_cleanup(self, chat_id: int | str) -> None:
+        chat_key = str(chat_id)
+        with self._reply_keyboard_cleanup_lock:
+            self._reply_keyboard_cleanup_timers.pop(chat_key, None)
+        if not self._stop.is_set():
+            self._remove_reply_keyboard(chat_id)
+
+    def _delete_reply_keyboard_cleanup_message(
+        self,
+        chat_id: int | str,
+        message_id: int,
+    ) -> None:
+        deleted = self._http.post(
+            f"{self.base_url}/deleteMessage",
+            json={"chat_id": chat_id, "message_id": message_id},
+            timeout=20,
+        )
+        payload = self._telegram_api_payload(deleted)
+        if payload.get("result") is not True:
+            raise requests.RequestException(
+                "Telegram did not confirm cleanup message deletion",
+                response=deleted,
+            )
+
+    def _remove_reply_keyboard(self, chat_id: int | str) -> None:
+        chat_key = str(chat_id)
+        with self._reply_keyboard_cleanup_lock:
+            if chat_key in self._reply_keyboard_removed_chats:
+                return
+            try:
+                pending_message_id = self._reply_keyboard_cleanup_messages.get(chat_key)
+                if pending_message_id is not None:
+                    self._delete_reply_keyboard_cleanup_message(chat_id, pending_message_id)
+                    self._mark_reply_keyboard_removed(chat_key)
+                    return
+
+                sent = self._http.post(
+                    f"{self.base_url}/sendMessage",
+                    json={
+                        "chat_id": chat_id,
+                        "text": "\u2063",
+                        "reply_markup": {"remove_keyboard": True},
+                        "disable_notification": True,
+                    },
+                    timeout=20,
+                )
+                payload = self._telegram_api_payload(sent)
+                result = payload.get("result")
+                message_id = result.get("message_id") if isinstance(result, dict) else None
+                if not isinstance(message_id, int):
+                    raise requests.RequestException(
+                        "Telegram cleanup message has no valid message_id",
+                        response=sent,
+                    )
+                self._reply_keyboard_cleanup_messages[chat_key] = message_id
+                self._delete_reply_keyboard_cleanup_message(chat_id, message_id)
+                self._mark_reply_keyboard_removed(chat_key)
+            except requests.RequestException as exc:
+                if (
+                    chat_key in self._reply_keyboard_cleanup_messages
+                    and self._is_terminal_cleanup_delete_error(exc)
+                ):
+                    self._mark_reply_keyboard_removed(chat_key)
+                elif exc.response is None or (
+                    isinstance(exc.response.status_code, int)
+                    and (
+                        exc.response.status_code == 429
+                        or exc.response.status_code >= 500
+                    )
+                ):
+                    self._schedule_reply_keyboard_cleanup_retry(chat_id)
+                status = exc.response.status_code if exc.response is not None else "network"
+                print(f"Telegram reply keyboard cleanup failed: {status}", flush=True)
 
     def _configure_private_chat_menu(
         self,
@@ -1516,6 +1680,10 @@ class TelegramLongPollingDaemon:
 
     def stop(self) -> None:
         self._stop.set()
+        with self._reply_keyboard_cleanup_lock:
+            for timer in self._reply_keyboard_cleanup_timers.values():
+                timer.cancel()
+            self._reply_keyboard_cleanup_timers.clear()
 
     def configure_webhook(self, public_api_url: str, secret: str) -> None:
         base_url = public_api_url.strip().rstrip("/")
@@ -1547,7 +1715,9 @@ class TelegramLongPollingDaemon:
 
     def _complete_source_probe(self, user_id: int | str, chat_id: int | str, raw_data: str) -> None:
         try:
-            response = self.controller.handle_web_app_data(user_id, raw_data)
+            response = self._without_reply_keyboard(
+                self.controller.handle_web_app_data(user_id, raw_data)
+            )
             with requests.Session() as session:
                 session.post(
                     f"{self.base_url}/sendMessage",
@@ -1611,6 +1781,7 @@ class TelegramLongPollingDaemon:
                 if not isinstance(approved_subjects, (list, tuple, set, frozenset)):
                     approved_subjects = ()
                 for subject in approved_subjects:
+                    self._remove_reply_keyboard(subject)
                     personalized_url = self._personalized_web_app_url(subject)
                     self._configure_private_chat_menu(subject, subject, personalized_url)
 
@@ -1633,14 +1804,17 @@ class TelegramLongPollingDaemon:
                     ).raise_for_status()
                 except requests.RequestException:
                     pass
+            self._remove_reply_keyboard(chat["id"])
             web_app_url = self._personalized_web_app_url(sender["id"])
             self._configure_private_chat_menu(sender["id"], chat["id"], web_app_url)
             response = self._personalize_response(
-                self.controller.handle_callback(sender["id"], data),
+                self._without_reply_keyboard(
+                    self.controller.handle_callback(sender["id"], data)
+                ),
                 web_app_url,
             )
             payload = {"chat_id": chat["id"], **response.telegram_payload()}
-            if message.get("message_id") and "keyboard" not in response.reply_markup:
+            if message.get("message_id"):
                 payload["message_id"] = message["message_id"]
                 endpoint = "editMessageText"
             else:
@@ -1660,11 +1834,12 @@ class TelegramLongPollingDaemon:
         message = update.get("message") or {}
         sender = message.get("from") or {}
         chat = message.get("chat") or {}
+        if not sender.get("id") or not chat.get("id"):
+            return
+        self._remove_reply_keyboard(chat["id"])
         web_app_data = message.get("web_app_data") or {}
         if (
-            sender.get("id")
-            and chat.get("id")
-            and isinstance(web_app_data, dict)
+            isinstance(web_app_data, dict)
             and isinstance(web_app_data.get("data"), str)
         ):
             if self._is_probe_request(web_app_data["data"]):
@@ -1678,7 +1853,9 @@ class TelegramLongPollingDaemon:
                         timeout=20,
                     ).raise_for_status()
                 return
-            response = self.controller.handle_web_app_data(sender["id"], web_app_data["data"])
+            response = self._without_reply_keyboard(
+                self.controller.handle_web_app_data(sender["id"], web_app_data["data"])
+            )
             self._http.post(
                 f"{self.base_url}/sendMessage",
                 json={"chat_id": chat["id"], **response.telegram_payload()},
@@ -1686,12 +1863,15 @@ class TelegramLongPollingDaemon:
             ).raise_for_status()
             return
         text = message.get("text")
-        if not sender.get("id") or not chat.get("id") or not isinstance(text, str):
+        if not isinstance(text, str):
             return
         response = self.controller.handle_ui(sender["id"], text)
         web_app_url = self._personalized_web_app_url(sender["id"])
         self._configure_private_chat_menu(sender["id"], chat["id"], web_app_url)
-        response = self._personalize_response(response, web_app_url)
+        response = self._personalize_response(
+            self._without_reply_keyboard(response),
+            web_app_url,
+        )
         self._http.post(
             f"{self.base_url}/sendMessage",
             json={"chat_id": chat["id"], **response.telegram_payload()},

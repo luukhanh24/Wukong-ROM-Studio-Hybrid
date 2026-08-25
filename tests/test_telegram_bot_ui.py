@@ -719,8 +719,21 @@ class TelegramDaemonUITests(unittest.TestCase):
         controller.access.subjects.return_value = ("42", "43")
         success = Mock()
         success.raise_for_status.return_value = None
+        success.json.return_value = {"ok": True, "result": True}
+        cleanup_sent = Mock()
+        cleanup_sent.raise_for_status.return_value = None
+        cleanup_sent.json.return_value = {"ok": True, "result": {"message_id": 99}}
         http = Mock()
-        http.post.return_value = success
+
+        def fake_post(endpoint, **kwargs):
+            if (
+                endpoint.endswith("/sendMessage")
+                and kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+            ):
+                return cleanup_sent
+            return success
+
+        http.post.side_effect = fake_post
         daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
 
         daemon.register_commands()
@@ -737,6 +750,21 @@ class TelegramDaemonUITests(unittest.TestCase):
             url = payload["menu_button"]["web_app"]["url"]
             self.assertEqual("wukong-rom-studio.vercel.app", urlsplit(url).hostname)
             self.assertIn("wkLaunch", parse_qs(urlsplit(url).query))
+        cleanup_calls = [
+            call.kwargs["json"]
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+        ]
+        self.assertEqual(["42", "43"], [str(payload["chat_id"]) for payload in cleanup_calls])
+        self.assertEqual(
+            2,
+            len([
+                call
+                for call in http.post.call_args_list
+                if call.args[0].endswith("/deleteMessage")
+            ]),
+        )
 
     def test_start_personalizes_mini_app_button_and_chat_menu(self) -> None:
         controller = Mock()
@@ -763,7 +791,12 @@ class TelegramDaemonUITests(unittest.TestCase):
         })
 
         calls = [call for call in http.post.call_args_list if call.args[0].endswith(("/sendMessage", "/setChatMenuButton"))]
-        sent = next(call.kwargs["json"] for call in calls if call.args[0].endswith("/sendMessage"))
+        sent = next(
+            call.kwargs["json"]
+            for call in calls
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("reply_markup") != {"remove_keyboard": True}
+        )
         menu = next(call.kwargs["json"] for call in calls if call.args[0].endswith("/setChatMenuButton"))
         button_url = sent["reply_markup"]["inline_keyboard"][0][0]["web_app"]["url"]
         menu_url = menu["menu_button"]["web_app"]["url"]
@@ -1247,6 +1280,18 @@ class TelegramDaemonUITests(unittest.TestCase):
         self.assertTrue(any(value.endswith("/setMyCommands") for value in endpoints))
         self.assertTrue(any(value.endswith("/answerCallbackQuery") for value in endpoints))
         self.assertTrue(any(value.endswith("/editMessageText") for value in endpoints))
+        callback_index = next(
+            index
+            for index, endpoint in enumerate(endpoints)
+            if endpoint.endswith("/answerCallbackQuery")
+        )
+        cleanup_index = next(
+            index
+            for index, call in enumerate(http.post.call_args_list)
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+        )
+        self.assertLess(callback_index, cleanup_index)
 
     def test_configures_https_webhook_with_secret_and_single_connection(self) -> None:
         controller = Mock()
@@ -1268,7 +1313,15 @@ class TelegramDaemonUITests(unittest.TestCase):
 
     def test_processes_telegram_web_app_data(self) -> None:
         controller = Mock()
-        controller.handle_web_app_data.return_value = BotResponse("Created")
+        controller.handle_web_app_data.return_value = BotResponse(
+            "Created",
+            {
+                "keyboard": [[{"text": "Legacy"}]],
+                "resize_keyboard": True,
+                "selective": True,
+                "input_field_placeholder": "Choose an action",
+            },
+        )
         success = Mock()
         success.raise_for_status.return_value = None
         http = Mock()
@@ -1286,7 +1339,20 @@ class TelegramDaemonUITests(unittest.TestCase):
         controller.handle_web_app_data.assert_called_once_with(
             42, '{"version":1,"action":"jobs"}'
         )
-        self.assertTrue(http.post.call_args.args[0].endswith("/sendMessage"))
+        cleanup = next(
+            call.kwargs["json"]
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+        )
+        self.assertEqual(100, cleanup["chat_id"])
+        response = next(
+            call.kwargs["json"]
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("text") == "Created"
+        )
+        self.assertNotIn("reply_markup", response)
 
     def test_source_probe_does_not_block_long_polling_loop(self) -> None:
         started = threading.Event()
@@ -1296,7 +1362,14 @@ class TelegramDaemonUITests(unittest.TestCase):
         def probe(_user_id, _raw_data):
             started.set()
             release.wait(2)
-            return BotResponse("Detected")
+            return BotResponse(
+                "Detected",
+                {
+                    "keyboard": [[{"text": "Legacy"}]],
+                    "selective": True,
+                    "input_field_placeholder": "Choose an action",
+                },
+            )
 
         controller.handle_web_app_data.side_effect = probe
         http = Mock()
@@ -1326,12 +1399,19 @@ class TelegramDaemonUITests(unittest.TestCase):
                 time.sleep(0.01)
 
         self.assertTrue(session.post.called)
+        self.assertNotIn("reply_markup", session.post.call_args.kwargs["json"])
 
-    def test_reply_keyboard_callback_is_sent_as_a_new_message(self) -> None:
+    def test_reply_keyboard_callback_is_removed_instead_of_recreated(self) -> None:
         controller = Mock()
+        controller.web_app_url = ""
         controller.handle_callback.return_value = BotResponse(
             "Open app",
-            {"keyboard": [[{"text": "Open", "web_app": {"url": "https://example.com"}}]]},
+            {
+                "keyboard": [[{"text": "Open", "web_app": {"url": "https://example.com"}}]],
+                "resize_keyboard": True,
+                "selective": True,
+                "input_field_placeholder": "Open Wukong Studio",
+            },
         )
         success = Mock()
         success.raise_for_status.return_value = None
@@ -1343,14 +1423,274 @@ class TelegramDaemonUITests(unittest.TestCase):
             "callback_query": {
                 "id": "callback-app",
                 "from": {"id": 42},
-                "message": {"message_id": 99, "chat": {"id": 100}},
+                "message": {"message_id": 99, "chat": {"id": 42}},
                 "data": "v1:app",
             }
         })
 
-        endpoints = [call.args[0] for call in http.post.call_args_list]
-        self.assertTrue(any(value.endswith("/sendMessage") for value in endpoints))
-        self.assertFalse(any(value.endswith("/editMessageText") for value in endpoints))
+        edited = next(
+            call.kwargs["json"]
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/editMessageText")
+        )
+        self.assertNotIn("reply_markup", edited)
+        cleanup = next(
+            call.kwargs["json"]
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/sendMessage")
+        )
+        self.assertEqual({"remove_keyboard": True}, cleanup["reply_markup"])
+
+    def test_reply_keyboard_cleanup_retries_delete_without_sending_another_helper(self) -> None:
+        controller = Mock()
+        controller.web_app_url = ""
+        controller.handle_ui.return_value = BotResponse("Ready")
+        cleanup_sent = Mock()
+        cleanup_sent.raise_for_status.return_value = None
+        cleanup_sent.json.return_value = {"ok": True, "result": {"message_id": 77}}
+        success = Mock()
+        success.raise_for_status.return_value = None
+        success.json.return_value = {"ok": True, "result": True}
+        delete_failed = Mock()
+        delete_failed.status_code = 429
+        delete_failed.json.return_value = {
+            "ok": False,
+            "description": "Too Many Requests: retry after 1",
+        }
+        delete_failed.raise_for_status.side_effect = requests.HTTPError(
+            "rate limited",
+            response=delete_failed,
+        )
+        delete_attempts = 0
+
+        def fake_post(endpoint, **kwargs):
+            nonlocal delete_attempts
+            if endpoint.endswith("/deleteMessage"):
+                delete_attempts += 1
+                return delete_failed if delete_attempts == 1 else success
+            if (
+                endpoint.endswith("/sendMessage")
+                and kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+            ):
+                return cleanup_sent
+            return success
+
+        http = Mock()
+        http.post.side_effect = fake_post
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+        update = {
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": -100123},
+                "text": "/start",
+            }
+        }
+
+        daemon.process_update(update)
+        daemon.process_update(update)
+
+        cleanup_calls = [
+            call
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+        ]
+        delete_calls = [
+            call
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/deleteMessage")
+        ]
+        self.assertEqual(1, len(cleanup_calls))
+        self.assertEqual(2, len(delete_calls))
+        self.assertEqual({"chat_id": -100123, "message_id": 77}, delete_calls[-1].kwargs["json"])
+        self.assertNotIn("-100123", daemon._reply_keyboard_cleanup_messages)
+        self.assertIn("-100123", daemon._reply_keyboard_removed_chats)
+
+    def test_reply_keyboard_cleanup_retries_in_background_without_another_update(self) -> None:
+        controller = Mock()
+        controller.web_app_url = ""
+        controller.handle_ui.return_value = BotResponse("Ready")
+        cleanup_sent = Mock()
+        cleanup_sent.raise_for_status.return_value = None
+        cleanup_sent.json.return_value = {"ok": True, "result": {"message_id": 77}}
+        success = Mock()
+        success.raise_for_status.return_value = None
+        success.json.return_value = {"ok": True, "result": True}
+        delete_failed = Mock()
+        delete_failed.raise_for_status.side_effect = requests.RequestException("temporary")
+        delete_attempts = 0
+
+        def fake_post(endpoint, **kwargs):
+            nonlocal delete_attempts
+            if endpoint.endswith("/deleteMessage"):
+                delete_attempts += 1
+                return delete_failed if delete_attempts == 1 else success
+            if (
+                endpoint.endswith("/sendMessage")
+                and kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+            ):
+                return cleanup_sent
+            return success
+
+        http = Mock()
+        http.post.side_effect = fake_post
+        timer = Mock()
+        with patch("wukong.telegram_bot.threading.Timer", return_value=timer) as timer_factory:
+            daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+            daemon.process_update({
+                "message": {
+                    "from": {"id": 42},
+                    "chat": {"id": 42},
+                    "text": "/start",
+                }
+            })
+
+            timer.start.assert_called_once_with()
+            retry = timer_factory.call_args.args[1]
+            retry(*timer_factory.call_args.kwargs["args"])
+
+        self.assertEqual(2, delete_attempts)
+        self.assertNotIn("42", daemon._reply_keyboard_cleanup_messages)
+        self.assertIn("42", daemon._reply_keyboard_removed_chats)
+
+    def test_reply_keyboard_cleanup_retry_exhaustion_does_not_cache_false_success(self) -> None:
+        controller = Mock()
+        controller.web_app_url = ""
+        controller.handle_ui.return_value = BotResponse("Ready")
+        failed = Mock()
+        failed.raise_for_status.side_effect = requests.RequestException("offline")
+        success = Mock()
+        success.raise_for_status.return_value = None
+
+        def fake_post(endpoint, **kwargs):
+            if (
+                endpoint.endswith("/sendMessage")
+                and kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+            ):
+                return failed
+            return success
+
+        http = Mock()
+        http.post.side_effect = fake_post
+        timers = [Mock() for _ in range(5)]
+        with patch("wukong.telegram_bot.threading.Timer", side_effect=timers) as timer_factory:
+            daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+            daemon.process_update({
+                "message": {
+                    "from": {"id": 42},
+                    "chat": {"id": 42},
+                    "text": "/start",
+                }
+            })
+            for _ in range(5):
+                timer_call = timer_factory.call_args
+                retry = timer_call.args[1]
+                retry(*timer_call.kwargs["args"])
+
+        self.assertEqual(5, timer_factory.call_count)
+        self.assertNotIn("42", daemon._reply_keyboard_removed_chats)
+        self.assertNotIn("42", daemon._reply_keyboard_cleanup_timers)
+        self.assertNotIn("42", daemon._reply_keyboard_cleanup_attempts)
+
+    def test_reply_keyboard_cleanup_does_not_cache_semantic_telegram_failure(self) -> None:
+        controller = Mock()
+        controller.web_app_url = ""
+        controller.handle_ui.return_value = BotResponse("Ready")
+        rejected = Mock()
+        rejected.raise_for_status.return_value = None
+        rejected.status_code = 200
+        rejected.json.return_value = {
+            "ok": False,
+            "description": "Bad Request: chat not found",
+        }
+        success = Mock()
+        success.raise_for_status.return_value = None
+
+        def fake_post(endpoint, **kwargs):
+            if (
+                endpoint.endswith("/sendMessage")
+                and kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+            ):
+                return rejected
+            return success
+
+        http = Mock()
+        http.post.side_effect = fake_post
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+        update = {
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 42},
+                "text": "/start",
+            }
+        }
+
+        daemon.process_update(update)
+        daemon.process_update(update)
+
+        cleanup_calls = [
+            call
+            for call in http.post.call_args_list
+            if call.args[0].endswith("/sendMessage")
+            and call.kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+        ]
+        self.assertEqual(2, len(cleanup_calls))
+        self.assertNotIn("42", daemon._reply_keyboard_removed_chats)
+
+    def test_reply_keyboard_cleanup_treats_missing_helper_as_already_deleted(self) -> None:
+        controller = Mock()
+        controller.web_app_url = ""
+        controller.handle_ui.return_value = BotResponse("Ready")
+        cleanup_sent = Mock()
+        cleanup_sent.raise_for_status.return_value = None
+        cleanup_sent.json.return_value = {"ok": True, "result": {"message_id": 77}}
+        missing = Mock()
+        missing.status_code = 400
+        missing.json.return_value = {
+            "ok": False,
+            "description": "Bad Request: message to delete not found",
+        }
+        missing.raise_for_status.side_effect = requests.HTTPError(
+            "not found",
+            response=missing,
+        )
+        success = Mock()
+        success.raise_for_status.return_value = None
+
+        def fake_post(endpoint, **kwargs):
+            if endpoint.endswith("/deleteMessage"):
+                return missing
+            if (
+                endpoint.endswith("/sendMessage")
+                and kwargs["json"].get("reply_markup") == {"remove_keyboard": True}
+            ):
+                return cleanup_sent
+            return success
+
+        http = Mock()
+        http.post.side_effect = fake_post
+        daemon = TelegramLongPollingDaemon("test-token", controller, http=http)
+        update = {
+            "message": {
+                "from": {"id": 42},
+                "chat": {"id": 42},
+                "text": "/start",
+            }
+        }
+
+        daemon.process_update(update)
+        daemon.process_update(update)
+
+        self.assertEqual(
+            1,
+            len([
+                call
+                for call in http.post.call_args_list
+                if call.args[0].endswith("/deleteMessage")
+            ]),
+        )
+        self.assertNotIn("42", daemon._reply_keyboard_cleanup_messages)
+        self.assertIn("42", daemon._reply_keyboard_removed_chats)
 
     def test_callback_edit_failure_falls_back_to_new_message(self) -> None:
         controller = Mock()
