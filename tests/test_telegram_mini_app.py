@@ -378,7 +378,7 @@ class TelegramMiniAppTests(unittest.TestCase):
                                 "id": "MOD/ColorOS_16.0.9",
                                 "target": "MOD/ColorOS_16.0.9",
                                 "remote": "drive:MOD/ColorOS_16.0.9",
-                                "sizeBytes": 2,
+                                "sizeBytes": 4,
                                 "archive": {
                                     "uri": "drive:MOD/ColorOS_16.0.9.tar.zst",
                                     "sha256": "a" * 64,
@@ -386,7 +386,9 @@ class TelegramMiniAppTests(unittest.TestCase):
                                     "sizeBytes": 1,
                                 },
                                 "files": [
-                                    {"path": "Gapps/system/app.apk", "sha256": "c" * 64, "sizeBytes": 1},
+                                    {"path": "Gapps/my_product/app.apk", "sha256": "c" * 64, "sizeBytes": 1},
+                                    {"path": "GlobalSearch/my_stock/app.apk", "sha256": "2" * 64, "sizeBytes": 1},
+                                    {"path": "Unsafe/vendor/app.apk", "sha256": "3" * 64, "sizeBytes": 1},
                                     {"path": "WK_Manager/system/app.apk", "sha256": "d" * 64, "sizeBytes": 1},
                                 ],
                             },
@@ -428,8 +430,14 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertEqual(["ColorOS_16.0.9"], payload["modVersions"])
         self.assertEqual("V5.0", payload["modReleaseVersions"]["ColorOS_16.0.9"])
-        self.assertEqual(["Gapps", "WK_Manager"], payload["modsByVersion"]["ColorOS_16.0.9"])
-        self.assertEqual(["Gapps", "WK_Manager"], payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"])
+        self.assertEqual(
+            ["Gapps", "GlobalSearch", "WK_Installer", "WK_Manager"],
+            payload["modsByVersion"]["ColorOS_16.0.9"],
+        )
+        self.assertEqual(
+            ["Gapps", "GlobalSearch", "WK_Installer", "WK_Manager"],
+            payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"],
+        )
         self.assertIn("sync_configs", [item["id"] for item in payload["pipelineSteps"]])
         self.assertNotIn("sync_metadata", [item["id"] for item in payload["pipelineSteps"]])
         self.assertEqual("PKG110", payload["devices"][0]["product"])

@@ -415,7 +415,7 @@ class StudioCoreTests(unittest.TestCase):
                 "package_zip",
             ],
         )
-        with self.assertRaisesRegex(studio_core.StudioError, "system-only"):
+        with self.assertRaisesRegex(studio_core.StudioError, "protected boot-partition"):
             studio_core.plan_steps(spec)
         steps = []
         self.assertNotIn("region_patch", steps)
@@ -541,7 +541,7 @@ class StudioCoreTests(unittest.TestCase):
         self.assertIn("Fake_lock", resume.selected_mod_names())
         self.assertTrue(
             all(
-                set(mod["partitions"]).issubset({"system"}) or mod["patchOnly"]
+                set(mod["partitions"]).issubset(studio_core.MOD_PARTITIONS) or mod["patchOnly"]
                 for mod in studio_core.list_mods()
                 if mod["name"] in resume.selected_mod_names()
             )
@@ -637,7 +637,7 @@ class StudioCoreTests(unittest.TestCase):
 
             self.assertEqual(
                 manifest_prop.read_text(encoding="utf-8"),
-                "ro.build.version.oplusrom.display=16.0.7\n",
+                "ro.build.version.oplusrom.display=16.0.7 | Plus | V9.2\n",
             )
             with zipfile.ZipFile(result["outputZip"], "r") as archive:
                 info = archive.read("info.txt").decode("utf-8").splitlines()
@@ -1495,7 +1495,7 @@ class StudioCoreTests(unittest.TestCase):
             self.assertEqual(xml.read_bytes(), b"<features>\n  <item/>\n</features>\n")
             self.assertEqual(apk.read_bytes(), b"PK\r\nbinary\rpayload")
 
-    def test_global_props_mod_is_rejected_by_system_only_policy(self):
+    def test_global_props_mod_updates_my_product_and_keeps_vendor_protected(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             unpack = root / "rom-unpack"
@@ -1515,33 +1515,45 @@ class StudioCoreTests(unittest.TestCase):
                 "ro.vendor.oplus.camera.isSupportExplorer=0\n",
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(studio_core.StudioError, "no supported"):
-                studio_core.apply_selected_mods(
-                    ["Global_props"],
-                    unpack,
-                    {"soc": "86xx"},
-                    root,
-                )
-            self.assertIn("Asia/Shanghai", product_prop.read_text(encoding="utf-8"))
+            result = studio_core.apply_selected_mods(
+                ["Global_props"],
+                unpack,
+                {"soc": "86xx"},
+                root,
+            )
+            self.assertEqual(result["modifiedPartitions"], ["my_product"])
+            self.assertEqual(
+                product_prop.read_text(encoding="utf-8"),
+                "persist.sys.timezone=America/New_York\n"
+                "persist.sys.oplus.region=US\n"
+                "ro.product.locale=en-US\n",
+            )
             self.assertEqual(
                 vendor_prop.read_text(encoding="utf-8"),
                 "ro.vendor.oplus.camera.isSupportExplorer=0\n",
             )
 
-    def test_passthrough_partitions_are_not_mod_or_debloat_targets(self):
-        self.assertEqual(("system",), studio_core.MUTABLE_PARTITIONS)
-        self.assertEqual({"system"}, studio_core.MOD_PARTITIONS)
+    def test_supported_mod_partitions_are_mutable_but_vendor_stays_passthrough(self):
+        self.assertTrue(
+            {"system", "system_ext", "my_product", "my_region", "my_stock"}.issubset(
+                studio_core.MOD_PARTITIONS
+            )
+        )
+        self.assertIn("vendor", studio_core.PASSTHROUGH_PARTITIONS)
+        self.assertIn("vendor_dlkm", studio_core.PASSTHROUGH_PARTITIONS)
         for partition in studio_core.PASSTHROUGH_PARTITIONS:
             self.assertNotIn(partition, studio_core.MUTABLE_PARTITIONS)
             self.assertNotIn(partition, studio_core.MOD_PARTITIONS)
         with self.assertRaisesRegex(studio_core.StudioError, "Invalid debloat path"):
             studio_core.validate_debloat_paths(["vendor\\build.prop"])
-        with self.assertRaisesRegex(studio_core.StudioError, "system-only"):
-            studio_core.validate_debloat_paths(["my_stock\\app\\Browser"])
+        self.assertEqual(
+            studio_core.validate_debloat_paths(["my_stock\\app\\Browser"]),
+            ["my_stock\\app\\Browser"],
+        )
 
-    def test_stage_apply_mod_rejects_every_non_system_partition(self):
+    def test_stage_apply_mod_accepts_supported_non_system_partition(self):
         context = studio_core.BuildContext(
-            job_id="system-only-mod",
+            job_id="multi-partition-mod",
             spec=studio_core.BuildSpec(romPath="fixture.zip", modNames=["Fixture"]),
             workspace=Path("workspace"),
             metadata={},
@@ -1552,8 +1564,9 @@ class StudioCoreTests(unittest.TestCase):
             "apply_selected_mods",
             return_value={"modifiedPartitions": ["system", "my_product"]},
         ):
-            with self.assertRaisesRegex(studio_core.StudioError, "outside system"):
-                studio_core._stage_apply_mod(context)
+            result = studio_core._stage_apply_mod(context)
+        self.assertEqual(result["modifiedPartitions"], ["system", "my_product"])
+        self.assertEqual(context.modified_partitions, {"system", "my_product"})
 
     def test_stage_apply_mod_detects_actual_passthrough_tree_writes(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1563,7 +1576,7 @@ class StudioCoreTests(unittest.TestCase):
             vendor_prop = vendor / "build.prop"
             vendor_prop.write_text("before\n", encoding="utf-8")
             context = studio_core.BuildContext(
-                job_id="actual-system-only-guard",
+                job_id="protected-partition-guard",
                 spec=studio_core.BuildSpec(romPath="fixture.zip", modNames=["Fixture"]),
                 workspace=workspace,
                 metadata={},
@@ -1582,7 +1595,7 @@ class StudioCoreTests(unittest.TestCase):
                 with self.assertRaisesRegex(studio_core.StudioError, "actual MOD writes.*vendor"):
                     studio_core._stage_apply_mod(context)
 
-    def test_block_ota_mod_is_rejected_by_system_only_policy(self):
+    def test_block_ota_mod_removes_ota_lines_from_stock_features(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             unpack = root / "rom-unpack"
@@ -1606,49 +1619,55 @@ class StudioCoreTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            with self.assertRaisesRegex(studio_core.StudioError, "does not exist"):
-                studio_core.apply_selected_mods(
-                    ["Block_ota"],
-                    unpack,
-                    {"soc": "86xx"},
-                    root,
-                )
+            result = studio_core.apply_selected_mods(
+                ["Block_ota"],
+                unpack,
+                {"soc": "86xx"},
+                root,
+            )
+            self.assertEqual(result["modifiedPartitions"], ["my_stock"])
+            self.assertEqual(result["stockOtaFeatureLines"], 4)
             content = feature_xml.read_text(encoding="utf-8")
-            self.assertIn("com.oplusos.sau", content)
             self.assertIn("com.oplus.system_update.keep", content)
+            self.assertNotIn("com.oplusos.sau", content)
+            self.assertNotIn("romupdate", content.lower())
+            self.assertNotIn("ota", content.lower())
 
-    def test_block_ota_is_not_listed_under_system_only_policy(self):
-        self.assertNotIn("Block_ota", [mod["name"] for mod in studio_core.list_mods()])
-        self.assertNotIn("Block_ota", studio_core.preset_default_mods("lite"))
+    def test_block_ota_is_listed_as_patch_only_mod(self):
+        mod = next(mod for mod in studio_core.list_mods() if mod["name"] == "Block_ota")
+        self.assertTrue(mod["ready"])
+        self.assertTrue(mod["patchOnly"])
+        self.assertEqual(mod["partitions"], [])
+        self.assertIn("Block_ota", studio_core.preset_default_mods("lite"))
 
-    def test_ai_global_is_rejected_by_system_only_policy(self):
+    def test_ai_global_removes_aiunit_only_for_coloros_1605(self):
         with tempfile.TemporaryDirectory() as temp, mock.patch.object(
             studio_core, "MOD_DIR", Path(temp) / "MOD"
         ):
             root = Path(temp)
-            for version in ("ColorOS_16.0.5", "ColorOS_16.0.7"):
+            for version, should_remove in (("ColorOS_16.0.5", True), ("ColorOS_16.0.7", False)):
                 mod_file = root / "MOD" / version / "Ai_global" / "my_stock" / "app" / "AiGlobal" / "AiGlobal.apk"
                 mod_file.parent.mkdir(parents=True)
                 mod_file.write_bytes(b"apk")
 
-            for version in ("ColorOS_16.0.5", "ColorOS_16.0.7"):
+            for version, should_remove in (("ColorOS_16.0.5", True), ("ColorOS_16.0.7", False)):
                 unpack = root / f"rom-unpack-{version}"
                 stock = unpack / "my_stock_unpacked" / "my_stock"
                 aiunit = stock / "app" / "AIUnit"
                 aiunit.mkdir(parents=True)
                 (aiunit / "AIUnit.apk").write_bytes(b"old")
 
-                with self.assertRaisesRegex(studio_core.StudioError, "no supported"):
-                    studio_core.apply_selected_mods(
-                        ["Ai_global"],
-                        unpack,
-                        {"soc": "86xx"},
-                        root / f"workspace-{version}",
-                        version,
-                    )
-                self.assertTrue(aiunit.exists())
+                result = studio_core.apply_selected_mods(
+                    ["Ai_global"],
+                    unpack,
+                    {"soc": "86xx"},
+                    root / f"workspace-{version}",
+                    version,
+                )
+                self.assertEqual(result["aiGlobalAiunitRemoved"], 1 if should_remove else 0)
+                self.assertEqual(aiunit.exists(), not should_remove)
 
-    def test_theme_cr_is_rejected_by_system_only_policy(self):
+    def test_theme_cr_removes_duplicate_del_app_theme_space(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             unpack = root / "rom-unpack"
@@ -1658,22 +1677,25 @@ class StudioCoreTests(unittest.TestCase):
             (duplicate / "old.apk").write_bytes(b"old")
             (stock / "priv-app").mkdir(parents=True)
 
-            with self.assertRaisesRegex(studio_core.StudioError, "no supported"):
-                studio_core.apply_selected_mods(
-                    ["Theme_cr"],
-                    unpack,
-                    {"soc": "86xx"},
-                    root,
-                )
-            self.assertTrue(duplicate.exists())
+            result = studio_core.apply_selected_mods(
+                ["Theme_cr"],
+                unpack,
+                {"soc": "86xx"},
+                root,
+            )
+            self.assertEqual(result["themeCrRemoved"], 1)
+            self.assertFalse(duplicate.exists())
+            self.assertTrue(
+                (stock / "priv-app" / "KeKeThemeSpace" / "KeKeThemeSpace.apk").is_file()
+            )
 
     def test_fix_metis_is_lite_default_mod(self):
         self.assertIn("Fix_Metis", studio_core.LITE_DEFAULT_MODS)
-        self.assertNotIn("Fix_Metis", studio_core.preset_default_mods("lite"))
+        self.assertIn("Fix_Metis", studio_core.preset_default_mods("lite"))
 
     def test_wk_installer_is_lite_default_mod(self):
         self.assertIn("WK_Installer", studio_core.LITE_DEFAULT_MODS)
-        self.assertNotIn("WK_Installer", studio_core.preset_default_mods("lite"))
+        self.assertIn("WK_Installer", studio_core.preset_default_mods("lite"))
 
     def test_build_branding_patches_display_version_and_market_name(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1736,7 +1758,7 @@ class StudioCoreTests(unittest.TestCase):
                 "ro.build.version.oplusrom.display=16.0.7 | Custom | V3.4\n",
             )
 
-    def test_repack_does_not_brand_passthrough_partitions(self):
+    def test_repack_brands_mutable_manifest_for_each_edition(self):
         with tempfile.TemporaryDirectory() as temp:
             workspace = Path(temp)
             manifest = (
@@ -1768,19 +1790,19 @@ class StudioCoreTests(unittest.TestCase):
                 lite = studio_core._stage_repack(context)
                 self.assertEqual(
                     manifest_prop.read_text(encoding="utf-8"),
-                    "ro.build.version.oplusrom.display=16.0.7\n",
+                    "ro.build.version.oplusrom.display=16.0.7 | Lite | V3.4\n",
                 )
                 context.spec = studio_core.BuildSpec(romPath="rom.zip", preset="resume")
                 plus = studio_core._stage_repack(context)
 
             self.assertEqual(
                 manifest_prop.read_text(encoding="utf-8"),
-                "ro.build.version.oplusrom.display=16.0.7\n",
+                "ro.build.version.oplusrom.display=16.0.7 | Plus | V3.4\n",
             )
-            self.assertEqual(lite["buildBranding"]["manifestDisplayVersion"], 0)
-            self.assertEqual(plus["buildBranding"]["manifestDisplayVersion"], 0)
+            self.assertEqual(lite["buildBranding"]["manifestDisplayVersion"], 1)
+            self.assertEqual(plus["buildBranding"]["manifestDisplayVersion"], 1)
 
-    def test_repack_preserves_passthrough_branding_for_coloros_800(self):
+    def test_repack_uses_selected_release_label_in_mutable_manifest(self):
         with tempfile.TemporaryDirectory() as temp:
             workspace = Path(temp)
             manifest = workspace / "rom-unpack" / "my_manifest_unpacked" / "my_manifest"
@@ -1812,7 +1834,7 @@ class StudioCoreTests(unittest.TestCase):
 
             self.assertEqual(
                 manifest_prop.read_text(encoding="utf-8"),
-                "ro.build.version.oplusrom.display=16.0.7\n",
+                "ro.build.version.oplusrom.display=16.0.7 | Lite | V4.1\n",
             )
 
     def test_stage_repack_copies_passthrough_source_images(self):
@@ -1822,6 +1844,7 @@ class StudioCoreTests(unittest.TestCase):
             source.mkdir()
             (source / "vendor.img").write_bytes(b"source-vendor")
             (source / "my_future.img").write_bytes(b"source-future")
+            (source / "my_stock.img").write_bytes(b"source-stock")
             context = studio_core.BuildContext(
                 job_id="fixture",
                 spec=studio_core.BuildSpec(romPath="rom.zip"),
@@ -1838,16 +1861,18 @@ class StudioCoreTests(unittest.TestCase):
             ), mock.patch.object(
                 studio_core,
                 "source_dynamic_partition_names",
-                return_value=["my_future", "system", "vendor"],
+                return_value=["my_future", "my_stock", "system", "vendor"],
             ):
                 result = studio_core._stage_repack(context)
 
             self.assertEqual((context.rom_repack / "vendor.img").read_bytes(), b"source-vendor")
+            self.assertEqual((context.rom_repack / "my_stock.img").read_bytes(), b"source-stock")
             self.assertEqual(
                 (context.rom_repack / "my_future.img").read_bytes(),
                 b"source-future",
             )
             self.assertIn("vendor", result["passthroughPartitions"])
+            self.assertIn("my_stock", result["passthroughPartitions"])
             self.assertIn("my_future", result["passthroughPartitions"])
 
     def test_debloat_paths_reject_traversal(self):
@@ -3518,7 +3543,7 @@ class StudioCoreTests(unittest.TestCase):
                 Path(command[5]).stem: command[command.index("--format") + 1]
                 for command in commands
             }
-            self.assertEqual(formats, {"system": "erofs"})
+            self.assertEqual(formats, {"my_product": "ext4", "system": "erofs"})
 
     def test_batch_repack_legacy_trusts_img_tool_exit_code(self):
         with tempfile.TemporaryDirectory() as temp:

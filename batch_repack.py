@@ -10,14 +10,14 @@ from partition_config import (
     validate_repacked_partition,
 )
 from studio_paths import platform_bin_dir
-from wukong.catalog import SYSTEM_ONLY_PARTITIONS
+from wukong.catalog import MODIFIABLE_PARTITIONS
 
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(line_buffering=True, errors="replace")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MUTABLE_PARTITIONS = set(SYSTEM_ONLY_PARTITIONS)
+MUTABLE_PARTITIONS = set(MODIFIABLE_PARTITIONS)
 
 # Ký tự cần escape trong file_contexts (regex format)
 FC_SPECIAL_CHARS = re.compile(r'([.+\[\](){}^$|?*])')
@@ -250,7 +250,8 @@ def batch_repack(
 
     selected_partitions = set(partitions) if partitions is not None else None
     if selected_partitions is not None and not selected_partitions.issubset(MUTABLE_PARTITIONS):
-        raise ValueError("System-only policy permits repacking only the system partition")
+        unsupported = ", ".join(sorted(selected_partitions.difference(MUTABLE_PARTITIONS)))
+        raise ValueError(f"Protected or unsupported partitions cannot be repacked: {unsupported}")
     print(f"[*] Starting batch repack to '{repack_dir}'...")
     if selected_partitions is not None:
         print(f"[*] Selected partitions: {', '.join(sorted(selected_partitions))}")
@@ -263,7 +264,7 @@ def batch_repack(
         if os.path.isdir(item_path) and item.endswith("_unpacked"):
             part_name = item.replace("_unpacked", "")
             if part_name not in MUTABLE_PARTITIONS:
-                print(f"[-] Skip non-system partition under system-only policy: {part_name}")
+                print(f"[-] Skip protected or passthrough partition: {part_name}")
                 continue
             if selected_partitions is not None and part_name not in selected_partitions:
                 print(f"[-] Reuse existing repack: {part_name}")

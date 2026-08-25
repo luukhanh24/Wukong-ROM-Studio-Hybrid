@@ -5,7 +5,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from wukong.catalog import SYSTEM_ONLY_PARTITIONS
+from wukong.catalog import MODIFIABLE_PARTITIONS
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -29,7 +29,7 @@ PARTITIONS = [
     "vendor",
     "vendor_dlkm"
 ]
-MUTABLE_PARTITIONS = sorted(SYSTEM_ONLY_PARTITIONS)
+MUTABLE_PARTITIONS = [part for part in PARTITIONS if part in MODIFIABLE_PARTITIONS]
 
 
 def _partition_workers(task_count):

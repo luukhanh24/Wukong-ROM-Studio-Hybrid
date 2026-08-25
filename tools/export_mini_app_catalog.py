@@ -6,10 +6,9 @@ from pathlib import Path
 
 from wukong.catalog import (
     LITE_DEFAULT_MODS,
+    MODIFIABLE_PARTITIONS,
     PLUS_DEFAULT_EXCLUDED_MODS,
     SHARED_MOD_NAMES,
-    SYSTEM_ONLY_PARTITIONS,
-    SYSTEM_ONLY_PATCH_MODS,
 )
 from wukong.content_packs import validate_content_index
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
@@ -56,7 +55,7 @@ def export_catalog(
             shared_mods.update(
                 name
                 for name, partitions in shared_partitions.items()
-                if partitions.intersection(SYSTEM_ONLY_PARTITIONS)
+                if partitions.intersection(MODIFIABLE_PARTITIONS)
             )
             continue
         if not pack_id.startswith("MOD/") or not isinstance(archive, dict) or not archive.get("sha256"):
@@ -71,8 +70,7 @@ def export_catalog(
             (
                 name
                 for name, partitions in partitions_by_mod.items()
-                if partitions.intersection(SYSTEM_ONLY_PARTITIONS)
-                or name in SYSTEM_ONLY_PATCH_MODS
+                if partitions.intersection(MODIFIABLE_PARTITIONS)
             ),
             key=str.casefold,
         )

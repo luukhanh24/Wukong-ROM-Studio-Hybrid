@@ -315,7 +315,7 @@ class StudioServerTests(unittest.TestCase):
             payload["presetDefaults"]["lite"],
             studio_core.preset_default_mods("lite"),
         )
-        self.assertNotIn("WK_Installer", payload["presetDefaults"]["lite"])
+        self.assertIn("WK_Installer", payload["presetDefaults"]["lite"])
         self.assertIn("WK_Manager", payload["presetDefaults"]["resume"])
         self.assertIn("Fake_lock", payload["presetDefaults"]["resume"])
         self.assertNotIn("Gallery_mod_CN", payload["presetDefaults"]["resume"])

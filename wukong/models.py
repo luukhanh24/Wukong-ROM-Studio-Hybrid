@@ -263,7 +263,7 @@ class BuildOptions:
             )
         if "patch_vendor_boot" in steps:
             raise RecipeValidationError(
-                "patch_vendor_boot is disabled by the system-only modification policy"
+                "patch_vendor_boot is disabled by the protected boot-partition policy"
             )
         mod_release_version = str(
             data.get("modReleaseVersion")
