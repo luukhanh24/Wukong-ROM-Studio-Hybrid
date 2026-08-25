@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-23T18:25:33.959404Z",
+  "generatedAt": "2026-08-25T16:55:09.596872Z",
   "packs": [
     {
       "archive": {
@@ -4347,9 +4347,9 @@
     },
     {
       "archive": {
-        "md5": "f24b1c274e2bbcb16c7e214d0b1b5ffd",
-        "sha256": "039b55b2ab464e45e469a3938429d0f7f18e8ea2ac6d7e0320446d77318576a8",
-        "sizeBytes": 10474709,
+        "md5": "1b3382423ffb58905dfb767579024bcf",
+        "sha256": "cf0f33fc03cf84d377d5c379c9e7dd72f30816dd339eed1ec4ec18c61343855f",
+        "sizeBytes": 10452896,
         "uri": "wukong-gdrive:WukongROM/content-packs/STARK/common.tar.zst"
       },
       "files": [
@@ -4400,8 +4400,8 @@
         },
         {
           "path": "WK_Manager/system/system/priv-app/WukongManager/WukongManager.apk",
-          "sha256": "2ec28287c707bda934bf396d8038fe826bea3582e82ad50384906598fbedf485",
-          "sizeBytes": 10841423
+          "sha256": "3401edf0c550554402c9a1535d8c820a9cd3d828415bf8bd85d9a687f99abf21",
+          "sizeBytes": 10824610
         },
         {
           "path": "WK_Manager/system/system/stark_build.prop",
@@ -4461,7 +4461,7 @@
       ],
       "id": "STARK/common",
       "remote": "wukong-gdrive:WukongROM/content-packs/STARK/common",
-      "sizeBytes": 16277239,
+      "sizeBytes": 16260426,
       "target": "STARK"
     },
     {
