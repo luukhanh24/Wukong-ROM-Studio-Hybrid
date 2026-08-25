@@ -858,7 +858,9 @@ class TelegramMiniAppTests(unittest.TestCase):
             'window.addEventListener("scroll", updateMastheadScroll, { passive: true })',
             script,
         )
-        self.assertIn('data-greeting-rotated="true"', dom)
+        self.assertIn('data-greeting-initial="', dom)
+        self.assertIn("state.greetingTimer = window.setInterval", script)
+        self.assertIn("}, 6000);", script)
         self.assertIn('data-haptic-selections="1"', dom)
         self.assertIn('data-broken-assets="0"', dom)
         self.assertGreater(screenshot_size, 10_000)
