@@ -577,9 +577,20 @@ class HybridChannelParityContractTests(unittest.TestCase):
                 orchestrator=telegram_orchestrator,
                 catalog_provider=lambda: {},
                 diagnostics_provider=lambda: {},
+                web_app_url="https://wukong-rom-studio.vercel.app/",
             )
-            submitted_message = telegram.handle("67890", f"/submit {recipe.canonical_json}")
-            telegram_job = submitted_message.splitlines()[0].rsplit(" ", 1)[-1]
+            submitted_message = telegram.handle_web_app_data(
+                "67890",
+                json.dumps(
+                    {
+                        "version": 1,
+                        "action": "submit_recipe",
+                        "recipe": recipe.to_dict(),
+                    }
+                ),
+            ).text
+            self.assertIn("đã được tạo", submitted_message, submitted_message)
+            telegram_job = submitted_message.splitlines()[0].split()[1]
             channels.append(
                 (
                     "telegram",

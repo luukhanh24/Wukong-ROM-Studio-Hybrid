@@ -19,6 +19,7 @@ from wukong.telegram_mini_api import (
     TelegramJobNotifier,
     TelegramMiniAppAPI,
     issue_telegram_launch_token,
+    public_artifact_url,
     validate_telegram_init_data,
     validate_telegram_launch_token,
 )
@@ -246,7 +247,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(403, denied.status_code)
         self.assertEqual("admin_required", denied.get_json()["code"])
 
-    def test_artifact_download_uses_short_lived_api_ticket(self) -> None:
+    def test_artifact_download_exposes_the_original_cloud_url(self) -> None:
         created = self.client.post(
             "/v1/jobs",
             headers={**self.headers(42), "Idempotency-Key": "download-job"},
@@ -267,13 +268,108 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             ],
         )
 
+        detail = self.client.get(f"/v1/jobs/{job_id}", headers=self.headers(42))
+        self.assertEqual(200, detail.status_code)
+        artifact = detail.get_json()["artifacts"][0]
+        self.assertEqual("https://drive.google.com/uc?id=fixture", artifact["publicUrl"])
+        self.assertTrue(artifact["downloadAvailable"])
+
         issued = self.client.get(f"/v1/jobs/{job_id}/download", headers=self.headers(42))
         self.assertEqual(200, issued.status_code)
-        download_url = issued.get_json()["downloadUrl"]
-        parsed = urlsplit(download_url)
-        followed = self.client.get(f"{parsed.path}?{parsed.query}")
-        self.assertEqual(302, followed.status_code)
-        self.assertEqual("https://drive.google.com/uc?id=fixture", followed.headers["Location"])
+        self.assertEqual(
+            "https://drive.google.com/uc?id=fixture",
+            issued.get_json()["downloadUrl"],
+        )
+        self.assertNotIn("onrender.com", issued.get_json()["downloadUrl"])
+
+    def test_signed_cloud_artifact_url_is_not_redacted(self) -> None:
+        created = self.client.post(
+            "/v1/jobs",
+            headers={**self.headers(42), "Idempotency-Key": "signed-download-job"},
+            json=self.recipe(),
+        )
+        job_id = created.get_json()["job_id"]
+        signed_url = (
+            "https://downloads.example.com/PKG110.zip"
+            "?X-Amz-Expires=3600&X-Amz-Signature=fixture-signature"
+        )
+        self.store.update(
+            job_id,
+            status=JobStatus.SUCCEEDED,
+            artifacts=[
+                ArtifactRecord(
+                    name="PKG110.zip",
+                    uri="cloud:artifacts/PKG110.zip",
+                    size_bytes=123,
+                    sha256="a" * 64,
+                    public_url=signed_url,
+                )
+            ],
+        )
+
+        detail = self.client.get(f"/v1/jobs/{job_id}", headers=self.headers(42))
+
+        self.assertEqual(200, detail.status_code)
+        self.assertEqual(signed_url, detail.get_json()["artifacts"][0]["publicUrl"])
+
+    def test_artifact_url_rejects_only_the_configured_api_host(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "WUKONG_TELEGRAM_MINI_APP_API_URL": "https://api.example.com",
+            },
+        ):
+            self.assertEqual("", public_artifact_url("https://api.example.com/download/1"))
+            self.assertEqual(
+                "",
+                public_artifact_url(
+                    "https://wukong-mini-api.onrender.com/v1/jobs/1/download"
+                ),
+            )
+            self.assertEqual(
+                "https://artifact-store.onrender.com/releases/PKG110.zip",
+                public_artifact_url(
+                    "https://artifact-store.onrender.com/releases/PKG110.zip"
+                ),
+            )
+
+    def test_malformed_artifact_url_is_reported_as_unavailable(self) -> None:
+        created = self.client.post(
+            "/v1/jobs",
+            headers={**self.headers(42), "Idempotency-Key": "malformed-download-job"},
+            json=self.recipe(),
+        )
+        job_id = created.get_json()["job_id"]
+        self.store.update(
+            job_id,
+            status=JobStatus.SUCCEEDED,
+            artifacts=[
+                ArtifactRecord(
+                    name="PKG110.zip",
+                    uri="cloud:artifacts/PKG110.zip",
+                    size_bytes=123,
+                    sha256="a" * 64,
+                    public_url="https://[",
+                )
+            ],
+        )
+
+        detail = self.client.get(f"/v1/jobs/{job_id}", headers=self.headers(42))
+        issued = self.client.get(f"/v1/jobs/{job_id}/download", headers=self.headers(42))
+
+        self.assertEqual(200, detail.status_code)
+        self.assertFalse(detail.get_json()["artifacts"][0]["downloadAvailable"])
+        self.assertEqual(409, issued.status_code)
+
+    def test_artifact_url_rejects_whitespace_controls_and_bad_escapes(self) -> None:
+        for value in (
+            "https://drive.google.com/file invalid",
+            "https://drive.google.com/file\ninvalid",
+            "https://drive.google.com/file/%zz",
+            "https://drive.google.com\\file",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual("", public_artifact_url(value))
 
     def test_validates_signature_and_expiry(self) -> None:
         result = validate_telegram_init_data(signed_init_data(42), TOKEN)
@@ -926,6 +1022,14 @@ class TelegramMiniAppAPITests(unittest.TestCase):
 
 
 class TelegramJobNotifierTests(unittest.TestCase):
+    def test_bounded_html_message_stays_within_telegram_limit(self) -> None:
+        text = TelegramJobNotifier._bounded_html_message(
+            ["<b>Wukong ROM Studio</b>", *(["x" * 1000] * 8)]
+        )
+
+        self.assertLessEqual(len(text), 4096)
+        self.assertTrue(text.endswith("<i>…</i>"))
+
     def test_runtime_notifies_once_after_public_artifact_exists(self) -> None:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -978,7 +1082,10 @@ class TelegramJobNotifierTests(unittest.TestCase):
         )
         with patch.dict(
             "os.environ",
-            {"WUKONG_TELEGRAM_MINI_APP_API_URL": "https://mini-api.example.com"},
+            {
+                "WUKONG_TELEGRAM_MINI_APP_API_URL": "https://mini-api.example.com",
+                "WUKONG_TELEGRAM_WEB_APP_URL": "https://wukong-rom-studio.vercel.app/",
+            },
         ):
             runtime.notify_terminal(manifest)
             runtime.notify_terminal(manifest)
@@ -986,12 +1093,24 @@ class TelegramJobNotifierTests(unittest.TestCase):
         post.assert_called_once()
         text = post.call_args.kwargs["json"]["text"]
         self.assertIn("PKG110_16.0.10.500(CN01)", text)
-        self.assertIn("Android: 16", text)
-        self.assertIn(f"https://mini-api.example.com/v1/jobs/{job.job_id}/download?ticket=", text)
-        self.assertNotIn("drive.google.com", text)
+        self.assertIn("Android  <code>16</code>", text)
+        self.assertNotIn("mini-api.example.com", text)
+        self.assertNotIn("onrender.com", text)
         self.assertIn("[internal build reference]", text)
         self.assertNotIn("github.com", text.casefold())
         self.assertNotIn("luukhanh24", text.casefold())
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual("HTML", payload["parse_mode"])
+        buttons = [
+            button
+            for row in payload["reply_markup"]["inline_keyboard"]
+            for button in row
+        ]
+        self.assertIn(
+            "https://drive.google.com/download/fixture",
+            [button.get("url") for button in buttons],
+        )
+        self.assertFalse(any("onrender.com" in str(button) for button in buttons))
         self.assertEqual(1, len([
             event for event in store.events(job.job_id)
             if event.type == "telegram_terminal_notified"

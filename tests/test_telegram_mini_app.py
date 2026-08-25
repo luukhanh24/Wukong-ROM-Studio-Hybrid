@@ -70,6 +70,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     catalog_mods_by_version = None
     jobs_fixture = False
     click_job_log = False
+    artifact_fixture = False
+    click_artifact_actions = False
     admin_user = False
 
     def log_message(self, _format: str, *_args: object) -> None:
@@ -116,10 +118,17 @@ Object.defineProperty(navigator, 'clipboard', { value: {
   readText() { return Promise.reject(new DOMException('blocked', 'NotAllowedError')); }
 }});
 """ if (self.clipboard_gesture_only or self.server_draft_fallback) else ""
+            artifact_clipboard = """
+Object.defineProperty(navigator, 'clipboard', { value: {
+  readText() { return Promise.resolve(''); },
+  writeText(value) { document.body.dataset.copiedArtifact = value; return Promise.resolve(); }
+}});
+""" if self.click_artifact_actions else ""
             source = f"""
-window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, openTelegramLink() {{}}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, openTelegramLink() {{}}, openLink(url) {{ document.body.dataset.openedArtifact = url; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
 {exec_fallback}
 {navigator_fallback}
+{artifact_clipboard}
 window.addEventListener('load', () => {{
   const fill = () => {{
     const input = document.querySelector('#source-uri');
@@ -140,6 +149,16 @@ window.addEventListener('load', () => {{
       button.click();
     }};
     setTimeout(openLog, 100);
+  }}
+  if ({str(self.click_artifact_actions).lower()}) {{
+    const useArtifactActions = () => {{
+      const open = document.querySelector('.artifact-open');
+      const copy = document.querySelector('.artifact-copy');
+      if (!open || !copy) {{ setTimeout(useArtifactActions, 50); return; }}
+      open.click();
+      copy.click();
+    }};
+    setTimeout(useArtifactActions, 100);
   }}
 }});
 """
@@ -210,16 +229,30 @@ window.addEventListener('load', () => {{
             return
         self._send(b"not found", "text/plain", 404)
 
-    @staticmethod
-    def _fixture_job() -> dict[str, object]:
+    @classmethod
+    def _fixture_job(cls) -> dict[str, object]:
+        artifacts = (
+            [{
+                "name": "Wukong_Plus_V6.0_PKG110.zip",
+                "size_bytes": 8422162432,
+                "sha256": "a" * 64,
+                "downloadAvailable": True,
+                "publicUrl": "https://drive.google.com/open?id=fixture-artifact",
+            }]
+            if cls.artifact_fixture
+            else []
+        )
         return {
-            "job_id": "fixture-job", "status": "running", "stage": "debloat", "progress": 0.42,
+            "job_id": "fixture-job",
+            "status": "succeeded" if cls.artifact_fixture else "running",
+            "stage": "complete" if cls.artifact_fixture else "debloat",
+            "progress": 1 if cls.artifact_fixture else 0.42,
             "runner": "github-hosted", "created_at": "2026-08-25T01:00:00Z",
             "recipe": {
                 "device": "PKG110", "source": {"sizeBytes": 8680370027, "metadata": {"productName": "PKG110", "version": "PKG110_16.0.9.400(CN01)", "androidVersion": "16"}},
                 "build": {"preset": "plus", "modVersion": "ColorOS_16.0.9", "modReleaseVersion": "V5.0", "mods": ["Gapps", "WK_Manager"]},
             },
-            "artifacts": [],
+            "artifacts": artifacts,
         }
 
     @classmethod
@@ -287,6 +320,8 @@ def _render_mini_app_in_chrome(
     initial_view: str = "",
     jobs_fixture: bool = False,
     click_job_log: bool = False,
+    artifact_fixture: bool = False,
+    click_artifact_actions: bool = False,
     admin_user: bool = False,
 ) -> tuple[str, int]:
     chrome = _chrome_path()
@@ -310,6 +345,8 @@ def _render_mini_app_in_chrome(
             "catalog_mods_by_version": catalog_mods_by_version,
             "jobs_fixture": jobs_fixture,
             "click_job_log": click_job_log,
+            "artifact_fixture": artifact_fixture,
+            "click_artifact_actions": click_artifact_actions,
             "admin_user": admin_user,
         },
     )
@@ -602,6 +639,32 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("removed Count", dom)
         self.assertIn("17", dom)
         self.assertIn("Thu gọn nhật ký", dom)
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_artifacts_use_direct_cloud_links_with_open_and_copy_actions(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            artifact_fixture=True,
+            click_artifact_actions=True,
+        )
+
+        self.assertIn("Mở trên Google Drive", dom)
+        self.assertIn("Sao chép link tải", dom)
+        self.assertIn("Google Drive", dom)
+        self.assertIn(
+            'data-opened-artifact="https://drive.google.com/open?id=fixture-artifact"',
+            dom,
+        )
+        self.assertIn(
+            'data-copied-artifact="https://drive.google.com/open?id=fixture-artifact"',
+            dom,
+        )
+        self.assertNotIn("/v1/jobs/fixture-job/download", dom)
+        self.assertNotIn("onrender.com", dom)
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('if (!copied) throw new Error("Clipboard copy failed")', script)
         self.assertGreater(screenshot_size, 10_000)
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:

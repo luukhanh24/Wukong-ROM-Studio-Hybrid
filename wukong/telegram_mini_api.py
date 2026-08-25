@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
+import html
 import hmac
 import json
 import os
@@ -345,6 +346,41 @@ def _origin_from_web_app_url(value: str) -> str:
     return f"https://{parsed.netloc.casefold()}"
 
 
+def public_artifact_url(value: object) -> str:
+    candidate = str(value or "").strip()
+    if (
+        not candidate
+        or "\\" in candidate
+        or any(character.isspace() or ord(character) < 0x20 or ord(character) == 0x7F for character in candidate)
+        or re.search(r"%(?![0-9A-Fa-f]{2})", candidate)
+    ):
+        return ""
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return ""
+    hostname = (parsed.hostname or "").casefold()
+    blocked_hosts = {"wukong-mini-api.onrender.com"}
+    try:
+        configured_host = (
+            urlsplit(os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "")).hostname
+            or ""
+        ).casefold()
+    except ValueError:
+        configured_host = ""
+    if configured_host:
+        blocked_hosts.add(configured_host)
+    if (
+        parsed.scheme.casefold() != "https"
+        or not hostname
+        or parsed.username
+        or parsed.password
+        or hostname in blocked_hosts
+    ):
+        return ""
+    return candidate
+
+
 def public_job_payload(
     manifest: JobManifest,
     recipe: BuildRecipe | None = None,
@@ -356,13 +392,15 @@ def public_job_payload(
     if isinstance(artifacts, list):
         for artifact in artifacts:
             if isinstance(artifact, dict):
-                downloadable = str(
-                    artifact.get("public_url") or artifact.get("publicUrl") or ""
-                ).startswith("https://")
+                cloud_url = public_artifact_url(
+                    artifact.get("public_url") or artifact.get("publicUrl")
+                )
                 artifact.pop("uri", None)
                 artifact.pop("public_url", None)
                 artifact.pop("publicUrl", None)
-                artifact["downloadAvailable"] = downloadable
+                artifact["downloadAvailable"] = bool(cloud_url)
+                if cloud_url:
+                    artifact["publicUrl"] = cloud_url
     if recipe:
         payload["recipe"] = {
             "task": recipe.task,
@@ -377,7 +415,21 @@ def public_job_payload(
             "storage": {"publishArtifact": recipe.storage.publish_artifact},
         }
     sanitized = sanitize_public_value(payload)
-    return dict(sanitized) if isinstance(sanitized, Mapping) else {}
+    result = dict(sanitized) if isinstance(sanitized, Mapping) else {}
+    sanitized_artifacts = result.get("artifacts")
+    if isinstance(artifacts, list) and isinstance(sanitized_artifacts, list):
+        for original, public in zip(artifacts, sanitized_artifacts, strict=False):
+            if not isinstance(original, dict) or not isinstance(public, dict):
+                continue
+            cloud_url = public_artifact_url(
+                original.get("publicUrl") or original.get("public_url")
+            )
+            public["downloadAvailable"] = bool(cloud_url)
+            if cloud_url:
+                public["publicUrl"] = cloud_url
+            else:
+                public.pop("publicUrl", None)
+    return result
 
 
 _PRIVATE_EVENT_KEYS = {
@@ -1199,16 +1251,21 @@ class TelegramMiniAppAPI:
                     manifest = self.orchestrator.inspect(job_id, self._identity())
                 except OrchestrationError as exc:
                     return jsonify({"error": str(exc)}), 404
-            artifact = next((item for item in manifest.artifacts if item.public_url), None)
-            target = str(artifact.public_url if artifact else "").strip()
-            if not target.startswith("https://"):
+            target = next(
+                (
+                    public_artifact_url(item.public_url)
+                    for item in manifest.artifacts
+                    if public_artifact_url(item.public_url)
+                ),
+                "",
+            )
+            if not target:
                 return jsonify({"error": "Artifact download is not available yet"}), 409
             if not ticket:
-                download_ticket = self._issue_download_ticket(job_id, self._identity().subject)
                 return jsonify(
                     {
-                        "downloadUrl": f"{request.host_url.rstrip('/')}/v1/jobs/{job_id}/download?ticket={download_ticket}",
-                        "expiresIn": ARTIFACT_DOWNLOAD_TICKET_SECONDS,
+                        "downloadUrl": target,
+                        "provider": urlsplit(target).hostname,
                     }
                 )
             return redirect(target, code=302)
@@ -1557,52 +1614,92 @@ class TelegramJobNotifier:
         if manifest.owner.channel != "telegram" or not recipe.build.notify_telegram:
             return
         metadata = recipe.source.metadata
+        succeeded = manifest.status == JobStatus.SUCCEEDED
+        title = "Build ROM hoàn tất" if succeeded else "Build ROM cần kiểm tra"
+        status = "Thành công" if succeeded else manifest.status.value
+
+        def escape(value: object, limit: int = 240) -> str:
+            return html.escape(str(value or "—")[:limit], quote=False)
+
         lines = [
-            "Wukong ROM Studio · Build report",
+            "<b>Wukong ROM Studio</b>",
+            f"<b>{title}</b>",
             "",
-            f"Job: {manifest.job_id}",
-            f"Status: {manifest.status.value}",
-            f"Device: {recipe.device}",
-            f"Product: {metadata.get('productName') or recipe.device}",
-            f"Version: {metadata.get('version') or '—'}",
-            f"Android: {metadata.get('androidVersion') or '—'}",
-            f"Security patch: {metadata.get('securityPatch') or '—'}",
-            f"Build date: {metadata.get('buildDate') or '—'}",
-            f"Preset / MOD pack: {recipe.build.preset} / {recipe.build.mod_version}"
-            f" · release {recipe.build.mod_release_version or '—'}",
-            f"Runner: {manifest.runner or '—'}",
+            "<b>Thông tin bản ROM</b>",
+            f"Trạng thái  <b>{escape(status)}</b>",
+            f"Job  <code>{escape(manifest.job_id, 32)}</code>",
+            f"Thiết bị  <code>{escape(recipe.device)}</code>",
+            f"Phiên bản  <code>{escape(metadata.get('version'))}</code>",
+            f"Android  <code>{escape(metadata.get('androidVersion'))}</code>",
+            f"Bản vá  <code>{escape(metadata.get('securityPatch'))}</code>",
+            f"Ngày build  <code>{escape(metadata.get('buildDate'))}</code>",
+            "",
+            "<b>Cấu hình</b>",
+            f"Preset  <code>{escape(recipe.build.preset)}</code>",
+            f"MOD pack  <code>{escape(recipe.build.mod_version)}</code>",
+            f"Phát hành  <code>{escape(recipe.build.mod_release_version)}</code>",
+            f"Runner  <code>{escape(manifest.runner)}</code>",
         ]
         duration = self._duration(manifest.created_at, manifest.finished_at)
         if duration:
-            lines.append(f"Duration: {duration}")
+            lines.append(f"Thời gian  <code>{duration}</code>")
         if manifest.error:
-            lines.extend(["", f"Error: {sanitize_public_value(manifest.error)}"])
+            lines.extend(
+                [
+                    "",
+                    "<b>Thông tin cần lưu ý</b>",
+                    escape(sanitize_public_value(manifest.error), 640),
+                ]
+            )
+        keyboard: list[list[dict[str, object]]] = []
         if manifest.artifacts:
-            lines.extend(["", "Artifacts:"])
-            public_api_url = os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip().rstrip("/")
-            for artifact in manifest.artifacts:
-                download_url = ""
-                if public_api_url.startswith("https://"):
-                    ticket = issue_artifact_download_ticket(
-                        manifest.job_id,
-                        manifest.owner.subject,
-                        self.bot_token,
-                    )
-                    download_url = f"{public_api_url}/v1/jobs/{manifest.job_id}/download?ticket={ticket}"
+            lines.extend(["", "<b>Artifact</b>"])
+            for index, artifact in enumerate(manifest.artifacts[:8], start=1):
+                cloud_url = public_artifact_url(artifact.public_url)
+                edition = (
+                    "Lite"
+                    if "lite" in artifact.name.casefold()
+                    else "Plus"
+                    if "plus" in artifact.name.casefold()
+                    else f"File {index}"
+                )
                 lines.extend(
                     [
-                        f"• {artifact.name} ({self._size(artifact.size_bytes)})",
-                        f"  SHA-256: {artifact.sha256}",
-                        f"  {download_url}" if download_url else "  Download link is temporarily unavailable.",
+                        f"{index}. <b>{escape(edition)}</b> · {self._size(artifact.size_bytes)}",
+                        f"<code>{escape(artifact.name)}</code>",
+                        f"SHA-256  <code>{escape(artifact.sha256)}</code>",
                     ]
                 )
+                if cloud_url:
+                    keyboard.append(
+                        [
+                            {
+                                "text": f"Tải {edition} · {self._size(artifact.size_bytes)}",
+                                "url": cloud_url,
+                            }
+                        ]
+                    )
+        web_app_url = os.environ.get("WUKONG_TELEGRAM_WEB_APP_URL", "").strip()
+        if web_app_url.startswith("https://"):
+            keyboard.append(
+                [
+                    {
+                        "text": "Mở Wukong Mini App",
+                        "web_app": {"url": web_app_url},
+                    }
+                ]
+            )
+        payload: dict[str, object] = {
+            "chat_id": manifest.owner.subject,
+            "text": self._bounded_html_message(lines),
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+        if keyboard:
+            payload["reply_markup"] = {"inline_keyboard": keyboard}
         response = self.http_post(
             self.endpoint,
-            json={
-                "chat_id": manifest.owner.subject,
-                "text": "\n".join(lines)[:4096],
-                "disable_web_page_preview": True,
-            },
+            json=payload,
             timeout=20,
         )
         raise_for_status = getattr(response, "raise_for_status", None)
@@ -1617,6 +1714,22 @@ class TelegramJobNotifier:
                 return f"{size:.0f} {unit}" if unit == "B" else f"{size:.2f} {unit}"
             size /= 1024
         return f"{value} B"
+
+    @staticmethod
+    def _bounded_html_message(lines: list[str], limit: int = 4096) -> str:
+        output: list[str] = []
+        suffix = "<i>…</i>"
+        for line in lines:
+            candidate = "\n".join([*output, line])
+            if len(candidate) <= limit:
+                output.append(line)
+                continue
+            while output and len("\n".join([*output, suffix])) > limit:
+                output.pop()
+            if len("\n".join([*output, suffix])) <= limit:
+                output.append(suffix)
+            break
+        return "\n".join(output)
 
     @staticmethod
     def _duration(start: str, end: str | None) -> str:

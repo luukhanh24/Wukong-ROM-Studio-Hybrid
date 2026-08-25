@@ -49,7 +49,7 @@ from wukong.telegram_mini_api import (
     TelegramMiniAppAPI,
     TelegramMiniAppAPIServer,
     TelegramMiniAppSessionStore,
-    issue_artifact_download_ticket,
+    public_artifact_url,
 )
 from wukong.runtime import HybridRuntime
 from wukong.security import validate_recipe_access
@@ -230,15 +230,14 @@ def main() -> int:
     mini_app_sessions = TelegramMiniAppSessionStore()
 
     def artifact_download_url(manifest) -> str:
-        public_url = os.environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip().rstrip("/")
-        if not public_url.startswith("https://"):
-            return ""
-        ticket = issue_artifact_download_ticket(
-            manifest.job_id,
-            manifest.owner.subject,
-            token,
+        return next(
+            (
+                public_artifact_url(artifact.public_url)
+                for artifact in manifest.artifacts
+                if public_artifact_url(artifact.public_url)
+            ),
+            "",
         )
-        return f"{public_url}/v1/jobs/{manifest.job_id}/download?ticket={ticket}"
 
     controller = TelegramBotController(
         access=access,

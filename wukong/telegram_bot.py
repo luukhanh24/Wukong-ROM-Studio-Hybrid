@@ -22,6 +22,7 @@ from .telegram import TelegramAccessStore
 from .telegram_mini_api import (
     TelegramMiniAppSessionStore,
     issue_telegram_launch_token,
+    public_artifact_url,
     public_event_payload,
     public_job_payload,
     sanitize_public_value,
@@ -30,6 +31,21 @@ from .telegram_mini_api import (
 
 LANGUAGES = {"vi", "en"}
 CALLBACK_VERSION = "v1"
+CHAT_BUILD_CALLBACK_ACTIONS = {
+    "new",
+    "task",
+    "run",
+    "src",
+    "lib",
+    "dev",
+    "mv",
+    "pre",
+    "mods",
+    "mod",
+    "mods_all",
+    "mods_done",
+    "confirm",
+}
 STATUS_LABELS = {
     "vi": {
         "queued": "đang chờ",
@@ -72,8 +88,8 @@ class ExpiredCallbackError(ValueError):
 
 TEXT = {
     "vi": {
-        "welcome": "Wukong ROM Studio\n\nChọn “Tạo bản build” để bắt đầu hoặc “Công việc của tôi” để theo dõi. Bạn không cần nhớ lệnh hay viết JSON.",
-        "new": "Tạo bản build",
+        "welcome": "Wukong ROM Studio\n\nMở Mini App để tạo build, theo dõi tiến trình và lấy link tải. Bot giữ vai trò thông báo và truy cập nhanh.",
+        "new": "Mở Wukong Mini App",
         "jobs": "Công việc của tôi",
         "library": "Kho ROM",
         "diagnostics": "Chẩn đoán",
@@ -122,7 +138,7 @@ TEXT = {
         "edit": "Làm lại",
         "advanced": "Tùy chọn nâng cao dùng lệnh /submit.",
         "created": "Job {job_id} đã được tạo.\nRunner: {runner}\nTrạng thái: {status}",
-        "no_jobs": "Bạn chưa có job nào. Chọn “Tạo bản build” để bắt đầu.",
+        "no_jobs": "Bạn chưa có job nào. Mở Wukong Mini App để tạo bản build đầu tiên.",
         "no_roms": "Kho ROM chưa có file phù hợp hoặc Drive chưa sẵn sàng.",
         "expired": "Nút này đã hết hạn hoặc không còn hợp lệ. Hãy mở lại menu để tiếp tục.",
         "denied": "Bạn chưa được cấp quyền. Hãy gửi Telegram user ID của bạn cho quản trị viên.",
@@ -138,8 +154,8 @@ TEXT = {
         "probe_result": "Đã nhận diện ROM\n\nNhà cung cấp: {provider}\nTệp: {filename}\nDung lượng: {size}\nProduct: {product}\nThiết bị: {device}\nPhiên bản: {version}\nAndroid: {android_version}\nBản vá bảo mật: {security_patch}\nNgày build: {build_date}\nLoại OTA: {ota_type}\nPhân tích sâu: {deep}",
     },
     "en": {
-        "welcome": "Wukong ROM Studio\n\nSelect “New build” to begin or “My jobs” to monitor progress. No commands or JSON are required.",
-        "new": "New build",
+        "welcome": "Wukong ROM Studio\n\nOpen the Mini App to create builds, monitor progress and collect download links. The bot handles notifications and quick access.",
+        "new": "Open Wukong Mini App",
         "jobs": "My jobs",
         "library": "ROM library",
         "diagnostics": "Diagnostics",
@@ -188,7 +204,7 @@ TEXT = {
         "edit": "Start over",
         "advanced": "Advanced options remain available through /submit.",
         "created": "Job {job_id} was created.\nRunner: {runner}\nStatus: {status}",
-        "no_jobs": "You do not have any jobs yet. Select “New build” to begin.",
+        "no_jobs": "You do not have any jobs yet. Open Wukong Mini App to create the first build.",
         "no_roms": "No suitable ROM files were found or Drive is unavailable.",
         "expired": "This button has expired or is no longer valid. Open the menu to continue.",
         "denied": "You do not have access yet. Send your Telegram user ID to an administrator.",
@@ -209,12 +225,10 @@ TEXT = {
 HELP_USER_VI = """Wukong ROM Studio Hybrid
 /start - mở menu nút / open the button menu
 /app - mở Telegram Mini App / open Telegram Mini App
-/new - tạo bản build / new build
 /jobs - công việc của tôi / my jobs
 /cloud - kho ROM / ROM library
 /diagnostics - chẩn đoán / diagnostics
 /language - đổi ngôn ngữ / change language
-/submit <recipe JSON> - chế độ nâng cao / advanced mode
 /job <job_id> - trạng thái job
 /events <job_id> - nhật ký job
 /cancel <job_id> - hủy job
@@ -230,12 +244,10 @@ HELP_ADMIN_VI = HELP_USER_VI + """/approve <telegram_user_id> - duyệt người
 HELP_USER_EN = """Wukong ROM Studio Hybrid
 /start - open the button menu
 /app - open Telegram Mini App
-/new - create a ROM build
 /jobs - view my jobs
 /cloud - browse the ROM library
 /diagnostics - view system diagnostics
 /language - switch language
-/submit <recipe JSON> - advanced mode
 /job <job_id> - inspect a job
 /events <job_id> - view job events
 /cancel <job_id> - cancel a job
@@ -397,6 +409,7 @@ class TelegramBotController:
         ui_state: TelegramUIStateStore | None = None,
         storage_remote: str | None = None,
         web_app_url: str | None = None,
+        allow_chat_build: bool = False,
         session_store: TelegramMiniAppSessionStore | None = None,
         artifact_download_url_provider: Callable[[JobManifest], str] | None = None,
     ) -> None:
@@ -422,15 +435,15 @@ class TelegramBotController:
             ):
                 raise ValueError("Telegram Mini App URL must be a public HTTPS URL")
         self.web_app_url = configured_web_app
+        self.allow_chat_build = bool(allow_chat_build)
         self.session_store = session_store
         self.artifact_download_url_provider = artifact_download_url_provider
 
     def command_sets(self) -> dict[str, list[dict[str, str]]]:
-        return {
+        commands = {
             "vi": [
                 {"command": "start", "description": "Mở menu chính"},
                 {"command": "app", "description": "Mở Wukong Mini App"},
-                {"command": "new", "description": "Tạo bản build"},
                 {"command": "jobs", "description": "Công việc của tôi"},
                 {"command": "cloud", "description": "Kho ROM trên Drive"},
                 {"command": "diagnostics", "description": "Chẩn đoán hệ thống"},
@@ -440,7 +453,6 @@ class TelegramBotController:
             "en": [
                 {"command": "start", "description": "Open the main menu"},
                 {"command": "app", "description": "Open Wukong Mini App"},
-                {"command": "new", "description": "Create a ROM build"},
                 {"command": "jobs", "description": "View my jobs"},
                 {"command": "cloud", "description": "Browse the ROM library"},
                 {"command": "diagnostics", "description": "View diagnostics"},
@@ -448,6 +460,10 @@ class TelegramBotController:
                 {"command": "help", "description": "Show help"},
             ],
         }
+        if self.allow_chat_build and not self.web_app_url:
+            commands["vi"].insert(2, {"command": "new", "description": "Tạo bản build"})
+            commands["en"].insert(2, {"command": "new", "description": "Create a ROM build"})
+        return commands
 
     def handle(self, user_id: int | str, text: str) -> str:
         """Compatibility text interface used by existing tests and adapters."""
@@ -482,6 +498,9 @@ class TelegramBotController:
             launcher = self._mini_app_launcher(language)
             return BotResponse(f"{message}\n\n{launcher.text}", launcher.reply_markup)
         session = self.ui_state.session(user_id)
+        if session and not self.allow_chat_build:
+            self.ui_state.clear_session(user_id)
+            session = {}
         if session.get("awaiting") and not normalized.startswith("/"):
             return self._wizard_input(identity, normalized, language, session)
         if self.session_store and not normalized.startswith("/") and self.session_store.remember_source(user_id, normalized):
@@ -496,6 +515,10 @@ class TelegramBotController:
             self.ui_state.clear_session(user_id)
             return self._main_menu(language)
         if command == "/app":
+            return self._mini_app_launcher(language)
+        if command in {"/new", "/submit"} and (
+            self.web_app_url or not self.allow_chat_build
+        ):
             return self._mini_app_launcher(language)
         if command == "/new":
             return self.handle_callback(user_id, "v1:new")
@@ -619,6 +642,12 @@ class TelegramBotController:
                 return self._recovery(language)
             action = parts[1] if len(parts) > 1 else ""
             value = parts[2] if len(parts) > 2 else ""
+            if (
+                not self.allow_chat_build
+                and action in CHAT_BUILD_CALLBACK_ACTIONS
+            ):
+                self.ui_state.clear_session(user_id)
+                return self._mini_app_launcher(language)
             if action == "menu":
                 self.ui_state.clear_session(user_id)
                 return self._main_menu(language)
@@ -629,6 +658,8 @@ class TelegramBotController:
                 self.ui_state.clear_session(user_id)
                 return self._main_menu(value)
             if action == "new":
+                if self.web_app_url or not self.allow_chat_build:
+                    return self._mini_app_launcher(language)
                 self.ui_state.set_session(user_id, {"step": "task"})
                 return BotResponse(
                     TEXT[language]["choose_task"],
@@ -813,6 +844,10 @@ class TelegramBotController:
                     }
                 )
             if command == "/submit":
+                if self.web_app_url or not self.allow_chat_build:
+                    return self._mini_app_launcher(
+                        self.ui_state.language(identity.subject)
+                    ).text
                 if not argument:
                     return "Cú pháp: /submit <recipe JSON>"
                 recipe = self._with_mod_release_version(BuildRecipe.from_dict(json.loads(argument)))
@@ -1086,10 +1121,29 @@ class TelegramBotController:
     def _jobs_menu(self, identity: Identity, language: str) -> BotResponse:
         jobs = self.orchestrator.list(identity)[:12]
         if not jobs:
-            return BotResponse(TEXT[language]["no_jobs"], self._inline([
-                [(TEXT[language]["new"], "v1:new")],
-                [(TEXT[language]["back"], "v1:menu")],
-            ]))
+            if self.web_app_url or not self.allow_chat_build:
+                rows = [[{"text": TEXT[language]["back"], "callback_data": "v1:menu"}]]
+                if self.web_app_url:
+                    rows.insert(
+                        0,
+                        [{
+                            "text": TEXT[language]["mini_app"],
+                            "web_app": {"url": self.web_app_url},
+                        }],
+                    )
+                return BotResponse(
+                    TEXT[language]["no_jobs"],
+                    {"inline_keyboard": rows},
+                )
+            return BotResponse(
+                TEXT[language]["no_jobs"],
+                self._inline(
+                    [
+                        [(TEXT[language]["new"], "v1:new")],
+                        [(TEXT[language]["back"], "v1:menu")],
+                    ]
+                ),
+            )
         rows = [[
             (
                 f"{self._status_label(job.status.value, language)} · {job.job_id[:12]}",
@@ -1126,10 +1180,13 @@ class TelegramBotController:
             if self.runtime:
                 job = self.runtime.refresh(job)
             if action == "artifact":
-                download_url = self._artifact_download_url(job)
                 text = "\n\n".join(
                     f"{item.name}\nSHA-256: {item.sha256}"
-                    + (f"\n{download_url}" if download_url else "")
+                    + (
+                        f"\n{self._artifact_download_url(job, item)}"
+                        if self._artifact_download_url(job, item)
+                        else ""
+                    )
                     for item in job.artifacts
                 ) or TEXT[language]["no_artifact"]
                 return BotResponse(text, self._job_markup(job, language, identity.subject))
@@ -1174,10 +1231,16 @@ class TelegramBotController:
             entries = payload.get("entries", []) if isinstance(payload, dict) else []
             names = [str(item.get("name") or item.get("path")) for item in entries[:20] if isinstance(item, dict)]
             text = TEXT[language]["library_title"] + "\n\n" + ("\n".join(f"• {name}" for name in names) or TEXT[language]["no_roms"])
-            return BotResponse(text, self._inline([
-                [(TEXT[language]["new"], "v1:new")],
-                [(TEXT[language]["back"], "v1:menu")],
-            ]))
+            rows: list[list[dict[str, object]]] = []
+            if self.web_app_url:
+                rows.append(
+                    [{
+                        "text": TEXT[language]["mini_app"],
+                        "web_app": {"url": self.web_app_url},
+                    }]
+                )
+            rows.append([{"text": TEXT[language]["back"], "callback_data": "v1:menu"}])
+            return BotResponse(text, {"inline_keyboard": rows})
         except (OSError, ValueError, RuntimeError) as exc:
             return BotResponse(TEXT[language]["failed"].format(error=exc), self._back_markup(language))
 
@@ -1209,18 +1272,23 @@ class TelegramBotController:
         job = self.orchestrator.inspect(job_id, identity)
         if self.runtime:
             job = self.runtime.refresh(job)
-        download_url = self._artifact_download_url(job)
         return "\n".join(
             f"{artifact.name}\nSHA-256: {artifact.sha256}"
-            + (f"\n{download_url}" if download_url else "")
+            + (
+                f"\n{self._artifact_download_url(job, artifact)}"
+                if self._artifact_download_url(job, artifact)
+                else ""
+            )
             for artifact in job.artifacts
         ) or "Job chưa có artifact."
 
-    def _artifact_download_url(self, job: JobManifest) -> str:
+    def _artifact_download_url(self, job: JobManifest, artifact: object | None = None) -> str:
+        direct = public_artifact_url(getattr(artifact, "public_url", ""))
+        if artifact is not None:
+            return direct
         if not self.artifact_download_url_provider:
             return ""
-        value = str(self.artifact_download_url_provider(job) or "").strip()
-        return sanitize_public_value(value) if value.startswith("https://") else ""
+        return public_artifact_url(self.artifact_download_url_provider(job))
 
     def _devices(self) -> list[tuple[str, str]]:
         payload = self.catalog_provider()
@@ -1274,11 +1342,13 @@ class TelegramBotController:
         return HELP_ADMIN_VI if identity.role == "admin" else HELP_USER_VI
 
     def _main_menu(self, language: str) -> BotResponse:
-        markup = self._inline([
-            [(TEXT[language]["new"], "v1:new")],
+        rows = [
             [(TEXT[language]["jobs"], "v1:jobs"), (TEXT[language]["library"], "v1:cloud")],
             [(TEXT[language]["diagnostics"], "v1:diag"), (TEXT[language]["language"], f"v1:lang:{'en' if language == 'vi' else 'vi'}")],
-        ])
+        ]
+        if self.allow_chat_build and not self.web_app_url:
+            rows.insert(0, [(TEXT[language]["new"], "v1:new")])
+        markup = self._inline(rows)
         if self.web_app_url:
             markup["inline_keyboard"].insert(
                 0, [{
@@ -1290,7 +1360,15 @@ class TelegramBotController:
 
     def _mini_app_launcher(self, language: str) -> BotResponse:
         if not self.web_app_url:
-            return BotResponse(TEXT[language]["failed"].format(error="Mini App URL is not configured"), self._back_markup(language))
+            error = (
+                "URL Mini App chưa được cấu hình"
+                if language == "vi"
+                else "Mini App URL is not configured"
+            )
+            return BotResponse(
+                TEXT[language]["failed"].format(error=error),
+                self._back_markup(language),
+            )
         return BotResponse(
             TEXT[language]["mini_app_prompt"],
             {

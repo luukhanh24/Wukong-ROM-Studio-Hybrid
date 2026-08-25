@@ -204,7 +204,8 @@ Object.assign(translations.vi, {
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible}/{total} sự kiện gần nhất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
-  retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API."
+  retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API.",
+  openArtifactCloud: "Mở trên {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng."
 });
 
 Object.assign(translations.en, {
@@ -268,7 +269,8 @@ Object.assign(translations.en, {
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "Latest {visible}/{total} events", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
-  retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API."
+  retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API.",
+  openArtifactCloud: "Open in {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet."
 });
 
 const pipelineLabels = {
@@ -677,14 +679,20 @@ function sourceMetadataText() {
   return sourceFactDefinitions.map(([id, key]) => `${t(key)}: ${$(`#${id}`)?.textContent?.trim() || "—"}`).join("\n");
 }
 
-async function copySourceMetadata() {
-  const text = sourceMetadataText();
+async function copyText(text) {
   if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
   else {
     const input = document.createElement("textarea"); input.value = text;
     input.style.position = "fixed"; input.style.opacity = "0"; input.style.pointerEvents = "none";
-    document.body.append(input); input.select(); document.execCommand("copy"); input.remove();
+    document.body.append(input); input.select();
+    const copied = document.execCommand("copy");
+    input.remove();
+    if (!copied) throw new Error("Clipboard copy failed");
   }
+}
+
+async function copySourceMetadata() {
+  await copyText(sourceMetadataText());
   toast(t("metadataCopied"));
 }
 
@@ -1733,6 +1741,45 @@ function jobFact(label, value) {
   return node;
 }
 
+function artifactCloudUrl(artifact) {
+  const candidate = String(artifact?.publicUrl || artifact?.public_url || "").trim();
+  try {
+    if (
+      !candidate
+      || candidate.includes("\\")
+      || /\s|[\u0000-\u001f\u007f]/u.test(candidate)
+      || /%(?![0-9a-f]{2})/iu.test(candidate)
+    ) return "";
+    const parsed = new URL(candidate);
+    const hostname = parsed.hostname.toLowerCase();
+    let miniApiOrigin = "";
+    try { miniApiOrigin = new URL(miniApiEndpoint).origin; } catch (_) {}
+    if (
+      parsed.protocol !== "https:"
+      || !hostname
+      || hostname === "wukong-mini-api.onrender.com"
+      || (miniApiOrigin && parsed.origin === miniApiOrigin)
+    ) return "";
+    return parsed.href;
+  } catch (_) {
+    return "";
+  }
+}
+
+function artifactProvider(url) {
+  const hostname = new URL(url).hostname.toLowerCase();
+  if (hostname === "drive.google.com" || hostname.endsWith(".googleusercontent.com")) return "Google Drive";
+  if (hostname === "1drv.ms" || hostname.endsWith(".onedrive.live.com")) return "OneDrive";
+  if (hostname === "dropbox.com" || hostname.endsWith(".dropboxusercontent.com")) return "Dropbox";
+  if (hostname === "mega.nz" || hostname.endsWith(".mega.nz")) return "MEGA";
+  return hostname.replace(/^www\./, "");
+}
+
+function openArtifactUrl(url) {
+  if (TelegramApp?.openLink) TelegramApp.openLink(url);
+  else window.open(url, "_blank", "noopener,noreferrer");
+}
+
 function renderArtifacts(job) {
   const section = document.createElement("section"); section.className = "job-artifacts";
   const title = document.createElement("h3"); title.textContent = t("artifactsReady"); section.append(title);
@@ -1747,20 +1794,34 @@ function renderArtifacts(job) {
     const size = document.createElement("span"); size.textContent = formatBytes(artifact.size_bytes ?? artifact.sizeBytes);
     header.append(name, size);
     const sha = document.createElement("code"); sha.textContent = `SHA-256 ${artifact.sha256 || "—"}`;
-    if (artifact.downloadAvailable === true) {
-      const link = document.createElement("button"); link.type = "button"; link.textContent = t("artifact");
-      link.addEventListener("click", async () => {
-        try {
-          const jobId = job.job_id || job.jobId;
-          const payload = await apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/download`);
-          if (!/^https:\/\//i.test(payload.downloadUrl || "")) throw new Error(t("requestFailed"));
-          if (TelegramApp?.openLink) TelegramApp.openLink(payload.downloadUrl);
-          else window.open(payload.downloadUrl, "_blank", "noopener,noreferrer");
-        } catch (error) { toast(error.message, true); }
+    const cloudUrl = artifactCloudUrl(artifact);
+    if (cloudUrl) {
+      const providerName = artifactProvider(cloudUrl);
+      const provider = document.createElement("small");
+      provider.className = "artifact-provider";
+      provider.textContent = providerName;
+      const actions = document.createElement("div");
+      actions.className = "job-artifact-actions";
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "artifact-open";
+      open.textContent = t("openArtifactCloud", { provider: providerName });
+      open.setAttribute("aria-label", `${open.textContent}: ${artifact.name || "Artifact"}`);
+      open.addEventListener("click", () => openArtifactUrl(cloudUrl));
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "artifact-copy";
+      copy.textContent = t("copyArtifactLink");
+      copy.setAttribute("aria-label", `${copy.textContent}: ${artifact.name || "Artifact"}`);
+      copy.addEventListener("click", () => {
+        copyText(cloudUrl)
+          .then(() => toast(t("artifactLinkCopied")))
+          .catch(() => toast(t("clipboardDenied"), true));
       });
-      card.append(header, sha, link);
+      actions.append(open, copy);
+      card.append(header, sha, provider, actions);
     } else {
-      const uri = document.createElement("code"); uri.textContent = t("noArtifacts");
+      const uri = document.createElement("code"); uri.textContent = t("artifactLinkUnavailable");
       card.append(header, sha, uri);
     }
     section.append(card);

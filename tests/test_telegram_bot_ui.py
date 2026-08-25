@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import requests
 
-from wukong.models import BuildRecipe, Identity, JobStatus, RecipeValidationError
+from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus, RecipeValidationError
 from wukong.orchestrator import HybridOrchestrator, InMemoryJobStore
 from wukong.routing import RunnerInventory
 from wukong.runtime import HybridRuntime
@@ -100,24 +100,92 @@ class TelegramBotUITests(unittest.TestCase):
             },
             ui_state=TelegramUIStateStore(self.root / "telegram-ui-state.json"),
             session_store=self.sessions,
+            web_app_url=" ",
+            allow_chat_build=True,
         )
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
-    def test_start_returns_vietnamese_menu_with_buttons(self) -> None:
+    def test_start_routes_new_builds_to_the_mini_app(self) -> None:
+        self.controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
+
         response = self.controller.handle_ui(42, "/start")
 
         self.assertIsInstance(response, BotResponse)
-        self.assertIn("Tạo bản build", response.text)
-        labels = [
-            button["text"]
+        self.assertIn("Mini App", response.text)
+        buttons = [
+            button
             for row in response.reply_markup["inline_keyboard"]
             for button in row
         ]
-        self.assertIn("Tạo bản build", labels)
+        labels = [button["text"] for button in buttons]
+        self.assertNotIn("Tạo bản build", labels)
+        self.assertFalse(any(button.get("callback_data") == "v1:new" for button in buttons))
+        self.assertEqual(
+            "https://wukong-rom-studio.vercel.app/",
+            next(button for button in buttons if "web_app" in button)["web_app"]["url"],
+        )
         self.assertIn("Công việc của tôi", labels)
         self.assertIn("English", labels)
+
+    def test_new_command_opens_the_mini_app_instead_of_the_chat_wizard(self) -> None:
+        self.controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
+
+        response = self.controller.handle_ui(42, "/new")
+
+        self.assertIn("Mini App", response.text)
+        self.assertEqual(
+            self.controller.web_app_url,
+            response.reply_markup["inline_keyboard"][0][0]["web_app"]["url"],
+        )
+        self.assertFalse(self.controller.ui_state.session(42))
+
+    def test_bot_command_menu_does_not_advertise_chat_build(self) -> None:
+        self.controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
+
+        commands = self.controller.command_sets()
+
+        self.assertNotIn("new", [item["command"] for item in commands["vi"]])
+        self.assertNotIn("new", [item["command"] for item in commands["en"]])
+
+    def test_submit_command_does_not_create_a_chat_build_when_mini_app_is_configured(self) -> None:
+        self.controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
+        recipe = {
+            "task": "build",
+            "device": "PKG110",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "execution": {"target": "github-auto"},
+        }
+
+        response = self.controller.handle_ui(42, f"/submit {json.dumps(recipe)}")
+
+        self.assertIn("Mini App", response.text)
+        self.assertEqual(
+            self.controller.web_app_url,
+            response.reply_markup["inline_keyboard"][0][0]["web_app"]["url"],
+        )
+        self.assertEqual([], self.orchestrator.list(Identity("telegram", "42", "user")))
+
+    def test_chat_build_is_disabled_by_default_without_a_mini_app_url(self) -> None:
+        self.controller.web_app_url = ""
+        self.controller.allow_chat_build = False
+
+        response = self.controller.handle_ui(42, "/new")
+
+        self.assertIn("URL Mini App chưa được cấu hình", response.text)
+        self.assertFalse(self.controller.ui_state.session(42))
+
+    def test_disabled_chat_build_discards_persisted_wizard_callbacks(self) -> None:
+        self.controller.web_app_url = "https://wukong-rom-studio.vercel.app/"
+        self.controller.allow_chat_build = False
+        self.controller.ui_state.set_session(42, {"step": "confirm", "task": "build"})
+
+        response = self.controller.handle_callback(42, "v1:confirm")
+
+        self.assertIn("Mini App", response.text)
+        self.assertFalse(self.controller.ui_state.session(42))
+        self.assertEqual([], self.orchestrator.list(Identity("telegram", "42", "user")))
 
     def test_main_menu_exposes_configured_telegram_mini_app(self) -> None:
         self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
@@ -241,6 +309,75 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertNotIn("external_run_id", output)
         self.assertNotIn('"runid"', output)
 
+    def test_artifact_command_uses_each_original_cloud_url(self) -> None:
+        recipe = BuildRecipe.from_dict(
+            {
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+                "execution": {"target": "github-auto"},
+            }
+        )
+        job = self.orchestrator.submit(recipe, Identity("telegram", "42", "user"))
+        self.store.update(
+            job.job_id,
+            status=JobStatus.SUCCEEDED,
+            artifacts=[
+                ArtifactRecord(
+                    "Wukong_Lite.zip",
+                    "drive:lite.zip",
+                    "a" * 64,
+                    1024,
+                    "https://drive.google.com/open?id=lite",
+                ),
+                ArtifactRecord(
+                    "Wukong_Plus.zip",
+                    "drive:plus.zip",
+                    "b" * 64,
+                    2048,
+                    "https://drive.google.com/open?id=plus",
+                ),
+            ],
+        )
+
+        output = self.controller.handle(42, f"/artifacts {job.job_id}")
+
+        self.assertIn("https://drive.google.com/open?id=lite", output)
+        self.assertIn("https://drive.google.com/open?id=plus", output)
+        self.assertNotIn("onrender.com", output)
+
+    def test_artifact_without_cloud_url_does_not_borrow_another_artifact_link(self) -> None:
+        recipe = BuildRecipe.from_dict(
+            {
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+                "execution": {"target": "github-auto"},
+            }
+        )
+        job = self.orchestrator.submit(recipe, Identity("telegram", "42", "user"))
+        self.store.update(
+            job.job_id,
+            status=JobStatus.SUCCEEDED,
+            artifacts=[
+                ArtifactRecord(
+                    "Wukong_Lite.zip",
+                    "drive:lite.zip",
+                    "a" * 64,
+                    1024,
+                    "https://drive.google.com/open?id=lite",
+                ),
+                ArtifactRecord("Wukong_Plus.zip", "drive:plus.zip", "b" * 64, 2048),
+            ],
+        )
+        self.controller.artifact_download_url_provider = (
+            lambda _manifest: "https://drive.google.com/open?id=lite"
+        )
+
+        output = self.controller.handle(42, f"/artifacts {job.job_id}")
+
+        self.assertEqual(1, output.count("https://drive.google.com/open?id=lite"))
+
     def test_mini_app_cache_actions_preserve_admin_boundary(self) -> None:
         self.controller.cache_provider = lambda: {"entryCount": 3, "totalBytes": 2048}
         self.controller.cache_clearer = lambda: {"entryCount": 0, "totalBytes": 0}
@@ -255,11 +392,17 @@ class TelegramBotUITests(unittest.TestCase):
 
     def test_language_callback_is_persisted_per_user(self) -> None:
         response = self.controller.handle_callback(42, "v1:lang:en")
-        self.assertIn("New build", response.text)
+        self.assertIn("Open the Mini App", response.text)
 
         restarted = TelegramUIStateStore(self.root / "telegram-ui-state.json")
         self.assertEqual("en", restarted.language("42"))
-        self.assertIn("My jobs", self.controller.handle_ui(42, "/start").text)
+        menu = self.controller.handle_ui(42, "/start")
+        labels = [
+            button["text"]
+            for row in menu.reply_markup["inline_keyboard"]
+            for button in row
+        ]
+        self.assertIn("My jobs", labels)
 
     def test_build_wizard_creates_recipe_without_json(self) -> None:
         self.controller.handle_callback(42, "v1:new")

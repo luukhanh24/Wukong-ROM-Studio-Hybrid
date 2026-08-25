@@ -363,12 +363,17 @@ h2 { letter-spacing: -.015em; }
 .job-events li[class*="event-error"] .event-marker i { background:var(--danger); box-shadow:0 0 0 1px var(--danger); }
 .job-events li[class*="event-artifacts"] .event-marker i { background:var(--success); box-shadow:0 0 0 1px var(--success); }
 .job-artifacts > p { margin: 0; padding: 13px; border: 1px dashed var(--line-strong); color: var(--muted); font-size: 10px; }
-.job-artifacts article { display: grid; gap: 8px; margin-top: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.job-artifacts article { display: grid; gap: 8px; min-width: 0; margin-top: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .job-artifacts article > div { display: flex; justify-content: space-between; gap: 10px; }
 .job-artifacts article strong { font-size: 11px; overflow-wrap: anywhere; }
 .job-artifacts article span { color: var(--muted); font: 500 9px/1.3 "JetBrains Mono", monospace; white-space: nowrap; }
 .job-artifacts code { display: block; overflow: hidden; color: var(--muted); font: 500 8px/1.4 "JetBrains Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
-.job-artifacts a { justify-self: start; padding: 7px 10px; border: 1px solid var(--accent); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--accent-soft); font-size: 10px; font-weight: 600; text-decoration: none; }
+.job-artifacts .artifact-provider { width: max-content; padding: 4px 7px; border: 1px solid var(--success); border-radius: var(--radius-sm); color: var(--success); background: var(--success-soft); font: 600 8px/1.2 "JetBrains Mono", monospace; }
+.job-artifacts .job-artifact-actions { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 7px; }
+.job-artifacts .job-artifact-actions button { min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--ink); background: var(--surface-raised); font-size: 10px; font-weight: 650; line-height: 1.25; }
+.job-artifacts .job-artifact-actions button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.job-artifacts .job-artifact-actions .artifact-open { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); }
+.job-artifacts .job-artifact-actions button:focus-visible { outline: 3px solid var(--aqua); outline-offset: 2px; }
 .job-history-sheet > header > span { color: var(--accent-strong); font: 600 12px/1 "JetBrains Mono", monospace; }
 .job-history { display: grid; gap: 8px; margin-top: 12px; }
 .job-history-card { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); text-align: left; }
@@ -498,6 +503,7 @@ h2 { letter-spacing: -.015em; }
   .active-job > header { align-items: flex-start; }
   .job-facts { grid-template-columns: repeat(2,1fr); }
   .process-key ol { grid-template-columns: repeat(2,1fr); }
+  .job-artifacts .job-artifact-actions { grid-template-columns: 1fr; }
   .process-key li { border-bottom: 1px solid var(--line); }
   .process-key li:nth-child(2n) { border-right: 0; }
   .catalog-controls, .device-table { grid-template-columns: 1fr; }
