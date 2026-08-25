@@ -264,6 +264,31 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, {
+  openProfile: "Mở hồ sơ", profileKicker: "HỒ SƠ TELEGRAM", profileStatus: "Quyền truy cập",
+  profileConfiguredAdmin: "Nguồn quản trị", configuredAdminYes: "Admin cấu hình", configuredAdminNo: "Tài khoản thông thường",
+  unlimitedLabel: "Quyền không giới hạn", yes: "Có", no: "Không", lifetimeGrantedLabel: "Tổng lượt đã cấp", lifetimeUsedLabel: "Tổng lượt đã dùng", lastJobStatusLabel: "Trạng thái job gần nhất",
+  languageLabel: "Ngôn ngữ", platformLabel: "Nền tảng", appVersionLabel: "Phiên bản ứng dụng", roleAdmin: "Quản trị viên", roleUser: "Người dùng", closeDialog: "Đóng",
+  themeTitle: "Chủ đề hệ thống", themeSystem: "Theo hệ thống", themeLight: "Sáng", themeDark: "Tối",
+  clearCacheConfirmTitle: "Xóa cache dùng chung?", clearCacheConfirmMessage: "Chỉ quản trị viên được phép thực hiện. Toàn bộ stage cache dùng chung sẽ bị xóa và các job sau có thể cần tải, xử lý lại dữ liệu.",
+  confirmClearCache: "Xóa cache", cacheClearing: "Đang xóa cache…", cacheCleared: "Đã xóa {count} mục cache.",
+  greetingMorning: "Chào buổi sáng, {name}", greetingAfternoon: "Buổi chiều hiệu quả nhé, {name}", greetingEvening: "Chào buổi tối, {name}",
+  greetingWish: "Chúc bạn có một bản build thật mượt", greetingAllowance: "{remaining} lượt còn lại · {jobs} job",
+  greetingUnlimited: "Không giới hạn lượt build · {jobs} job"
+});
+Object.assign(translations.en, {
+  openProfile: "Open profile", profileKicker: "TELEGRAM PROFILE", profileStatus: "Access status",
+  profileConfiguredAdmin: "Admin source", configuredAdminYes: "Configured admin", configuredAdminNo: "Standard account",
+  unlimitedLabel: "Unlimited access", yes: "Yes", no: "No", lifetimeGrantedLabel: "Lifetime granted", lifetimeUsedLabel: "Lifetime used", lastJobStatusLabel: "Last job status",
+  languageLabel: "Language", platformLabel: "Platform", appVersionLabel: "App version", roleAdmin: "Administrator", roleUser: "User", closeDialog: "Close",
+  themeTitle: "System theme", themeSystem: "Use system", themeLight: "Light", themeDark: "Dark",
+  clearCacheConfirmTitle: "Clear shared cache?", clearCacheConfirmMessage: "Only administrators may perform this action. The shared stage cache will be removed, so later jobs may need to download and process data again.",
+  confirmClearCache: "Clear cache", cacheClearing: "Clearing cache…", cacheCleared: "Cleared {count} cache entries.",
+  greetingMorning: "Good morning, {name}", greetingAfternoon: "Have a focused afternoon, {name}", greetingEvening: "Good evening, {name}",
+  greetingWish: "Wishing you a beautifully smooth build", greetingAllowance: "{remaining} credits left · {jobs} jobs",
+  greetingUnlimited: "Unlimited build allowance · {jobs} jobs"
+});
+
+Object.assign(translations.vi, {
   allowanceUnlimitedSummary: "Không giới hạn lượt còn lại · {used} đã dùng · {jobs} job",
   releaseVersionHint: "Mặc định cố định theo MOD pack; thay đổi chỉ áp dụng cho job hiện tại.",
   saveReleaseVersion: "Áp dụng cho job",
@@ -345,6 +370,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const state = {
   language: localStorage.getItem("wukong-language") || "vi",
+  theme: localStorage.getItem("wukong-theme") || "system",
   catalog: null,
   toastTimer: null,
   defaultPreset: localStorage.getItem("wukong-default-preset") || "plus",
@@ -376,6 +402,10 @@ const state = {
   liquidPosition: 0,
   liquidAnimationFrame: 0,
   liquidSuppressClick: false,
+  greetingIndex: 0,
+  greetingTimer: 0,
+  mastheadFrame: 0,
+  cacheClearPending: false,
   me: null,
   miniSessionId: "",
   adminUsers: [],
@@ -395,6 +425,7 @@ function t(key, values = {}) {
 function applyLanguage() {
   document.documentElement.lang = state.language;
   $$('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
+  $$("[data-i18n-aria]").forEach((node) => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
   $("#language").textContent = state.language === "vi" ? "VI / EN" : "EN / VI";
   const devicePlaceholder = $("#device option[value='']");
   if (devicePlaceholder) devicePlaceholder.textContent = t("chooseDevice");
@@ -409,6 +440,8 @@ function applyLanguage() {
   }
   renderSessionDiagnostics();
   renderAccount();
+  renderGreeting();
+  if ($("#profile-dialog")?.open) renderProfileDialog();
   renderAdminUsers();
   renderDebloatSummary();
   updateSummary();
@@ -424,6 +457,91 @@ function toast(message, error = false) {
   clearTimeout(state.toastTimer);
   state.toastTimer = setTimeout(() => node.classList.remove("visible"), 3600);
   if (TelegramApp?.HapticFeedback) TelegramApp.HapticFeedback.notificationOccurred(error ? "error" : "success");
+}
+
+const themeMedia = window.matchMedia?.("(prefers-color-scheme: dark)");
+
+function resolvedTheme() {
+  return state.theme === "system" ? (themeMedia?.matches ? "dark" : "light") : state.theme;
+}
+
+function applyTheme(theme = state.theme, persist = false) {
+  state.theme = ["system", "light", "dark"].includes(theme) ? theme : "system";
+  const resolved = resolvedTheme();
+  document.documentElement.dataset.theme = state.theme;
+  document.documentElement.dataset.colorScheme = resolved;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "dark" ? "#17191d" : "#f3f1eb");
+  $$("[data-theme-value]").forEach((button) => {
+    const active = button.dataset.themeValue === state.theme;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  if (persist) localStorage.setItem("wukong-theme", state.theme);
+  try {
+    TelegramApp?.setHeaderColor?.(resolved === "dark" ? "#1d2025" : "#f8f7f2");
+    TelegramApp?.setBackgroundColor?.(resolved === "dark" ? "#17191d" : "#f3f1eb");
+  } catch (_) {}
+}
+
+function greetingName() {
+  return String(state.me?.displayName || state.me?.username || "Wukong").trim().split(/\s+/)[0];
+}
+
+function greetingMessages() {
+  const hour = new Date().getHours();
+  const timeKey = hour < 12 ? "greetingMorning" : hour < 18 ? "greetingAfternoon" : "greetingEvening";
+  const values = { name: greetingName(), jobs: Number(state.me?.jobCount || 0), remaining: Number(state.me?.buildCredits || 0) };
+  return [
+    { key: timeKey, icon: "./assets/wukong-studio.svg" },
+    { key: "greetingWish", icon: "./assets/service-pack.svg" },
+    { key: state.me?.unlimited ? "greetingUnlimited" : "greetingAllowance", icon: "./assets/service-github.svg", values }
+  ].map((item) => ({ ...item, text: t(item.key, { ...values, ...(item.values || {}) }) }));
+}
+
+function renderGreeting() {
+  const root = $("#greeting-carousel");
+  if (!root) return;
+  root.hidden = !state.me;
+  if (!state.me) return;
+  const messages = greetingMessages();
+  const item = messages[state.greetingIndex % messages.length];
+  $("#greeting-icon").src = item.icon;
+  $("#greeting-kicker").textContent = state.me?.unlimited ? t("unlimited") : t("buildAllowance");
+  const message = $("#greeting-message");
+  if (!message) return;
+  if (!prefersReducedMotion() && message.textContent !== "—") {
+    message.animate(
+      [{ opacity: .2, filter: "blur(5px)", transform: "translateY(4px)" }, { opacity: 1, filter: "blur(0)", transform: "translateY(0)" }],
+      { duration: 360, easing: "cubic-bezier(.16,1,.3,1)" }
+    );
+  }
+  message.textContent = item.text;
+}
+
+function scheduleGreeting() {
+  clearInterval(state.greetingTimer);
+  if (prefersReducedMotion() || document.hidden) return;
+  state.greetingTimer = window.setInterval(() => {
+    state.greetingIndex = (state.greetingIndex + 1) % greetingMessages().length;
+    renderGreeting();
+  }, 6000);
+}
+
+function updateMastheadScroll() {
+  cancelAnimationFrame(state.mastheadFrame);
+  state.mastheadFrame = requestAnimationFrame(() => {
+    const progress = Math.max(0, Math.min(1, window.scrollY / 80));
+    const root = document.documentElement.style;
+    root.setProperty("--masthead-scroll", progress.toFixed(3));
+    root.setProperty("--masthead-height", `${Math.round((window.innerWidth <= 860 ? 60 : 64) - progress * 6)}px`);
+    root.setProperty("--masthead-copy-opacity", String(1 - progress * .62));
+    root.setProperty("--masthead-copy-blur", `${(progress * 2).toFixed(2)}px`);
+    root.setProperty("--masthead-copy-offset", `${(-progress * 2).toFixed(2)}px`);
+    root.setProperty("--masthead-greeting-opacity", String(1 - progress * .88));
+    root.setProperty("--masthead-greeting-blur", `${(progress * 3).toFixed(2)}px`);
+    root.setProperty("--masthead-greeting-offset", `${(-progress * 3).toFixed(2)}px`);
+    document.body.classList.toggle("masthead-compact", progress > .82);
+  });
 }
 
 function miniApiAvailable() {
@@ -501,10 +619,15 @@ function telegramTransportAvailable() {
   return typeof TelegramApp?.sendData === "function" && Boolean(TelegramApp.platform) && TelegramApp.platform !== "unknown";
 }
 
+const liquidSlots = [0, 1, 3, 4];
+
+function nearestLiquidSlot(value) {
+  return liquidSlots.reduce((best, slot) => Math.abs(slot - value) < Math.abs(best - value) ? slot : best, liquidSlots[0]);
+}
+
 function setLiquidPosition(value, velocity = 0, pressed = false) {
   const nav = $(".bottom-nav");
-  const count = $$(".bottom-nav [data-nav]").length || 1;
-  const position = Math.max(0, Math.min(count - 1, Number(value) || 0));
+  const position = Math.max(-.14, Math.min(4.14, Number(value) || 0));
   state.liquidPosition = position;
   nav?.style.setProperty("--liquid-position", String(position));
   nav?.style.setProperty("--liquid-offset", `${position * 100}%`);
@@ -541,9 +664,11 @@ function navigate(name, smooth = true) {
     if (active) node.setAttribute("aria-current", "page"); else node.removeAttribute("aria-current");
   });
   const bottomNav = $(".bottom-nav");
-  const activeIndex = $$(".bottom-nav [data-nav]").findIndex((node) => node.dataset.nav === name);
-  bottomNav?.style.setProperty("--active-index", String(Math.max(0, activeIndex)));
-  if (smooth) animateLiquidPosition(Math.max(0, activeIndex)); else setLiquidPosition(Math.max(0, activeIndex));
+  const activeButton = $$(".bottom-nav [data-nav]").find((node) => node.dataset.nav === name);
+  const activeSlot = Number(activeButton?.dataset.slot || 0);
+  bottomNav?.style.setProperty("--active-index", String(activeSlot));
+  if (smooth) animateLiquidPosition(activeSlot); else setLiquidPosition(activeSlot);
+  if (smooth) TelegramApp?.HapticFeedback?.selectionChanged?.();
   bottomNav?.classList.remove("is-shifting");
   if (smooth && !prefersReducedMotion()) {
     void bottomNav?.offsetWidth;
@@ -561,7 +686,6 @@ function bindLiquidBottomTabs() {
   const nav = $(".bottom-nav");
   const buttons = $$(".bottom-nav [data-nav]");
   if (!nav || !buttons.length || !("PointerEvent" in window)) return;
-  nav.style.setProperty("--tab-count", String(buttons.length));
   let pointerId = null;
   let startX = 0;
   let startPosition = 0;
@@ -577,6 +701,7 @@ function bindLiquidBottomTabs() {
     event.stopImmediatePropagation();
   }, true);
   nav.addEventListener("pointerdown", (event) => {
+    if (event.target.closest("[data-profile-trigger]")) return;
     if (event.button !== 0 && event.pointerType !== "touch") return;
     cancelAnimationFrame(state.liquidAnimationFrame);
     pointerId = event.pointerId;
@@ -592,15 +717,15 @@ function bindLiquidBottomTabs() {
   nav.addEventListener("pointermove", (event) => {
     if (event.pointerId !== pointerId) return;
     const now = performance.now();
-    const tabWidth = Math.max(1, (nav.clientWidth - 8) / buttons.length);
+    const tabWidth = Math.max(1, (nav.clientWidth - 8) / 5);
     const delta = event.clientX - startX;
     if (Math.abs(delta) > 5) dragged = true;
     const instantaneous = ((event.clientX - lastX) / Math.max(8, now - lastTime)) * 16 / tabWidth;
     velocity = velocity * .6 + instantaneous * .4;
     let position = startPosition + delta / tabWidth;
     if (position < 0) position *= .18;
-    if (position > buttons.length - 1) position = buttons.length - 1 + (position - buttons.length + 1) * .18;
-    setLiquidPosition(Math.max(-.12, Math.min(buttons.length - .88, position)), velocity, true);
+    if (position > 4) position = 4 + (position - 4) * .18;
+    setLiquidPosition(position, velocity, true);
     nav.style.setProperty("--panel-offset", `${Math.sign(delta) * Math.min(4, Math.abs(delta) / nav.clientWidth * 4)}px`);
     lastX = event.clientX;
     lastTime = now;
@@ -611,14 +736,17 @@ function bindLiquidBottomTabs() {
     pointerId = null;
     nav.classList.remove("is-pressed");
     nav.style.setProperty("--panel-offset", "0px");
-    const target = Math.max(0, Math.min(buttons.length - 1, Math.round(state.liquidPosition + velocity * .22)));
+    const target = nearestLiquidSlot(state.liquidPosition + velocity * .22);
     if (dragged) {
+      const releasedPosition = state.liquidPosition;
       state.liquidSuppressClick = true;
-      navigate(buttons[target].dataset.nav, false);
+      const targetButton = buttons.find((button) => Number(button.dataset.slot) === target);
+      if (targetButton) navigate(targetButton.dataset.nav, false);
+      setLiquidPosition(releasedPosition, velocity, true);
       animateLiquidPosition(target);
     } else {
-      const active = buttons.findIndex((button) => button.classList.contains("active"));
-      animateLiquidPosition(Math.max(0, active));
+      const active = buttons.find((button) => button.classList.contains("active"));
+      animateLiquidPosition(Number(active?.dataset.slot || 0));
     }
     setTimeout(() => { state.liquidSuppressClick = false; }, 350);
   };
@@ -1285,9 +1413,18 @@ function renderCatalog() {
   const mods = (state.catalog.modsByVersion[version] || []).filter((name) => name.toLocaleLowerCase().includes(query));
   $("#device-list").replaceChildren(...devices.map((item) => {
     const row = document.createElement("div"); row.className = "device-row";
+    const image = document.createElement("img");
+    const identity = `${item.product} ${item.name}`.toLocaleLowerCase();
+    const brand = identity.includes("realme") || item.product.startsWith("RMX") ? "realme"
+      : identity.includes("oppo") || item.product.startsWith("CPH") ? "oppo"
+      : identity.includes("oneplus") ? "oneplus" : "wukong";
+    image.src = `./assets/device-${brand}.svg`;
+    image.alt = brand === "wukong" ? "Wukong device" : brand;
+    image.width = 42; image.height = 42;
     const code = document.createElement("b"); code.textContent = item.product;
     const name = document.createElement("span"); name.textContent = item.name;
-    row.append(code, name); return row;
+    const copy = document.createElement("span"); copy.className = "device-copy"; copy.append(code, name);
+    row.append(image, copy); return row;
   }));
   $("#catalog-mod-list").replaceChildren(...mods.map((name) => {
     const item = document.createElement("span"); item.textContent = name; return item;
@@ -1456,7 +1593,88 @@ function profileAvatar(profile, className = "") {
     image.addEventListener("error", () => image.remove(), { once: true });
     root.prepend(image);
   }
+  const hue = [...String(profile?.telegramId || "wukong")].reduce((total, char) => total + char.charCodeAt(0), 0) % 360;
+  root.style.setProperty("--avatar-hue", String(hue));
   return root;
+}
+
+function renderProfileTrigger(button, profile) {
+  if (!button) return;
+  button.hidden = !profile;
+  if (!profile) return;
+  const avatar = profileAvatar(profile);
+  button.replaceChildren(...avatar.childNodes);
+  button.style.setProperty("--avatar-hue", avatar.style.getPropertyValue("--avatar-hue"));
+  button.setAttribute("aria-label", t("openProfile"));
+}
+
+function profileValue(key, profile) {
+  const values = {
+    telegramId: profile.telegramId,
+    username: profile.username ? `@${profile.username}` : "—",
+    displayName: profile.displayName || "—",
+    accessStatus: accessLabel(profile.accessStatus),
+    role: t(profile.role === "admin" ? "roleAdmin" : "roleUser"),
+    buildCredits: profile.unlimited ? t("unlimited") : String(profile.buildCredits || 0),
+    unlimited: profile.unlimited ? t("yes") : t("no"),
+    lifetimeGranted: String(profile.lifetimeGranted || 0),
+    lifetimeUsed: String(profile.lifetimeUsed || 0),
+    jobCount: String(profile.jobCount || 0),
+    firstSeenAt: formatDate(profile.firstSeenAt),
+    lastSeenAt: formatDate(profile.lastSeenAt),
+    lastJobId: profile.lastJobId || "—",
+    lastJobStatus: profile.lastJobStatus || "—",
+    language: String(profile.language || "—").toUpperCase(),
+    platform: profile.platform || "—",
+    appVersion: profile.appVersion || "—",
+    approvedAt: formatDate(profile.approvedAt),
+    revokedAt: formatDate(profile.revokedAt),
+    accessActor: profile.accessActor || "—",
+    accessReason: profile.accessReason || "—",
+    configuredAdmin: profile.configuredAdmin ? t("configuredAdminYes") : t("configuredAdminNo")
+  };
+  return values[key] ?? "—";
+}
+
+function profileLabel(key) {
+  const labels = {
+    telegramId: "Telegram ID", username: "Username", displayName: t("displayName"),
+    accessStatus: t("profileStatus"), role: t("role"), buildCredits: t("allowance"),
+    unlimited: t("unlimitedLabel"), lifetimeGranted: t("lifetimeGrantedLabel"), lifetimeUsed: t("lifetimeUsedLabel"),
+    jobCount: t("jobCount"), firstSeenAt: t("firstAccess"), lastSeenAt: t("lastAccess"),
+    lastJobId: t("lastJob"), lastJobStatus: t("lastJobStatusLabel"), language: t("languageLabel"),
+    platform: t("platformLabel"), appVersion: t("appVersionLabel"), approvedAt: t("approvedAt"),
+    revokedAt: t("revokedAt"), accessActor: t("accessActor"), accessReason: t("accessReason"),
+    configuredAdmin: t("profileConfiguredAdmin")
+  };
+  return labels[key] || key;
+}
+
+function renderProfileDialog() {
+  const profile = state.me;
+  if (!profile) return;
+  const avatarRoot = $("#profile-dialog-avatar");
+  const avatar = profileAvatar(profile, "profile-avatar-large");
+  avatar.id = "profile-dialog-avatar";
+  avatarRoot?.replaceWith(avatar);
+  $("#profile-dialog-name").textContent = profile.displayName || profile.username || profile.telegramId;
+  $("#profile-dialog-handle").textContent = profile.username ? `@${profile.username} · ${profile.telegramId}` : profile.telegramId;
+  const dialog = $("#profile-dialog");
+  dialog?.style.setProperty("--profile-image", profile.photoUrl ? `url("${String(profile.photoUrl).replaceAll('"', '\\"')}")` : "none");
+  dialog?.style.setProperty("--avatar-hue", avatar.style.getPropertyValue("--avatar-hue"));
+  const keys = Object.keys(profile).filter((key) => {
+    if (key === "miniAppOpenCount") return false;
+    return !["photoUrl"].includes(key);
+  });
+  $("#profile-detail-grid")?.replaceChildren(...keys.map((key) => detailFact(profileLabel(key), profileValue(key, profile))));
+}
+
+function openProfileDialog() {
+  if (!state.me) return;
+  renderProfileDialog();
+  const dialog = $("#profile-dialog");
+  if (dialog && !dialog.open) dialog.showModal();
+  TelegramApp?.HapticFeedback?.impactOccurred?.("light");
 }
 
 function initializeApprovedWorkspace() {
@@ -1506,19 +1724,11 @@ function renderAccessGate() {
 
 function renderAccount() {
   const profile = state.me;
-  const chip = $("#quota-chip");
-  const value = $("#quota-value");
-  if (!chip || !value) return;
-  chip.hidden = !profile;
-  chip.classList.remove("pending", "revoked", "exhausted");
+  renderProfileTrigger($("#header-profile"), profile);
+  renderProfileTrigger($("#dock-profile"), profile);
+  renderGreeting();
+  scheduleGreeting();
   if (!profile) return;
-  if (profile.accessStatus !== "approved") {
-    value.textContent = t(profile.accessStatus === "revoked" ? "revoked" : "pending");
-    chip.classList.add(profile.accessStatus === "revoked" ? "revoked" : "pending");
-  } else if (profile.unlimited) value.textContent = t("unlimited");
-  else if (Number(profile.buildCredits || 0) <= 0) {
-    value.textContent = t("quotaExhausted"); chip.classList.add("exhausted");
-  } else value.textContent = String(profile.buildCredits);
   const runtimeAllowance = $("#runtime-build-allowance");
   if (runtimeAllowance) {
     const values = {
@@ -2383,17 +2593,53 @@ async function runQuickAction(action) {
     return;
   }
   if (action === "cache_clear") {
-    const payload = await apiRequest("/v1/cache/clear", { method: "POST" });
-    toast(`${payload.entryCount ?? 0} cache`);
+    openCacheClearDialog();
     return;
   }
   throw new Error(t("requestFailed"));
+}
+
+function openCacheClearDialog() {
+  if (state.cacheClearPending) return;
+  const dialog = $("#cache-clear-dialog");
+  if (dialog && !dialog.open) dialog.showModal();
+  TelegramApp?.HapticFeedback?.impactOccurred?.("medium");
+}
+
+async function performCacheClear() {
+  if (state.cacheClearPending) return;
+  const button = $("#cache-clear-confirm");
+  state.cacheClearPending = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = t("cacheClearing");
+  }
+  try {
+    const payload = await apiRequest("/v1/cache/clear", { method: "POST" });
+    $("#cache-clear-dialog")?.close();
+    toast(t("cacheCleared", { count: payload.entryCount ?? 0 }));
+  } catch (error) {
+    toast(error.message, true);
+  } finally {
+    state.cacheClearPending = false;
+    if (button) {
+      button.disabled = false;
+      button.textContent = t("confirmClearCache");
+    }
+  }
 }
 
 function bindEvents() {
   $("#language").addEventListener("click", () => { state.language = state.language === "vi" ? "en" : "vi"; localStorage.setItem("wukong-language", state.language); applyLanguage(); });
   $$('[data-nav]').forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
   bindLiquidBottomTabs();
+  $("#header-profile")?.addEventListener("click", openProfileDialog);
+  $("#dock-profile")?.addEventListener("click", openProfileDialog);
+  $("#profile-dialog-close")?.addEventListener("click", () => $("#profile-dialog")?.close());
+  $("#cache-clear-confirm")?.addEventListener("click", () => performCacheClear());
+  $$("[data-theme-value]").forEach((button) => button.addEventListener("click", () => applyTheme(button.dataset.themeValue, true)));
+  themeMedia?.addEventListener?.("change", () => { if (state.theme === "system") applyTheme("system"); });
+  window.addEventListener("scroll", updateMastheadScroll, { passive: true });
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
     runQuickAction(button.dataset.action).catch((error) => toast(error.message, true));
   }));
@@ -2482,8 +2728,12 @@ function bindEvents() {
     } catch (error) { toast(error.message, true); }
   });
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) clearTimeout(state.jobsPollTimer);
+    if (document.hidden) {
+      clearTimeout(state.jobsPollTimer);
+      clearInterval(state.greetingTimer);
+    }
     else {
+      scheduleGreeting();
       ensureAutomaticTelegramConnection();
       loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
     }
@@ -2542,7 +2792,10 @@ function ensureAutomaticTelegramConnection() {
 }
 
 function startMiniApp() {
+  applyTheme(state.theme);
   bindEvents();
+  updateMastheadScroll();
+  scheduleGreeting();
   restoreSourceDraft();
   window.WukongMiniApp = Object.freeze({ setDeliveryState });
   applyLanguage();
@@ -2571,6 +2824,7 @@ if (TelegramApp) {
     TelegramApp = (window.Telegram && window.Telegram.WebApp) || null;
     if (!TelegramApp) { renderSessionDiagnostics(); return; }
     activateTelegramApp();
+    applyTheme(state.theme);
     restoreSourceDraft();
     updateTelegramState();
     updateSourceDetection();

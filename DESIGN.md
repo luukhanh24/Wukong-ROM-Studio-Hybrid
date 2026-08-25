@@ -173,7 +173,7 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 **The Pearl Majority Rule.** Most editable space remains pearl or neutral. Saturated color appears at decisions, categories, and state transitions, never as a blanket fill across every container.
 
-**The Solid Workspace Rule.** Work sheets, fields, ledgers, and title surfaces use solid color, borders, and tonal layering. The only glass-and-gradient exception is the compact mobile navigation lens; it must remain local to the dock and must not spread into the working canvas.
+**The Solid Workspace Rule.** Work sheets, fields, ledgers, and title surfaces use solid color, borders, and tonal layering. Glass and image-derived blur are limited to the compact mobile navigation lens, the authenticated profile sheet, and the compacting masthead; they must not spread into the working canvas.
 
 ## Typography
 
@@ -205,7 +205,7 @@ The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px
 
 The Studio recipe uses a flexible work column and a 320px sticky dispatch docket separated by a 16px gutter. Numbered dossier sections remain in the work column, with four-pixel chromatic spines indicating source, build, and delivery. Controls use compact internal rhythms; source facts form a measured grid rather than separate cards.
 
-At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a four-cell floating liquid bottom instrument. Its 64px capsule uses locally bounded blur, vibrancy and rim highlights; a 56px lens slides or drags beneath the active destination with damped spring motion, press scaling, velocity stretch, inner depth and subtle chromatic edge separation. Icons replace numeric tab indexes, and the active state uses the lens rather than a colored underline. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
+At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a five-slot floating liquid bottom instrument. Four slots remain destinations; the center slot is a raised circular Telegram avatar that opens the authenticated profile. The capsule uses locally bounded blur, vibrancy and rim highlights; one refractive lens slides or drags only among destination slots 0, 1, 3 and 4 with damped spring motion, press scaling, velocity stretch, inner depth and subtle chromatic edge separation. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
 
 View changes use a 380ms eased rise-and-fade. Controls transition color, border, shadow, and transform in roughly 180–220ms. Hover movement is limited to one pixel for work elements and two pixels for the active mobile destination. Reduced-motion preference collapses animation and smooth scrolling.
 
@@ -277,7 +277,15 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky four-cell contents rail with consistent line icons and a tonal active surface. Mobile recreates Kyant0's LiquidBottomTabs interaction model as a four-cell web control: a translucent 64px capsule contains one 56px refractive lens that supports taps and damped horizontal dragging. The lens springs to the nearest destination, grows under pressure, stretches against drag velocity, and uses bounded blur, vibrancy, inner shadow, rim light, and chromatic edge separation. The active icon and label deepen to blue and scale only slightly; no underline competes with the moving lens. Desktop and mobile navigation always update together, and reduced-motion preference removes slide, stretch, and scale transitions.
+Desktop uses a sticky four-cell contents rail with consistent line icons and a profile action in the masthead. Mobile recreates Kyant0's LiquidBottomTabs interaction model as a five-slot web control: a translucent capsule contains one refractive lens for the four destinations plus a raised center avatar. The lens springs to the nearest valid destination, grows under pressure, stretches against drag velocity, and uses bounded blur, vibrancy, inner shadow, rim light, and chromatic edge separation. The avatar is never treated as a destination or drag stop. Desktop and mobile navigation always update together, and reduced-motion preference removes slide, stretch, scale and rotating greeting transitions.
+
+### Authenticated Profile
+
+The avatar opens a centered dialog on desktop and a bottom sheet on compact screens. The avatar image becomes a bounded, enlarged blur behind the profile facts; initials use a deterministic Telegram-ID color. Every user-facing profile field remains visible except Mini App Open count, while the raw photo URL remains visual data rather than copy.
+
+### Masthead Greeting
+
+The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. On scroll it compacts progressively through opacity and bounded blur while the logo and essential controls remain usable. The greeting stops while the document is hidden and becomes static under reduced motion.
 
 ### Runtime Rail
 
@@ -314,9 +322,9 @@ Every active job exposes its device and ROM facts together with MOD-pack identit
 
 ### Don't:
 
-- **Don't** use gradients, glass surfaces, blurred blobs, or neon glows outside the intentionally bounded Liquid bottom-navigation instrument.
+- **Don't** use gradients, glass surfaces, blurred blobs, or neon glows outside the intentionally bounded navigation, authenticated profile and compacting masthead moments.
 - **Don't** turn every information group into the same rounded card with the same shadow.
-- **Don't** add decorative welcome copy, KPI theatre, abstract illustrations, or oversized marketing typography to the operating surface.
+- **Don't** add generic welcome copy, KPI theatre, abstract illustrations, or oversized marketing typography; the masthead greeting must remain short, personal and operational.
 - **Don't** use color without a defined interaction, category, or state meaning.
 - **Don't** make selected and unselected MODs differ only by fill intensity.
 - **Don't** allow fixed navigation, toasts, or submit controls to obscure the work.

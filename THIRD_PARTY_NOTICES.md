@@ -22,6 +22,13 @@ the GPL-3.0 label for new Wukong modules does not override those notices.
 Apktool 3.0.2 is licensed under Apache License 2.0. Source:
 <https://github.com/iBotPeaches/Apktool/tree/v3.0.2>.
 
+## AndroidLiquidGlass
+
+The Telegram Mini App's liquid bottom-navigation interaction is adapted from
+Kyant0's AndroidLiquidGlass `LiquidBottomTabs` implementation. AndroidLiquidGlass
+is licensed under Apache License 2.0. Source:
+<https://github.com/Kyant0/AndroidLiquidGlass>.
+
 ## Android platform tools and filesystem utilities
 
 The repository/runtime includes or invokes Android platform tools, e2fsprogs,
@@ -35,4 +42,3 @@ APK, APEX, recovery images, firmware and other content-packs are not relicensed
 under GPL-3.0 merely because Wukong can download or process them. Operators are
 responsible for having permission to store, modify and distribute each content
 pack and resulting ROM.
-

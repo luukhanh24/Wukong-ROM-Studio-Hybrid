@@ -74,6 +74,11 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_other_job = False
     artifact_fixture = False
     click_artifact_actions = False
+    click_profile = False
+    click_theme_dark = False
+    click_cache_flow = False
+    exercise_dock_header = False
+    cache_clear_requests = 0
     admin_user = False
     pending_user = False
 
@@ -128,7 +133,7 @@ Object.defineProperty(navigator, 'clipboard', { value: {
 }});
 """ if self.click_artifact_actions else ""
             source = f"""
-window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, openTelegramLink() {{}}, openLink(url) {{ document.body.dataset.openedArtifact = url; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}} }} }} }};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, setHeaderColor(value) {{ document.body.dataset.telegramHeaderColor = value; }}, setBackgroundColor(value) {{ document.body.dataset.telegramBackgroundColor = value; }}, openTelegramLink() {{}}, openLink(url) {{ document.body.dataset.openedArtifact = url; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}}, impactOccurred() {{}}, selectionChanged() {{ document.body.dataset.hapticSelections = String(Number(document.body.dataset.hapticSelections || 0) + 1); }} }} }} }};
 {exec_fallback}
 {navigator_fallback}
 {artifact_clipboard}
@@ -184,6 +189,67 @@ window.addEventListener('load', () => {{
     }};
     setTimeout(selectArchivedJob, 300);
   }}
+  if ({str(self.click_profile).lower()}) {{
+    const openProfile = () => {{
+      const button = document.querySelector('#dock-profile');
+      if (!button || button.hidden) {{ setTimeout(openProfile, 50); return; }}
+      button.click();
+      document.body.dataset.profileOpened = String(document.querySelector('#profile-dialog')?.open === true);
+    }};
+    setTimeout(openProfile, 250);
+  }}
+  if ({str(self.click_theme_dark).lower()}) {{
+    const selectDark = () => {{
+      const button = document.querySelector('[data-theme-value="dark"]');
+      if (!button) {{ setTimeout(selectDark, 50); return; }}
+      button.click();
+      document.body.dataset.selectedTheme = document.documentElement.dataset.colorScheme || '';
+    }};
+    setTimeout(selectDark, 250);
+  }}
+  if ({str(self.click_cache_flow).lower()}) {{
+    const exerciseCache = () => {{
+      const trigger = document.querySelector('[data-action="cache_clear"]');
+      const dialog = document.querySelector('#cache-clear-dialog');
+      if (!trigger || !dialog) {{ setTimeout(exerciseCache, 50); return; }}
+      trigger.click();
+      document.body.dataset.cacheDialogOpened = String(dialog.open === true);
+      dialog.querySelector('[value="cancel"]')?.click();
+      document.body.dataset.cacheCancelled = String(dialog.open === false);
+      setTimeout(() => {{
+        trigger.click();
+        setTimeout(() => {{
+          document.querySelector('#cache-clear-confirm')?.click();
+          setTimeout(async () => {{
+            const result = await fetch('/test/cache-count').then((response) => response.json());
+            document.body.dataset.cacheRequestCount = String(result.count);
+          }}, 800);
+        }}, 80);
+      }}, 80);
+    }};
+    setTimeout(exerciseCache, 300);
+  }}
+  if ({str(self.exercise_dock_header).lower()}) {{
+    const exerciseDockHeader = () => {{
+      const greeting = document.querySelector('#greeting-message');
+      const jobs = document.querySelector('.bottom-nav [data-nav="jobs"]');
+      if (!greeting || !jobs || jobs.hidden) {{ setTimeout(exerciseDockHeader, 50); return; }}
+      document.body.dataset.greetingInitial = greeting.textContent;
+      setTimeout(() => {{
+        window.scrollTo(0, 120);
+        setTimeout(() => {{
+          document.body.dataset.mastheadProgress = document.documentElement.style.getPropertyValue('--masthead-scroll');
+          jobs.click();
+        }}, 250);
+      }}, 1800);
+      setTimeout(() => {{
+        document.body.dataset.activeDockTab = document.querySelector('.bottom-nav [aria-current="page"]')?.dataset.nav || '';
+        document.body.dataset.greetingRotated = String(greeting.textContent !== document.body.dataset.greetingInitial);
+        document.body.dataset.brokenAssets = String([...document.images].filter((image) => image.complete && image.naturalWidth === 0).length);
+      }}, 6500);
+    }};
+    setTimeout(exerciseDockHeader, 350);
+  }}
   setTimeout(() => {{
     document.body.dataset.viewportWidth = String(document.documentElement.clientWidth);
     document.body.dataset.documentWidth = String(document.documentElement.scrollWidth);
@@ -203,6 +269,11 @@ window.addEventListener('load', () => {{
                 "application/javascript; charset=utf-8",
             )
             return
+        if path.startswith("/assets/"):
+            asset = ROOT / "telegram_mini_app" / path.lstrip("/")
+            if asset.is_file():
+                self._send(asset.read_bytes(), "image/svg+xml")
+                return
         if path == "/catalog.json":
             mod_versions = list(self.catalog_mod_versions)
             mods_by_version = self.catalog_mods_by_version or {
@@ -234,6 +305,9 @@ window.addEventListener('load', () => {{
             return
         if path == "/v1/me":
             self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
+            return
+        if path == "/test/cache-count":
+            self._send(json.dumps({"count": type(self).cache_clear_requests}).encode(), "application/json")
             return
         if path == "/v1/admin/users" and self.admin_user:
             user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
@@ -369,6 +443,10 @@ window.addEventListener('load', () => {{
                 return
             self._send(json.dumps(self.source_metadata).encode(), "application/json")
             return
+        if path == "/v1/cache/clear" and self.api_enabled and self.admin_user:
+            type(self).cache_clear_requests += 1
+            self._send(json.dumps({"entryCount": type(self).cache_clear_requests, "totalBytes": 0}).encode(), "application/json")
+            return
         self._send(b'{"error":"not found"}', "application/json", 404)
 
 
@@ -395,6 +473,10 @@ def _render_mini_app_in_chrome(
     click_other_job: bool = False,
     artifact_fixture: bool = False,
     click_artifact_actions: bool = False,
+    click_profile: bool = False,
+    click_theme_dark: bool = False,
+    click_cache_flow: bool = False,
+    exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
 ) -> tuple[str, int]:
@@ -423,6 +505,11 @@ def _render_mini_app_in_chrome(
             "click_other_job": click_other_job,
             "artifact_fixture": artifact_fixture,
             "click_artifact_actions": click_artifact_actions,
+            "click_profile": click_profile,
+            "click_theme_dark": click_theme_dark,
+            "click_cache_flow": click_cache_flow,
+            "exercise_dock_header": exercise_dock_header,
+            "cache_clear_requests": 0,
             "admin_user": admin_user,
             "pending_user": pending_user,
         },
@@ -677,6 +764,40 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("repeat(var(--tab-count),minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
 
+    def test_mini_app_exposes_branded_liquid_profile_theme_and_cache_safety(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        bottom_nav = re.search(r'<nav class="bottom-nav".*?</nav>', html, re.DOTALL)
+        self.assertIsNotNone(bottom_nav)
+        dock = bottom_nav.group(0)
+        self.assertEqual(["0", "1", "3", "4"], re.findall(r'data-slot="([^"]+)"', dock))
+        self.assertIn('id="dock-profile"', dock)
+        self.assertIn('id="header-profile"', html)
+        self.assertIn('id="profile-dialog"', html)
+        self.assertIn('id="cache-clear-dialog"', html)
+        self.assertIn('id="theme-selector"', html)
+        self.assertIn('data-theme-value="system"', html)
+        self.assertIn('data-theme-value="light"', html)
+        self.assertIn('data-theme-value="dark"', html)
+        self.assertIn('src="./assets/wukong-studio.svg"', html)
+        self.assertNotIn("ROM STUDIO / HYBRID", html)
+        self.assertIn("wukong-theme", script)
+        self.assertIn("renderProfileDialog", script)
+        self.assertIn("openCacheClearDialog", script)
+        self.assertIn("miniAppOpenCount", script)
+        self.assertIn('key === "miniAppOpenCount"', script)
+        self.assertIn("greetingTimer", script)
+        self.assertIn("updateMastheadScroll", script)
+        self.assertIn("HapticFeedback?.selectionChanged", script)
+        self.assertIn("Chỉ quản trị viên", html)
+        self.assertIn("activateTelegramApp();\n    applyTheme(state.theme);", script)
+        self.assertIn("--dock-slot-count:5", styles)
+        self.assertIn(".profile-dialog-backdrop", styles)
+        self.assertIn('data-color-scheme="dark"', styles)
+        self.assertIn("assets/service-telegram.svg", html)
+
     def test_admin_system_surface_renders_user_access_and_quota_ledger(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
             api_enabled=True,
@@ -689,8 +810,57 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("Người dùng &amp; lượt build", dom)
         self.assertIn("New User", dom)
         self.assertIn("@new_user", dom)
-        self.assertIn('id="quota-value">Không giới hạn</strong>', dom)
+        self.assertIn('id="greeting-carousel"', dom)
+        self.assertIn("Không giới hạn", dom)
         self.assertIn("Không giới hạn lượt còn lại", dom)
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            click_profile=True,
+            click_theme_dark=True,
+        )
+
+        self.assertIn('data-profile-opened="true"', dom)
+        self.assertIn('data-selected-theme="dark"', dom)
+        profile = re.search(r'<dialog class="profile-dialog"[^>]*open.*?</dialog>', dom, re.DOTALL)
+        self.assertIsNotNone(profile)
+        self.assertIn("Fixture User", profile.group(0))
+        self.assertNotIn("2 lần mở", profile.group(0))
+        self.assertNotIn("miniAppOpenCount", profile.group(0))
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_cache_clear_requires_dialog_confirmation_and_submits_once(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="system",
+            admin_user=True,
+            click_cache_flow=True,
+        )
+
+        self.assertIn('data-cache-dialog-opened="true"', dom)
+        self.assertIn('data-cache-cancelled="true"', dom)
+        self.assertIn('data-cache-request-count="1"', dom)
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_dock_header_greeting_haptics_and_assets_work_together(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            exercise_dock_header=True,
+        )
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('data-active-dock-tab="jobs"', dom)
+        self.assertIn('data-masthead-progress="', dom)
+        self.assertIn('root.setProperty("--masthead-scroll", progress.toFixed(3))', script)
+        self.assertIn(
+            'window.addEventListener("scroll", updateMastheadScroll, { passive: true })',
+            script,
+        )
+        self.assertIn('data-greeting-rotated="true"', dom)
+        self.assertIn('data-haptic-selections="1"', dom)
+        self.assertIn('data-broken-assets="0"', dom)
         self.assertGreater(screenshot_size, 10_000)
 
     def test_build_surface_keeps_build_workflow_separate_from_catalog_and_system(self) -> None:
