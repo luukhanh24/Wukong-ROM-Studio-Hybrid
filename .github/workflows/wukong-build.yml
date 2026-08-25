@@ -262,6 +262,8 @@ jobs:
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          control_plane_url: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          actions_callback_secret: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           self_hosted: "false"
 
   self-hosted:
@@ -284,6 +286,8 @@ jobs:
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          control_plane_url: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          actions_callback_secret: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           self_hosted: "true"
 
   notify-control-plane:
@@ -295,7 +299,8 @@ jobs:
       - name: "20 · Đồng bộ kết quả / Wake control plane"
         env:
           API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
-          CALLBACK_SECRET: ${{ github.token }}
+          CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
+          CALLBACK_BEARER: ${{ github.token }}
           WUKONG_JOB_ID: ${{ inputs.job_id }}
           WUKONG_RUN_ID: ${{ github.run_id }}
           ROUTE_RESULT: ${{ needs.route.result }}
@@ -305,7 +310,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$API_URL" || -z "$CALLBACK_SECRET" ]]; then
+          if [[ -z "$API_URL" || ( -z "$CALLBACK_SECRET" && -z "$CALLBACK_BEARER" ) ]]; then
             echo "Control plane is not bound yet; skipping terminal callback."
             exit 0
           fi
@@ -334,9 +339,34 @@ jobs:
           PY
           )"
           for attempt in {1..30}; do
+            callback_headers=(-H 'Content-Type: application/json')
+            if [[ -n "$CALLBACK_SECRET" ]]; then
+              timestamp="$(date +%s)"
+              signature="$(BODY="$body" TIMESTAMP="$timestamp" CALLBACK_SECRET="$CALLBACK_SECRET" python - <<'PY'
+          import hashlib
+          import hmac
+          import os
+          key = hmac.new(
+              b"WukongActionsCallback\0",
+              os.environ["CALLBACK_SECRET"].encode(),
+              hashlib.sha256,
+          ).digest()
+          print(hmac.new(
+              key,
+              os.environ["TIMESTAMP"].encode("ascii") + b"." + os.environ["BODY"].encode(),
+              hashlib.sha256,
+          ).hexdigest())
+          PY
+              )"
+              callback_headers+=(
+                -H "X-Wukong-Timestamp: $timestamp"
+                -H "X-Wukong-Signature: $signature"
+              )
+            else
+              callback_headers+=(-H "Authorization: Bearer $CALLBACK_BEARER")
+            fi
             if curl --fail --silent --show-error --connect-timeout 15 --max-time 45 \
-              -H 'Content-Type: application/json' \
-              -H "Authorization: Bearer $CALLBACK_SECRET" \
+              "${callback_headers[@]}" \
               --data-binary "$body" \
               "$api_url/internal/actions/callback"; then
               exit 0

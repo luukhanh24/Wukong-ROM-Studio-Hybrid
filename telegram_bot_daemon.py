@@ -48,7 +48,6 @@ from wukong.telegram_mini_api import (
     TelegramJobNotifier,
     TelegramMiniAppAPI,
     TelegramMiniAppAPIServer,
-    TelegramMiniAppSessionStore,
     public_artifact_url,
 )
 from wukong.runtime import HybridRuntime
@@ -228,7 +227,7 @@ def main() -> int:
         catalog["modReleaseVersions"] = fixed_release_versions()
         return catalog
     diagnostics_provider = lambda: {"system": diagnostics(), "cache": stage_cache_status()}
-    mini_app_sessions = TelegramMiniAppSessionStore()
+    mini_app_sessions = stores.sessions
 
     def artifact_download_url(manifest) -> str:
         return next(
@@ -299,7 +298,10 @@ def main() -> int:
                     telegram_transport.process_update if transport == "webhook" else None
                 ),
                 telegram_webhook_secret=webhook_secret if transport == "webhook" else None,
-                actions_callback_secret=os.environ.get("WUKONG_GITHUB_TOKEN", ""),
+                actions_callback_secret=os.environ.get(
+                    "WUKONG_ACTIONS_CALLBACK_SECRET",
+                    os.environ.get("WUKONG_GITHUB_TOKEN", ""),
+                ),
                 readiness_provider=readiness.is_set,
                 max_init_data_age_seconds=int(
                     os.environ.get("WUKONG_TELEGRAM_MINI_APP_MAX_AUTH_AGE", "3600")
@@ -326,10 +328,21 @@ def main() -> int:
             return 2
     try:
         if transport == "webhook":
-            telegram_transport.register_commands()
-            telegram_transport.configure_webhook(public_api_url, webhook_secret)
+            manage_webhook = os.environ.get(
+                "WUKONG_TELEGRAM_MANAGE_WEBHOOK",
+                "true",
+            ).strip().casefold() not in {"0", "false", "no", "off"}
+            if manage_webhook:
+                telegram_transport.register_commands()
+                telegram_transport.configure_webhook(public_api_url, webhook_secret)
             readiness.set()
-            print(f"Telegram webhook registered at {public_api_url.rstrip('/')}/telegram/webhook", flush=True)
+            if manage_webhook:
+                print(
+                    f"Telegram webhook registered at {public_api_url.rstrip('/')}/telegram/webhook",
+                    flush=True,
+                )
+            else:
+                print("Telegram webhook management is disabled for this fallback service", flush=True)
             mini_app_host = (urlsplit(web_app_url).hostname or "").casefold()
             if render_url and mini_app_host.endswith(".github.io"):
                 try:
@@ -352,6 +365,7 @@ def main() -> int:
             mini_api_server.stop()
         if state_backup:
             state_backup.stop()
+        stores.close()
     return 0
 
 

@@ -10,8 +10,10 @@ from wukong.models import BuildRecipe, Identity, JobManifest, JobStatus
 from wukong.orchestrator import FileJobStore
 from wukong.postgres_state import (
     BuildQuotaError,
+    PostgresControlPlaneTaskStore,
     PostgresJobStore,
     PostgresTelegramAccessStore,
+    PostgresTelegramSessionStore,
     PostgresTelegramUIStateStore,
     migrate_file_job_store,
     migrate_telegram_access_store,
@@ -79,6 +81,115 @@ class PostgresJobStoreTests(unittest.TestCase):
         self.assertEqual(recipe.to_dict(), restored.recipe(manifest.job_id).to_dict())
         self.assertEqual("submitted", restored.events(manifest.job_id)[0].type)
         self.assertEqual([manifest.job_id], [job.job_id for job in restored.list()])
+
+    def test_pairing_and_source_draft_survive_a_fresh_store_instance(self) -> None:
+        first = PostgresTelegramSessionStore(
+            connect=self.connect,
+            dialect="sqlite",
+            pairing_max_age_seconds=300,
+            draft_max_age_seconds=86400,
+        )
+
+        pairing = first.begin("WK_build_bot", now=1000)
+        self.assertTrue(first.confirm(pairing["pairId"], 42, now=1001))
+        self.assertTrue(
+            first.remember_source(
+                42,
+                "https://downloads.example/rom.zip?signature=short-lived",
+                now=1002,
+            )
+        )
+
+        restored = PostgresTelegramSessionStore(
+            connect=self.connect,
+            dialect="sqlite",
+            pairing_max_age_seconds=300,
+            draft_max_age_seconds=86400,
+        )
+
+        self.assertIsNotNone(
+            restored.launch_token(
+                pairing["pairId"],
+                pairing["pairSecret"],
+                "1234567:" + "a" * 32,
+                now=1003,
+            )
+        )
+        self.assertEqual(
+            "https://downloads.example/rom.zip?signature=short-lived",
+            restored.source_draft(42, now=1003),
+        )
+        restored.forget_source(42)
+        self.assertEqual("", restored.source_draft(42, now=1004))
+
+    def test_cloud_task_ledger_leases_updates_and_applies_only_newer_progress(self) -> None:
+        jobs = PostgresJobStore(connect=self.connect, dialect="sqlite")
+        task_state = PostgresControlPlaneTaskStore(connect=self.connect, dialect="sqlite")
+        recipe = _recipe()
+        jobs.create(
+            JobManifest(
+                job_id="progress-job",
+                owner=Identity("telegram", "42", "admin"),
+                recipe_digest=recipe.digest,
+                status=JobStatus.QUEUED,
+            ),
+            recipe,
+        )
+
+        self.assertTrue(task_state.claim_telegram_update(123, now=1000, lease_seconds=60))
+        self.assertFalse(task_state.claim_telegram_update(123, now=1001, lease_seconds=60))
+        task_state.release_telegram_update(123, now=1002)
+        self.assertTrue(task_state.claim_telegram_update(123, now=1003, lease_seconds=60))
+        task_state.complete_telegram_update(123, now=1004)
+        self.assertFalse(task_state.claim_telegram_update(123, now=2000, lease_seconds=60))
+
+        self.assertTrue(task_state.claim_job_dispatch("progress-job", now=1000))
+        self.assertFalse(task_state.claim_job_dispatch("progress-job", now=1001))
+        task_state.release_job_dispatch("progress-job", now=1002)
+        self.assertTrue(task_state.claim_job_dispatch("progress-job", now=1003))
+        task_state.complete_job_dispatch("progress-job", now=1004)
+        self.assertFalse(task_state.claim_job_dispatch("progress-job", now=2000))
+
+        self.assertTrue(
+            task_state.apply_job_progress(
+                jobs,
+                "progress-job",
+                sequence=2,
+                status=JobStatus.RUNNING,
+                stage="extract",
+                progress=0.35,
+                timestamp="2026-08-26T00:00:02Z",
+            )
+        )
+        self.assertFalse(
+            task_state.apply_job_progress(
+                jobs,
+                "progress-job",
+                sequence=1,
+                status=JobStatus.DOWNLOADING,
+                stage="download",
+                progress=0.10,
+                timestamp="2026-08-26T00:00:01Z",
+            )
+        )
+        restored = jobs.get("progress-job")
+        self.assertEqual(JobStatus.RUNNING, restored.status)
+        self.assertEqual("extract", restored.stage)
+        self.assertEqual(0.35, restored.progress)
+
+    def test_telegram_configuration_is_claimed_once_per_release_and_retries_after_failure(self) -> None:
+        task_state = PostgresControlPlaneTaskStore(connect=self.connect, dialect="sqlite")
+        release = "a" * 40
+
+        self.assertTrue(task_state.claim_telegram_configuration(release, now=1000))
+        self.assertFalse(task_state.claim_telegram_configuration(release, now=1001))
+        task_state.release_telegram_configuration(release, now=1002)
+        self.assertTrue(task_state.claim_telegram_configuration(release, now=1003))
+        task_state.complete_telegram_configuration(release, now=1004)
+        self.assertFalse(task_state.claim_telegram_configuration(release, now=2000))
+        self.assertTrue(task_state.telegram_configuration_complete(release))
+        self.assertFalse(task_state.telegram_configuration_complete("b" * 40))
+        self.assertTrue(task_state.claim_telegram_configuration("b" * 40, now=2001))
 
     def test_legacy_file_migration_is_complete_and_idempotent(self) -> None:
         recipe = _recipe()
@@ -632,6 +743,8 @@ class PostgresJobStoreTests(unittest.TestCase):
         )
 
         self.assertIsInstance(configured.jobs, PostgresJobStore)
+        self.assertIsInstance(configured.sessions, PostgresTelegramSessionStore)
+        self.assertIsInstance(configured.tasks, PostgresControlPlaneTaskStore)
         self.assertEqual("legacy-control-plane-job", configured.jobs.list()[0].job_id)
         self.assertEqual("user", configured.access.identity(99).role)
         self.assertEqual("en", configured.ui_state.language(42))

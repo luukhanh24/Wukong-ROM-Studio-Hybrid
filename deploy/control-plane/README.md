@@ -61,6 +61,8 @@ Configure these repository secrets:
 - `WUKONG_TELEGRAM_BOT_TOKEN` and `WUKONG_TELEGRAM_ADMIN_IDS`.
 - `WUKONG_TELEGRAM_WEBHOOK_SECRET`: stable random 32–256 character value.
 - `WUKONG_GITHUB_TOKEN` and `RCLONE_CONFIG_B64`.
+- `WUKONG_ACTIONS_CALLBACK_SECRET`: the same HMAC secret configured in GitHub
+  Actions and, during Cloud Run migration, GCP Secret Manager.
 
 The GitHub token needs Actions read/write and repository Metadata read. The
 workflow token updates repository variables after public health verification.

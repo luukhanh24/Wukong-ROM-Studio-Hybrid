@@ -9,6 +9,10 @@ inputs:
     required: true
   github_token:
     required: false
+  control_plane_url:
+    required: false
+  actions_callback_secret:
+    required: false
   self_hosted:
     required: true
 runs:
@@ -114,6 +118,9 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
         WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
         WUKONG_GITHUB_TOKEN: ${{ inputs.github_token }}
+        WUKONG_ACTIONS_PROGRESS_URL: ${{ format('{0}/internal/actions/progress', inputs.control_plane_url) }}
+        WUKONG_ACTIONS_CALLBACK_SECRET: ${{ inputs.actions_callback_secret }}
+        WUKONG_ACTIONS_RUN_ID: ${{ github.run_id }}
         # Terminal reporting is owned by the always-on control plane after the
         # public artifact URL has been synchronized. Avoid an early duplicate
         # notification from the ephemeral Actions runner.

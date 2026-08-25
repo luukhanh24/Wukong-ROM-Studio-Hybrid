@@ -64,6 +64,7 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         )
         self.runtime = Mock(spec=[
             "start",
+            "dispatch",
             "refresh",
             "reconcile_actions_callback",
             "verify_actions_bearer",
@@ -792,6 +793,178 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(204, response.status_code)
         self.assertLess(elapsed, 0.5)
 
+    def test_webhook_enqueues_cloud_task_instead_of_using_process_memory(self) -> None:
+        dispatcher = Mock()
+        handler = Mock()
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            telegram_update_handler=handler,
+            telegram_webhook_secret="secret-token",
+            cloud_task_dispatcher=dispatcher,
+        )
+        client = api.app.test_client()
+
+        response = client.post(
+            "/telegram/webhook",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-token"},
+            json={"update_id": 77, "message": {}},
+        )
+
+        self.assertEqual(204, response.status_code)
+        dispatcher.enqueue_telegram_update.assert_called_once_with(
+            77,
+            {"update_id": 77, "message": {}},
+        )
+        handler.assert_not_called()
+
+    def test_cloud_task_endpoint_verifies_oidc_and_deduplicates_telegram_update(self) -> None:
+        dispatcher = Mock()
+        handler = Mock()
+        task_store = Mock()
+        task_store.claim_telegram_update.side_effect = [True, False]
+        verifier = Mock(side_effect=lambda value: value == "Bearer oidc-token")
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            telegram_update_handler=handler,
+            telegram_webhook_secret="secret-token",
+            cloud_task_dispatcher=dispatcher,
+            task_store=task_store,
+            task_token_verifier=verifier,
+        )
+        client = api.app.test_client()
+        headers = {"Authorization": "Bearer oidc-token"}
+
+        denied = client.post(
+            "/internal/tasks/telegram-update",
+            json={"updateId": 77, "update": {"update_id": 77}},
+        )
+        accepted = client.post(
+            "/internal/tasks/telegram-update",
+            headers=headers,
+            json={"updateId": 77, "update": {"update_id": 77}},
+        )
+        duplicate = client.post(
+            "/internal/tasks/telegram-update",
+            headers=headers,
+            json={"updateId": 77, "update": {"update_id": 77}},
+        )
+
+        self.assertEqual(403, denied.status_code)
+        self.assertEqual(204, accepted.status_code)
+        self.assertEqual(204, duplicate.status_code)
+        handler.assert_called_once_with({"update_id": 77})
+        task_store.complete_telegram_update.assert_called_once_with(77)
+
+    def test_cloud_task_configures_telegram_once_per_release(self) -> None:
+        configure = Mock()
+        task_store = Mock()
+        task_store.claim_telegram_configuration.side_effect = [True, False]
+        verifier = Mock(side_effect=lambda value: value == "Bearer oidc-token")
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            telegram_configuration_handler=configure,
+            task_store=task_store,
+            task_token_verifier=verifier,
+        )
+        client = api.app.test_client()
+        headers = {"Authorization": "Bearer oidc-token"}
+        payload = {"release": "a" * 40}
+
+        denied = client.post("/internal/tasks/configure-telegram", json=payload)
+        accepted = client.post(
+            "/internal/tasks/configure-telegram",
+            headers=headers,
+            json=payload,
+        )
+        duplicate = client.post(
+            "/internal/tasks/configure-telegram",
+            headers=headers,
+            json=payload,
+        )
+
+        self.assertEqual(403, denied.status_code)
+        self.assertEqual(204, accepted.status_code)
+        self.assertEqual(204, duplicate.status_code)
+        configure.assert_called_once_with("a" * 40)
+        task_store.complete_telegram_configuration.assert_called_once_with("a" * 40)
+
+    def test_cloud_task_dispatches_an_accepted_job_once(self) -> None:
+        task_store = Mock()
+        task_store.claim_job_dispatch.side_effect = [True, False]
+        verifier = Mock(side_effect=lambda value: value == "Bearer oidc-token")
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            task_store=task_store,
+            task_token_verifier=verifier,
+        )
+        client = api.app.test_client()
+        headers = {"Authorization": "Bearer oidc-token"}
+        payload = {"jobId": "accepted-job"}
+
+        first = client.post("/internal/tasks/job-dispatch", headers=headers, json=payload)
+        duplicate = client.post("/internal/tasks/job-dispatch", headers=headers, json=payload)
+
+        self.assertEqual(204, first.status_code)
+        self.assertEqual(204, duplicate.status_code)
+        self.runtime.dispatch.assert_called_once_with("accepted-job")
+        task_store.complete_job_dispatch.assert_called_once_with("accepted-job")
+
+    def test_job_submission_enqueues_durable_dispatch_task(self) -> None:
+        dispatcher = Mock()
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": [], "modVersions": ["ColorOS_16.0.10"]},
+            release_versions_provider=lambda: self.release_versions,
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            cloud_task_dispatcher=dispatcher,
+        )
+        client = api.app.test_client()
+        probe = client.post(
+            "/v1/sources/probe",
+            headers=self.headers(),
+            json={"uri": "https://downloads.example/rom.zip"},
+        )
+        self.assertEqual(200, probe.status_code)
+
+        created = client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+
+        self.assertEqual(201, created.status_code)
+        dispatcher.enqueue_job_dispatch.assert_called_once_with(created.json["job_id"])
+        self.runtime.start.assert_not_called()
+
     def test_actions_callback_requires_fresh_hmac_and_refreshes_existing_job(self) -> None:
         probe = self.client.post(
             "/v1/sources/probe",
@@ -839,6 +1012,67 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, accepted.status_code)
         self.runtime.refresh.assert_called_with(self.store.get(job_id), force_cloud=True)
         self.runtime.notify_terminal.assert_called_once()
+
+    def test_actions_progress_accepts_only_newer_signed_sequence(self) -> None:
+        task_store = Mock()
+        task_store.apply_job_progress.side_effect = [True, False]
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": [], "modVersions": ["ColorOS_16.0.10"]},
+            release_versions_provider=lambda: self.release_versions,
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            task_store=task_store,
+            actions_callback_secret=CALLBACK_SECRET,
+        )
+        client = api.app.test_client()
+        probe = client.post(
+            "/v1/sources/probe",
+            headers=self.headers(),
+            json={"uri": "https://downloads.example/rom.zip"},
+        )
+        self.assertEqual(200, probe.status_code)
+        created = client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
+        job_id = created.json["job_id"]
+        payload = {
+            "jobId": job_id,
+            "runId": 555,
+            "sequence": 2,
+            "status": "running",
+            "stage": "extract",
+            "progress": 0.35,
+            "timestamp": "2026-08-26T00:00:02Z",
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode()
+        timestamp = str(int(time.time()))
+        key = hmac.new(
+            b"WukongActionsCallback\0",
+            CALLBACK_SECRET.encode(),
+            hashlib.sha256,
+        ).digest()
+        signature = hmac.new(
+            key,
+            timestamp.encode("ascii") + b"." + body,
+            hashlib.sha256,
+        ).hexdigest()
+        headers = {
+            "Content-Type": "application/json",
+            "X-Wukong-Timestamp": timestamp,
+            "X-Wukong-Signature": signature,
+        }
+
+        first = client.post("/internal/actions/progress", headers=headers, data=body)
+        stale = client.post("/internal/actions/progress", headers=headers, data=body)
+
+        self.assertEqual(200, first.status_code)
+        self.assertTrue(first.json["applied"])
+        self.assertEqual(200, stale.status_code)
+        self.assertFalse(stale.json["applied"])
+        self.assertEqual(2, task_store.apply_job_progress.call_count)
 
     def test_pre_executor_callback_reconciles_failure_without_waiting_for_drive(self) -> None:
         created = self.client.post("/v1/jobs", headers=self.headers(), json=self.recipe())
@@ -982,6 +1216,29 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, readiness_healthy.status_code)
         self.assertEqual("c" * 40, healthy.json["release"])
         self.assertEqual("postgresql", healthy.json["stateBackend"])
+
+    def test_health_reports_only_a_completed_telegram_configuration_release(self) -> None:
+        task_store = Mock()
+        task_store.telegram_configuration_complete.return_value = True
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            task_store=task_store,
+        )
+        client = api.app.test_client()
+
+        with patch.dict("os.environ", {"WUKONG_RELEASE_SHA": "a" * 40}):
+            response = client.get("/healthz")
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("a" * 40, response.json["telegramConfigurationRelease"])
+        task_store.telegram_configuration_complete.assert_called_once_with("a" * 40)
 
     def test_probe_create_list_detail_events_and_ownership(self) -> None:
         probe = self.client.post(
