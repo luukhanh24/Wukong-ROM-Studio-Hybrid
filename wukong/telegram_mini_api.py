@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import copy
 import hashlib
 import hmac
@@ -24,7 +25,7 @@ from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
 from .source_probe import validate_direct_signed_url_ttl
-from .telegram import BuildQuotaError, TelegramAccessStore
+from .telegram import BuildConcurrencyError, BuildQuotaError, TelegramAccessStore
 
 TERMINAL_STATUSES = {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
 SOURCE_METADATA_KEYS = (
@@ -44,6 +45,34 @@ SOURCE_METADATA_KEYS = (
     "deepInspected",
     "warning",
 )
+
+
+def _encode_audit_cursor(event: Mapping[str, object]) -> str:
+    payload = json.dumps(
+        [str(event.get("createdAt") or ""), str(event.get("eventId") or "")],
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_audit_cursor(value: str) -> tuple[str, str] | None:
+    normalized = str(value or "").strip()
+    if not normalized:
+        return None
+    try:
+        padding = "=" * (-len(normalized) % 4)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(normalized + padding).decode("utf-8")
+        )
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("Audit cursor is invalid") from exc
+    if (
+        not isinstance(decoded, list)
+        or len(decoded) != 2
+        or not all(isinstance(item, str) and item for item in decoded)
+    ):
+        raise ValueError("Audit cursor is invalid")
+    return decoded[0], decoded[1]
 RELEASE_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 ACTIONS_CALLBACK_MAX_AGE_SECONDS = 5 * 60
 TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS = 60 * 60
@@ -1068,6 +1097,8 @@ class TelegramMiniAppAPI:
                 return jsonify(public_job_payload(manifest, recipe)), 201
             except BuildQuotaError as exc:
                 return jsonify({"error": str(exc), "code": "build_quota_exhausted"}), 403
+            except BuildConcurrencyError as exc:
+                return jsonify({"error": str(exc), "code": "build_concurrency_conflict"}), 409
             except PermissionError as exc:
                 return jsonify({"error": str(exc), "code": "access_denied"}), 403
             except (
@@ -1228,10 +1259,22 @@ class TelegramMiniAppAPI:
                 for job in self.orchestrator.list(actor)
                 if job.owner.channel == "telegram" and job.owner.subject == str(telegram_id)
             ][:50]
+            event_page = self.access.user_events(
+                telegram_id,
+                actor=actor,
+                limit=101,
+            )
+            visible_events = event_page[:100]
             return jsonify(
                 {
                     "user": profile,
-                    "events": self.access.user_events(telegram_id, actor=actor),
+                    "events": visible_events,
+                    "eventsHasMore": len(event_page) > 100,
+                    "eventsNextCursor": (
+                        _encode_audit_cursor(visible_events[-1])
+                        if len(event_page) > 100 and visible_events
+                        else ""
+                    ),
                     "jobs": jobs,
                 }
             )
@@ -1240,7 +1283,27 @@ class TelegramMiniAppAPI:
         def admin_user_events(telegram_id: str) -> Response:
             actor = self._require_admin_identity()
             try:
-                return jsonify({"events": self.access.user_events(telegram_id, actor=actor)})
+                limit = max(1, min(int(request.args.get("limit", "100")), 100))
+                before = _decode_audit_cursor(request.args.get("cursor", ""))
+                event_page = self.access.user_events(
+                    telegram_id,
+                    actor=actor,
+                    limit=limit + 1,
+                    before=before,
+                )
+                visible_events = event_page[:limit]
+                has_more = len(event_page) > limit
+                return jsonify(
+                    {
+                        "events": visible_events,
+                        "hasMore": has_more,
+                        "nextCursor": (
+                            _encode_audit_cursor(visible_events[-1])
+                            if has_more and visible_events
+                            else ""
+                        ),
+                    }
+                )
             except ValueError as exc:
                 return jsonify({"error": str(exc)}), 400
 

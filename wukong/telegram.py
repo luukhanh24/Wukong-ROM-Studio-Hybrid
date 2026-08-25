@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import threading
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
@@ -12,6 +13,10 @@ from .models import Identity, utc_now
 
 class BuildQuotaError(PermissionError):
     """Raised when an approved Telegram user has no build credit left."""
+
+
+class BuildConcurrencyError(RuntimeError):
+    """Raised when a user or device already has an active build."""
 
 
 def require_sensitive_admin_reason(
@@ -140,6 +145,7 @@ class TelegramAccessStore:
     ) -> None:
         state.setdefault("events", []).append(
             {
+                "eventId": uuid.uuid4().hex,
                 "telegramId": subject,
                 "type": event_type,
                 "actorTelegramId": actor,
@@ -576,16 +582,48 @@ class TelegramAccessStore:
             self._write(state)
         return profile
 
-    def user_events(self, user_id: int | str, *, actor: Identity) -> list[dict[str, Any]]:
+    def user_events(
+        self,
+        user_id: int | str,
+        *,
+        actor: Identity,
+        limit: int = 100,
+        offset: int = 0,
+        before: tuple[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
         self._require_admin(actor)
         subject = self._subject(user_id)
         with self._lock:
-            events = [
-                dict(event)
-                for event in self._read().get("events", [])
-                if isinstance(event, Mapping) and event.get("telegramId") == subject
+            events = []
+            for index, event in enumerate(self._read().get("events", [])):
+                if not isinstance(event, Mapping) or event.get("telegramId") != subject:
+                    continue
+                payload = dict(event)
+                payload.setdefault("eventId", f"legacy-{index:020d}")
+                events.append(payload)
+        ordered = sorted(
+            events,
+            key=lambda event: (
+                str(event.get("createdAt") or ""),
+                str(event.get("eventId") or ""),
+            ),
+            reverse=True,
+        )
+        if before is not None:
+            before_created_at, before_event_id = before
+            ordered = [
+                event
+                for event in ordered
+                if (
+                    str(event.get("createdAt") or "") < before_created_at
+                    or (
+                        str(event.get("createdAt") or "") == before_created_at
+                        and str(event.get("eventId") or "") < before_event_id
+                    )
+                )
             ]
-        return list(reversed(events))
+        start = max(0, int(offset))
+        return ordered[start : start + max(1, min(int(limit), 200))]
 
     def backfill_jobs(self, manifests: Iterable[object]) -> int:
         """Populate historical counters once while preserving newer live values."""

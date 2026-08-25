@@ -237,7 +237,7 @@ Object.assign(translations.vi, {
   sortUsers: "Sắp xếp", lastAccess: "Truy cập gần nhất", firstAccess: "Truy cập đầu tiên", jobCount: "Số job", buildCredits: "Lượt còn lại",
   activity: "Hoạt động", allowance: "Hạn mức", displayName: "Tên hiển thị", cancelDialog: "Hủy", createPendingUser: "Tạo hồ sơ chờ duyệt", quotaFilter: "Hạn mức", quotaAvailable: "Còn lượt", activityFilter: "Hoạt động", openedMiniApp: "Đã mở Mini App", neverOpened: "Chưa từng mở", hasJobs: "Đã tạo job", subtractCredit: "Trừ lượt", jobHistory: "Lịch sử job",
   userCreated: "Đã tạo hồ sơ chờ duyệt.", userUpdated: "Đã cập nhật quyền người dùng.", noUsers: "Không có người dùng phù hợp.",
-  openCount: "{count} lần mở", jobsCount: "{count} job", approveUser: "Duyệt + 1 lượt", revokeUser: "Thu hồi", addCredit: "+1 lượt", setCredit: "Đặt số lượt", toggleUnlimited: "Đổi unlimited", auditTitle: "Nhật ký thay đổi"
+  openCount: "{count} lần mở", jobsCount: "{count} job", approveUser: "Duyệt + 1 lượt", revokeUser: "Thu hồi", addCredit: "+1 lượt", setCredit: "Đặt số lượt", toggleUnlimited: "Đổi unlimited", auditTitle: "Nhật ký thay đổi", loadMoreAudit: "Tải thêm nhật ký"
 });
 Object.assign(translations.en, {
   buildAllowance: "BUILD CREDIT", unlimited: "Unlimited", pending: "Pending", approved: "Approved", revoked: "Revoked",
@@ -247,7 +247,7 @@ Object.assign(translations.en, {
   sortUsers: "Sort", lastAccess: "Last access", firstAccess: "First access", jobCount: "Jobs", buildCredits: "Credits",
   activity: "Activity", allowance: "Allowance", displayName: "Display name", cancelDialog: "Cancel", createPendingUser: "Create pending profile", quotaFilter: "Quota", quotaAvailable: "Credits available", activityFilter: "Activity", openedMiniApp: "Opened Mini App", neverOpened: "Never opened", hasJobs: "Has jobs", subtractCredit: "Subtract credit", jobHistory: "Job history",
   userCreated: "Pending profile created.", userUpdated: "User access updated.", noUsers: "No matching users.",
-  openCount: "{count} opens", jobsCount: "{count} jobs", approveUser: "Approve + 1", revokeUser: "Revoke", addCredit: "+1 credit", setCredit: "Set credits", toggleUnlimited: "Toggle unlimited", auditTitle: "Audit history"
+  openCount: "{count} opens", jobsCount: "{count} jobs", approveUser: "Approve + 1", revokeUser: "Revoke", addCredit: "+1 credit", setCredit: "Set credits", toggleUnlimited: "Toggle unlimited", auditTitle: "Audit history", loadMoreAudit: "Load more audit events"
 });
 
 Object.assign(translations.en, {
@@ -1452,6 +1452,15 @@ function detailFact(label, value) {
   small.textContent = label; strong.textContent = value || "—"; box.append(small, strong); return box;
 }
 
+function adminAuditArticle(event) {
+  const article = document.createElement("article");
+  const name = document.createElement("strong"); name.textContent = event.type;
+  const detail = document.createElement("small");
+  detail.textContent = `${formatDate(event.createdAt)}${event.actorTelegramId ? ` · ${event.actorTelegramId}` : ""}${event.reason ? ` · ${event.reason}` : ""}`;
+  article.append(name, detail);
+  return article;
+}
+
 async function runAdminUserAction(user, action) {
   let path = action; let body = {};
   if (action === "approve") body.reason = window.prompt("Reason / Lý do", "approved by admin") || "";
@@ -1510,11 +1519,31 @@ async function openAdminUser(telegramId) {
   definitions.forEach(([action, label, className]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (className) button.className = className; button.disabled = Boolean(user.configuredAdmin); button.addEventListener("click", () => runAdminUserAction(user, action).catch((error) => toast(error.message, true))); actions.append(button); });
   const auditTitle = document.createElement("h3"); auditTitle.textContent = t("auditTitle");
   const audit = document.createElement("div"); audit.className = "user-audit";
-  audit.replaceChildren(...events.map((event) => { const article = document.createElement("article"); const name = document.createElement("strong"); name.textContent = event.type; const detail = document.createElement("small"); detail.textContent = `${formatDate(event.createdAt)}${event.actorTelegramId ? ` · ${event.actorTelegramId}` : ""}${event.reason ? ` · ${event.reason}` : ""}`; article.append(name, detail); return article; }));
+  audit.replaceChildren(...events.map(adminAuditArticle));
+  let auditCursor = String(payload.eventsNextCursor || "");
+  const loadMoreAudit = document.createElement("button");
+  loadMoreAudit.type = "button";
+  loadMoreAudit.className = "secondary";
+  loadMoreAudit.textContent = t("loadMoreAudit");
+  loadMoreAudit.hidden = !payload.eventsHasMore;
+  loadMoreAudit.addEventListener("click", async () => {
+    loadMoreAudit.disabled = true;
+    try {
+      const page = await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/events?cursor=${encodeURIComponent(auditCursor)}&limit=100`);
+      const nextEvents = Array.isArray(page.events) ? page.events : [];
+      audit.append(...nextEvents.map(adminAuditArticle));
+      auditCursor = String(page.nextCursor || "");
+      loadMoreAudit.hidden = !page.hasMore;
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      loadMoreAudit.disabled = false;
+    }
+  });
   const jobsTitle = document.createElement("h3"); jobsTitle.textContent = t("jobHistory");
   const jobHistory = document.createElement("div"); jobHistory.className = "user-audit";
   jobHistory.replaceChildren(...jobs.map((job) => { const article = document.createElement("article"); const name = document.createElement("strong"); name.textContent = `${job.job_id || job.jobId} · ${job.status}`; const detail = document.createElement("small"); detail.textContent = `${formatDate(job.created_at || job.createdAt)} · ${job.stage || "—"}`; article.append(name, detail); return article; }));
-  root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, auditTitle, audit);
+  root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, auditTitle, audit, loadMoreAudit);
   $("#user-detail-dialog").showModal();
 }
 

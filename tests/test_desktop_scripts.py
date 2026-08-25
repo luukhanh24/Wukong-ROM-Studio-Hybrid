@@ -29,6 +29,14 @@ class DesktopScriptTests(unittest.TestCase):
         content = (ROOT / "desktop/Scripts/publish.ps1").read_text(encoding="utf-8")
         self.assertIn("tests.test_wk_manager_patcher `\n            tests.test_wukong_hybrid", content)
 
+    def test_content_sync_preview_does_not_create_a_persistent_index(self):
+        content = (
+            ROOT / "desktop/WukongStudio.App/NativeStudioView.xaml.cs"
+        ).read_text(encoding="utf-8")
+        self.assertIn('target == "preview" && !File.Exists(index)', content)
+        self.assertIn("effectiveIndex = templateIndex;", content)
+        self.assertIn("startInfo.ArgumentList.Add(effectiveIndex);", content)
+
 
 if __name__ == "__main__":
     unittest.main()

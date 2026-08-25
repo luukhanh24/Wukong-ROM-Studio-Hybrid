@@ -5,6 +5,8 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from wukong.catalog import SYSTEM_ONLY_PARTITIONS
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # List of partitions to unpack as requested
@@ -27,18 +29,7 @@ PARTITIONS = [
     "vendor",
     "vendor_dlkm"
 ]
-PASSTHROUGH_PARTITIONS = {
-    "my_bigball",
-    "my_carrier",
-    "my_engineering",
-    "my_heytap",
-    "odm",
-    "product",
-    "system_dlkm",
-    "vendor",
-    "vendor_dlkm",
-}
-MUTABLE_PARTITIONS = [part for part in PARTITIONS if part not in PASSTHROUGH_PARTITIONS]
+MUTABLE_PARTITIONS = sorted(SYSTEM_ONLY_PARTITIONS)
 
 
 def _partition_workers(task_count):

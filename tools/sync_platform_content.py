@@ -11,6 +11,7 @@ from wukong.content_sync import (
     DEFAULT_REMOTE,
     assert_publishable,
     migrate_shared_mods,
+    preview_content_pack,
     publish_index_to_github,
     refresh_content_index,
     resolve_selected_content_pack,
@@ -29,7 +30,11 @@ def main() -> int:
     parser.add_argument("--index", required=True)
     parser.add_argument("--baseline-index")
     parser.add_argument("--remote", default=DEFAULT_REMOTE)
-    parser.add_argument("--target", choices=("refresh", "drive", "github", "all"), required=True)
+    parser.add_argument(
+        "--target",
+        choices=("preview", "refresh", "drive", "github", "all"),
+        required=True,
+    )
     parser.add_argument("--rclone-config")
     parser.add_argument("--repository")
     parser.add_argument("--branch", default="main")
@@ -46,6 +51,8 @@ def main() -> int:
             "--target github publishes the verified index as-is; "
             "--folder and --migrate-shared are not allowed"
         )
+    if args.target == "preview" and not args.folder:
+        parser.error("--folder is required for preview")
     try:
         run_id = uuid.UUID(args.run_id).hex if args.run_id else uuid.uuid4().hex
     except ValueError:
@@ -66,6 +73,17 @@ def main() -> int:
             packRoot=str(selected_pack_root),
             replace=True,
         )
+    if args.target == "preview":
+        emit(
+            "preview",
+            **preview_content_pack(
+                install,
+                index_path,
+                selected_pack_id,
+                remote=args.remote,
+            ),
+        )
+        return 0
     if args.migrate_shared:
         migrated = migrate_shared_mods(install)
         emit("migrate", mods=migrated)

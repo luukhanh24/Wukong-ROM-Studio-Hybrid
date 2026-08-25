@@ -311,8 +311,11 @@ class StudioServerTests(unittest.TestCase):
         self.assertIn("ColorOS_16.0.8", payload["modVersions"])
         self.assertIn("ColorOS_16.0.8", payload["modsByVersion"])
         self.assertIn("ColorOS_16.0.8", payload["presetDefaultsByVersion"])
-        self.assertEqual(payload["presetDefaults"]["lite"], studio_core.LITE_DEFAULT_MODS)
-        self.assertIn("WK_Installer", payload["presetDefaults"]["lite"])
+        self.assertEqual(
+            payload["presetDefaults"]["lite"],
+            studio_core.preset_default_mods("lite"),
+        )
+        self.assertNotIn("WK_Installer", payload["presetDefaults"]["lite"])
         self.assertIn("WK_Manager", payload["presetDefaults"]["resume"])
         self.assertIn("Fake_lock", payload["presetDefaults"]["resume"])
         self.assertNotIn("Gallery_mod_CN", payload["presetDefaults"]["resume"])
@@ -468,12 +471,12 @@ class StudioServerTests(unittest.TestCase):
         response = self.client.post(
             "/api/settings",
             headers=self.headers,
-            json={"roots": [str(self.root)], "debloatPaths": [r"my_stock\app\Browser"]},
+            json={"roots": [str(self.root)], "debloatPaths": [r"system\system\app\Browser"]},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["debloatPaths"], [r"my_stock\app\Browser"])
+        self.assertEqual(response.get_json()["debloatPaths"], [r"system\system\app\Browser"])
         payload = self.client.get("/api/bootstrap", headers=self.headers).get_json()
-        self.assertEqual(payload["settings"]["debloatPaths"], [r"my_stock\app\Browser"])
+        self.assertEqual(payload["settings"]["debloatPaths"], [r"system\system\app\Browser"])
 
     def test_settings_and_api_manage_stage_cache(self):
         response = self.client.post(

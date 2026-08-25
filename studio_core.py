@@ -24,8 +24,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from partition_config import (
     PartitionConfigError,
-    read_partition_tree_fingerprint,
-    sync_all_partition_configs,
+    partition_repack_fingerprint,
     sync_partition_configs,
     validate_partition_configs,
 )
@@ -51,7 +50,13 @@ from studio_paths import (
     platform_tool_path,
 )
 from src.core.utils import gettype
-from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS, SHARED_MOD_NAMES
+from wukong.catalog import (
+    LITE_DEFAULT_MODS,
+    PLUS_DEFAULT_EXCLUDED_MODS,
+    SHARED_MOD_NAMES,
+    SYSTEM_ONLY_PARTITIONS,
+    SYSTEM_ONLY_PATCH_MODS,
+)
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 from wukong.mod_release_versions import (
     DEFAULT_MOD_RELEASE_VERSION,
@@ -122,18 +127,6 @@ RESERVED_WORKSPACE_NAMES = {
 }
 RESUME_DEFAULT_MODS: list[str] = []
 BLOCKED_MODS: dict[str, str] = {}
-PROTECTED_DEBLOAT_PATHS = {
-    r"system_ext\app\NotificationCenter".lower(),
-    r"system_ext\priv-app\Settings".lower(),
-    r"system_ext\priv-app\SystemUI".lower(),
-    r"system_ext\priv-app\OplusLauncher".lower(),
-}
-PATCH_ONLY_MODS = {
-    "Block_ota": "Remove lines containing ota, romupdate or com.oplusos.sau from my_stock app-features.xml",
-}
-BLOCK_OTA_FEATURE_KEYWORDS = ("ota", "romupdate", "com.oplusos.sau")
-THEME_CR_REMOVE_PATHS = [r"my_stock\del-app\KeKeThemeSpace"]
-AI_GLOBAL_COLOROS_1605_REMOVE_PATHS = [r"my_stock\app\AIUnit"]
 SELINUX_HASH_MODS = {"Fake_lock", "WK_Manager"}
 FAKE_LOCK_INIT_BLOCK_START = "    # WK_STUDIO_FAKE_LOCK_BEGIN"
 FAKE_LOCK_INIT_BLOCK_END = "    # WK_STUDIO_FAKE_LOCK_END"
@@ -226,19 +219,9 @@ PARTITIONS = [
     "vendor",
     "vendor_dlkm",
 ]
-PASSTHROUGH_PARTITIONS = {
-    "my_bigball",
-    "my_carrier",
-    "my_engineering",
-    "my_heytap",
-    "odm",
-    "product",
-    "system_dlkm",
-    "vendor",
-    "vendor_dlkm",
-}
-MUTABLE_PARTITIONS = tuple(name for name in PARTITIONS if name not in PASSTHROUGH_PARTITIONS)
-MOD_PARTITIONS = set(MUTABLE_PARTITIONS)
+MUTABLE_PARTITIONS = tuple(sorted(SYSTEM_ONLY_PARTITIONS))
+MOD_PARTITIONS = set(SYSTEM_ONLY_PARTITIONS)
+PASSTHROUGH_PARTITIONS = set(PARTITIONS).difference(MUTABLE_PARTITIONS)
 REQUIRED_IMAGES = {
     "boot.img",
     "dtbo.img",
@@ -260,8 +243,7 @@ CORE_SOURCE_IMAGES = {
     "init_boot.img",
     "modem.img",
 }
-DYNAMIC_SOURCE_IMAGES = {f"{name}.img" for name in PARTITIONS}
-EXCLUDED_FIRMWARE = DYNAMIC_SOURCE_IMAGES | CORE_SOURCE_IMAGES | {
+EXCLUDED_FIRMWARE = CORE_SOURCE_IMAGES | {
     "vbmeta.img",
     "vendor_boot.img",
 }
@@ -1289,16 +1271,8 @@ def apply_rom_renames(entries: Iterable[dict[str, Any]]) -> dict[str, Any]:
 
 def _mod_special_actions(name: str) -> list[str]:
     actions = []
-    if name in PATCH_ONLY_MODS:
-        actions.append(PATCH_ONLY_MODS[name])
     if name == "Fix_noti":
         actions.append("Patch oplus-services.jar with apktool")
-    if name == "Global_props":
-        actions.append("Upsert US timezone, region and locale properties")
-    if name == "Ai_global":
-        actions.append("ColorOS 16.0.5 only: remove my_stock app AIUnit")
-    if name == "Theme_cr":
-        actions.append("Remove duplicate my_stock del-app KeKeThemeSpace before packaging")
     if name == "WK_Manager":
         actions.append("Patch framework.jar, services.jar and oplus-services.jar with apktool")
         actions.append("Import STARK smali into framework.jar")
@@ -1364,7 +1338,7 @@ def list_mods(mod_version: str | None = None, *, mod_root: Path | None = None) -
                     continue
                 if mod_dir.name in seen:
                     continue
-                patch_only = mod_dir.name in PATCH_ONLY_MODS
+                system_patch = mod_dir.name in SYSTEM_ONLY_PATCH_MODS
                 directories = sorted(path.name for path in mod_dir.iterdir() if path.is_dir())
                 compatible = [name for name in directories if name in MOD_PARTITIONS]
                 skipped = [name for name in directories if name not in MOD_PARTITIONS]
@@ -1374,11 +1348,11 @@ def list_mods(mod_version: str | None = None, *, mod_root: Path | None = None) -
                     {
                         "name": mod_dir.name,
                         "version": version,
-                        "valid": bool(compatible) or patch_only,
-                        "ready": (bool(compatible) or patch_only) and not blocked_reason,
+                        "valid": bool(compatible) or system_patch,
+                        "ready": (bool(compatible) or system_patch) and not blocked_reason,
                         "blockedReason": blocked_reason,
                         "partitions": compatible,
-                        "patchOnly": patch_only,
+                        "patchOnly": system_patch and not compatible,
                         "shared": shared,
                         "skippedDirectories": skipped,
                         "rootFiles": root_files,
@@ -1386,25 +1360,6 @@ def list_mods(mod_version: str | None = None, *, mod_root: Path | None = None) -
                     }
                 )
                 seen.add(mod_dir.name)
-    for name in sorted(PATCH_ONLY_MODS):
-        if name in seen:
-            continue
-        blocked_reason = BLOCKED_MODS.get(name)
-        results.append(
-            {
-                "name": name,
-                "version": version,
-                "valid": True,
-                "ready": not blocked_reason,
-                "blockedReason": blocked_reason,
-                "partitions": [],
-                "patchOnly": True,
-                "shared": False,
-                "skippedDirectories": [],
-                "rootFiles": [],
-                "specialActions": _mod_special_actions(name),
-            }
-        )
     return sorted(results, key=lambda mod: mod["name"].lower())
 
 
@@ -1444,13 +1399,14 @@ def preset_default_mods(
 ) -> list[str]:
     normalized = "lite" if preset == "standard" else preset
     mods = list_mods(mod_version, mod_root=mod_root)
+    ready_names = {str(mod["name"]) for mod in mods if mod.get("ready")}
     if normalized == "lite":
-        return [name for name in LITE_DEFAULT_MODS if any(mod["name"] == name for mod in mods)]
+        return [name for name in LITE_DEFAULT_MODS if name in ready_names]
     if normalized in {"resume", "plus", "both"}:
         return [
             mod["name"]
             for mod in mods
-            if mod["name"] not in PLUS_DEFAULT_EXCLUDED_MODS
+            if mod.get("ready") and mod["name"] not in PLUS_DEFAULT_EXCLUDED_MODS
         ]
     return []
 
@@ -1478,10 +1434,8 @@ def validate_debloat_paths(paths: Iterable[str] | None) -> list[str]:
             or any(part in {".", ".."} for part in parts)
             or Path(path).is_absolute()
         ):
-            raise StudioError(f"Invalid debloat path: {value}")
+            raise StudioError(f"Invalid debloat path under system-only policy: {value}")
         clean = "\\".join(parts)
-        if clean.lower() in PROTECTED_DEBLOAT_PATHS:
-            continue
         if clean not in normalized:
             normalized.append(clean)
     return normalized
@@ -1620,6 +1574,19 @@ def validate_source_rom(source_rom: Path) -> bool:
     return source_rom.is_dir() and all((source_rom / name).is_file() for name in required)
 
 
+def source_dynamic_partition_names(source_rom: Path) -> list[str]:
+    if not source_rom.is_dir():
+        return []
+    return sorted(
+        {
+            image.stem
+            for image in source_rom.glob("*.img")
+            if image.stem != "super" and partition_filesystem_type(image) is not None
+        },
+        key=str.casefold,
+    )
+
+
 def validate_rom_unpack(rom_unpack: Path, source_rom: Path | None = None) -> bool:
     if not rom_unpack.is_dir():
         return False
@@ -1682,11 +1649,11 @@ def _ext4_repack_profile(path: Path) -> dict[str, Any] | None:
 def validate_rom_repack(rom_repack: Path, source_rom: Path | None = None) -> bool:
     if not rom_repack.is_dir():
         return False
-    expected = [
-        name
-        for name in PARTITIONS
-        if source_rom is None or (source_rom / f"{name}.img").is_file()
-    ]
+    expected = (
+        source_dynamic_partition_names(source_rom)
+        if source_rom is not None
+        else list(MUTABLE_PARTITIONS)
+    )
     if not expected:
         return False
     for name in expected:
@@ -2130,7 +2097,7 @@ def _partition_destination(
         if soc and soc < "87xx":
             return None
         target_partition = "vendor"
-    if target_partition in PASSTHROUGH_PARTITIONS:
+    if target_partition not in MUTABLE_PARTITIONS:
         return None
     destination = rom_unpack / f"{target_partition}_unpacked" / target_partition
     return (target_partition, destination) if destination.is_dir() else None
@@ -2254,29 +2221,6 @@ def _replace_oneplus_brand(path: Path) -> int:
         return 0
     _write_text_lf(path, updated)
     return content.count("一加")
-
-
-def remove_stock_ota_feature_lines(rom_unpack: Path) -> int:
-    feature_xml = (
-        rom_unpack
-        / "my_stock_unpacked"
-        / "my_stock"
-        / "etc"
-        / "extension"
-        / "com.oplus.app-features.xml"
-    )
-    if not feature_xml.is_file():
-        return 0
-    lines = feature_xml.read_text(encoding="utf-8", errors="replace").splitlines()
-    kept = [
-        line
-        for line in lines
-        if not any(keyword in line.lower() for keyword in BLOCK_OTA_FEATURE_KEYWORDS)
-    ]
-    removed = len(lines) - len(kept)
-    if removed:
-        _write_text_lf(feature_xml, "\n".join(kept) + ("\n" if kept else ""))
-    return removed
 
 
 def patch_build_branding(
@@ -3027,9 +2971,6 @@ def apply_selected_mods(
     mods = validate_mods(mod_names, mod_version=version)
     copied = patched = copied_bytes = 0
     applied = []
-    stock_ota_feature_lines = 0
-    theme_cr_removed = 0
-    ai_global_aiunit_removed = 0
     jar_reports: list[dict[str, Any]] = []
     system_power_report: dict[str, Any] | None = None
     modified_partitions: set[str] = set()
@@ -3091,22 +3032,6 @@ def apply_selected_mods(
             patched += _patch_fake_lock_init_rc(rom_unpack, mod_dir)
             _sync_fake_lock_repack_configs(rom_unpack)
             modified_partitions.add("system")
-        if mod["name"] == "Block_ota":
-            removed = remove_stock_ota_feature_lines(rom_unpack)
-            stock_ota_feature_lines += removed
-            patched += removed
-            if removed:
-                modified_partitions.add("my_stock")
-        if mod["name"] == "Ai_global" and version == "ColorOS_16.0.5":
-            result = delete_bloatware(rom_unpack, AI_GLOBAL_COLOROS_1605_REMOVE_PATHS)
-            ai_global_aiunit_removed += int(result["deleted"])
-            patched += int(result["deleted"])
-            modified_partitions.update(result["modifiedPartitions"])
-        if mod["name"] == "Theme_cr":
-            result = delete_bloatware(rom_unpack, THEME_CR_REMOVE_PATHS)
-            theme_cr_removed += int(result["deleted"])
-            patched += int(result["deleted"])
-            modified_partitions.update(result["modifiedPartitions"])
         applied.append(mod["name"])
 
     jar_progress = 35
@@ -3164,9 +3089,6 @@ def apply_selected_mods(
         "copied": copied,
         "copiedBytes": copied_bytes,
         "patched": patched,
-        "stockOtaFeatureLines": stock_ota_feature_lines,
-        "themeCrRemoved": theme_cr_removed,
-        "aiGlobalAiunitRemoved": ai_global_aiunit_removed,
         "jarReports": jar_reports,
         "systemPower": system_power_report,
         "platSepolicyHash": sepolicy_hash,
@@ -3541,6 +3463,7 @@ def _stage_debloat(context: BuildContext) -> dict[str, Any]:
     report = delete_bloatware(context.rom_unpack, context.spec.debloatPaths)
     if report["requested"] and not report["effective"]:
         raise StudioError(str(report["warning"]))
+    context.modified_partitions.update(report.get("modifiedPartitions") or [])
     return report
 
 
@@ -3548,6 +3471,7 @@ def _stage_apply_mod(context: BuildContext) -> dict[str, Any]:
     mod_names = context.spec.selected_mod_names()
     if not mod_names:
         return {"skipped": True}
+    passthrough_before = _passthrough_partition_fingerprints(context.rom_unpack)
     details = apply_selected_mods(
         mod_names,
         context.rom_unpack,
@@ -3556,14 +3480,36 @@ def _stage_apply_mod(context: BuildContext) -> dict[str, Any]:
         context.spec.modVersion,
         context.progress_callback,
     )
-    forbidden = sorted(set(details.get("modifiedPartitions") or []).intersection(PASSTHROUGH_PARTITIONS))
+    passthrough_after = _passthrough_partition_fingerprints(context.rom_unpack)
+    changed_passthrough = sorted(
+        name
+        for name in set(passthrough_before).union(passthrough_after)
+        if passthrough_before.get(name) != passthrough_after.get(name)
+    )
+    if changed_passthrough:
+        raise StudioError(
+            "System-only policy detected actual MOD writes outside system: "
+            + ", ".join(changed_passthrough)
+        )
+    forbidden = sorted(
+        set(details.get("modifiedPartitions") or []).difference(MUTABLE_PARTITIONS)
+    )
     if forbidden:
         raise StudioError(
-            "System-only policy blocked MOD changes outside mutable partitions: "
+            "System-only policy blocked MOD changes outside system: "
             + ", ".join(forbidden)
         )
     context.modified_partitions.update(details.get("modifiedPartitions") or [])
     return details
+
+
+def _passthrough_partition_fingerprints(rom_unpack: Path) -> dict[str, str]:
+    fingerprints: dict[str, str] = {}
+    for unpacked in sorted(rom_unpack.glob("*_unpacked"), key=lambda path: path.name.casefold()):
+        partition = unpacked.name.removesuffix("_unpacked")
+        if partition not in MUTABLE_PARTITIONS and (unpacked / partition).is_dir():
+            fingerprints[partition] = partition_repack_fingerprint(unpacked, partition)
+    return fingerprints
 
 
 def _sync_selected_partition_configs(
@@ -3589,10 +3535,15 @@ def _sync_selected_partition_configs(
 
 def _stage_sync_configs(context: BuildContext) -> dict[str, Any]:
     vendor_sepolicy_guard = validate_no_unsafe_vendor_priv_app_sysfs(context.rom_unpack)
-    reports = (
-        _sync_selected_partition_configs(context.rom_unpack, context.modified_partitions)
-        if context.selective_repack
-        else sync_all_partition_configs(context.rom_unpack)
+    forbidden = sorted(set(context.modified_partitions).difference(MUTABLE_PARTITIONS))
+    if forbidden:
+        raise StudioError(
+            "System-only policy blocked metadata sync outside system: "
+            + ", ".join(forbidden)
+        )
+    reports = _sync_selected_partition_configs(
+        context.rom_unpack,
+        context.modified_partitions,
     )
     return {"partitions": reports, "vendorSepolicyGuard": vendor_sepolicy_guard}
 
@@ -3600,27 +3551,29 @@ def _stage_sync_configs(context: BuildContext) -> dict[str, Any]:
 def copy_passthrough_partition_images(source_rom: Path, rom_repack: Path) -> list[str]:
     rom_repack.mkdir(parents=True, exist_ok=True)
     copied = []
-    for name in PARTITIONS:
-        if name not in PASSTHROUGH_PARTITIONS:
+    for name in source_dynamic_partition_names(source_rom):
+        if name in MUTABLE_PARTITIONS:
             continue
         source = source_rom / f"{name}.img"
-        if not source.is_file():
-            continue
         _link_or_copy_required(source, rom_repack / source.name, "passthrough partition")
         copied.append(name)
     return copied
 
 
 def _stage_repack(context: BuildContext) -> dict[str, Any]:
-    branding = patch_build_branding(
-        context.rom_unpack,
-        build_edition_name(context.spec),
-        studio_version_name(context.spec),
-    )
-    if branding["manifestDisplayVersion"] or branding["manifestBrand"]:
-        context.modified_partitions.add("my_manifest")
-    if branding["productDisplayVersion"] or branding["productBrand"]:
-        context.modified_partitions.add("my_product")
+    forbidden = sorted(set(context.modified_partitions).difference(MUTABLE_PARTITIONS))
+    if forbidden:
+        raise StudioError(
+            "System-only policy blocked repack outside system: "
+            + ", ".join(forbidden)
+        )
+    branding = {
+        "manifestDisplayVersion": 0,
+        "productDisplayVersion": 0,
+        "manifestBrand": 0,
+        "productBrand": 0,
+        "skipped": "system-only policy",
+    }
     command = [
         sys.executable,
         str(ROOT_DIR / "batch_repack.py"),
@@ -3630,32 +3583,23 @@ def _stage_repack(context: BuildContext) -> dict[str, Any]:
         "auto",
         "--skip-sync",
     ]
-    repacked_partitions = sorted(context.modified_partitions) if context.selective_repack else []
-    if context.selective_repack:
-        if not repacked_partitions:
-            raise StudioError("Selective repack has no modified partitions")
-        for part_name in repacked_partitions:
-            (context.rom_repack / f"{part_name}.img").unlink(missing_ok=True)
-        command.extend(["--partitions", *repacked_partitions])
+    repacked_partitions = sorted(context.modified_partitions)
+    if not repacked_partitions:
+        raise StudioError("System-only repack has no modified system partition")
+    for part_name in repacked_partitions:
+        (context.rom_repack / f"{part_name}.img").unlink(missing_ok=True)
+    command.extend(["--partitions", *repacked_partitions])
     _run_command(command)
     passthrough = copy_passthrough_partition_images(context.source_rom, context.rom_repack)
     if not validate_rom_repack(context.rom_repack, context.source_rom):
         raise StudioError("Partition repack did not produce all expected images")
-    if not repacked_partitions:
-        repacked_partitions = sorted(
-            name for name in MUTABLE_PARTITIONS if (context.rom_repack / f"{name}.img").is_file()
-        )
     if repacked_partitions:
         context.rom_repack.mkdir(parents=True, exist_ok=True)
         _write_text_lf(
             context.rom_repack / PATCHED_VBMETA_MARKER,
             "\n".join(repacked_partitions) + "\n",
         )
-    reused_partitions = sorted(
-        name
-        for name in MUTABLE_PARTITIONS
-        if name not in repacked_partitions and (context.rom_repack / f"{name}.img").is_file()
-    )
+    reused_partitions: list[str] = []
     return {
         "romRepack": str(context.rom_repack),
         "buildBranding": branding,
@@ -3674,6 +3618,15 @@ def _stage_super(context: BuildContext) -> dict[str, Any]:
     ):
         raise StudioError("super.img repack failed")
     details = validate_super(context.build_dir / "super.img", context.device)
+    expected_partitions = {
+        f"{image.stem}_a"
+        for image in context.rom_repack.glob("*.img")
+    }
+    missing_inputs = sorted(expected_partitions.difference(details["partitions"]))
+    if missing_inputs:
+        raise StudioError(
+            "super.img dropped source logical partitions: " + ", ".join(missing_inputs)
+        )
     marker = context.rom_repack / PATCHED_VBMETA_MARKER
     if marker.is_file():
         details["requiresPatchedVbmeta"] = True
@@ -3916,8 +3869,11 @@ def _populate_shared_package_assets(context: BuildContext, target_root: Path) ->
             copied += int(method == "copied")
             reused += int(method == "reused")
 
+    dynamic_images = {
+        f"{name}.img" for name in source_dynamic_partition_names(context.source_rom)
+    }
     for source in context.source_rom.glob("*.img"):
-        if source.name not in EXCLUDED_FIRMWARE:
+        if source.name not in EXCLUDED_FIRMWARE and source.name not in dynamic_images:
             method = _link_or_copy_required(source, firmware_cache / source.name, "firmware image")
             linked += int(method == "linked")
             copied += int(method == "copied")

@@ -13,8 +13,54 @@ public sealed record ContentSyncProgressSnapshot(
     double? EtaSeconds,
     double Percent);
 
+public sealed record ContentSyncPreviewSnapshot(
+    string PackId,
+    string Target,
+    IReadOnlyList<string> Added,
+    IReadOnlyList<string> Modified,
+    IReadOnlyList<string> Removed,
+    IReadOnlyList<string> Conflicts,
+    int UnchangedCount,
+    int TotalFiles,
+    long TotalBytes);
+
 public static class ContentSyncProgressProtocol
 {
+    public static bool TryParsePreview(string line, out ContentSyncPreviewSnapshot? preview)
+    {
+        preview = null;
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (!StringValue(root, "stage").Equals("preview", StringComparison.Ordinal))
+            {
+                return false;
+            }
+            var packId = StringValue(root, "packId");
+            var target = StringValue(root, "target");
+            if (string.IsNullOrWhiteSpace(packId) || string.IsNullOrWhiteSpace(target))
+            {
+                return false;
+            }
+            preview = new ContentSyncPreviewSnapshot(
+                packId,
+                target,
+                StringArray(root, "added"),
+                StringArray(root, "modified"),
+                StringArray(root, "removed"),
+                StringArray(root, "conflicts"),
+                IntValue(root, "unchangedCount", 0),
+                IntValue(root, "totalFiles", 0),
+                LongValue(root, "totalBytes"));
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     public static bool TryReadChangedPackCount(string line, out int count)
     {
         count = 0;
@@ -78,6 +124,15 @@ public static class ContentSyncProgressProtocol
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? string.Empty
             : string.Empty;
+
+    private static IReadOnlyList<string> StringArray(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array
+            ? value.EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString() ?? string.Empty)
+                .Where(item => item.Length > 0)
+                .ToArray()
+            : Array.Empty<string>();
 
     private static int IntValue(JsonElement element, string name, int fallback) =>
         element.TryGetProperty(name, out var value)

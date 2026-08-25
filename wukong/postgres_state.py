@@ -12,10 +12,12 @@ from typing import Any, Iterator, Protocol
 
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, utc_now
 from .orchestrator import JobEvent, JobStore, OrchestrationError, TERMINAL_STATUSES
-from .telegram import BuildQuotaError, require_sensitive_admin_reason
+from .telegram import BuildConcurrencyError, BuildQuotaError, require_sensitive_admin_reason
 
 
 class _Cursor(Protocol):
+    rowcount: int
+
     def execute(self, query: str, parameters: tuple[object, ...] = ()) -> Any: ...
     def fetchone(self) -> Any: ...
     def fetchall(self) -> list[Any]: ...
@@ -29,6 +31,92 @@ class _Connection(Protocol):
 
 
 ConnectionFactory = Callable[[], _Connection]
+
+
+def _manifest_lock_keys(manifest: JobManifest, recipe: BuildRecipe) -> tuple[str, str]:
+    return (
+        f"user:{manifest.owner.subject}",
+        f"device:{recipe.device.casefold()}",
+    )
+
+
+def _release_and_reassign_build_locks(
+    cursor: _Cursor,
+    sql: Callable[[str], str],
+    job_id: str,
+) -> None:
+    """Release one terminal job while preserving locks for older conflicting state."""
+
+    cursor.execute(
+        sql("SELECT lock_key FROM wukong_build_locks WHERE job_id = ?"),
+        (str(job_id),),
+    )
+    released_keys = {str(row[0]) for row in cursor.fetchall()}
+    if not released_keys:
+        return
+    cursor.execute(
+        sql("DELETE FROM wukong_build_locks WHERE job_id = ?"),
+        (str(job_id),),
+    )
+    subjects = sorted(
+        key.split(":", 1)[1]
+        for key in released_keys
+        if key.startswith("user:")
+    )
+    devices = sorted(
+        key.split(":", 1)[1]
+        for key in released_keys
+        if key.startswith("device:")
+    )
+    clauses = ["job_id <> ?", "owner_channel = 'telegram'", "status NOT IN (?, ?, ?)"]
+    parameters: list[object] = [
+        str(job_id),
+        JobStatus.SUCCEEDED.value,
+        JobStatus.FAILED.value,
+        JobStatus.CANCELLED.value,
+    ]
+    contenders: list[str] = []
+    if subjects:
+        contenders.append(f"owner_subject IN ({', '.join('?' for _ in subjects)})")
+        parameters.extend(subjects)
+    if devices:
+        contenders.append(f"LOWER(device) IN ({', '.join('?' for _ in devices)})")
+        parameters.extend(devices)
+    if not contenders:
+        return
+    clauses.append(f"({' OR '.join(contenders)})")
+    cursor.execute(
+        sql(
+            "SELECT job_id, manifest_json, recipe_json, created_at FROM wukong_jobs "
+            f"WHERE {' AND '.join(clauses)} ORDER BY created_at ASC, job_id ASC"
+        ),
+        tuple(parameters),
+    )
+    remaining = set(released_keys)
+    for candidate_job_id, manifest_json, recipe_json, created_at in cursor.fetchall():
+        manifest = JobManifest.from_dict(json.loads(str(manifest_json)))
+        if manifest.status in TERMINAL_STATUSES or manifest.owner.channel != "telegram":
+            continue
+        recipe = BuildRecipe.from_dict(json.loads(str(recipe_json)))
+        for lock_key in remaining.intersection(_manifest_lock_keys(manifest, recipe)):
+            cursor.execute(
+                sql(
+                    "INSERT INTO wukong_build_locks "
+                    "(lock_key, job_id, subject, device, created_at) "
+                    "VALUES (?, ?, ?, ?, ?) ON CONFLICT (lock_key) DO NOTHING"
+                ),
+                (
+                    lock_key,
+                    str(candidate_job_id),
+                    manifest.owner.subject,
+                    recipe.device,
+                    str(created_at),
+                ),
+            )
+            if cursor.rowcount == 1:
+                remaining.discard(lock_key)
+        if not remaining:
+            break
 
 
 class _DatabaseStore:
@@ -909,6 +997,33 @@ class PostgresTelegramAccessStore(_DatabaseStore):
             if consumed and credits <= 0:
                 raise BuildQuotaError("No build credits remain")
             balance = credits - 1 if consumed else credits
+            lock_keys = (f"user:{subject}", f"device:{recipe.device.casefold()}")
+            cursor.execute(
+                self._sql(
+                    "SELECT lock_key, job_id FROM wukong_build_locks "
+                    "WHERE lock_key IN (?, ?)"
+                ),
+                lock_keys,
+            )
+            active_conflicts: list[str] = []
+            for lock_key, locked_job_id in cursor.fetchall():
+                cursor.execute(
+                    self._sql("SELECT manifest_json FROM wukong_jobs WHERE job_id = ?"),
+                    (str(locked_job_id),),
+                )
+                locked_manifest = PostgresJobStore._manifest_from_row(cursor.fetchone())
+                if locked_manifest is None or locked_manifest.status in TERMINAL_STATUSES:
+                    cursor.execute(
+                        self._sql("DELETE FROM wukong_build_locks WHERE lock_key = ? AND job_id = ?"),
+                        (str(lock_key), str(locked_job_id)),
+                    )
+                else:
+                    active_conflicts.append(str(lock_key).split(":", 1)[0])
+            if active_conflicts:
+                labels = " and ".join(sorted(set(active_conflicts)))
+                raise BuildConcurrencyError(
+                    f"Another build is already active for this {labels}; wait for it to finish"
+                )
             cursor.execute(
                 self._sql("SELECT 1 FROM wukong_jobs WHERE job_id = ?"),
                 (manifest.job_id,),
@@ -918,16 +1033,34 @@ class PostgresTelegramAccessStore(_DatabaseStore):
             cursor.execute(
                 self._sql(
                     "INSERT INTO wukong_jobs "
-                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence) "
-                    "VALUES (?, ?, ?, ?, 2)"
+                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence, "
+                    "owner_channel, owner_subject, device, status) "
+                    "VALUES (?, ?, ?, ?, 2, ?, ?, ?, ?)"
                 ),
                 (
                     manifest.job_id,
                     PostgresJobStore._manifest_json(manifest),
                     recipe.canonical_json,
                     manifest.created_at,
+                    manifest.owner.channel,
+                    manifest.owner.subject,
+                    recipe.device,
+                    manifest.status.value,
                 ),
             )
+            for lock_key in lock_keys:
+                cursor.execute(
+                    self._sql(
+                        "INSERT INTO wukong_build_locks "
+                        "(lock_key, job_id, subject, device, created_at) VALUES (?, ?, ?, ?, ?) "
+                        "ON CONFLICT (lock_key) DO NOTHING"
+                    ),
+                    (lock_key, manifest.job_id, subject, recipe.device, utc_now()),
+                )
+                if cursor.rowcount != 1:
+                    raise BuildConcurrencyError(
+                        "Another build claimed this user or device; retry after it finishes"
+                    )
             cursor.execute(
                 self._sql(
                     "INSERT INTO wukong_job_events "
@@ -1049,17 +1182,26 @@ class PostgresTelegramAccessStore(_DatabaseStore):
                 reason=reason,
                 details={"jobId": job_id, "retainJob": bool(retain_job)},
             )
+            if retain_job:
+                _release_and_reassign_build_locks(cursor, self._sql, job_id)
         return True
 
     def update_job_status(self, user_id: int | str, job_id: str, status: str) -> None:
         subject = self._subject(user_id)
         with self._lock, self._connection() as connection:
-            connection.cursor().execute(
+            cursor = connection.cursor()
+            cursor.execute(
                 self._sql(
                     "UPDATE wukong_telegram_users SET last_job_id = ?, last_job_status = ? WHERE subject = ?"
                 ),
                 (str(job_id), str(status or "")[:64], subject),
             )
+            if str(status or "").casefold() in {
+                JobStatus.SUCCEEDED.value,
+                JobStatus.FAILED.value,
+                JobStatus.CANCELLED.value,
+            }:
+                _release_and_reassign_build_locks(cursor, self._sql, str(job_id))
 
     def list_users(
         self,
@@ -1075,37 +1217,69 @@ class PostgresTelegramAccessStore(_DatabaseStore):
         direction: str = "desc",
     ) -> dict[str, Any]:
         self._require_admin(actor)
+        term = str(query or "").strip().casefold()
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if term:
+            clauses.append(
+                "(LOWER(subject) LIKE ? ESCAPE '\\' "
+                "OR LOWER(COALESCE(username, '')) LIKE ? ESCAPE '\\' "
+                "OR LOWER(COALESCE(display_name, '')) LIKE ? ESCAPE '\\')"
+            )
+            escaped_term = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            pattern = f"%{escaped_term}%"
+            parameters.extend((pattern, pattern, pattern))
+        if status in {"pending", "approved", "revoked"}:
+            clauses.append("access_status = ?")
+            parameters.append(status)
+        if quota == "available":
+            clauses.append("(unlimited = 1 OR build_credits > 0)")
+        elif quota == "exhausted":
+            clauses.append("(unlimited = 0 AND build_credits = 0)")
+        elif quota == "unlimited":
+            clauses.append("unlimited = 1")
+        if activity == "active":
+            clauses.append("mini_app_open_count > 0")
+        elif activity == "never":
+            clauses.append("mini_app_open_count = 0")
+        elif activity == "jobs":
+            clauses.append("job_count > 0")
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        sort_columns = {
+            "lastSeenAt": "last_seen_at",
+            "firstSeenAt": "first_seen_at",
+            "miniAppOpenCount": "mini_app_open_count",
+            "jobCount": "job_count",
+            "buildCredits": "build_credits",
+        }
+        sort_direction = "ASC" if direction == "asc" else "DESC"
+        order_by = (
+            f"LENGTH(subject) {sort_direction}, subject {sort_direction}"
+            if sort == "telegramId"
+            else f"{sort_columns.get(sort, 'last_seen_at')} {sort_direction}, subject ASC"
+        )
+        page_limit = max(1, min(int(limit), 100))
+        page_offset = max(0, int(offset))
         with self._connection() as connection:
             cursor = connection.cursor()
-            cursor.execute(f"SELECT {self._profile_columns()} FROM wukong_telegram_users")
-            users = [self._profile_payload(row) for row in cursor.fetchall()]
-        filtered = [user for user in users if user is not None]
-        term = str(query or "").strip().casefold()
-        if term:
-            filtered = [
-                user for user in filtered
-                if term in " ".join(str(user.get(key) or "").casefold() for key in ("telegramId", "username", "displayName"))
+            cursor.execute(
+                self._sql(f"SELECT COUNT(*) FROM wukong_telegram_users{where}"),
+                tuple(parameters),
+            )
+            total = int(cursor.fetchone()[0])
+            cursor.execute(
+                self._sql(
+                    f"SELECT {self._profile_columns()} FROM wukong_telegram_users{where} "
+                    f"ORDER BY {order_by} LIMIT ? OFFSET ?"
+                ),
+                (*parameters, page_limit, page_offset),
+            )
+            users = [
+                profile
+                for row in cursor.fetchall()
+                if (profile := self._profile_payload(row)) is not None
             ]
-        if status in {"pending", "approved", "revoked"}:
-            filtered = [user for user in filtered if user["accessStatus"] == status]
-        if quota == "available":
-            filtered = [user for user in filtered if user["unlimited"] or int(user["buildCredits"] or 0) > 0]
-        elif quota == "exhausted":
-            filtered = [user for user in filtered if not user["unlimited"] and int(user["buildCredits"] or 0) == 0]
-        elif quota == "unlimited":
-            filtered = [user for user in filtered if user["unlimited"]]
-        if activity == "active":
-            filtered = [user for user in filtered if int(user["miniAppOpenCount"] or 0) > 0]
-        elif activity == "never":
-            filtered = [user for user in filtered if int(user["miniAppOpenCount"] or 0) == 0]
-        elif activity == "jobs":
-            filtered = [user for user in filtered if int(user["jobCount"] or 0) > 0]
-        allowed_sort = {"lastSeenAt", "firstSeenAt", "miniAppOpenCount", "jobCount", "buildCredits", "telegramId"}
-        sort_key = sort if sort in allowed_sort else "lastSeenAt"
-        filtered.sort(key=lambda user: (user.get(sort_key) is not None, user.get(sort_key)), reverse=direction != "asc")
-        total = len(filtered)
-        start = max(0, offset)
-        return {"users": filtered[start : start + max(1, min(limit, 100))], "total": total}
+        return {"users": users, "total": total}
 
     def create_user(
         self,
@@ -1121,17 +1295,41 @@ class PostgresTelegramAccessStore(_DatabaseStore):
             self._append_event(connection.cursor(), profile["telegramId"], "created_by_admin", actor=actor.subject)
         return profile
 
-    def user_events(self, user_id: int | str, *, actor: Identity) -> list[dict[str, Any]]:
+    def user_events(
+        self,
+        user_id: int | str,
+        *,
+        actor: Identity,
+        limit: int = 100,
+        offset: int = 0,
+        before: tuple[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
         self._require_admin(actor)
         subject = self._subject(user_id)
+        cursor_clause = ""
+        parameters: list[object] = [subject]
+        if before is not None:
+            before_created_at, before_event_id = before
+            cursor_clause = (
+                " AND (created_at < ? OR (created_at = ? AND event_id < ?))"
+            )
+            parameters.extend((before_created_at, before_created_at, before_event_id))
+        parameters.extend(
+            (
+                max(1, min(int(limit), 200)),
+                max(0, int(offset)),
+            )
+        )
         with self._connection() as connection:
             cursor = connection.cursor()
             cursor.execute(
                 self._sql(
                     "SELECT event_id, event_type, actor_subject, reason, details_json, created_at "
-                    "FROM wukong_telegram_user_events WHERE subject = ? ORDER BY created_at DESC, event_id DESC"
+                    "FROM wukong_telegram_user_events WHERE subject = ?"
+                    f"{cursor_clause} "
+                    "ORDER BY created_at DESC, event_id DESC LIMIT ? OFFSET ?"
                 ),
-                (subject,),
+                tuple(parameters),
             )
             return [
                 {
@@ -1212,10 +1410,50 @@ class PostgresJobStore(_DatabaseStore):
                     manifest_json TEXT NOT NULL,
                     recipe_json TEXT NOT NULL,
                     created_at TEXT NOT NULL,
-                    next_event_sequence INTEGER NOT NULL DEFAULT 1
+                    next_event_sequence INTEGER NOT NULL DEFAULT 1,
+                    owner_channel TEXT NOT NULL DEFAULT '',
+                    owner_subject TEXT NOT NULL DEFAULT '',
+                    device TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL DEFAULT ''
                 )
                 """
             )
+            if self._dialect == "sqlite":
+                cursor.execute("PRAGMA table_info(wukong_jobs)")
+                existing_columns = {str(row[1]) for row in cursor.fetchall()}
+                for name in ("owner_channel", "owner_subject", "device", "status"):
+                    if name not in existing_columns:
+                        cursor.execute(
+                            f"ALTER TABLE wukong_jobs ADD COLUMN {name} TEXT NOT NULL DEFAULT ''"
+                        )
+            else:
+                for name in ("owner_channel", "owner_subject", "device", "status"):
+                    cursor.execute(
+                        f"ALTER TABLE wukong_jobs ADD COLUMN IF NOT EXISTS "
+                        f"{name} TEXT NOT NULL DEFAULT ''"
+                    )
+            cursor.execute(
+                "SELECT job_id, manifest_json, recipe_json FROM wukong_jobs "
+                "WHERE owner_channel = '' OR owner_subject = '' OR device = '' OR status = ''"
+            )
+            for job_id, manifest_json, recipe_json in cursor.fetchall():
+                manifest = self._manifest_from_row((manifest_json,))
+                if manifest is None:
+                    continue
+                recipe = BuildRecipe.from_dict(json.loads(str(recipe_json)))
+                cursor.execute(
+                    self._sql(
+                        "UPDATE wukong_jobs SET owner_channel = ?, owner_subject = ?, "
+                        "device = ?, status = ? WHERE job_id = ?"
+                    ),
+                    (
+                        manifest.owner.channel,
+                        manifest.owner.subject,
+                        recipe.device,
+                        manifest.status.value,
+                        str(job_id),
+                    ),
+                )
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS wukong_job_events (
@@ -1230,8 +1468,67 @@ class PostgresJobStore(_DatabaseStore):
                 """
             )
             cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_build_locks (
+                    lock_key TEXT PRIMARY KEY,
+                    job_id TEXT NOT NULL,
+                    subject TEXT NOT NULL,
+                    device TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (job_id) REFERENCES wukong_jobs(job_id) ON DELETE CASCADE
+                )
+                """
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS wukong_build_locks_job_idx "
+                "ON wukong_build_locks(job_id)"
+            )
+            cursor.execute(
+                self._sql(
+                    "SELECT job_id, manifest_json, recipe_json, created_at FROM wukong_jobs "
+                    "WHERE owner_channel = 'telegram' AND status NOT IN (?, ?, ?) "
+                    "ORDER BY created_at ASC, job_id ASC"
+                ),
+                (
+                    JobStatus.SUCCEEDED.value,
+                    JobStatus.FAILED.value,
+                    JobStatus.CANCELLED.value,
+                ),
+            )
+            for job_id, manifest_json, recipe_json, created_at in cursor.fetchall():
+                manifest = self._manifest_from_row((manifest_json,))
+                if manifest is None:
+                    continue
+                recipe = BuildRecipe.from_dict(json.loads(str(recipe_json)))
+                for lock_key in (
+                    f"user:{manifest.owner.subject}",
+                    f"device:{recipe.device.casefold()}",
+                ):
+                    cursor.execute(
+                        self._sql(
+                            "INSERT INTO wukong_build_locks "
+                            "(lock_key, job_id, subject, device, created_at) "
+                            "VALUES (?, ?, ?, ?, ?) ON CONFLICT (lock_key) DO NOTHING"
+                        ),
+                        (
+                            lock_key,
+                            str(job_id),
+                            manifest.owner.subject,
+                            recipe.device,
+                            str(created_at),
+                        ),
+                    )
+            cursor.execute(
                 "CREATE INDEX IF NOT EXISTS wukong_jobs_created_idx "
                 "ON wukong_jobs(created_at DESC)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS wukong_jobs_active_owner_idx "
+                "ON wukong_jobs(owner_channel, status, owner_subject)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS wukong_jobs_active_device_idx "
+                "ON wukong_jobs(owner_channel, status, device)"
             )
             cursor.execute(
                 """
@@ -1284,14 +1581,19 @@ class PostgresJobStore(_DatabaseStore):
             cursor.execute(
                 self._sql(
                     "INSERT INTO wukong_jobs "
-                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence) "
-                    "VALUES (?, ?, ?, ?, 1)"
+                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence, "
+                    "owner_channel, owner_subject, device, status) "
+                    "VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)"
                 ),
                 (
                     manifest.job_id,
                     self._manifest_json(manifest),
                     recipe.canonical_json,
                     manifest.created_at,
+                    manifest.owner.channel,
+                    manifest.owner.subject,
+                    recipe.device,
+                    manifest.status.value,
                 ),
             )
         return JobManifest.from_dict(manifest.to_dict())
@@ -1316,8 +1618,9 @@ class PostgresJobStore(_DatabaseStore):
             cursor.execute(
                 self._sql(
                     "INSERT INTO wukong_jobs "
-                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence) "
-                    "VALUES (?, ?, ?, ?, ?)"
+                    "(job_id, manifest_json, recipe_json, created_at, next_event_sequence, "
+                    "owner_channel, owner_subject, device, status) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 ),
                 (
                     manifest.job_id,
@@ -1325,6 +1628,10 @@ class PostgresJobStore(_DatabaseStore):
                     recipe.canonical_json,
                     manifest.created_at,
                     next_sequence,
+                    manifest.owner.channel,
+                    manifest.owner.subject,
+                    recipe.device,
+                    manifest.status.value,
                 ),
             )
             for event in sorted(events, key=lambda entry: entry.sequence):
@@ -1385,17 +1692,28 @@ class PostgresJobStore(_DatabaseStore):
             if manifest.status in TERMINAL_STATUSES and not manifest.finished_at:
                 manifest.finished_at = manifest.updated_at
             cursor.execute(
-                self._sql("UPDATE wukong_jobs SET manifest_json = ? WHERE job_id = ?"),
-                (self._manifest_json(manifest), job_id),
+                self._sql(
+                    "UPDATE wukong_jobs SET manifest_json = ?, owner_channel = ?, "
+                    "owner_subject = ?, status = ? WHERE job_id = ?"
+                ),
+                (
+                    self._manifest_json(manifest),
+                    manifest.owner.channel,
+                    manifest.owner.subject,
+                    manifest.status.value,
+                    job_id,
+                ),
             )
+            if manifest.status in TERMINAL_STATUSES:
+                _release_and_reassign_build_locks(cursor, self._sql, job_id)
         return JobManifest.from_dict(manifest.to_dict())
 
     def replace_recipe(self, job_id: str, recipe: BuildRecipe) -> BuildRecipe:
         with self._lock, self._connection() as connection:
             cursor = connection.cursor()
             cursor.execute(
-                self._sql("UPDATE wukong_jobs SET recipe_json = ? WHERE job_id = ?"),
-                (recipe.canonical_json, job_id),
+                self._sql("UPDATE wukong_jobs SET recipe_json = ?, device = ? WHERE job_id = ?"),
+                (recipe.canonical_json, recipe.device, job_id),
             )
             if cursor.rowcount == 0:
                 raise OrchestrationError("Job not found")

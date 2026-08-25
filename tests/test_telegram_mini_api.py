@@ -13,7 +13,7 @@ from urllib.parse import urlencode, urlsplit
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
 from wukong.orchestrator import HybridOrchestrator, InMemoryJobStore
 from wukong.routing import RunnerInventory
-from wukong.telegram import TelegramAccessStore
+from wukong.telegram import BuildConcurrencyError, TelegramAccessStore
 from wukong.telegram_mini_api import (
     TelegramInitDataError,
     TelegramJobNotifier,
@@ -170,6 +170,23 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(403, exhausted.status_code)
         self.assertEqual("build_quota_exhausted", exhausted.get_json()["code"])
 
+    def test_job_submit_reports_active_user_or_device_conflict(self) -> None:
+        self.access.reserve_and_create_job = Mock(
+            side_effect=BuildConcurrencyError(
+                "Another build is already active for this device; wait for it to finish"
+            )
+        )
+
+        response = self.client.post(
+            "/v1/jobs",
+            headers={**self.headers(42), "Idempotency-Key": "conflicting-submit"},
+            json=self.recipe(),
+        )
+
+        self.assertEqual(409, response.status_code)
+        self.assertEqual("build_concurrency_conflict", response.get_json()["code"])
+        self.assertEqual(0, self.runtime.start.call_count)
+
     def test_admin_manages_users_access_allowance_and_audit(self) -> None:
         created = self.client.post(
             "/v1/admin/users",
@@ -213,6 +230,17 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             json={"reason": "access ended"},
         )
         self.assertEqual("revoked", revoked.get_json()["user"]["accessStatus"])
+        for index in range(105):
+            self.access.open_session(88, f"audit-page-{index}")
+        paged_detail = self.client.get("/v1/admin/users/88", headers=self.headers(1))
+        self.assertEqual(100, len(paged_detail.get_json()["events"]))
+        self.assertTrue(paged_detail.get_json()["eventsHasMore"])
+        next_page = self.client.get(
+            f"/v1/admin/users/88/events?cursor={paged_detail.get_json()['eventsNextCursor']}&limit=100",
+            headers=self.headers(1),
+        )
+        self.assertGreater(len(next_page.get_json()["events"]), 0)
+        self.assertFalse(next_page.get_json()["hasMore"])
 
         denied = self.client.get("/v1/admin/users", headers=self.headers(42))
         self.assertEqual(403, denied.status_code)

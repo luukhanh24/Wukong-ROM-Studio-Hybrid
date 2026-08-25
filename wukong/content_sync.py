@@ -146,6 +146,80 @@ def _pack_payload_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -> bo
     return all(left.get(key) == right.get(key) for key in ("id", "target", "remote", "sizeBytes", "files"))
 
 
+def preview_content_pack(
+    install_root: Path,
+    index_path: Path,
+    pack_id: str,
+    *,
+    remote: str = DEFAULT_REMOTE,
+) -> dict[str, Any]:
+    """Compare one local content-pack with the last verified index record."""
+
+    install = install_root.resolve()
+    sources = discover_pack_sources(install)
+    source_root = sources.get(pack_id)
+    if source_root is None:
+        raise KeyError(f"Selected content-pack source is missing: {pack_id}")
+    generated = build_content_pack_record(source_root, remote=remote, pack_id=pack_id)
+    existing: dict[str, Any] = {"schemaVersion": 1, "packs": []}
+    if index_path.is_file():
+        existing = json.loads(index_path.read_text(encoding="utf-8"))
+        validate_content_index(existing)
+    old = next(
+        (dict(pack) for pack in existing["packs"] if str(pack.get("id")) == pack_id),
+        None,
+    )
+    old_files = {
+        str(item["path"]): dict(item)
+        for item in (old or {}).get("files", [])
+        if isinstance(item, Mapping)
+    }
+    new_files = {
+        str(item["path"]): dict(item)
+        for item in generated["files"]
+        if isinstance(item, Mapping)
+    }
+    added = sorted(set(new_files).difference(old_files), key=str.casefold)
+    removed = sorted(set(old_files).difference(new_files), key=str.casefold)
+    modified = sorted(
+        (
+            path
+            for path in set(new_files).intersection(old_files)
+            if any(
+                new_files[path].get(key) != old_files[path].get(key)
+                for key in ("sizeBytes", "sha256")
+            )
+        ),
+        key=str.casefold,
+    )
+    conflicts: list[str] = []
+    target = str(generated["target"])
+    for pack in existing["packs"]:
+        other_id = str(pack.get("id") or "")
+        other_target = str(pack.get("target") or "")
+        if other_id != pack_id and other_target.casefold() == target.casefold():
+            conflicts.append(
+                f"Target {target} is also owned by content-pack {other_id}"
+            )
+    by_casefold: dict[str, str] = {}
+    for path in new_files:
+        folded = path.casefold()
+        previous = by_casefold.setdefault(folded, path)
+        if previous != path:
+            conflicts.append(f"Case-insensitive path collision: {previous} <> {path}")
+    return {
+        "packId": pack_id,
+        "target": target,
+        "added": added,
+        "modified": modified,
+        "removed": removed,
+        "conflicts": conflicts,
+        "unchangedCount": len(new_files) - len(added) - len(modified),
+        "totalFiles": len(new_files),
+        "totalBytes": int(generated["sizeBytes"]),
+    }
+
+
 def _atomic_write_index(path: Path, index: Mapping[str, Any]) -> None:
     path = path.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)

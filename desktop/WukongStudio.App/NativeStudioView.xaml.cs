@@ -3376,10 +3376,35 @@ public sealed partial class NativeStudioView : UserControl
             return;
         }
         var selection = _contentSyncFolderSelection!;
+        ContentSyncPreviewSnapshot preview;
+        try
+        {
+            var previewOutput = await RunPlatformContentSyncAsync("preview", selection.SelectedFolder);
+            preview = ParseContentSyncPreview(previewOutput);
+            HybridResultBox.Text = FormatContentSyncPreview(preview, includePaths: true);
+        }
+        catch (Exception exception)
+        {
+            HybridResultBox.Text = exception.Message;
+            ShowMessage(
+                Localized("Không thể tạo preview đồng bộ"),
+                exception.Message,
+                InfoBarSeverity.Error);
+            return;
+        }
+        if (preview.Conflicts.Count > 0)
+        {
+            ShowMessage(
+                Localized("Content-pack có xung đột"),
+                string.Join(Environment.NewLine, preview.Conflicts),
+                InfoBarSeverity.Error);
+            return;
+        }
         var confirmed = await ConfirmDialogAsync(
             Localized("Thay thế content-pack trên Drive?"),
             $"{Localized("Thư mục đã chọn")}:\n{selection.SelectedFolder}\n\n" +
             $"{Localized("Content-pack sẽ bị thay thế toàn bộ")}:\n{selection.PackId}\n\n" +
+            $"{FormatContentSyncPreview(preview, includePaths: false)}\n\n" +
             (requestedModReleaseVersion is null
                 ? string.Empty
                 : $"{Localized(existingModPack && string.Equals(currentModReleaseVersion, requestedModReleaseVersion, StringComparison.Ordinal)
@@ -3481,29 +3506,43 @@ public sealed partial class NativeStudioView : UserControl
         {
             throw new InvalidOperationException("Studio layout chưa sẵn sàng.");
         }
-        var credentials = new HybridSecretStore(_layout).Load()
-            ?? throw new InvalidOperationException("Hãy lưu GitHub token và rclone.conf trong Thiết đặt trước.");
+        var requiresCredentials = target != "preview";
+        var credentials = requiresCredentials
+            ? new HybridSecretStore(_layout).Load()
+                ?? throw new InvalidOperationException("Hãy lưu GitHub token và rclone.conf trong Thiết đặt trước.")
+            : null;
         var python = Path.Combine(_layout.PythonRoot, "python.exe");
         var script = Path.Combine(_layout.ScriptsRoot, "tools", "sync_platform_content.py");
         var templateIndex = Path.Combine(_layout.ScriptsRoot, "content-packs", "index.json");
         var syncDataRoot = Path.Combine(_layout.DataRoot, "ContentSync");
         var index = Path.Combine(syncDataRoot, "index.json");
+        var effectiveIndex = index;
         var runId = Guid.NewGuid().ToString("N");
         if (!File.Exists(python) || !File.Exists(script) || !File.Exists(templateIndex))
         {
             throw new FileNotFoundException("Runtime đồng bộ content-pack chưa được cài đầy đủ. Hãy build/cài lại Wukong ROM Studio.");
         }
-        Directory.CreateDirectory(syncDataRoot);
-        if (!File.Exists(index))
+        if (target == "preview" && !File.Exists(index))
         {
-            File.Copy(templateIndex, index);
+            effectiveIndex = templateIndex;
+        }
+        else
+        {
+            Directory.CreateDirectory(syncDataRoot);
+            if (!File.Exists(index))
+            {
+                File.Copy(templateIndex, index);
+            }
         }
         Directory.CreateDirectory(_layout.SecretsRoot);
         var rcloneConfig = Path.Combine(_layout.SecretsRoot, $".content-sync-{Guid.NewGuid():N}.conf");
         try
         {
-            await File.WriteAllTextAsync(rcloneConfig, credentials.RcloneConfig, new UTF8Encoding(false));
-            File.SetAttributes(rcloneConfig, FileAttributes.Hidden | FileAttributes.Temporary);
+            if (credentials is not null)
+            {
+                await File.WriteAllTextAsync(rcloneConfig, credentials.RcloneConfig, new UTF8Encoding(false));
+                File.SetAttributes(rcloneConfig, FileAttributes.Hidden | FileAttributes.Temporary);
+            }
             var startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = python,
@@ -3518,11 +3557,14 @@ public sealed partial class NativeStudioView : UserControl
             startInfo.ArgumentList.Add("--install-root");
             startInfo.ArgumentList.Add(_layout.InstallRoot);
             startInfo.ArgumentList.Add("--index");
-            startInfo.ArgumentList.Add(index);
+            startInfo.ArgumentList.Add(effectiveIndex);
             startInfo.ArgumentList.Add("--baseline-index");
             startInfo.ArgumentList.Add(templateIndex);
             startInfo.ArgumentList.Add("--remote");
-            startInfo.ArgumentList.Add($"{credentials.RcloneRemote.TrimEnd(':')}:WukongROM/content-packs");
+            startInfo.ArgumentList.Add(
+                credentials is null
+                    ? "wukong-gdrive:WukongROM/content-packs"
+                    : $"{credentials.RcloneRemote.TrimEnd(':')}:WukongROM/content-packs");
             startInfo.ArgumentList.Add("--target");
             startInfo.ArgumentList.Add(target);
             startInfo.ArgumentList.Add("--run-id");
@@ -3532,8 +3574,11 @@ public sealed partial class NativeStudioView : UserControl
                 startInfo.ArgumentList.Add("--folder");
                 startInfo.ArgumentList.Add(selectedFolder);
             }
-            startInfo.ArgumentList.Add("--repository");
-            startInfo.ArgumentList.Add(credentials.GitHubRepository);
+            if (credentials is not null)
+            {
+                startInfo.ArgumentList.Add("--repository");
+                startInfo.ArgumentList.Add(credentials.GitHubRepository);
+            }
             if (target == "drive")
             {
                 startInfo.ArgumentList.Add("--rclone-config");
@@ -3545,8 +3590,11 @@ public sealed partial class NativeStudioView : UserControl
             }
             startInfo.Environment["PYTHONUTF8"] = "1";
             startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
-            startInfo.Environment["WUKONG_GITHUB_REPOSITORY"] = credentials.GitHubRepository;
-            startInfo.Environment["WUKONG_GITHUB_TOKEN"] = credentials.GitHubToken;
+            if (credentials is not null)
+            {
+                startInfo.Environment["WUKONG_GITHUB_REPOSITORY"] = credentials.GitHubRepository;
+                startInfo.Environment["WUKONG_GITHUB_TOKEN"] = credentials.GitHubToken;
+            }
             startInfo.Environment["PATH"] = string.Join(
                 Path.PathSeparator,
                 Path.Combine(_layout.RuntimeRoot, "Bin", "Windows", "AMD64"),
@@ -3615,6 +3663,55 @@ public sealed partial class NativeStudioView : UserControl
                 File.SetAttributes(rcloneConfig, FileAttributes.Normal);
                 File.Delete(rcloneConfig);
             }
+        }
+    }
+
+    private static ContentSyncPreviewSnapshot ParseContentSyncPreview(string output)
+    {
+        foreach (var line in output.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (ContentSyncProgressProtocol.TryParsePreview(line, out var preview))
+            {
+                return preview!;
+            }
+        }
+        throw new InvalidDataException("Tác vụ preview không trả về danh sách thay đổi content-pack.");
+    }
+
+    private string FormatContentSyncPreview(ContentSyncPreviewSnapshot preview, bool includePaths)
+    {
+        var lines = new List<string>
+        {
+            $"{Localized("Preview file")}: +{preview.Added.Count}  ~{preview.Modified.Count}  -{preview.Removed.Count}",
+            $"{Localized("Không đổi")}: {preview.UnchangedCount} · {Localized("Tổng file")}: {preview.TotalFiles} · {FormatTransferBytes(preview.TotalBytes)}",
+        };
+        if (includePaths)
+        {
+            AddContentSyncPreviewPaths(lines, Localized("Thêm"), preview.Added);
+            AddContentSyncPreviewPaths(lines, Localized("Sửa"), preview.Modified);
+            AddContentSyncPreviewPaths(lines, Localized("Xóa"), preview.Removed);
+            AddContentSyncPreviewPaths(lines, Localized("Xung đột"), preview.Conflicts);
+        }
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static void AddContentSyncPreviewPaths(
+        ICollection<string> output,
+        string label,
+        IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0)
+        {
+            return;
+        }
+        output.Add($"{label} ({paths.Count}):");
+        foreach (var path in paths.Take(12))
+        {
+            output.Add($"  {path}");
+        }
+        if (paths.Count > 12)
+        {
+            output.Add($"  … +{paths.Count - 12}");
         }
     }
 

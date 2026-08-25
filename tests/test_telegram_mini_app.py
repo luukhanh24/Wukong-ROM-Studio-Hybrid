@@ -428,8 +428,8 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertEqual(["ColorOS_16.0.9"], payload["modVersions"])
         self.assertEqual("V5.0", payload["modReleaseVersions"]["ColorOS_16.0.9"])
-        self.assertEqual(["Gapps", "WK_Installer", "WK_Manager"], payload["modsByVersion"]["ColorOS_16.0.9"])
-        self.assertEqual(["Gapps", "WK_Installer", "WK_Manager"], payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"])
+        self.assertEqual(["Gapps", "WK_Manager"], payload["modsByVersion"]["ColorOS_16.0.9"])
+        self.assertEqual(["Gapps", "WK_Manager"], payload["presetDefaultsByVersion"]["ColorOS_16.0.9"]["both"])
         self.assertIn("sync_configs", [item["id"] for item in payload["pipelineSteps"]])
         self.assertNotIn("sync_metadata", [item["id"] for item in payload["pipelineSteps"]])
         self.assertEqual("PKG110", payload["devices"][0]["product"])
@@ -468,6 +468,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("artifact_publish", script)
         self.assertIn("loadJobs", script)
         self.assertIn("scheduleJobsPoll", script)
+        self.assertIn("loadMoreAudit", script)
+        self.assertIn(
+            "/events?cursor=${encodeURIComponent(auditCursor)}&limit=100",
+            script,
+        )
         self.assertIn("renderArtifacts", script)
         self.assertIn("upload_progress", script)
         self.assertIn("speedBytesPerSecond", script)
@@ -847,13 +852,9 @@ class TelegramMiniAppTests(unittest.TestCase):
         config = json.loads((ROOT / "config" / "debloat.json").read_text(encoding="utf-8"))
 
         self.assertIn("defaultDebloatPaths", script)
-        for path in (
-            r"my_stock\priv-app\CodeBook",
-            r"my_stock\app\AIWriter",
-            r"my_stock\app\ColorDirectService",
-            r"my_stock\app\AIMemory",
-        ):
-            self.assertIn(path, config["default"])
+        self.assertTrue(config["default"])
+        self.assertTrue(all(path.startswith("system\\") for path in config["default"]))
+        self.assertIn(r"system\system\framework\services.jar.prof", config["default"])
 
 
 if __name__ == "__main__":

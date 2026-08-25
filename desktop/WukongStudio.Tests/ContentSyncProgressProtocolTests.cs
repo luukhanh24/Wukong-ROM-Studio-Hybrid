@@ -63,4 +63,25 @@ public sealed class ContentSyncProgressProtocolTests
         Assert.True(ContentSyncProgressProtocol.TryReadChangedPackCount(line, out var count));
         Assert.Equal(expected, count);
     }
+
+    [Fact]
+    public void ParsesContentPackFileDiffPreview()
+    {
+        const string line = """
+            {"stage":"preview","packId":"STARK/common","target":"STARK","added":["new.apk"],"modified":["manager.apk"],"removed":["old.apk"],"conflicts":["duplicate target"],"unchangedCount":7,"totalFiles":9,"totalBytes":1234}
+            """;
+
+        var parsed = ContentSyncProgressProtocol.TryParsePreview(line, out var preview);
+
+        Assert.True(parsed);
+        Assert.NotNull(preview);
+        Assert.Equal("STARK/common", preview.PackId);
+        Assert.Equal(["new.apk"], preview.Added);
+        Assert.Equal(["manager.apk"], preview.Modified);
+        Assert.Equal(["old.apk"], preview.Removed);
+        Assert.Equal(["duplicate target"], preview.Conflicts);
+        Assert.Equal(7, preview.UnchangedCount);
+        Assert.Equal(9, preview.TotalFiles);
+        Assert.Equal(1234, preview.TotalBytes);
+    }
 }

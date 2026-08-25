@@ -8,6 +8,7 @@ from pathlib import Path
 from wukong.content_sync import (
     discover_pack_sources,
     migrate_shared_mods,
+    preview_content_pack,
     refresh_content_index,
     resolve_selected_content_pack,
     restore_incomplete_index,
@@ -119,6 +120,49 @@ class ContentSyncTests(unittest.TestCase):
 
             self.assertEqual("STARK/common", pack_id)
             self.assertEqual((install / "Content" / "STARK").resolve(), pack_root)
+
+    def test_preview_reports_added_modified_removed_and_target_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            install = Path(root)
+            stark = install / "Content" / "STARK"
+            stark.mkdir(parents=True)
+            (stark / "same.txt").write_bytes(b"same")
+            (stark / "changed.txt").write_bytes(b"before")
+            (stark / "removed.txt").write_bytes(b"remove")
+            index_path = install / "index.json"
+            index, _ = refresh_content_index(install, index_path, remote="drive:packs")
+            index["packs"].append(
+                {
+                    "id": "duplicate/target",
+                    "target": "STARK",
+                    "remote": "drive:packs/duplicate",
+                    "sizeBytes": 1,
+                    "files": [
+                        {"path": "other.txt", "sizeBytes": 1, "sha256": "a" * 64}
+                    ],
+                }
+            )
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+            (stark / "changed.txt").write_bytes(b"after")
+            (stark / "removed.txt").unlink()
+            (stark / "added.txt").write_bytes(b"add")
+
+            preview = preview_content_pack(
+                install,
+                index_path,
+                "STARK/common",
+                remote="drive:packs",
+            )
+
+            self.assertEqual(["added.txt"], preview["added"])
+            self.assertEqual(["changed.txt"], preview["modified"])
+            self.assertEqual(["removed.txt"], preview["removed"])
+            self.assertEqual(1, preview["unchangedCount"])
+            self.assertEqual(3, preview["totalFiles"])
+            self.assertEqual(
+                ["Target STARK is also owned by content-pack duplicate/target"],
+                preview["conflicts"],
+            )
 
     def test_selected_sync_forces_only_its_pack_and_preserves_other_archives(self) -> None:
         with tempfile.TemporaryDirectory() as root:

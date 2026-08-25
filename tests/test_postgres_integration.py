@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import os
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
 from wukong.control_plane_storage import open_control_plane_stores
 from wukong.models import BuildRecipe, Identity, JobManifest, JobStatus
 from wukong.orchestrator import FileJobStore
-from wukong.postgres_state import PostgresJobStore
-from wukong.telegram import TelegramAccessStore
+from wukong.postgres_state import PostgresJobStore, PostgresTelegramAccessStore
+from wukong.telegram import BuildConcurrencyError, TelegramAccessStore
 from wukong.telegram_bot import TelegramUIStateStore
 
 
@@ -30,6 +31,7 @@ def _recipe() -> BuildRecipe:
 @unittest.skipUnless(POSTGRES_URL, "WUKONG_TEST_POSTGRES_URL is not configured")
 class PostgreSQLIntegrationTests(unittest.TestCase):
     TABLES = (
+        "wukong_build_locks",
         "wukong_telegram_quota_ledger",
         "wukong_telegram_sessions",
         "wukong_telegram_user_events",
@@ -111,6 +113,78 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
         self.assertEqual([1, 2], [event.sequence for event in reopened.jobs.events("legacy-postgres-job")])
         self.assertIsNone(reopened.access.identity(99))
         self.assertEqual("vi", reopened.ui_state.language(42))
+
+    def test_real_postgres_device_lock_accepts_only_one_concurrent_job(self) -> None:
+        admin = Identity("telegram", "42", "admin")
+        setup_access = PostgresTelegramAccessStore(
+            database_url=POSTGRES_URL,
+            admin_ids=[42],
+        )
+        for subject in (99, 100, 101):
+            setup_access.approve(subject, actor=admin)
+            setup_access.update_allowance(
+                subject,
+                actor=admin,
+                operation="unlimited",
+                unlimited=True,
+            )
+        recipe = _recipe()
+        stores = [
+            (
+                PostgresJobStore(database_url=POSTGRES_URL),
+                PostgresTelegramAccessStore(database_url=POSTGRES_URL, admin_ids=[42]),
+            )
+            for _ in range(2)
+        ]
+        barrier = threading.Barrier(3)
+        results: list[tuple[str, str]] = []
+        results_lock = threading.Lock()
+
+        def submit(index: int, subject: str) -> None:
+            jobs, access = stores[index]
+            job_id = f"postgres-lock-{subject}"
+            barrier.wait()
+            try:
+                access.reserve_and_create_job(
+                    jobs,
+                    JobManifest(
+                        job_id=job_id,
+                        owner=Identity("telegram", subject, "user"),
+                        recipe_digest=recipe.digest,
+                    ),
+                    recipe,
+                    idempotency_key=job_id,
+                )
+                outcome = ("accepted", job_id)
+            except BuildConcurrencyError:
+                outcome = ("conflict", job_id)
+            with results_lock:
+                results.append(outcome)
+
+        threads = [
+            threading.Thread(target=submit, args=(0, "99")),
+            threading.Thread(target=submit, args=(1, "100")),
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait()
+        for thread in threads:
+            thread.join(timeout=15)
+
+        self.assertEqual(["accepted", "conflict"], sorted(result[0] for result in results))
+        accepted_job_id = next(job_id for outcome, job_id in results if outcome == "accepted")
+        stores[0][0].update(accepted_job_id, status=JobStatus.SUCCEEDED)
+        released = setup_access.reserve_and_create_job(
+            PostgresJobStore(database_url=POSTGRES_URL),
+            JobManifest(
+                job_id="postgres-lock-released",
+                owner=Identity("telegram", "101", "user"),
+                recipe_digest=recipe.digest,
+            ),
+            recipe,
+            idempotency_key="postgres-lock-released",
+        )
+        self.assertFalse(released["existing"])
 
 
 if __name__ == "__main__":

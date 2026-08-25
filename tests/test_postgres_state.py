@@ -17,17 +17,17 @@ from wukong.postgres_state import (
     migrate_telegram_access_store,
     migrate_telegram_ui_state_file,
 )
-from wukong.telegram import TelegramAccessStore
+from wukong.telegram import BuildConcurrencyError, TelegramAccessStore
 from wukong.telegram_bot import TelegramUIStateStore
 from wukong.control_plane_storage import open_control_plane_stores
 
 
-def _recipe() -> BuildRecipe:
+def _recipe(device: str = "PKG110") -> BuildRecipe:
     return BuildRecipe.from_dict(
         {
             "schemaVersion": 1,
             "task": "build",
-            "device": "PKG110",
+            "device": device,
             "source": {
                 "kind": "https",
                 "uri": "https://downloads.example/rom.zip",
@@ -250,15 +250,29 @@ class PostgresJobStoreTests(unittest.TestCase):
             recipe,
             idempotency_key="same-client-key",
         )
+        with self.assertRaisesRegex(BuildConcurrencyError, "device"):
+            access.reserve_and_create_job(
+                jobs,
+                JobManifest(
+                    job_id="blocked-device-job",
+                    owner=Identity("telegram", "100", "user"),
+                    recipe_digest=recipe.digest,
+                    runner="github-hosted",
+                ),
+                recipe,
+                idempotency_key="same-client-key",
+            )
+        access.update_job_status(99, first_manifest.job_id, JobStatus.SUCCEEDED.value)
+        other_recipe = _recipe("CPH2653")
         other_user = access.reserve_and_create_job(
             jobs,
             JobManifest(
                 job_id="atomic-job-100",
                 owner=Identity("telegram", "100", "user"),
-                recipe_digest=recipe.digest,
+                recipe_digest=other_recipe.digest,
                 runner="github-hosted",
             ),
-            recipe,
+            other_recipe,
             idempotency_key="same-client-key",
         )
 
@@ -269,6 +283,209 @@ class PostgresJobStoreTests(unittest.TestCase):
         self.assertEqual(0, access.profile(99)["buildCredits"])
         self.assertEqual(1, access.profile(99)["jobCount"])
         self.assertEqual("submitted", jobs.events("atomic-job-99")[0].type)
+
+    def test_active_build_locks_user_and_device_until_terminal_status(self) -> None:
+        jobs = PostgresJobStore(connect=self.connect, dialect="sqlite")
+        access = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = access.identity(42)
+        access.approve(99, actor=admin)
+        access.approve(100, actor=admin)
+        access.update_allowance(99, actor=admin, operation="unlimited", unlimited=True)
+        access.update_allowance(100, actor=admin, operation="unlimited", unlimited=True)
+        first_recipe = _recipe("PKG110")
+        first = JobManifest(
+            job_id="locked-job",
+            owner=Identity("telegram", "99", "user"),
+            recipe_digest=first_recipe.digest,
+        )
+        access.reserve_and_create_job(
+            jobs,
+            first,
+            first_recipe,
+            idempotency_key="locked-request",
+        )
+
+        with self.assertRaisesRegex(BuildConcurrencyError, "user"):
+            access.reserve_and_create_job(
+                jobs,
+                JobManifest(
+                    job_id="same-user-job",
+                    owner=first.owner,
+                    recipe_digest=_recipe("CPH2653").digest,
+                ),
+                _recipe("CPH2653"),
+                idempotency_key="same-user-request",
+            )
+        with self.assertRaisesRegex(BuildConcurrencyError, "device"):
+            access.reserve_and_create_job(
+                jobs,
+                JobManifest(
+                    job_id="same-device-job",
+                    owner=Identity("telegram", "100", "user"),
+                    recipe_digest=first_recipe.digest,
+                ),
+                first_recipe,
+                idempotency_key="same-device-request",
+            )
+
+        jobs.update(first.job_id, status=JobStatus.FAILED)
+        released = access.reserve_and_create_job(
+            jobs,
+            JobManifest(
+                job_id="released-device-job",
+                owner=Identity("telegram", "100", "user"),
+                recipe_digest=first_recipe.digest,
+            ),
+            first_recipe,
+            idempotency_key="released-device-request",
+        )
+        self.assertFalse(released["existing"])
+
+    def test_job_store_restart_backfills_locks_for_existing_active_jobs(self) -> None:
+        jobs = PostgresJobStore(connect=self.connect, dialect="sqlite")
+        access = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = access.identity(42)
+        access.approve(99, actor=admin)
+        access.approve(100, actor=admin)
+        access.update_allowance(99, actor=admin, operation="unlimited", unlimited=True)
+        access.update_allowance(100, actor=admin, operation="unlimited", unlimited=True)
+        recipe = _recipe("PKG110")
+        jobs.create(
+            JobManifest(
+                job_id="preexisting-active-job",
+                owner=Identity("telegram", "99", "user"),
+                recipe_digest=recipe.digest,
+                status=JobStatus.RUNNING,
+            ),
+            recipe,
+        )
+
+        reopened_jobs = PostgresJobStore(connect=self.connect, dialect="sqlite")
+
+        with self.assertRaisesRegex(BuildConcurrencyError, "device"):
+            access.reserve_and_create_job(
+                reopened_jobs,
+                JobManifest(
+                    job_id="blocked-after-restart",
+                    owner=Identity("telegram", "100", "user"),
+                    recipe_digest=recipe.digest,
+                ),
+                recipe,
+                idempotency_key="blocked-after-restart",
+            )
+
+    def test_terminal_legacy_job_reassigns_backfilled_lock_to_remaining_active_job(self) -> None:
+        jobs = PostgresJobStore(connect=self.connect, dialect="sqlite")
+        access = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = access.identity(42)
+        for subject in (99, 100, 101):
+            access.approve(subject, actor=admin)
+            access.update_allowance(
+                subject,
+                actor=admin,
+                operation="unlimited",
+                unlimited=True,
+            )
+        recipe = _recipe("PKG110")
+        for job_id, subject in (("legacy-active-a", "99"), ("legacy-active-b", "100")):
+            jobs.create(
+                JobManifest(
+                    job_id=job_id,
+                    owner=Identity("telegram", subject, "user"),
+                    recipe_digest=recipe.digest,
+                    status=JobStatus.RUNNING,
+                ),
+                recipe,
+            )
+
+        reopened = PostgresJobStore(connect=self.connect, dialect="sqlite")
+        reopened.update("legacy-active-a", status=JobStatus.SUCCEEDED)
+
+        with self.assertRaisesRegex(BuildConcurrencyError, "device"):
+            access.reserve_and_create_job(
+                reopened,
+                JobManifest(
+                    job_id="still-blocked-by-legacy-b",
+                    owner=Identity("telegram", "101", "user"),
+                    recipe_digest=recipe.digest,
+                ),
+                recipe,
+                idempotency_key="still-blocked-by-legacy-b",
+            )
+
+    def test_admin_user_listing_filters_sorts_and_paginates_in_storage(self) -> None:
+        access = PostgresTelegramAccessStore(
+            connect=self.connect,
+            dialect="sqlite",
+            admin_ids=[42],
+        )
+        admin = access.identity(42)
+        huge_subject = "999999999999999999999999999999999999"
+        for subject, username in (
+            (99, "zulu"),
+            (100, "alpha"),
+            (101, "middle"),
+            (huge_subject, "percent%user"),
+        ):
+            access.observe_user(subject, username=username)
+            access.approve(subject, actor=admin)
+        access.update_allowance(99, actor=admin, operation="set", value=0, reason="fixture")
+        access.open_session(100, "active-session")
+
+        first_page = access.list_users(
+            actor=admin,
+            status="approved",
+            quota="available",
+            sort="telegramId",
+            direction="asc",
+            limit=2,
+            offset=0,
+        )
+        second_page = access.list_users(
+            actor=admin,
+            status="approved",
+            quota="available",
+            sort="telegramId",
+            direction="asc",
+            limit=2,
+            offset=2,
+        )
+        searched = access.list_users(actor=admin, query="ALPHA")
+        literal_wildcard = access.list_users(actor=admin, query="%")
+        numeric_order = access.list_users(
+            actor=admin,
+            sort="telegramId",
+            direction="asc",
+            limit=10,
+        )
+
+        self.assertEqual(4, first_page["total"])
+        self.assertEqual(["42", "100"], [user["telegramId"] for user in first_page["users"]])
+        self.assertEqual(
+            ["101", huge_subject],
+            [user["telegramId"] for user in second_page["users"]],
+        )
+        self.assertEqual(["100"], [user["telegramId"] for user in searched["users"]])
+        self.assertEqual(
+            [huge_subject],
+            [user["telegramId"] for user in literal_wildcard["users"]],
+        )
+        self.assertEqual(
+            ["42", "99", "100", "101", huge_subject],
+            [user["telegramId"] for user in numeric_order["users"]],
+        )
 
     def test_destructive_allowance_changes_require_a_reason(self) -> None:
         access = PostgresTelegramAccessStore(

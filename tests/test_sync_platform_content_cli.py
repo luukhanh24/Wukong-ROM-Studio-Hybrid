@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,6 +14,42 @@ from wukong.content_sync import refresh_content_index
 
 
 class SyncPlatformContentCliTests(unittest.TestCase):
+    def test_preview_reports_file_diff_without_credentials_or_index_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            install = Path(root)
+            selected = install / "Content" / "STARK" / "WK_Manager"
+            selected.mkdir(parents=True)
+            (selected / "manager.apk").write_bytes(b"current")
+            index_path = install / "index.json"
+            index, _ = refresh_content_index(install, index_path, remote="drive:packs")
+            original = index_path.read_bytes()
+            old_file = index["packs"][0]["files"][0]
+            old_file["sha256"] = "a" * 64
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+            original = index_path.read_bytes()
+            argv = [
+                "sync_platform_content",
+                "--install-root", str(install),
+                "--index", str(index_path),
+                "--target", "preview",
+                "--folder", str(selected),
+            ]
+            output = io.StringIO()
+
+            with patch.object(sys, "argv", argv), redirect_stdout(output):
+                result = sync_platform_content.main()
+
+            events = [
+                json.loads(line)
+                for line in output.getvalue().splitlines()
+                if line.strip()
+            ]
+            preview = next(event for event in events if event["stage"] == "preview")
+            self.assertEqual(0, result)
+            self.assertEqual(["WK_Manager/manager.apk"], preview["modified"])
+            self.assertEqual([], preview["conflicts"])
+            self.assertEqual(original, index_path.read_bytes())
+
     def test_github_publish_uses_repaired_verified_index_without_rescanning_local_content(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             install = Path(root)

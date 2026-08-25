@@ -4,7 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
-from wukong.catalog import LITE_DEFAULT_MODS, PLUS_DEFAULT_EXCLUDED_MODS, SHARED_MOD_NAMES
+from wukong.catalog import (
+    LITE_DEFAULT_MODS,
+    PLUS_DEFAULT_EXCLUDED_MODS,
+    SHARED_MOD_NAMES,
+    SYSTEM_ONLY_PARTITIONS,
+    SYSTEM_ONLY_PATCH_MODS,
+)
 from wukong.content_packs import validate_content_index
 from wukong.pipeline import DEFAULT_PIPELINE_STEPS, PIPELINE_STEP_DEFINITIONS
 from wukong.mod_release_versions import default_mod_release_version
@@ -42,22 +48,32 @@ def export_catalog(
         pack_id = str(pack.get("id") or "")
         archive = pack.get("archive")
         if pack_id == "STARK/common" and isinstance(archive, dict) and archive.get("sha256"):
+            shared_partitions: dict[str, set[str]] = {}
+            for item in pack.get("files", []):
+                parts = str(item.get("path") or "").replace("\\", "/").split("/")
+                if len(parts) >= 2 and parts[0] in SHARED_MOD_NAMES:
+                    shared_partitions.setdefault(parts[0], set()).add(parts[1])
             shared_mods.update(
                 name
-                for item in pack.get("files", [])
-                if (name := str(item.get("path") or "").replace("\\", "/").split("/", 1)[0])
-                in SHARED_MOD_NAMES
+                for name, partitions in shared_partitions.items()
+                if partitions.intersection(SYSTEM_ONLY_PARTITIONS)
             )
             continue
         if not pack_id.startswith("MOD/") or not isinstance(archive, dict) or not archive.get("sha256"):
             continue
         version = pack_id.split("/", 1)[1]
+        partitions_by_mod: dict[str, set[str]] = {}
+        for item in pack.get("files", []):
+            parts = str(item.get("path") or "").replace("\\", "/").split("/")
+            if len(parts) >= 2 and parts[0]:
+                partitions_by_mod.setdefault(parts[0], set()).add(parts[1])
         mods_by_version[version] = sorted(
-            {
-                str(item.get("path") or "").replace("\\", "/").split("/", 1)[0]
-                for item in pack.get("files", [])
-                if str(item.get("path") or "").strip()
-            },
+            (
+                name
+                for name, partitions in partitions_by_mod.items()
+                if partitions.intersection(SYSTEM_ONLY_PARTITIONS)
+                or name in SYSTEM_ONLY_PATCH_MODS
+            ),
             key=str.casefold,
         )
     if shared_mods:

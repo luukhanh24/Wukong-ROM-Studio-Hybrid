@@ -14,3 +14,5 @@ LITE_DEFAULT_MODS: list[str] = [
 ]
 PLUS_DEFAULT_EXCLUDED_MODS: set[str] = {"Gallery_mod_CN"}
 SHARED_MOD_NAMES: frozenset[str] = frozenset({"WK_Manager", "WK_Installer"})
+SYSTEM_ONLY_PARTITIONS: frozenset[str] = frozenset({"system"})
+SYSTEM_ONLY_PATCH_MODS: frozenset[str] = frozenset({"Fix_noti"})
