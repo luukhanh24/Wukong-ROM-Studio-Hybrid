@@ -196,6 +196,8 @@ window.addEventListener('load', () => {{
       button.click();
       document.body.dataset.profileOpened = String(document.querySelector('#profile')?.classList.contains('active') === true);
       document.body.dataset.activeProfileTab = document.querySelector('.bottom-nav [aria-current="page"]')?.dataset.nav || '';
+      document.body.dataset.profileLensSuppressed = String(document.querySelector('.bottom-nav')?.classList.contains('profile-active') === true);
+      document.body.dataset.profileHaloActive = String(button.classList.contains('active') === true);
     }};
     setTimeout(openProfile, 250);
   }}
@@ -271,6 +273,12 @@ window.addEventListener('load', () => {{
                     '<rect width="200" height="200" fill="url(#a)"/><circle cx="100" cy="100" r="48" fill="none" '
                     'stroke="#ff8bd2" stroke-width="13"/><circle cx="116" cy="82" r="26" fill="#fff" opacity=".72"/></svg>'
                 ).encode(),
+                "image/svg+xml",
+            )
+            return
+        if path == "/WukongStudio.svg":
+            self._send(
+                (ROOT / "telegram_mini_app" / "WukongStudio.svg").read_bytes(),
                 "image/svg+xml",
             )
             return
@@ -774,7 +782,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("updateDispatchFab", script)
         self.assertIn('data-i18n="finishBuild">Hoàn tất cấu hình build', html)
         self.assertIn("bindLiquidBottomTabs", script)
-        self.assertIn("--liquid-stretch-x", styles)
+        self.assertIn("--liquid-press", styles)
         self.assertIn("chromatic", (ROOT / "DESIGN.md").read_text(encoding="utf-8"))
         self.assertIn("prefersReducedMotion", script)
         self.assertIn('"IBM Plex Sans"', styles)
@@ -797,6 +805,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="dock-profile"', dock)
         self.assertIn('data-nav="profile"', dock)
         self.assertNotIn('id="header-profile"', html)
+        self.assertIn('src="./WukongStudio.svg"', html)
+        self.assertEqual(
+            (ROOT / "desktop" / "WukongStudio.App" / "Assets" / "WukongStudio.svg").read_text(encoding="utf-8"),
+            (ROOT / "telegram_mini_app" / "WukongStudio.svg").read_text(encoding="utf-8"),
+        )
         self.assertIn('class="view profile-view" id="profile"', html)
         self.assertNotIn('id="profile-dialog"', html)
         self.assertIn('id="cache-clear-dialog"', html)
@@ -820,8 +833,21 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn(".profile-scene-backdrop", styles)
         self.assertIn("backdrop-filter:blur(24px)", styles)
         self.assertIn('data-color-scheme="dark"', styles)
-        self.assertIn('id="greeting-emoji"', html)
+        self.assertIn('id="greeting-mark"', html)
+        self.assertNotIn('id="greeting-emoji"', html)
         self.assertIn('class="language-button"', html)
+        self.assertNotIn(".wordmark > span { display:none; }", styles)
+        self.assertIn(".bottom-nav.profile-active:not(.profile-dragging) .liquid-lens", styles)
+        self.assertIn(".bottom-nav .dock-profile.active::before", styles)
+        self.assertIn("updateGreetingOverflow", script)
+        self.assertIn('window.addEventListener("resize"', script)
+        self.assertIn("--avatar-image", script)
+        self.assertIn("profile-dragging", script)
+        self.assertIn("easeOutQuint", script)
+        self.assertNotIn("velocity = velocity * .72", script)
+        self.assertNotIn('emoji: "🚀"', script)
+        self.assertIn(':root[data-color-scheme="dark"] .masthead', styles)
+        self.assertIn(':root[data-color-scheme="dark"] .bottom-nav', styles)
 
     def test_admin_system_surface_renders_user_access_and_quota_ledger(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
@@ -850,6 +876,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-profile-opened="true"', dom)
         self.assertIn('data-selected-theme="dark"', dom)
         self.assertIn('data-active-profile-tab="profile"', dom)
+        self.assertIn('data-profile-lens-suppressed="true"', dom)
+        self.assertIn('data-profile-halo-active="true"', dom)
         profile = re.search(r'<section class="view profile-view active" id="profile".*?</section>\s*</main>', dom, re.DOTALL)
         self.assertIsNotNone(profile)
         self.assertIn("Fixture User", profile.group(0))

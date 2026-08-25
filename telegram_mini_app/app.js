@@ -494,10 +494,27 @@ function greetingMessages() {
   const timeKey = hour < 12 ? "greetingMorning" : hour < 18 ? "greetingAfternoon" : "greetingEvening";
   const values = { name: greetingName(), jobs: Number(state.me?.jobCount || 0), remaining: Number(state.me?.buildCredits || 0) };
   return [
-    { key: timeKey, emoji: hour < 12 ? "☀️" : hour < 18 ? "✨" : "🌙" },
-    { key: "greetingWish", emoji: "🚀" },
-    { key: state.me?.unlimited ? "greetingUnlimited" : "greetingAllowance", emoji: state.me?.unlimited ? "♾️" : "⚡", values }
+    { key: timeKey },
+    { key: "greetingWish" },
+    { key: state.me?.unlimited ? "greetingUnlimited" : "greetingAllowance", values }
   ].map((item) => ({ ...item, text: t(item.key, { ...values, ...(item.values || {}) }) }));
+}
+
+function updateGreetingOverflow() {
+  const viewport = $(".greeting-message-viewport");
+  const message = $("#greeting-message");
+  if (!viewport || !message) return;
+  message.classList.remove("is-marquee");
+  message.style.removeProperty("--greeting-travel");
+  message.style.removeProperty("--greeting-marquee-duration");
+  if (prefersReducedMotion()) return;
+  requestAnimationFrame(() => {
+    const overflow = Math.ceil(message.scrollWidth - viewport.clientWidth);
+    if (overflow <= 2) return;
+    message.style.setProperty("--greeting-travel", `${-(overflow + 18)}px`);
+    message.style.setProperty("--greeting-marquee-duration", `${Math.min(16, Math.max(8, 6 + overflow / 24)).toFixed(1)}s`);
+    message.classList.add("is-marquee");
+  });
 }
 
 function renderGreeting() {
@@ -507,7 +524,6 @@ function renderGreeting() {
   if (!state.me) return;
   const messages = greetingMessages();
   const item = messages[state.greetingIndex % messages.length];
-  $("#greeting-emoji").textContent = item.emoji;
   $("#greeting-kicker").textContent = state.me?.unlimited ? t("unlimited") : t("buildAllowance");
   const message = $("#greeting-message");
   if (!message) return;
@@ -518,6 +534,7 @@ function renderGreeting() {
     );
   }
   message.textContent = item.text;
+  updateGreetingOverflow();
 }
 
 function scheduleGreeting() {
@@ -536,9 +553,9 @@ function updateMastheadScroll() {
     const root = document.documentElement.style;
     root.setProperty("--masthead-scroll", progress.toFixed(3));
     root.setProperty("--masthead-height", `${Math.round((window.innerWidth <= 860 ? 60 : 64) - progress * 6)}px`);
-    root.setProperty("--masthead-surface-mix", `${Math.round(88 - progress * 36)}%`);
-    root.setProperty("--masthead-backdrop-blur", `${Math.round(10 + progress * 14)}px`);
-    root.setProperty("--masthead-greeting-opacity", String(1 - progress * .42));
+    root.setProperty("--masthead-surface-mix", `${Math.round(7 + progress * 11)}%`);
+    root.setProperty("--masthead-backdrop-blur", `${Math.round(8 + progress * 16)}px`);
+    root.setProperty("--masthead-greeting-opacity", String(1 - progress * .18));
     root.setProperty("--masthead-greeting-offset", `${(-progress * 2).toFixed(2)}px`);
     document.body.classList.toggle("masthead-compact", progress > .82);
   });
@@ -627,26 +644,28 @@ function nearestLiquidSlot(value) {
 
 function setLiquidPosition(value, velocity = 0, pressed = false) {
   const nav = $(".bottom-nav");
-  const position = Math.max(-.14, Math.min(4.14, Number(value) || 0));
+  const position = Math.max(0, Math.min(4, Number(value) || 0));
   state.liquidPosition = position;
   nav?.style.setProperty("--liquid-position", String(position));
   nav?.style.setProperty("--liquid-offset", `${position * 100}%`);
-  nav?.style.setProperty("--liquid-velocity", String(Math.max(-1, Math.min(1, velocity))));
-  nav?.style.setProperty("--liquid-skew", `${Math.max(-3, Math.min(3, -velocity * 3))}deg`);
-  nav?.style.setProperty("--liquid-stretch-x", String(pressed ? Math.min(1.39, 1.22 + Math.abs(velocity) * .17) : 1));
-  nav?.style.setProperty("--liquid-stretch-y", String(pressed ? Math.max(.86, 1.04 - Math.abs(velocity) * .12) : 1));
+  nav?.style.setProperty("--liquid-press", pressed ? ".97" : "1");
+}
+
+function easeOutQuint(value) {
+  return 1 - Math.pow(1 - value, 5);
 }
 
 function animateLiquidPosition(target) {
   cancelAnimationFrame(state.liquidAnimationFrame);
   if (prefersReducedMotion()) { setLiquidPosition(target); return; }
-  let position = state.liquidPosition;
-  let velocity = 0;
-  const tick = () => {
-    velocity = velocity * .72 + (target - position) * .2;
-    position += velocity;
-    setLiquidPosition(position, velocity, false);
-    if (Math.abs(target - position) < .001 && Math.abs(velocity) < .001) {
+  const start = state.liquidPosition;
+  const distance = target - start;
+  const duration = 360;
+  const startedAt = performance.now();
+  const tick = (now) => {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    setLiquidPosition(start + distance * easeOutQuint(progress));
+    if (progress >= 1) {
       setLiquidPosition(target);
       return;
     }
@@ -667,6 +686,7 @@ function navigate(name, smooth = true) {
   const activeButton = $$(".bottom-nav [data-nav]").find((node) => node.dataset.nav === name);
   const activeSlot = Number(activeButton?.dataset.slot || 0);
   bottomNav?.style.setProperty("--active-index", String(activeSlot));
+  bottomNav?.classList.toggle("profile-active", name === "profile");
   if (smooth) animateLiquidPosition(activeSlot); else setLiquidPosition(activeSlot);
   if (smooth) TelegramApp?.HapticFeedback?.selectionChanged?.();
   bottomNav?.classList.remove("is-shifting");
@@ -720,13 +740,11 @@ function bindLiquidBottomTabs() {
     const tabWidth = Math.max(1, (nav.clientWidth - 8) / 5);
     const delta = event.clientX - startX;
     if (Math.abs(delta) > 5) dragged = true;
+    nav.classList.toggle("profile-dragging", dragged && nav.classList.contains("profile-active"));
     const instantaneous = ((event.clientX - lastX) / Math.max(8, now - lastTime)) * 16 / tabWidth;
     velocity = velocity * .6 + instantaneous * .4;
-    let position = startPosition + delta / tabWidth;
-    if (position < 0) position *= .18;
-    if (position > 4) position = 4 + (position - 4) * .18;
+    const position = Math.max(0, Math.min(4, startPosition + delta / tabWidth));
     setLiquidPosition(position, velocity, true);
-    nav.style.setProperty("--panel-offset", `${Math.sign(delta) * Math.min(4, Math.abs(delta) / nav.clientWidth * 4)}px`);
     lastX = event.clientX;
     lastTime = now;
   });
@@ -735,8 +753,8 @@ function bindLiquidBottomTabs() {
     nav.releasePointerCapture?.(pointerId);
     pointerId = null;
     nav.classList.remove("is-pressed");
-    nav.style.setProperty("--panel-offset", "0px");
-    const target = nearestLiquidSlot(state.liquidPosition + velocity * .22);
+    nav.classList.remove("profile-dragging");
+    const target = nearestLiquidSlot(state.liquidPosition + Math.max(-.18, Math.min(.18, velocity * .08)));
     if (dragged) {
       const releasedPosition = state.liquidPosition;
       state.liquidSuppressClick = true;
@@ -1597,6 +1615,8 @@ function renderProfileTrigger(button, profile) {
   const avatar = profileAvatar(profile);
   button.replaceChildren(...avatar.childNodes);
   button.style.setProperty("--avatar-hue", avatar.style.getPropertyValue("--avatar-hue"));
+  if (profile.photoUrl) button.style.setProperty("--avatar-image", `url(${JSON.stringify(String(profile.photoUrl))})`);
+  else button.style.removeProperty("--avatar-image");
   button.setAttribute("aria-label", t("openProfile"));
 }
 
@@ -2679,6 +2699,12 @@ function bindEvents() {
   $$("[data-theme-value]").forEach((button) => button.addEventListener("click", () => applyTheme(button.dataset.themeValue, true)));
   themeMedia?.addEventListener?.("change", () => { if (state.theme === "system") applyTheme("system"); });
   window.addEventListener("scroll", updateMastheadScroll, { passive: true });
+  let greetingResizeFrame = 0;
+  window.addEventListener("resize", () => {
+    cancelAnimationFrame(greetingResizeFrame);
+    greetingResizeFrame = requestAnimationFrame(updateGreetingOverflow);
+  }, { passive: true });
+  document.fonts?.ready?.then(updateGreetingOverflow).catch(() => {});
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
     runQuickAction(button.dataset.action).catch((error) => toast(error.message, true));
   }));
