@@ -122,6 +122,8 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
 
         self.assertIn("RENDER_DEPLOY_HOOK_URL", workflow)
         self.assertIn("api.render.com/deploy/", workflow)
+        self.assertIn("ref=${GITHUB_SHA}", workflow)
+        self.assertIn("for _ in {1..120}", workflow)
         self.assertIn("/healthz", workflow)
         self.assertIn("telegram-mini-app-pages.yml", workflow)
         self.assertNotIn("WUKONG_VPS_SSH_KEY", workflow)
