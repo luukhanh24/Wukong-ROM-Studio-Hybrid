@@ -167,7 +167,7 @@ const translations = {
 Object.assign(translations.vi, {
   navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Wukong Studio",
   buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.", routePolicy: "RUNNER",
-  sourceHint: "URL trực tiếp, link OPlus chưa resolve, trang OTA Daniel Springer hoặc Drive riêng tư.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.",
+  sourceHint: "URL trực tiếp, link OPlus chưa resolve hoặc Drive riêng tư.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp, OPlus chưa resolve và Drive. URL ký tạm thời không xuất hiện trong log.",
   recipeHint: "Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.", runner: "Nơi chạy", modPack: "Nền MOD",
   deliveryTitle: "Kết quả build", deliveryHint: "Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.",
   packageZip: "ZIP flashable", packageHint: "Đóng gói sau repack", publish: "Upload Drive", publishHint: "Tạo link tải khi thành công",
@@ -211,7 +211,7 @@ Object.assign(translations.vi, {
 Object.assign(translations.en, {
   navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Wukong Studio",
   buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.", routePolicy: "RUNNER",
-  sourceHint: "Use a direct URL, unresolved OPlus link, Daniel Springer OTA page, or private Drive reference.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct links, unresolved OPlus links, Daniel Springer and Drive are supported. Signed URLs never appear in logs.",
+  sourceHint: "Use a direct URL, unresolved OPlus link, or private Drive reference.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct links, unresolved OPlus links and Drive are supported. Signed URLs never appear in logs.",
   recipeHint: "A preset is the starting point; every MOD and stage remains editable.", runner: "Run on", modPack: "MOD base",
   deliveryTitle: "Build result", deliveryHint: "Package the ZIP, upload it to Drive and send the link through Telegram.",
   packageZip: "Flashable ZIP", packageHint: "Package after repacking", publish: "Upload to Drive", publishHint: "Create a link after success",
@@ -244,7 +244,7 @@ Object.assign(translations.vi, {
   accessRevokedKicker: "QUYỀN TRUY CẬP ĐÃ THU HỒI", accessRevokedTitle: "Tài khoản chưa thể mở Studio", accessRevokedMessage: "Liên hệ quản trị viên nếu bạn cần khôi phục quyền truy cập.",
   accessConnectKicker: "CHƯA KẾT NỐI TELEGRAM", accessConnectTitle: "Kết nối tài khoản để tiếp tục", accessConnectMessage: "Mở Mini App từ bot hoặc kết nối Telegram để xác thực an toàn.",
   accountDetails: "Thông tin tài khoản", refreshAccess: "Kiểm tra lại quyền", runtimeAllowance: "LƯỢT BUILD · JOBS", allowanceSummary: "{remaining} còn lại · {used} đã dùng · {jobs} job",
-  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do"
+  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", fabBuild: "Build", totalUsers: "Tổng người dùng", revokedUsers: "Đã thu hồi"
 });
 Object.assign(translations.en, {
   buildAllowance: "BUILD CREDIT", unlimited: "Unlimited", pending: "Pending", approved: "Approved", revoked: "Revoked",
@@ -260,7 +260,7 @@ Object.assign(translations.en, {
   accessRevokedKicker: "ACCESS REVOKED", accessRevokedTitle: "Studio is not available for this account", accessRevokedMessage: "Contact an administrator if you need access restored.",
   accessConnectKicker: "TELEGRAM NOT CONNECTED", accessConnectTitle: "Connect your account to continue", accessConnectMessage: "Open the Mini App from the bot or connect Telegram for secure authentication.",
   accountDetails: "Account details", refreshAccess: "Check access again", runtimeAllowance: "BUILD ALLOWANCE · JOBS", allowanceSummary: "{remaining} left · {used} used · {jobs} jobs",
-  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason"
+  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", fabBuild: "Build", totalUsers: "Total users", revokedUsers: "Revoked"
 });
 
 Object.assign(translations.vi, {
@@ -414,6 +414,8 @@ const state = {
   miniSessionId: "",
   adminUsers: [],
   adminUsersTotal: 0,
+  adminUsersOverallTotal: 0,
+  adminUsersRevokedTotal: 0,
   adminUsersOffset: 0,
   adminUsersLoading: false,
   selectedAdminUserId: "",
@@ -553,8 +555,8 @@ function updateMastheadScroll() {
     const root = document.documentElement.style;
     root.setProperty("--masthead-scroll", progress.toFixed(3));
     root.setProperty("--masthead-height", `${Math.round((window.innerWidth <= 860 ? 60 : 64) - progress * 6)}px`);
-    root.setProperty("--masthead-surface-mix", `${Math.round(7 + progress * 11)}%`);
-    root.setProperty("--masthead-backdrop-blur", `${Math.round(8 + progress * 16)}px`);
+    root.setProperty("--masthead-surface-mix", `${Math.round(3 + progress * 5)}%`);
+    root.setProperty("--masthead-backdrop-blur", `${Math.round(3 + progress * 5)}px`);
     root.setProperty("--masthead-greeting-opacity", String(1 - progress * .18));
     root.setProperty("--masthead-greeting-offset", `${(-progress * 2).toFixed(2)}px`);
     document.body.classList.toggle("masthead-compact", progress > .82);
@@ -972,7 +974,6 @@ function clearSource() {
   const input = $("#source-uri");
   input.value = "";
   input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.focus({ preventScroll: true });
   toast(t("sourceCleared"));
 }
 
@@ -1580,7 +1581,7 @@ function updateSummary() {
     node.dataset.i18n = ready ? "launch" : "finishSource";
     node.textContent = t(ready ? "launch" : "finishSource");
   });
-  $("#dispatch-fab")?.setAttribute("aria-label", t("finishBuild"));
+  $("#dispatch-fab")?.setAttribute("aria-label", t("fabBuild"));
 }
 
 function profileInitials(profile) {
@@ -1790,6 +1791,8 @@ function renderAccount() {
   renderProfileView();
   renderGreeting();
   scheduleGreeting();
+  $("#user-admin").hidden = true;
+  $("#admin-maintenance").hidden = true;
   if (!profile) return;
   const runtimeAllowance = $("#runtime-build-allowance");
   if (runtimeAllowance) {
@@ -1806,6 +1809,7 @@ function renderAccount() {
   }
   const admin = profile.role === "admin";
   $("#user-admin").hidden = !admin;
+  $("#admin-maintenance").hidden = !admin;
   renderAccessGate();
 }
 
@@ -1852,6 +1856,8 @@ function renderAdminUsers() {
   const start = state.adminUsersTotal ? state.adminUsersOffset + 1 : 0;
   const end = Math.min(state.adminUsersOffset + state.adminUsers.length, state.adminUsersTotal);
   $("#user-page-summary").textContent = `${start}–${end} / ${state.adminUsersTotal}`;
+  $("#user-total-count").textContent = String(state.adminUsersOverallTotal);
+  $("#user-revoked-count").textContent = String(state.adminUsersRevokedTotal);
   $("#user-prev").disabled = state.adminUsersOffset <= 0;
   $("#user-next").disabled = end >= state.adminUsersTotal;
 }
@@ -1869,6 +1875,13 @@ async function loadAdminUsers({ reset = false } = {}) {
     const payload = await apiRequest(`/v1/admin/users?query=${query}&status=${status}&quota=${quota}&activity=${activity}&sort=${sort}&offset=${state.adminUsersOffset}&limit=25`);
     state.adminUsers = Array.isArray(payload.users) ? payload.users : [];
     state.adminUsersTotal = Number(payload.total || 0);
+    renderAdminUsers();
+    const [totalResult, revokedResult] = await Promise.allSettled([
+      apiRequest("/v1/admin/users?offset=0&limit=1"),
+      apiRequest("/v1/admin/users?status=revoked&offset=0&limit=1")
+    ]);
+    if (totalResult.status === "fulfilled") state.adminUsersOverallTotal = Number(totalResult.value.total || 0);
+    if (revokedResult.status === "fulfilled") state.adminUsersRevokedTotal = Number(revokedResult.value.total || 0);
     renderAdminUsers();
   } finally { state.adminUsersLoading = false; }
 }
@@ -1932,7 +1945,7 @@ async function openAdminUser(telegramId) {
   const header = document.createElement("header");
   const titleBox = document.createElement("div"); titleBox.className = "user-detail-title"; titleBox.append(profileAvatar(user));
   const titleCopy = document.createElement("span"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h2"); title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleCopy.append(kicker, title); titleBox.append(titleCopy);
-  const close = document.createElement("button"); close.type = "button"; close.textContent = "×"; close.addEventListener("click", () => $("#user-detail-dialog").close()); header.append(titleBox, close);
+  const close = document.createElement("button"); close.type = "button"; close.textContent = "×"; close.setAttribute("aria-label", t("closeDialog")); close.addEventListener("click", () => $("#user-detail-dialog").close()); header.append(titleBox, close);
   const grid = document.createElement("div"); grid.className = "user-detail-grid";
   grid.append(
     detailFact(t("accessStatus"), accessLabel(user.accessStatus)), detailFact(t("allowance"), user.unlimited ? t("unlimited") : String(user.buildCredits || 0)),
@@ -2394,7 +2407,12 @@ function renderActiveJob(job, events) {
   const context = document.createElement("section"); context.className = "job-context";
   const contextTitle = document.createElement("div");
   const contextLabel = document.createElement("strong"); contextLabel.textContent = t("jobContext");
-  const mods = document.createElement("small"); mods.textContent = (build.mods || []).join(" · ") || t("noModsSelected");
+  const mods = document.createElement("div"); mods.className = "job-mod-grid";
+  const selectedJobMods = build.mods || [];
+  if (selectedJobMods.length) mods.append(...selectedJobMods.map((name) => {
+    const chip = document.createElement("span"); chip.textContent = name; return chip;
+  }));
+  else { const empty = document.createElement("small"); empty.textContent = t("noModsSelected"); mods.append(empty); }
   contextTitle.append(contextLabel, mods);
   const contextCopy = document.createElement("div"); contextCopy.className = "job-release-context";
   const pack = document.createElement("small"); pack.textContent = build.modVersion || "—";

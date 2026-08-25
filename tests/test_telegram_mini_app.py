@@ -334,8 +334,11 @@ window.addEventListener('load', () => {{
             self._send(json.dumps({"count": type(self).cache_clear_requests}).encode(), "application/json")
             return
         if path == "/v1/admin/users" and self.admin_user:
+            if "status=revoked" in self.path:
+                self._send(json.dumps({"users": [], "total": 2}).encode(), "application/json")
+                return
             user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
-            self._send(json.dumps({"users": [user], "total": 1}).encode(), "application/json")
+            self._send(json.dumps({"users": [user], "total": 7}).encode(), "application/json")
             return
         if path == "/v1/admin/users/88" and self.admin_user:
             user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
@@ -780,7 +783,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotRegex(bottom_nav_html, r"<b>\d{2}</b>")
         self.assertNotIn(".bottom-nav button.active::before", styles)
         self.assertIn("updateDispatchFab", script)
-        self.assertIn('data-i18n="finishBuild">Hoàn tất cấu hình build', html)
+        self.assertIn('data-i18n="fabBuild">Build', html)
         self.assertIn("bindLiquidBottomTabs", script)
         self.assertIn("--liquid-press", styles)
         self.assertIn("chromatic", (ROOT / "DESIGN.md").read_text(encoding="utf-8"))
@@ -859,12 +862,37 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="user-admin"', dom)
         self.assertNotRegex(dom, r'id="user-admin"[^>]* hidden')
         self.assertIn("Người dùng &amp; lượt build", dom)
+        self.assertIn('id="user-total-count">7</strong>', dom)
+        self.assertIn('id="user-revoked-count">2</strong>', dom)
+        self.assertNotRegex(dom, r'id="admin-maintenance"[^>]* hidden')
         self.assertIn("New User", dom)
         self.assertIn("@new_user", dom)
         self.assertIn('id="greeting-carousel"', dom)
         self.assertIn("Không giới hạn", dom)
         self.assertIn("Không giới hạn lượt còn lại", dom)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_mobile_surface_is_distilled_and_maintenance_is_admin_only(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, initial_view="system")
+
+        self.assertNotIn('data-i18n="buildIntro"', html)
+        self.assertNotIn('data-i18n="jobsIntro"', html)
+        self.assertNotIn('data-i18n="catalogIntro"', html)
+        self.assertNotIn('data-i18n="systemIntro"', html)
+        self.assertNotIn('class="process-key"', html)
+        self.assertIn('id="admin-maintenance" hidden', html)
+        self.assertRegex(dom, r'id="admin-maintenance"[^>]* hidden')
+        self.assertIn('data-i18n="fabBuild">Build', html)
+        self.assertIn('mods.className = "job-mod-grid"', script)
+        self.assertNotIn('input.focus({ preventScroll: true });\n  toast(t("sourceCleared"))', script)
+        self.assertIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
+        self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
+        self.assertIn('.profile-highlight { text-align:center; }', styles)
+        self.assertIn('$("#admin-maintenance").hidden = true;', script)
+        self.assertIn("Promise.allSettled", script)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
@@ -945,6 +973,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn('class="job-events expanded"', dom)
+        self.assertIn('class="job-mod-grid"', dom)
+        self.assertRegex(dom, r'class="job-mod-grid"[^>]*>.*?<span>Gapps</span>.*?<span>WK_Manager</span>')
         self.assertIn("Toàn bộ nhật ký build", dom)
         self.assertIn("Gỡ ứng dụng thừa · Đang thực hiện", dom)
         self.assertIn("Đang quét 42 đường dẫn hệ thống", dom)

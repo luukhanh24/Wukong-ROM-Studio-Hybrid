@@ -64,7 +64,7 @@
 
   <main>
     <section class="view active" id="build" aria-labelledby="build-title">
-      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Wukong Studio</h1><p data-i18n="buildIntro">Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.</p></div></header>
+      <header class="page-head"><div><h1 id="build-title" data-i18n="buildTitle">Wukong Studio</h1></div></header>
       <section class="runtime-strip" aria-label="Build runtime status">
         <div><i class="status-dot waiting" aria-hidden="true"></i><span><small data-i18n="routePolicy">RUNNER</small><strong id="route-label">GitHub Auto</strong></span></div>
         <div><i class="status-dot waiting" id="runtime-pipeline-dot" aria-hidden="true"></i><span><small data-i18n="runtimePipeline">PIPELINE</small><strong id="runtime-pipeline-state" data-i18n="runtimeWaiting">Chờ recipe hợp lệ</strong></span></div>
@@ -72,11 +72,11 @@
       </section>
       <form id="recipe-form">
         <section class="dossier-section source-section">
-          <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2><p data-i18n="sourceHint">URL trực tiếp, trang OTA Daniel Springer hoặc Drive riêng tư.</p></div></header>
+          <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2></div></header>
           <div class="smart-source">
             <div class="field field-wide source-input-field">
               <div class="source-input-head"><label for="source-uri" data-i18n="sourceUrl">Dán link ROM</label><div><button id="paste-source" type="button" data-i18n="pasteLink">Dán</button><button id="clear-source" type="button" data-i18n="clearLink">Xóa</button></div></div>
-              <textarea id="source-uri" rows="3" required spellcheck="false" aria-describedby="source-state source-facts" placeholder="https://component-ota-cn.allawntech.com/downloadCheck?…"></textarea><small data-i18n="sourceSecure">Chấp nhận link trực tiếp, OPlus chưa resolve, Daniel Springer và Drive. URL ký tạm thời không xuất hiện trong log.</small>
+              <textarea id="source-uri" rows="3" required spellcheck="false" aria-describedby="source-state source-facts" placeholder="https://component-ota-cn.allawntech.com/downloadCheck?…"></textarea><small data-i18n="sourceSecure">Chấp nhận link trực tiếp, OPlus chưa resolve và Drive. URL ký tạm thời không xuất hiện trong log.</small>
             </div>
             <div class="source-state idle" id="source-state" aria-live="polite">
               <div class="source-state-mark" aria-hidden="true"><span>URL</span></div>
@@ -142,7 +142,7 @@
     </section>
 
     <section class="view" id="jobs" aria-labelledby="jobs-title">
-      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Tiến trình & lịch sử</h1><p data-i18n="jobsIntro">Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.</p></div><button class="primary compact" id="refresh-jobs" type="button" data-i18n="refreshJob">Làm mới trạng thái</button></header>
+      <header class="page-head"><div><h1 id="jobs-title" data-i18n="jobsTitle">Tiến trình & lịch sử</h1></div><button class="primary compact" id="refresh-jobs" type="button" data-i18n="refreshJob">Làm mới trạng thái</button></header>
       <div class="jobs-connection" id="jobs-connection" role="status" aria-live="polite"><i></i><span data-i18n="jobsLoading">Đang đồng bộ lịch sử job…</span></div>
       <section class="active-job" id="active-job" hidden aria-live="polite"></section>
       <section class="job-history-sheet">
@@ -155,11 +155,10 @@
         <div class="job-history" id="job-history"></div>
         <div class="job-empty" id="job-empty" hidden><strong data-i18n="noJobsTitle">Chưa có job</strong><p data-i18n="noJobsMessage">Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.</p><button class="primary compact" type="button" data-nav="build" data-i18n="newBuild">Tạo build đầu tiên</button></div>
       </section>
-      <aside class="process-key"><h2 data-i18n="stageKey">Các trạng thái chuẩn</h2><ol><li data-i18n="stageQueued">Chờ</li><li data-i18n="stagePreflight">Kiểm tra</li><li data-i18n="stageDownloading">Tải ROM</li><li data-i18n="stageRunning">Đang build</li><li data-i18n="stageUploading">Đang upload</li><li data-i18n="stageTerminal">Thành công / Lỗi</li></ol></aside>
     </section>
 
     <section class="view" id="catalog" aria-labelledby="catalog-title">
-      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật</h1><p data-i18n="catalogIntro">Danh mục thiết bị, content-pack và MOD đang sẵn sàng cho mọi runner.</p></div><div class="catalog-total" id="catalog-total">···</div></header>
+      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật</h1></div><div class="catalog-total" id="catalog-total">···</div></header>
       <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
       <section class="catalog-sheet"><header><h2 data-i18n="devicesTitle">Thiết bị</h2><span id="device-count">0</span></header><div class="device-table" id="device-list"></div></section>
       <section class="catalog-sheet"><header><h2 data-i18n="modsTitle">MOD trong pack</h2><span id="catalog-mod-count">0</span></header><div class="catalog-mods" id="catalog-mod-list"></div></section>
@@ -184,7 +183,7 @@
     </section>
 
     <section class="view" id="system" aria-labelledby="system-title">
-      <header class="page-head"><div><h1 id="system-title" data-i18n="systemTitle">Trạng thái dịch vụ</h1><p data-i18n="systemIntro">Telegram, runner, Drive và content-pack trong một màn hình.</p></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
+      <header class="page-head"><div><h1 id="system-title" data-i18n="systemTitle">Trạng thái dịch vụ</h1></div><button class="primary compact" data-action="diagnostics" data-i18n="runDiagnostics">Chạy chẩn đoán</button></header>
       <div class="system-ledger">
         <div><b>01</b><i id="telegram-health"></i><span><strong>Telegram</strong><small id="telegram-auth-state" data-i18n="authenticatedPreview">Chưa xác thực. Hãy mở từ nút Mini App trong bot.</small></span></div>
         <div><b>02</b><i></i><span><strong>GitHub Actions</strong><small data-i18n="runnerChecked">Kiểm runner ngay khi submit</small></span></div>
@@ -192,9 +191,10 @@
         <div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div>
       </div>
       <section class="system-actions"><h2 data-i18n="sessionDiagTitle">Phiên Telegram</h2><p id="session-diag" style="margin:4px 0 0;font-size:12px;line-height:1.5;opacity:.85">…</p></section>
-      <section class="system-actions"><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div></section>
+      <section class="system-actions" id="admin-maintenance" hidden><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div></section>
       <section class="user-admin" id="user-admin" hidden>
         <header><div><small data-i18n="userLedgerKicker">QUẢN TRỊ TRUY CẬP</small><h2 data-i18n="userLedgerTitle">Người dùng & lượt build</h2><p data-i18n="userLedgerHint">Duyệt tài khoản, cấp lượt và xem lịch sử mà không xóa dấu vết.</p></div><button class="primary compact" id="add-user" type="button" data-i18n="addUser">Thêm Telegram ID</button></header>
+        <div class="user-admin-stats"><div><small data-i18n="totalUsers">Tổng người dùng</small><strong id="user-total-count">0</strong></div><div><small data-i18n="revokedUsers">Đã thu hồi</small><strong id="user-revoked-count">0</strong></div></div>
         <div class="user-admin-controls"><label class="field"><span data-i18n="searchUsers">Tìm người dùng</span><input id="user-search" type="search" placeholder="Telegram ID / username / tên"></label><label class="field"><span data-i18n="accessStatus">Trạng thái</span><select id="user-status"><option value="" data-i18n="allUsers">Tất cả</option><option value="pending" data-i18n="pending">Chờ duyệt</option><option value="approved" data-i18n="approved">Đã duyệt</option><option value="revoked" data-i18n="revoked">Đã thu hồi</option></select></label><label class="field"><span data-i18n="quotaFilter">Hạn mức</span><select id="user-quota-filter"><option value="" data-i18n="allUsers">Tất cả</option><option value="available" data-i18n="quotaAvailable">Còn lượt</option><option value="exhausted" data-i18n="quotaExhausted">Đã hết lượt</option><option value="unlimited" data-i18n="unlimited">Không giới hạn</option></select></label><label class="field"><span data-i18n="activityFilter">Hoạt động</span><select id="user-activity-filter"><option value="" data-i18n="allUsers">Tất cả</option><option value="active" data-i18n="openedMiniApp">Đã mở Mini App</option><option value="never" data-i18n="neverOpened">Chưa từng mở</option><option value="jobs" data-i18n="hasJobs">Đã tạo job</option></select></label><label class="field"><span data-i18n="sortUsers">Sắp xếp</span><select id="user-sort"><option value="lastSeenAt" data-i18n="lastAccess">Truy cập gần nhất</option><option value="firstSeenAt" data-i18n="firstAccess">Truy cập đầu tiên</option><option value="jobCount" data-i18n="jobCount">Số job</option><option value="buildCredits" data-i18n="buildCredits">Lượt còn lại</option></select></label></div>
         <div class="user-table" role="table" aria-label="Telegram users"><div class="user-table-head" role="row"><span>Telegram</span><span data-i18n="activity">Hoạt động</span><span data-i18n="allowance">Hạn mức</span><span data-i18n="accessStatus">Trạng thái</span><span></span></div><div id="user-table-body"></div></div>
         <div class="user-pagination"><span id="user-page-summary">0</span><div><button id="user-prev" type="button">←</button><button id="user-next" type="button">→</button></div></div>
@@ -203,7 +203,7 @@
     </section>
   </main>
 
-  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-label="Hoàn tất cấu hình build" aria-hidden="true" hidden><span data-i18n="finishBuild">Hoàn tất cấu hình build</span><svg class="dispatch-fab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-label="Build" aria-hidden="true" hidden><span data-i18n="fabBuild">Build</span><svg class="dispatch-fab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
   <nav class="bottom-nav" aria-label="Mobile navigation">
     <span class="liquid-surface" aria-hidden="true"></span><i class="liquid-lens" aria-hidden="true"><span></span></i>
     <button class="active" data-nav="build" data-slot="0"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button>
@@ -213,7 +213,7 @@
     <button data-nav="system" data-slot="4"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
   </nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <dialog class="user-dialog" id="user-create-dialog"><form method="dialog" id="user-create-form"><header><div><small data-i18n="addUserKicker">HỒ SƠ MỚI</small><h2 data-i18n="addUser">Thêm Telegram ID</h2></div><button value="cancel" aria-label="Close">×</button></header><label class="field"><span>Telegram ID</span><input id="new-user-id" inputmode="numeric" required></label><label class="field"><span>Username</span><input id="new-user-username"></label><label class="field"><span data-i18n="displayName">Tên hiển thị</span><input id="new-user-display-name"></label><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="primary" id="create-user-confirm" value="default" type="submit" data-i18n="createPendingUser">Tạo hồ sơ chờ duyệt</button></footer></form></dialog>
+  <dialog class="user-dialog" id="user-create-dialog"><form method="dialog" id="user-create-form"><header><div><small data-i18n="addUserKicker">HỒ SƠ MỚI</small><h2 data-i18n="addUser">Thêm Telegram ID</h2></div><button value="cancel" data-i18n-aria="closeDialog" aria-label="Đóng">×</button></header><label class="field"><span>Telegram ID</span><input id="new-user-id" inputmode="numeric" required></label><label class="field"><span>Username</span><input id="new-user-username"></label><label class="field"><span data-i18n="displayName">Tên hiển thị</span><input id="new-user-display-name"></label><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="primary" id="create-user-confirm" value="default" type="submit" data-i18n="createPendingUser">Tạo hồ sơ chờ duyệt</button></footer></form></dialog>
   <dialog class="user-dialog user-detail-dialog" id="user-detail-dialog"><div id="user-detail-content"></div></dialog>
   <dialog class="confirm-dialog" id="cache-clear-dialog">
     <form method="dialog"><div class="confirm-mark" aria-hidden="true">!</div><h2 data-i18n="clearCacheConfirmTitle">Xóa cache dùng chung?</h2><p data-i18n="clearCacheConfirmMessage">Chỉ quản trị viên được phép thực hiện. Toàn bộ stage cache dùng chung sẽ bị xóa và các job sau có thể cần tải, xử lý lại dữ liệu.</p><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="danger-confirm" id="cache-clear-confirm" value="default" type="button" data-i18n="confirmClearCache">Xóa cache</button></footer></form>

@@ -277,7 +277,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky four-cell contents rail with consistent line icons. Mobile adapts Kyant0's LiquidBottomTabs material model as a five-slot web control: a highly translucent capsule contains one refractive lens and a raised center avatar for the Profile destination. The lens settles with a smooth exponential ease-out without bounce, using bounded backdrop blur, vibrancy, inner depth, rim light and subtle chromatic edge separation. The Profile destination suppresses the lens and identifies its active state with a restrained avatar-derived halo. Reduced-motion preference removes lens travel, halo scale and rotating greeting transitions.
+Desktop uses a sticky four-cell contents rail with consistent line icons. Mobile adapts Kyant0's LiquidBottomTabs material model as a five-slot web control: a highly translucent, low-blur capsule contains one refractive lens and a raised center avatar for the Profile destination. The top sheen is omitted so page content remains visible through the dock; labels and icons use near-black in light mode and white in dark mode. The lens settles with a smooth exponential ease-out without bounce. The Profile destination suppresses the lens and identifies its active state with an avatar-derived halo plus a partial circular rim. Reduced-motion preference removes lens travel, halo scale and rotating greeting transitions.
 
 ### Authenticated Profile
 
@@ -285,7 +285,7 @@ The center avatar opens a full Profile destination rather than an interrupting p
 
 ### Masthead Greeting
 
-The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. A single quiet status dot replaces decorative emoji. Copy that exceeds the available width travels horizontally at a measured pace; short copy stays still. On scroll the surface remains transparent while backdrop blur increases, so underlying content remains visible and the foreground controls stay crisp. The greeting stops while the document is hidden and becomes static under reduced motion.
+The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. A single quiet status dot replaces decorative emoji. On mobile the greeting occupies the flexible space between the wordmark and language control. Copy that exceeds the available width travels horizontally at a measured pace; short copy stays still. On scroll the surface remains highly transparent and increases only to a light blur, so underlying content remains visible and the foreground controls stay crisp. The greeting stops while the document is hidden and becomes static under reduced motion.
 
 ### Runtime Rail
 
@@ -301,11 +301,11 @@ ZIP, Drive, and Telegram stages support `pending`, `running`, `complete`, `faile
 
 ### Dispatch Docket
 
-The docket is the authoritative recipe summary. It shows three readiness checks, completed count, route summary, recovery copy, and exactly one submit action. An incomplete docket receives a sun border; it does not claim readiness until both source and device are valid. On compact screens, when the docket scrolls out of view, it collapses into a right-edge “Hoàn tất cấu hình build” shortcut with a short scale transition. The shortcut keeps its text and direction icon instead of collapsing into an ambiguous check mark. Activating it returns focus and scroll position to the full docket; it disappears when the docket is visible.
+The docket is the authoritative recipe summary. It shows three readiness checks, completed count, route summary, recovery copy, and exactly one submit action. An incomplete docket receives a sun border; it does not claim readiness until both source and device are valid. On compact screens, when the docket scrolls out of view, it becomes a small glass “Build” shortcut with a direction arrow and a deliberate gap above the dock. Activating it returns focus and scroll position to the full docket; it disappears when the docket is visible.
 
 ### Job Context and Events
 
-Every active job exposes its device and ROM facts together with MOD-pack identity, release-version label, and the actual selected MOD names before the event stream. During upload, the progress area identifies the current file, file percentage, transferred bytes, speed, and ETA. Events are grouped by their actual named build step in compact ledger rows, while success and failure receive distinct tonal backgrounds. The default view shows the eight newest events; “View full log” expands every retained sanitized event and its structured details rather than exposing generic “step” labels. A release label shown in history or logs is the value persisted with that job, not a live reinterpretation of the pack's current label.
+Every active job exposes its device and ROM facts together with MOD-pack identity, release-version label, and the actual selected MOD names as bordered chips before the event stream. During upload, the progress area identifies the current file, file percentage, transferred bytes, speed, and ETA. Events are grouped by their actual named build step in compact ledger rows, while success and failure receive distinct tonal backgrounds. The default view shows the eight newest events; “View full log” expands every retained sanitized event and its structured details rather than exposing generic “step” labels. A release label shown in history or logs is the value persisted with that job, not a live reinterpretation of the pack's current label.
 
 ## Do's and Don'ts
 
