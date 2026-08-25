@@ -16,8 +16,6 @@ services:
         sync: false
       - key: WUKONG_GITHUB_TOKEN
         sync: false
-      - key: WUKONG_ACTIONS_CALLBACK_SECRET
-        sync: false
       - key: WUKONG_RCLONE_CONFIG_CONTENT_B64
         sync: false
       - key: DATABASE_URL

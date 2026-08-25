@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .actions_ui import GitHubActionsUI
-from .actions_progress import ActionsProgressReporter
 from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
 from .cloud_sync import CloudJobSync
 from .content_packs import ContentPackManager, validate_content_index
@@ -137,7 +136,6 @@ class LocalJobExecutor:
         content_root: Path | None = None,
         content_index: Path | None = None,
         actions_ui: GitHubActionsUI | None = None,
-        actions_progress: ActionsProgressReporter | None = None,
     ) -> None:
         self.store = store
         self.workspace_root = workspace_root.resolve()
@@ -152,7 +150,6 @@ class LocalJobExecutor:
             content_index or SCRIPT_ROOT / "content-packs" / "index.json"
         ).resolve()
         self.actions_ui = actions_ui or GitHubActionsUI()
-        self.actions_progress = actions_progress or ActionsProgressReporter.from_environment()
         self._cloud_push_warning_at: dict[str, float] = {}
 
     def execute(self, job_id: str) -> JobManifest:
@@ -165,22 +162,9 @@ class LocalJobExecutor:
         root = self.workspace_root / job_id
         source_target = source_target_for(recipe, root)
         try:
-            self._update_with_progress(
-                job_id,
-                status=JobStatus.PREFLIGHT,
-                stage="preflight",
-                progress=0.0,
-                error=None,
-                force=True,
-            )
+            self.store.update(job_id, status=JobStatus.PREFLIGHT, stage="preflight", progress=0.0, error=None)
             self.store.append_event(job_id, "state", status=JobStatus.PREFLIGHT.value, stage="preflight")
-            self._update_with_progress(
-                job_id,
-                status=JobStatus.DOWNLOADING,
-                stage="download",
-                progress=0.0,
-                force=True,
-            )
+            self.store.update(job_id, status=JobStatus.DOWNLOADING, stage="download", progress=0.0)
             self.actions_ui.begin("download")
             storage = self.storage_factory(recipe.storage.remote)
             self._push_cloud_manifest(job_id, storage)
@@ -199,25 +183,13 @@ class LocalJobExecutor:
                 sizeBytes=source.size_bytes,
             )
             if recipe.task == "source_mirror":
-                self._update_with_progress(
-                    job_id,
-                    status=JobStatus.UPLOADING,
-                    stage="upload",
-                    progress=0.8,
-                    force=True,
-                )
+                self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
                 record = storage.store_source(source.path, device=recipe.device, digest=source.sha256)
                 return self._succeed(job_id, [record])
             if recipe.task == "artifact_publish":
-                self._update_with_progress(
-                    job_id,
-                    status=JobStatus.UPLOADING,
-                    stage="upload",
-                    progress=0.8,
-                    force=True,
-                )
+                self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
                 record = storage.publish_artifact(source.path, device=recipe.device, build="published")
@@ -225,13 +197,7 @@ class LocalJobExecutor:
 
             self._ensure_content_packs(recipe)
             recipe = self._reconcile_recipe_mods(job_id, recipe)
-            self._update_with_progress(
-                job_id,
-                status=JobStatus.RUNNING,
-                stage="build",
-                progress=0.1,
-                force=True,
-            )
+            self.store.update(job_id, status=JobStatus.RUNNING, stage="build", progress=0.1)
             from studio_core import (
                 BuildSpec,
                 build_spec_fingerprint,
@@ -292,9 +258,7 @@ class LocalJobExecutor:
                 changes: dict[str, object] = {"stage": stage}
                 if progress is not None:
                     changes["progress"] = max(0.0, min(progress / 100, 0.79))
-                updated = self.store.update(job_id, **changes)
-                if self.actions_progress is not None:
-                    self.actions_progress.publish(updated)
+                self.store.update(job_id, **changes)
                 self.store.append_event(job_id, event_type, **event)
                 self.actions_ui.event(event)
                 status = str(event.get("status") or "")
@@ -383,13 +347,7 @@ class LocalJobExecutor:
             if not outputs:
                 raise OrchestrationError("Build completed without an artifact")
             records: list[ArtifactRecord] = []
-            self._update_with_progress(
-                job_id,
-                status=JobStatus.UPLOADING,
-                stage="upload",
-                progress=0.8,
-                force=True,
-            )
+            self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
             self._push_cloud_progress(job_id, storage)
             self.actions_ui.begin("upload")
             last_upload_push = 0.0
@@ -404,13 +362,7 @@ class LocalJobExecutor:
                             return
                         last_upload_event = now
                         overall = (output_index + percent / 100.0) / max(1, len(outputs))
-                        updated = self.store.update(
-                            job_id,
-                            stage="upload",
-                            progress=0.8 + overall * 0.19,
-                        )
-                        if self.actions_progress is not None:
-                            self.actions_progress.publish(updated)
+                        self.store.update(job_id, stage="upload", progress=0.8 + overall * 0.19)
                         self.store.append_event(
                             job_id,
                             "upload_progress",
@@ -615,18 +567,6 @@ class LocalJobExecutor:
 
     def _push_cloud_manifest(self, job_id: str, storage: RcloneStorageAdapter) -> bool:
         return self._push_cloud_state(job_id, storage, manifest_only=True)
-
-    def _update_with_progress(
-        self,
-        job_id: str,
-        *,
-        force: bool = False,
-        **changes: object,
-    ) -> JobManifest:
-        manifest = self.store.update(job_id, **changes)
-        if self.actions_progress is not None:
-            self.actions_progress.publish(manifest, force=force)
-        return manifest
 
     def _push_cloud_progress(self, job_id: str, storage: RcloneStorageAdapter) -> bool:
         return self._push_cloud_state(job_id, storage, manifest_only=False)

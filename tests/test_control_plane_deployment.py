@@ -142,69 +142,8 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         )
         self.assertIn("sha256sum --check --strict", dockerfile)
         self.assertNotIn("ca-certificates gosu rclone", dockerfile)
-        self.assertIn("psycopg[binary,pool]", control_plane_requirements)
-        self.assertIn("google-cloud-tasks", control_plane_requirements)
-        self.assertIn("gunicorn", control_plane_requirements)
+        self.assertIn("psycopg[binary]", control_plane_requirements)
         self.assertIn("deploy/control-plane/requirements.txt", dockerfile)
-
-    def test_cloud_run_contract_uses_stateless_runtime_and_bounded_scaling(self) -> None:
-        root = Path(__file__).parents[1]
-        workflow = (root / ".github/workflows/cloud-run-production.yml").read_text(
-            encoding="utf-8"
-        )
-        dockerfile = (root / "deploy/cloud-run/Dockerfile").read_text(encoding="utf-8")
-        gunicorn = (root / "deploy/cloud-run/gunicorn.conf.py").read_text(encoding="utf-8")
-        bootstrap = (root / "deploy/cloud-run/bootstrap.sh").read_text(encoding="utf-8")
-        build_workflow = (root / ".github/workflows/wukong-build.yml").read_text(
-            encoding="utf-8"
-        )
-        hybrid_action = (root / ".github/actions/run-hybrid/action.yml").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("google-github-actions/auth", workflow)
-        self.assertIn("google-github-actions/deploy-cloudrun", workflow)
-        self.assertIn("--cpu=2", workflow)
-        self.assertIn("--memory=2Gi", workflow)
-        self.assertIn("--concurrency=40", workflow)
-        self.assertIn("--min=0", workflow)
-        self.assertIn("--max=2", workflow)
-        self.assertIn("--cpu-boost", workflow)
-        self.assertIn("WUKONG_RELEASE_SHA", workflow)
-        self.assertIn("/healthz", workflow)
-        self.assertIn("telegram-mini-app-pages.yml", workflow)
-        self.assertIn("wukong.cloud_run_app:app", dockerfile)
-        self.assertIn("workers = 1", gunicorn)
-        self.assertIn("threads = 16", gunicorn)
-        self.assertIn("wukong-telegram", bootstrap)
-        self.assertIn("wukong-dispatch", bootstrap)
-        self.assertIn("asia-southeast1", bootstrap)
-        self.assertIn('--filter-projects="projects/$project_number"', bootstrap)
-        self.assertNotIn("service-account-key.json", workflow)
-        self.assertIn("WUKONG_ACTIONS_CALLBACK_SECRET", build_workflow)
-        self.assertIn("actions_callback_secret:", hybrid_action)
-        self.assertIn("WUKONG_ACTIONS_PROGRESS_URL", hybrid_action)
-        self.assertIn("X-Wukong-Signature", build_workflow)
-        self.assertIn("/internal/tasks/configure-telegram", workflow)
-        self.assertIn("gh variable set WUKONG_TELEGRAM_MINI_APP_API_URL", workflow)
-        self.assertIn("cutover-telegram:", workflow)
-        self.assertRegex(
-            workflow,
-            r"(?s)cutover-telegram:.*?needs: publish-mini-app.*?/internal/tasks/configure-telegram",
-        )
-        self.assertRegex(
-            workflow,
-            r"(?s)cutover-telegram:.*?environment:\s+name: cloud-run-production",
-        )
-        self.assertIn("telegramConfigurationRelease", workflow)
-
-    def test_mini_app_uses_bounded_visibility_aware_job_polling(self) -> None:
-        script = (
-            Path(__file__).parents[1] / "telegram_mini_app/app.js"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("active ? 10000 : 30000", script)
-        self.assertIn("document.hidden", script)
 
     def test_render_free_blueprint_uses_docker_generated_tls_and_ephemeral_state_backup(self) -> None:
         root = Path(__file__).parents[1]
@@ -228,10 +167,6 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertRegex(
             blueprint,
             r"(?s)- key: WUKONG_GITHUB_REPOSITORY\s+sync: false",
-        )
-        self.assertRegex(
-            blueprint,
-            r"(?s)- key: WUKONG_ACTIONS_CALLBACK_SECRET\s+sync: false",
         )
         self.assertIn("https://wukong-rom-studio.vercel.app/", blueprint)
         self.assertIn("WUKONG_CONTROL_PLANE_REQUIRE_POSTGRES", blueprint)

@@ -2525,7 +2525,7 @@ async function loadJobDetail(jobId) {
 function scheduleJobsPoll(active) {
   clearTimeout(state.jobsPollTimer);
   if (document.hidden || !privateApiAvailable()) return;
-  state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), active ? 10000 : 30000);
+  state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), active ? 5000 : 30000);
 }
 
 async function loadJobs({ force = false } = {}) {

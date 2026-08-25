@@ -674,11 +674,7 @@ class TelegramMiniAppAPI:
         cache_provider: Callable[[], dict[str, object]] | None = None,
         cache_clearer: Callable[[], dict[str, object]] | None = None,
         telegram_update_handler: Callable[[dict[str, object]], None] | None = None,
-        telegram_configuration_handler: Callable[[str], None] | None = None,
         telegram_webhook_secret: str | None = None,
-        cloud_task_dispatcher: object | None = None,
-        task_store: object | None = None,
-        task_token_verifier: Callable[[str], bool] | None = None,
         actions_callback_secret: str | None = None,
         readiness_provider: Callable[[], bool] | None = None,
         max_init_data_age_seconds: int = 3600,
@@ -707,16 +703,12 @@ class TelegramMiniAppAPI:
         self.cache_provider = cache_provider
         self.cache_clearer = cache_clearer
         self.telegram_update_handler = telegram_update_handler
-        self.telegram_configuration_handler = telegram_configuration_handler
         self.telegram_webhook_secret = (telegram_webhook_secret or "").strip()
-        self.cloud_task_dispatcher = cloud_task_dispatcher
-        self.task_store = task_store
-        self.task_token_verifier = task_token_verifier
         self.actions_callback_secret = (actions_callback_secret or "").strip()
         if bool(self.telegram_update_handler) != bool(self.telegram_webhook_secret):
             raise ValueError("Telegram webhook handler and secret must be configured together")
         self._telegram_update_queue: queue.Queue[dict[str, object]] | None = None
-        if self.telegram_update_handler and self.cloud_task_dispatcher is None:
+        if self.telegram_update_handler:
             self._telegram_update_queue = queue.Queue(maxsize=128)
             threading.Thread(
                 target=self._run_telegram_update_worker,
@@ -764,14 +756,10 @@ class TelegramMiniAppAPI:
         def authenticate() -> Response | None:
             if request.path in {"/healthz", "/readyz"}:
                 return None
-            if request.path in {"/internal/actions/callback", "/internal/actions/progress"}:
+            if request.path == "/internal/actions/callback":
                 authorization = request.headers.get("Authorization", "")
                 scheme, separator, credential = authorization.partition(" ")
-                if (
-                    request.path == "/internal/actions/callback"
-                    and separator == " "
-                    and scheme.casefold() == "bearer"
-                ):
+                if separator == " " and scheme.casefold() == "bearer":
                     # The Actions runner presents its own repository token.
                     # Trust is deferred to the handler, which verifies the
                     # run directly against GitHub so a rotated token can
@@ -812,11 +800,6 @@ class TelegramMiniAppAPI:
                     self.telegram_webhook_secret,
                 ):
                     return jsonify({"error": "Telegram webhook authentication failed"}), 403
-                return None
-            if request.path.startswith("/internal/tasks/"):
-                authorization = request.headers.get("Authorization", "")
-                if self.task_token_verifier is None or not self.task_token_verifier(authorization):
-                    return jsonify({"error": "Cloud Task authentication failed"}), 403
                 return None
             if re.fullmatch(r"/v1/jobs/[A-Za-z0-9-]{1,64}/download", request.path) and request.args.get("ticket"):
                 return None
@@ -958,25 +941,14 @@ class TelegramMiniAppAPI:
         def health() -> Response:
             release = os.environ.get("WUKONG_RELEASE_SHA", "").strip().casefold()
             ready = bool(self.readiness_provider())
-            normalized_release = release if RELEASE_SHA_RE.fullmatch(release) else "development"
-            payload = {
-                "status": "ready" if ready else "starting",
-                "service": "wukong-control-plane",
-                "stateBackend": self.state_backend,
-                "release": normalized_release,
-            }
-            configuration_complete = getattr(
-                self.task_store,
-                "telegram_configuration_complete",
-                None,
-            )
-            if (
-                normalized_release != "development"
-                and callable(configuration_complete)
-                and configuration_complete(normalized_release)
-            ):
-                payload["telegramConfigurationRelease"] = normalized_release
-            return jsonify(payload), 200 if ready else 503
+            return jsonify(
+                {
+                    "status": "ready" if ready else "starting",
+                    "service": "wukong-control-plane",
+                    "stateBackend": self.state_backend,
+                    "release": release if RELEASE_SHA_RE.fullmatch(release) else "development",
+                }
+            ), 200 if ready else 503
 
         @app.get("/readyz")
         def readiness() -> Response:
@@ -1031,79 +1003,12 @@ class TelegramMiniAppAPI:
                 return jsonify({"error": "Telegram update must be an object"}), 400
             update_kind = "callback" if payload.get("callback_query") else "message" if payload.get("message") else "other"
             print(f"Telegram webhook update queued: {update_kind}", flush=True)
-            if self.cloud_task_dispatcher is not None:
-                try:
-                    update_id = int(payload.get("update_id"))
-                    self.cloud_task_dispatcher.enqueue_telegram_update(update_id, payload)
-                except (OSError, RuntimeError, TypeError, ValueError) as exc:
-                    print(f"Telegram Cloud Task enqueue failed: {type(exc).__name__}", flush=True)
-                    return jsonify({"error": "Telegram update could not be queued"}), 503
-                return Response(status=204)
             if self._telegram_update_queue is None:
                 return jsonify({"error": "Telegram webhook is not configured"}), 503
             try:
                 self._telegram_update_queue.put_nowait(payload)
             except queue.Full:
                 return jsonify({"error": "Telegram webhook queue is full"}), 503
-            return Response(status=204)
-
-        @app.post("/internal/tasks/telegram-update")
-        def telegram_update_task() -> Response:
-            payload = request.get_json(force=True) or {}
-            update = payload.get("update") if isinstance(payload, Mapping) else None
-            try:
-                update_id = int(payload.get("updateId"))
-            except (TypeError, ValueError):
-                return jsonify({"error": "Telegram update ID is invalid"}), 400
-            if not isinstance(update, dict) or int(update.get("update_id", -1)) != update_id:
-                return jsonify({"error": "Telegram update payload is invalid"}), 400
-            if self.telegram_update_handler is None or self.task_store is None:
-                return jsonify({"error": "Telegram task processing is not configured"}), 503
-            if not self.task_store.claim_telegram_update(update_id):
-                return Response(status=204)
-            try:
-                self.telegram_update_handler(update)
-            except Exception:  # noqa: BLE001 - Cloud Tasks must retry transient bot failures
-                self.task_store.release_telegram_update(update_id)
-                raise
-            self.task_store.complete_telegram_update(update_id)
-            return Response(status=204)
-
-        @app.post("/internal/tasks/job-dispatch")
-        def job_dispatch_task() -> Response:
-            payload = request.get_json(force=True) or {}
-            job_id = str(payload.get("jobId") or "") if isinstance(payload, Mapping) else ""
-            if not job_id.isascii() or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,63}", job_id):
-                return jsonify({"error": "Job dispatch task is invalid"}), 400
-            dispatch = getattr(self.runtime, "dispatch", None)
-            if not callable(dispatch) or self.task_store is None:
-                return jsonify({"error": "Job dispatch is not configured"}), 503
-            if not self.task_store.claim_job_dispatch(job_id):
-                return Response(status=204)
-            try:
-                dispatch(job_id)
-            except Exception:  # noqa: BLE001 - Cloud Tasks retries transient dispatch failures
-                self.task_store.release_job_dispatch(job_id)
-                raise
-            self.task_store.complete_job_dispatch(job_id)
-            return Response(status=204)
-
-        @app.post("/internal/tasks/configure-telegram")
-        def configure_telegram_task() -> Response:
-            payload = request.get_json(force=True) or {}
-            release = str(payload.get("release") or "").strip().casefold()
-            if not RELEASE_SHA_RE.fullmatch(release):
-                return jsonify({"error": "Telegram configuration release is invalid"}), 400
-            if self.telegram_configuration_handler is None or self.task_store is None:
-                return jsonify({"error": "Telegram configuration is not available"}), 503
-            if not self.task_store.claim_telegram_configuration(release):
-                return Response(status=204)
-            try:
-                self.telegram_configuration_handler(release)
-            except Exception:  # noqa: BLE001 - Cloud Tasks retries transient Telegram failures
-                self.task_store.release_telegram_configuration(release)
-                raise
-            self.task_store.complete_telegram_configuration(release)
             return Response(status=204)
 
         @app.post("/internal/actions/callback")
@@ -1173,44 +1078,6 @@ class TelegramMiniAppAPI:
                 }
             )
 
-        @app.post("/internal/actions/progress")
-        def actions_progress() -> Response:
-            payload = request.get_json(force=True) or {}
-            if not isinstance(payload, Mapping):
-                return jsonify({"error": "Actions progress payload is invalid"}), 400
-            job_id = str(payload.get("jobId") or "")
-            try:
-                run_id = int(payload.get("runId"))
-                sequence = int(payload.get("sequence"))
-                status = JobStatus(str(payload.get("status") or "").casefold())
-                progress = float(payload.get("progress"))
-            except (TypeError, ValueError):
-                return jsonify({"error": "Actions progress values are invalid"}), 400
-            stage = str(payload.get("stage") or "")[:128]
-            source_timestamp = str(payload.get("timestamp") or "")[:64]
-            if (
-                not job_id.isascii()
-                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,63}", job_id)
-                or run_id <= 0
-                or sequence <= 0
-                or status in TERMINAL_STATUSES
-                or not 0.0 <= progress <= 1.0
-                or self.task_store is None
-            ):
-                return jsonify({"error": "Actions progress values are invalid"}), 400
-            if self.orchestrator.store.get(job_id) is None:
-                return jsonify({"error": "Job not found"}), 404
-            applied = self.task_store.apply_job_progress(
-                self.orchestrator.store,
-                job_id,
-                sequence=sequence,
-                status=status,
-                stage=stage,
-                progress=progress,
-                timestamp=source_timestamp,
-            )
-            return jsonify({"jobId": job_id, "applied": bool(applied)})
-
         @app.post("/v1/sources/probe")
         def probe_source() -> Response:
             try:
@@ -1275,17 +1142,6 @@ class TelegramMiniAppAPI:
                 job_id = str(reservation["jobId"])
                 if reservation.get("existing"):
                     existing = self.orchestrator.inspect(job_id, identity)
-                    if self.cloud_task_dispatcher is not None:
-                        try:
-                            self.cloud_task_dispatcher.enqueue_job_dispatch(job_id)
-                        except (OSError, RuntimeError, TypeError, ValueError):
-                            return jsonify(
-                                {
-                                    "error": "Accepted job dispatch could not be queued; retry this request",
-                                    "code": "dispatch_enqueue_failed",
-                                    "jobId": job_id,
-                                }
-                            ), 503
                     return jsonify(
                         public_job_payload(existing, self.orchestrator.store.recipe(job_id))
                     ), 200
@@ -1301,19 +1157,7 @@ class TelegramMiniAppAPI:
                     )
                 )
                 job_created = True
-                if self.cloud_task_dispatcher is not None:
-                    try:
-                        self.cloud_task_dispatcher.enqueue_job_dispatch(manifest.job_id)
-                    except (OSError, RuntimeError, TypeError, ValueError):
-                        return jsonify(
-                            {
-                                "error": "Accepted job dispatch could not be queued; retry this request",
-                                "code": "dispatch_enqueue_failed",
-                                "jobId": manifest.job_id,
-                            }
-                        ), 503
-                else:
-                    self.runtime.start(manifest)
+                self.runtime.start(manifest)
                 return jsonify(public_job_payload(manifest, recipe)), 201
             except BuildQuotaError as exc:
                 return jsonify({"error": str(exc), "code": "build_quota_exhausted"}), 403

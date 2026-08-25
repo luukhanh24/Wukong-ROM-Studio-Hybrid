@@ -51,29 +51,12 @@ class HybridRuntime:
 
     def start(self, manifest: JobManifest) -> None:
         worker = threading.Thread(
-            target=self._execute_local if manifest.runner == "windows" else self.dispatch,
+            target=self._execute_local if manifest.runner == "windows" else self._dispatch_github,
             args=(manifest.job_id,),
             name=f"wukong-hybrid-{manifest.job_id[:8]}",
             daemon=True,
         )
         worker.start()
-
-    def dispatch(self, job_id: str) -> None:
-        """Synchronously dispatch one durable job; safe for Cloud Tasks retries."""
-
-        manifest = self.store.get(job_id)
-        if manifest is None:
-            raise ValueError("Job is unavailable")
-        if manifest.status in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}:
-            return
-        if manifest.external_run_id or any(
-            event.type == "dispatched" for event in self.store.events(job_id)
-        ):
-            return
-        if manifest.runner == "windows":
-            self._execute_local(job_id)
-        else:
-            self._dispatch_github(job_id)
 
     def resume_cloud_watchers(self) -> int:
         """Resume cloud-state polling for jobs that survived a daemon restart."""
