@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
@@ -17,6 +18,8 @@ ASSET_NAMES = (
     "fflate.LICENSE.txt",
     "WukongStudio.svg",
 )
+
+PRODUCTION_API_ORIGIN = "https://wukong-control-plane.luuxuankhanh98.workers.dev"
 
 
 def _api_origin(value: str) -> str:
@@ -33,6 +36,10 @@ def _api_origin(value: str) -> str:
     ):
         raise ValueError("WUKONG_TELEGRAM_MINI_APP_API_URL must be a public HTTPS origin")
     return normalized
+
+
+def configured_api_origin(environ: Mapping[str, str] = os.environ) -> str:
+    return environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip() or PRODUCTION_API_ORIGIN
 
 
 def build_site(
@@ -69,10 +76,7 @@ def main() -> int:
     build_site(
         root,
         output,
-        api_url=os.environ.get(
-            "WUKONG_TELEGRAM_MINI_APP_API_URL",
-            "https://wukong-mini-api.onrender.com",
-        ),
+        api_url=configured_api_origin(),
         release=(
             os.environ.get("WUKONG_RELEASE_SHA")
             or os.environ.get("VERCEL_GIT_COMMIT_SHA")

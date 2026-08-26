@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-mini-api.onrender.com' }}
+  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-control-plane.luuxuankhanh98.workers.dev' }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
