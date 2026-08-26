@@ -180,7 +180,6 @@ Object.assign(translations.vi, {
   systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", maintenance: "Bảo trì & thiết đặt",
   inspectCache: "Xem stage cache", inspectCacheHint: "Dung lượng và lượt tái sử dụng", clearCache: "Xóa cache", adminOnly: "Chỉ admin",
   miniSettings: "Thiết đặt Mini App", defaultPreset: "Preset mặc định",
-  secretBoundary: "Token GitHub, Telegram và rclone không hiển thị ở đây. Quản lý chúng trong Windows app hoặc GitHub Secrets.",
   searchMods: "Lọc MOD để chọn", jobActionHint: "Nhập ID để mở tác vụ; bot sẽ kiểm tra quyền và trạng thái.",
   stageQueued: "Chờ", stagePreflight: "Kiểm tra", stageDownloading: "Tải ROM", stageRunning: "Đang build", stageUploading: "Đang upload", stageTerminal: "Thành công / Lỗi",
   previewMode: "CHẾ ĐỘ XEM TRƯỚC", authenticatedPreview: "Chưa xác thực — mở từ nút Mini App trong bot"
@@ -224,7 +223,6 @@ Object.assign(translations.en, {
   systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", maintenance: "Maintenance & settings",
   inspectCache: "Inspect stage cache", inspectCacheHint: "Usage and reuse count", clearCache: "Clear cache", adminOnly: "Admin only",
   miniSettings: "Mini App settings", defaultPreset: "Default preset",
-  secretBoundary: "GitHub, Telegram and rclone credentials are never shown here. Manage them in the Windows app or GitHub Secrets.",
   searchMods: "Filter selectable MODs", jobActionHint: "Enter an ID to reveal actions; the bot verifies ownership and state.",
   stageQueued: "Queued", stagePreflight: "Preflight", stageDownloading: "Downloading", stageRunning: "Running", stageUploading: "Uploading", stageTerminal: "Succeeded / Failed",
   previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button"
@@ -244,7 +242,8 @@ Object.assign(translations.vi, {
   accessRevokedKicker: "QUYỀN TRUY CẬP ĐÃ THU HỒI", accessRevokedTitle: "Tài khoản chưa thể mở Studio", accessRevokedMessage: "Liên hệ quản trị viên nếu bạn cần khôi phục quyền truy cập.",
   accessConnectKicker: "CHƯA KẾT NỐI TELEGRAM", accessConnectTitle: "Kết nối tài khoản để tiếp tục", accessConnectMessage: "Mở Mini App từ bot hoặc kết nối Telegram để xác thực an toàn.",
   accountDetails: "Thông tin tài khoản", refreshAccess: "Kiểm tra lại quyền", runtimeAllowance: "LƯỢT BUILD · JOBS", allowanceSummary: "{remaining} còn lại · {used} đã dùng · {jobs} job",
-  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", fabBuild: "Build", totalUsers: "Tổng người dùng", revokedUsers: "Đã thu hồi"
+  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", fabBuild: "Build", totalUsers: "Tổng người dùng", revokedUsers: "Đã thu hồi",
+  backToUsers: "Người dùng & lượt build", adminActionKicker: "CẬP NHẬT QUYỀN", creditValue: "Số lượt build", actionReason: "Lý do", confirmAction: "Xác nhận", adminActionMessage: "Thay đổi này sẽ được lưu vào nhật ký truy cập của người dùng.", actionValueInvalid: "Nhập số lượt hợp lệ.", actionReasonRequired: "Hãy nhập lý do cho thay đổi này."
 });
 Object.assign(translations.en, {
   buildAllowance: "BUILD CREDIT", unlimited: "Unlimited", pending: "Pending", approved: "Approved", revoked: "Revoked",
@@ -260,7 +259,8 @@ Object.assign(translations.en, {
   accessRevokedKicker: "ACCESS REVOKED", accessRevokedTitle: "Studio is not available for this account", accessRevokedMessage: "Contact an administrator if you need access restored.",
   accessConnectKicker: "TELEGRAM NOT CONNECTED", accessConnectTitle: "Connect your account to continue", accessConnectMessage: "Open the Mini App from the bot or connect Telegram for secure authentication.",
   accountDetails: "Account details", refreshAccess: "Check access again", runtimeAllowance: "BUILD ALLOWANCE · JOBS", allowanceSummary: "{remaining} left · {used} used · {jobs} jobs",
-  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", fabBuild: "Build", totalUsers: "Total users", revokedUsers: "Revoked"
+  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", fabBuild: "Build", totalUsers: "Total users", revokedUsers: "Revoked",
+  backToUsers: "Users & build credits", adminActionKicker: "UPDATE ACCESS", creditValue: "Build credits", actionReason: "Reason", confirmAction: "Confirm", adminActionMessage: "This change will be retained in the user's access audit trail.", actionValueInvalid: "Enter a valid credit value.", actionReasonRequired: "Enter a reason for this change."
 });
 
 Object.assign(translations.vi, {
@@ -419,6 +419,7 @@ const state = {
   adminUsersOffset: 0,
   adminUsersLoading: false,
   selectedAdminUserId: "",
+  adminUserReturnScrollY: 0,
   workspaceLoaded: false
 };
 
@@ -678,6 +679,9 @@ function animateLiquidPosition(target) {
 
 function navigate(name, smooth = true) {
   if (!document.getElementById(name)) name = "build";
+  if ($("#system")?.classList.contains("admin-user-open")) {
+    closeAdminUserPage({ restoreFocus: false, scroll: false });
+  }
   $$(".view").forEach((node) => node.classList.toggle("active", node.id === name));
   $$(".bottom-nav [data-nav], .contents-rail [data-nav]").forEach((node) => {
     const active = node.dataset.nav === name;
@@ -1793,6 +1797,7 @@ function renderAccount() {
   scheduleGreeting();
   $("#user-admin").hidden = true;
   $("#admin-maintenance").hidden = true;
+  if (!profile || profile.role !== "admin") closeAdminUserPage({ restoreFocus: false, scroll: false });
   if (!profile) return;
   const runtimeAllowance = $("#runtime-build-allowance");
   if (runtimeAllowance) {
@@ -1848,7 +1853,7 @@ function renderAdminUsers() {
     const quota = document.createElement("span"); quota.className = "user-quota";
     quota.textContent = user.unlimited ? t("unlimited") : `${user.buildCredits || 0} · ${t("jobsCount", { count: user.jobCount || 0 })}`;
     const status = document.createElement("span"); status.className = `access-badge ${user.accessStatus}`; status.textContent = accessLabel(user.accessStatus);
-    const open = document.createElement("button"); open.type = "button"; open.className = "user-open"; open.textContent = "›"; open.setAttribute("aria-label", `${t("displayName")}: ${name.textContent}`);
+    const open = document.createElement("button"); open.type = "button"; open.className = "user-open"; open.dataset.userId = String(user.telegramId); open.textContent = "›"; open.setAttribute("aria-label", `${t("displayName")}: ${name.textContent}`);
     open.addEventListener("click", () => openAdminUser(user.telegramId).catch((error) => toast(error.message, true)));
     row.append(identity, activity, quota, status, open);
     return row;
@@ -1900,37 +1905,99 @@ function adminAuditArticle(event) {
   return article;
 }
 
+function closeAdminUserPage({ restoreFocus = true, scroll = true } = {}) {
+  const system = $("#system");
+  const page = $("#admin-user-page");
+  if (!system || !page) return;
+  const telegramId = state.selectedAdminUserId;
+  system.classList.remove("admin-user-open");
+  page.hidden = true;
+  state.selectedAdminUserId = "";
+  if (scroll) window.scrollTo({ top: state.adminUserReturnScrollY, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  if (restoreFocus && telegramId) {
+    requestAnimationFrame(() => $$(".user-open").find((button) => button.dataset.userId === String(telegramId))?.focus());
+  }
+}
+
+function requestAdminAction(user, action) {
+  if (action === "credit-add") return Promise.resolve({ reason: "admin grant" });
+  const dialog = $("#admin-action-dialog");
+  const form = $("#admin-action-form");
+  const valueField = $("#admin-action-value-field");
+  const valueInput = $("#admin-action-value");
+  const reasonField = $("#admin-action-reason-field");
+  const reasonInput = $("#admin-action-reason");
+  const error = $("#admin-action-error");
+  const confirm = $("#admin-action-confirm");
+  const needsValue = ["credit-subtract", "credit-set"].includes(action);
+  const needsReason = action === "revoke" || action === "credit-subtract" || (action === "unlimited" && user.unlimited);
+  const allowsReason = needsReason || action === "approve" || action === "credit-set";
+  $("#admin-action-title").textContent = t({
+    approve: "approveUser", revoke: "revokeUser", "credit-subtract": "subtractCredit",
+    "credit-set": "setCredit", unlimited: "toggleUnlimited"
+  }[action]);
+  $("#admin-action-message").textContent = t("adminActionMessage");
+  valueField.hidden = !needsValue;
+  reasonField.hidden = !allowsReason;
+  valueInput.value = action === "credit-set" ? String(user.buildCredits || 0) : "1";
+  reasonInput.value = action === "approve" ? "approved by admin" : "";
+  error.hidden = true;
+  confirm.classList.toggle("danger-confirm", action === "revoke");
+  confirm.classList.toggle("primary", action !== "revoke");
+  dialog.showModal();
+  requestAnimationFrame(() => (needsValue ? valueInput : allowsReason ? reasonInput : confirm).focus());
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      form.onsubmit = null;
+      resolve(value);
+    };
+    form.onsubmit = (event) => {
+      event.preventDefault();
+      if (event.submitter?.value === "cancel") { dialog.close("cancel"); return; }
+      const rawValue = valueInput.value.trim();
+      const valueValid = !needsValue || /^\d+$/.test(rawValue)
+        && (action === "credit-set" || Number(rawValue) > 0);
+      if (!valueValid) {
+        error.textContent = t("actionValueInvalid");
+        error.hidden = false;
+        valueInput.focus();
+        return;
+      }
+      const value = needsValue ? Number(rawValue) : undefined;
+      const reasonRequired = needsReason || action === "credit-set" && value < Number(user.buildCredits || 0);
+      const reason = reasonInput.value.trim();
+      if (reasonRequired && !reason) {
+        error.textContent = t("actionReasonRequired");
+        error.hidden = false;
+        reasonInput.focus();
+        return;
+      }
+      dialog.close("confirm");
+      finish({ value, reason });
+    };
+    dialog.addEventListener("close", () => finish(null), { once: true });
+  });
+}
+
 async function runAdminUserAction(user, action) {
+  const input = await requestAdminAction(user, action);
+  if (!input) return;
   let path = action; let body = {};
-  if (action === "approve") body.reason = window.prompt("Reason / Lý do", "approved by admin") || "";
-  if (action === "revoke") {
-    body.reason = window.prompt("Reason / Lý do thu hồi", "") || "";
-    if (!body.reason) return;
-  }
-  if (action === "credit-add") { path = "allowance"; body = { operation: "add", value: 1, reason: "admin grant" }; }
-  if (action === "credit-subtract") {
-    path = "allowance";
-    const value = window.prompt("Credits to subtract / Số lượt cần trừ", "1");
-    if (value === null || !/^\d+$/.test(value) || Number(value) <= 0) return;
-    const reason = window.prompt("Reason / Lý do giảm", "") || "";
-    if (!reason) return;
-    body = { operation: "add", value: -Number(value), reason };
-  }
+  if (action === "approve" || action === "revoke") body.reason = input.reason;
+  if (action === "credit-add") { path = "allowance"; body = { operation: "add", value: 1, reason: input.reason }; }
+  if (action === "credit-subtract") { path = "allowance"; body = { operation: "add", value: -input.value, reason: input.reason }; }
   if (action === "credit-set") {
     path = "allowance";
-    const value = window.prompt("Build credits", String(user.buildCredits || 0));
-    if (value === null || !/^\d+$/.test(value)) return;
-    body = { operation: "set", value: Number(value), reason: Number(value) < Number(user.buildCredits || 0) ? (window.prompt("Reason / Lý do giảm", "") || "") : "admin allocation" };
-    if (Number(value) < Number(user.buildCredits || 0) && !body.reason) return;
+    body = { operation: "set", value: input.value, reason: input.reason || "admin allocation" };
   }
   if (action === "unlimited") {
     path = "allowance";
     const next = !user.unlimited;
-    body = { operation: "unlimited", unlimited: next, reason: next ? "admin enabled unlimited" : (window.prompt("Reason / Lý do tắt unlimited", "") || "") };
-    if (!next && !body.reason) return;
+    body = { operation: "unlimited", unlimited: next, reason: input.reason || "admin enabled unlimited" };
   }
-  if (["revoke", "credit-subtract", "credit-set", "unlimited"].includes(action)
-      && !window.confirm("Confirm sensitive change / Xác nhận thao tác nhạy cảm?")) return;
   await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/${path}`, { method: "POST", body: JSON.stringify(body) });
   toast(t("userUpdated"));
   await loadAdminUsers({ reset: false });
@@ -1938,14 +2005,16 @@ async function runAdminUserAction(user, action) {
 }
 
 async function openAdminUser(telegramId) {
+  if (!$("#system")?.classList.contains("admin-user-open")) state.adminUserReturnScrollY = window.scrollY;
   const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}`);
   const user = payload.user; const events = Array.isArray(payload.events) ? payload.events : []; const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
   state.selectedAdminUserId = user.telegramId;
   const root = $("#user-detail-content");
   const header = document.createElement("header");
+  header.className = "admin-user-hero";
   const titleBox = document.createElement("div"); titleBox.className = "user-detail-title"; titleBox.append(profileAvatar(user));
-  const titleCopy = document.createElement("span"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h2"); title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleCopy.append(kicker, title); titleBox.append(titleCopy);
-  const close = document.createElement("button"); close.type = "button"; close.textContent = "×"; close.setAttribute("aria-label", t("closeDialog")); close.addEventListener("click", () => $("#user-detail-dialog").close()); header.append(titleBox, close);
+  const titleCopy = document.createElement("span"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h1"); title.id = "admin-user-page-title"; title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleCopy.append(kicker, title); titleBox.append(titleCopy);
+  const status = document.createElement("span"); status.className = `access-badge ${user.accessStatus}`; status.textContent = accessLabel(user.accessStatus); header.append(titleBox, status);
   const grid = document.createElement("div"); grid.className = "user-detail-grid";
   grid.append(
     detailFact(t("accessStatus"), accessLabel(user.accessStatus)), detailFact(t("allowance"), user.unlimited ? t("unlimited") : String(user.buildCredits || 0)),
@@ -1988,7 +2057,10 @@ async function openAdminUser(telegramId) {
   const jobHistory = document.createElement("div"); jobHistory.className = "user-audit";
   jobHistory.replaceChildren(...jobs.map((job) => { const article = document.createElement("article"); const name = document.createElement("strong"); name.textContent = `${job.job_id || job.jobId} · ${job.status}`; const detail = document.createElement("small"); detail.textContent = `${formatDate(job.created_at || job.createdAt)} · ${job.stage || "—"}`; article.append(name, detail); return article; }));
   root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, auditTitle, audit, loadMoreAudit);
-  $("#user-detail-dialog").showModal();
+  $("#admin-user-page").hidden = false;
+  $("#system").classList.add("admin-user-open");
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  requestAnimationFrame(() => $("#admin-user-back").focus());
 }
 
 function positiveInteger(input, errorKey) {
@@ -2795,6 +2867,7 @@ function bindEvents() {
   $("#user-prev").addEventListener("click", () => { state.adminUsersOffset = Math.max(0, state.adminUsersOffset - 25); loadAdminUsers().catch(() => {}); });
   $("#user-next").addEventListener("click", () => { state.adminUsersOffset += 25; loadAdminUsers().catch(() => {}); });
   $("#add-user").addEventListener("click", () => $("#user-create-dialog").showModal());
+  $("#admin-user-back").addEventListener("click", () => closeAdminUserPage());
   $("#user-create-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {

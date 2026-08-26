@@ -277,11 +277,15 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Navigation
 
-Desktop uses a sticky four-cell contents rail with consistent line icons. Mobile adapts Kyant0's LiquidBottomTabs material model as a five-slot web control: a highly translucent, low-blur capsule contains one refractive lens and a raised center avatar for the Profile destination. The top sheen is omitted so page content remains visible through the dock; labels and icons use near-black in light mode and white in dark mode. The lens settles with a smooth exponential ease-out without bounce. The Profile destination suppresses the lens and identifies its active state with an avatar-derived halo plus a partial circular rim. Reduced-motion preference removes lens travel, halo scale and rotating greeting transitions.
+Desktop uses a sticky four-cell contents rail with consistent line icons. Mobile adapts Kyant0's LiquidBottomTabs material model as a five-slot web control: a single highly translucent, low-blur shell forms a wide capsule with a smoothly shouldered center rise that contains the avatar. The shell outline and glass follow the same scalable silhouette at every mobile width; no separate ring or arc surrounds the avatar. The top sheen is omitted so page content remains visible through the dock; labels and icons use near-black in light mode and white in dark mode. The lens settles with a smooth exponential ease-out without bounce. The Profile destination suppresses the lens and may use only a soft avatar-derived halo, never a circular rim. Reduced-motion preference removes lens travel, halo scale and rotating greeting transitions.
 
 ### Authenticated Profile
 
 The center avatar opens a full Profile destination rather than an interrupting popup. On mobile the view fills the working canvas behind the dock. The avatar is centered and its enlarged image becomes a saturated, bounded blur behind grouped glass facts; initials use a deterministic Telegram-ID color. Highlight facts and two-column detail groups create hierarchy without table styling. Every user-facing profile field remains visible except Mini App Open count, while the raw photo URL remains visual data rather than copy.
+
+### Admin User Detail
+
+Selecting a user from System opens a dedicated second-level page inside the System destination. The System dock item remains active, a 44px back control restores the ledger and focus, and audit/job history use natural page scrolling instead of a modal viewport. Create-user, cache confirmation and sensitive access changes use the same solid tonal dialogs in light and dark mode; browser-native prompts are not used.
 
 ### Masthead Greeting
 

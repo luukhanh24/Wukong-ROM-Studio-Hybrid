@@ -77,6 +77,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_profile = False
     click_theme_dark = False
     click_cache_flow = False
+    click_admin_user = False
+    click_admin_action = False
     exercise_dock_header = False
     cache_clear_requests = 0
     admin_user = False
@@ -232,6 +234,32 @@ window.addEventListener('load', () => {{
       }}, 80);
     }};
     setTimeout(exerciseCache, 300);
+  }}
+  if ({str(self.click_admin_user).lower()}) {{
+    const openAdminProfile = () => {{
+      const button = document.querySelector('.user-open');
+      if (!button) {{ setTimeout(openAdminProfile, 50); return; }}
+      button.click();
+      setTimeout(() => {{
+        const page = document.querySelector('#admin-user-page');
+        document.body.dataset.adminUserPageOpen = String(page?.hidden === false && document.querySelector('#system')?.classList.contains('admin-user-open'));
+        document.body.dataset.adminUserDialogPresent = String(Boolean(document.querySelector('#user-detail-dialog')));
+      }}, 500);
+    }};
+    setTimeout(openAdminProfile, 500);
+  }}
+  if ({str(self.click_admin_action).lower()}) {{
+    const openAdminAction = () => {{
+      const button = document.querySelector('.user-detail-actions button:nth-child(2)');
+      if (!button) {{ setTimeout(openAdminAction, 50); return; }}
+      button.click();
+      setTimeout(() => {{
+        const dialog = document.querySelector('#admin-action-dialog');
+        document.body.dataset.adminActionDialogOpen = String(dialog?.open === true);
+        document.body.dataset.adminActionValueVisible = String(document.querySelector('#admin-action-value-field')?.hidden === false);
+      }}, 100);
+    }};
+    setTimeout(openAdminAction, 1200);
   }}
   if ({str(self.exercise_dock_header).lower()}) {{
     const exerciseDockHeader = () => {{
@@ -503,6 +531,8 @@ def _render_mini_app_in_chrome(
     click_profile: bool = False,
     click_theme_dark: bool = False,
     click_cache_flow: bool = False,
+    click_admin_user: bool = False,
+    click_admin_action: bool = False,
     exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
@@ -537,6 +567,8 @@ def _render_mini_app_in_chrome(
             "click_profile": click_profile,
             "click_theme_dark": click_theme_dark,
             "click_cache_flow": click_cache_flow,
+            "click_admin_user": click_admin_user,
+            "click_admin_action": click_admin_action,
             "exercise_dock_header": exercise_dock_header,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
@@ -872,6 +904,45 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("Không giới hạn lượt còn lại", dom)
         self.assertGreater(screenshot_size, 10_000)
 
+    def test_admin_user_opens_as_a_system_page_in_dark_mode(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="system",
+            admin_user=True,
+            click_admin_user=True,
+            click_theme_dark=True,
+        )
+
+        self.assertIn('id="admin-user-page"', html)
+        self.assertNotIn('id="user-detail-dialog"', html)
+        self.assertIn('data-admin-user-page-open="true"', dom)
+        self.assertIn('data-admin-user-dialog-present="false"', dom)
+        self.assertRegex(dom, r'<section class="[^"]*admin-user-open[^"]*" id="system"')
+        self.assertIn("New User", dom)
+        self.assertIn(':root[data-color-scheme="dark"] .user-dialog', styles)
+        self.assertIn(':root[data-color-scheme="dark"] .confirm-dialog', styles)
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn("window.prompt", script)
+        self.assertNotIn("window.confirm", script)
+        self.assertGreater(screenshot_size, 10_000)
+
+    def test_admin_sensitive_action_uses_themed_dialog(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="system",
+            admin_user=True,
+            click_admin_user=True,
+            click_admin_action=True,
+            click_theme_dark=True,
+        )
+
+        self.assertIn('data-admin-action-dialog-open="true"', dom)
+        self.assertIn('data-admin-action-value-visible="true"', dom)
+        self.assertRegex(dom, r'id="admin-action-dialog"[^>]* open')
+        self.assertIn("Trừ lượt", dom)
+
     def test_mobile_surface_is_distilled_and_maintenance_is_admin_only(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
@@ -889,10 +960,13 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('mods.className = "job-mod-grid"', script)
         self.assertNotIn('input.focus({ preventScroll: true });\n  toast(t("sourceCleared"))', script)
         self.assertIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
+        self.assertIn('class="dock-shell"', html)
+        self.assertIn('.bottom-nav .dock-shell', styles)
         self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
         self.assertIn("Promise.allSettled", script)
+        self.assertNotIn('data-i18n="secretBoundary"', html)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
