@@ -9,7 +9,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 
 from tools.export_mini_app_catalog import export_catalog
 from wukong.mod_release_versions import default_mod_release_version
@@ -321,6 +321,12 @@ window.addEventListener('load', () => {{
                 "application/javascript; charset=utf-8",
             )
             return
+        if path == "/fflate.js":
+            self._send(
+                (ROOT / "telegram_mini_app" / "fflate.js").read_bytes(),
+                "application/javascript; charset=utf-8",
+            )
+            return
         if path.startswith("/assets/"):
             asset = ROOT / "telegram_mini_app" / path.lstrip("/")
             if asset.is_file():
@@ -354,6 +360,37 @@ window.addEventListener('load', () => {{
             if self.jobs_fixture and self.click_other_job:
                 jobs.append(self._fixture_archived_job())
             self._send(json.dumps({"jobs": jobs}).encode(), "application/json")
+            return
+        if path == "/v1/sync":
+            jobs = [self._fixture_job()] if self.jobs_fixture else []
+            if self.jobs_fixture and self.click_other_job:
+                jobs.append(self._fixture_archived_job())
+            query = parse_qs(urlsplit(self.path).query)
+            selected = str((query.get("jobId") or [""])[0])
+            after = int(str((query.get("after") or ["0"])[0]) or "0")
+            if selected == "archived-job" and self.jobs_fixture and self.click_other_job:
+                active_job = self._fixture_archived_job()
+                events = [
+                    {"sequence": 1, "jobId": "archived-job", "timestamp": "2026-08-24T01:00:00Z", "type": "submitted"},
+                    {"sequence": 2, "jobId": "archived-job", "timestamp": "2026-08-24T01:04:00Z", "type": "step", "step": "package", "status": "success"},
+                ]
+            elif self.jobs_fixture:
+                active_job = self._fixture_job()
+                events = [
+                    {"sequence": 1, "jobId": "fixture-job", "timestamp": "2026-08-25T01:00:00Z", "type": "submitted", "runner": "github-hosted"},
+                    {"sequence": 2, "jobId": "fixture-job", "timestamp": "2026-08-25T01:01:00Z", "type": "plan", "steps": ["inspect_rom", "debloat", "apply_mod"]},
+                    {"sequence": 3, "jobId": "fixture-job", "timestamp": "2026-08-25T01:02:00Z", "type": "step", "step": "inspect_rom", "status": "success", "details": {"durationSeconds": 4.2, "phase": "Plus"}},
+                    {"sequence": 4, "jobId": "fixture-job", "timestamp": "2026-08-25T01:03:00Z", "type": "step", "step": "debloat", "status": "running", "message": "Đang quét 42 đường dẫn hệ thống", "details": {"removedCount": 17, "notFoundCount": 2, "phase": "Plus"}},
+                ]
+            else:
+                active_job = None
+                events = []
+            self._send(json.dumps({
+                "user": self._fixture_user(),
+                "jobs": jobs,
+                "activeJob": active_job,
+                "events": [event for event in events if int(event["sequence"]) > after],
+            }).encode(), "application/json")
             return
         if path == "/v1/me":
             self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
@@ -759,7 +796,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("event-group", script)
         self.assertIn("activeEventsJobId", script)
         self.assertIn("jobDetailRequestId", script)
-        self.assertIn("events?after=${after}", script)
+        self.assertIn("/v1/sync?jobId=${encodeURIComponent(jobId)}&after=${after}", script)
         self.assertIn("const unique = new Map()", script)
         self.assertNotIn("githubRunLink", script)
         self.assertNotIn("external_run_id", script)

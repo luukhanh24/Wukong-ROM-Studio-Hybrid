@@ -29,6 +29,13 @@ Kyant0's AndroidLiquidGlass `LiquidBottomTabs` implementation. AndroidLiquidGlas
 is licensed under Apache License 2.0. Source:
 <https://github.com/Kyant0/AndroidLiquidGlass>.
 
+## fflate
+
+The Telegram Mini App vendors fflate 0.8.3 for client-side ZIP/ZIP64 metadata
+inspection. fflate is licensed under the MIT License; its license text is
+retained at `telegram_mini_app/fflate.LICENSE.txt`. Source:
+<https://github.com/101arrowz/fflate/tree/v0.8.3>.
+
 ## Android platform tools and filesystem utilities
 
 The repository/runtime includes or invokes Android platform tools, e2fsprogs,

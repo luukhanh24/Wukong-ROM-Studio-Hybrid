@@ -677,6 +677,7 @@ class TelegramMiniAppAPI:
         telegram_webhook_secret: str | None = None,
         actions_callback_secret: str | None = None,
         readiness_provider: Callable[[], bool] | None = None,
+        read_only_provider: Callable[[], bool] | None = None,
         max_init_data_age_seconds: int = 3600,
         probe_cache_seconds: int = 15 * 60,
         session_store: TelegramMiniAppSessionStore | None = None,
@@ -716,6 +717,7 @@ class TelegramMiniAppAPI:
                 daemon=True,
             ).start()
         self.readiness_provider = readiness_provider or (lambda: True)
+        self.read_only_provider = read_only_provider or (lambda: False)
         self.max_init_data_age_seconds = max(60, max_init_data_age_seconds)
         self.probe_cache_seconds = max(60, probe_cache_seconds)
         self.session_store = session_store or TelegramMiniAppSessionStore()
@@ -756,6 +758,16 @@ class TelegramMiniAppAPI:
         def authenticate() -> Response | None:
             if request.path in {"/healthz", "/readyz"}:
                 return None
+            if (
+                request.method in {"POST", "PUT", "PATCH", "DELETE"}
+                and bool(self.read_only_provider())
+            ):
+                return jsonify(
+                    {
+                        "error": "Control plane is in read-only maintenance mode",
+                        "code": "maintenance_read_only",
+                    }
+                ), 503
             if request.path == "/internal/actions/callback":
                 authorization = request.headers.get("Authorization", "")
                 scheme, separator, credential = authorization.partition(" ")

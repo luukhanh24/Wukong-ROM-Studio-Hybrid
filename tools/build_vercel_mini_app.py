@@ -9,7 +9,14 @@ from urllib.parse import quote, urlsplit
 from tools.export_mini_app_catalog import export_catalog
 
 
-ASSET_NAMES = ("index.html", "styles.css", "app.js", "WukongStudio.svg")
+ASSET_NAMES = (
+    "index.html",
+    "styles.css",
+    "app.js",
+    "fflate.js",
+    "fflate.LICENSE.txt",
+    "WukongStudio.svg",
+)
 
 
 def _api_origin(value: str) -> str:

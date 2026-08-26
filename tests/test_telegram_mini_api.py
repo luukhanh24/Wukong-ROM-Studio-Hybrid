@@ -983,6 +983,29 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual("c" * 40, healthy.json["release"])
         self.assertEqual("postgresql", healthy.json["stateBackend"])
 
+    def test_read_only_maintenance_blocks_writes_but_keeps_reads_available(self) -> None:
+        read_only = True
+        api = TelegramMiniAppAPI(
+            bot_token=TOKEN,
+            allowed_origin=f"{ORIGIN}/Wukong-ROM-Studio-Hybrid/",
+            access=self.access,
+            orchestrator=self.orchestrator,
+            runtime=self.runtime,
+            catalog_provider=lambda: {"devices": []},
+            diagnostics_provider=lambda: {"ready": True},
+            source_probe_provider=self.probe,
+            read_only_provider=lambda: read_only,
+            state_backend="postgresql",
+        )
+        client = api.app.test_client()
+
+        read = client.get("/v1/me", headers=self.headers(42))
+        write = client.post("/v1/jobs", headers=self.headers(42), json=self.recipe())
+
+        self.assertEqual(200, read.status_code)
+        self.assertEqual(503, write.status_code)
+        self.assertEqual("maintenance_read_only", write.json["code"])
+
     def test_probe_create_list_detail_events_and_ownership(self) -> None:
         probe = self.client.post(
             "/v1/sources/probe",
