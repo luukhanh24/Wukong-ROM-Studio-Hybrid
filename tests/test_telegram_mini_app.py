@@ -80,6 +80,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_admin_user = False
     click_admin_action = False
     exercise_dock_header = False
+    exercise_liquid_drag = False
     cache_clear_requests = 0
     admin_user = False
     pending_user = False
@@ -283,6 +284,30 @@ window.addEventListener('load', () => {{
       }}, 6500);
     }};
     setTimeout(exerciseDockHeader, 350);
+  }}
+  if ({str(self.exercise_liquid_drag).lower()}) {{
+    const exerciseLiquidDrag = () => {{
+      const nav = document.querySelector('.bottom-nav');
+      if (!nav || nav.hidden || !nav.clientWidth) {{ setTimeout(exerciseLiquidDrag, 50); return; }}
+      nav.setPointerCapture = () => {{}};
+      nav.releasePointerCapture = () => {{}};
+      const tabWidth = (nav.clientWidth - 8) / 5;
+      const startX = nav.getBoundingClientRect().left + tabWidth / 2;
+      const y = nav.getBoundingClientRect().top + 36;
+      nav.dispatchEvent(new PointerEvent('pointerdown', {{ bubbles:true, pointerId:41, pointerType:'touch', button:0, clientX:startX, clientY:y }}));
+      nav.dispatchEvent(new PointerEvent('pointermove', {{ bubbles:true, pointerId:41, pointerType:'touch', button:0, clientX:startX + tabWidth * 2.8, clientY:y }}));
+      document.body.dataset.liquidDragPress = nav.style.getPropertyValue('--liquid-press-progress');
+      document.body.dataset.liquidDragScaleX = nav.style.getPropertyValue('--liquid-lens-scale-x');
+      document.body.dataset.liquidDragScaleY = nav.style.getPropertyValue('--liquid-lens-scale-y');
+      document.body.dataset.liquidDragPanelOffset = nav.style.getPropertyValue('--panel-offset');
+      nav.dispatchEvent(new PointerEvent('pointerup', {{ bubbles:true, pointerId:41, pointerType:'touch', button:0, clientX:startX + tabWidth * 2.8, clientY:y }}));
+      setTimeout(() => {{
+        document.body.dataset.liquidDragTarget = document.querySelector('.bottom-nav [aria-current="page"]')?.dataset.nav || '';
+        document.body.dataset.liquidDragSettledScaleX = nav.style.getPropertyValue('--liquid-lens-scale-x');
+        document.body.dataset.liquidDragSettledPanelOffset = nav.style.getPropertyValue('--panel-offset');
+      }}, 700);
+    }};
+    setTimeout(exerciseLiquidDrag, 350);
   }}
   setTimeout(() => {{
     document.body.dataset.viewportWidth = String(document.documentElement.clientWidth);
@@ -557,6 +582,7 @@ def _render_mini_app_in_chrome(
     click_admin_user: bool = False,
     click_admin_action: bool = False,
     exercise_dock_header: bool = False,
+    exercise_liquid_drag: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
     screenshot_output: Path | None = None,
@@ -593,6 +619,7 @@ def _render_mini_app_in_chrome(
             "click_admin_user": click_admin_user,
             "click_admin_action": click_admin_action,
             "exercise_dock_header": exercise_dock_header,
+            "exercise_liquid_drag": exercise_liquid_drag,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
             "pending_user": pending_user,
@@ -984,12 +1011,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn('input.focus({ preventScroll: true });\n  toast(t("sourceCleared"))', script)
         self.assertIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
         self.assertNotIn('class="dock-shell"', html)
-        self.assertNotIn('dock-shell-clip', html)
+        self.assertIn('dock-shell-clip', html)
         self.assertIn('--dock-cap-size:76px', styles)
-        self.assertIn('radial-gradient(circle 38px at 50% 38px', styles)
-        self.assertIn('radial-gradient(circle 29px at 29px 57px', styles)
-        self.assertIn('background:rgba(255,255,255,.075)', styles)
-        self.assertIn('backdrop-filter:blur(22px) saturate(1.75) contrast(1.08)', styles)
+        self.assertIn('id="dock-shell-path"', html)
+        self.assertIn('background:rgba(250,250,250,.4)', styles)
+        self.assertIn('backdrop-filter:blur(8px) saturate(1.6) contrast(1.04)', styles)
         self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
@@ -1025,14 +1051,56 @@ class TelegramMiniAppTests(unittest.TestCase):
                     self.assertIsNotNone(match, name)
                     return float(match.group(1))
 
-                self.assertLessEqual(metric("dock-surface-alpha"), 0.10)
-                self.assertGreaterEqual(metric("dock-surface-blur"), 20)
-                self.assertLessEqual(metric("dock-lens-alpha"), 0.10)
-                self.assertGreaterEqual(metric("dock-lens-blur"), 20)
+                self.assertAlmostEqual(metric("dock-surface-alpha"), 0.40, places=2)
+                self.assertAlmostEqual(metric("dock-surface-blur"), 8, places=1)
+                self.assertAlmostEqual(metric("dock-lens-alpha"), 0.10, places=2)
+                self.assertAlmostEqual(metric("dock-lens-blur"), 8, places=1)
                 self.assertGreaterEqual(metric("dock-left"), 8)
                 self.assertGreaterEqual(metric("dock-right-gap"), 8)
                 self.assertGreaterEqual(metric("dock-fab-gap"), 12)
                 self.assertGreaterEqual(metric("mobile-main-padding-bottom"), 180)
+
+    def test_mobile_dock_ports_liquid_bottom_tabs_material_and_motion(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="dock-shell-path"', html)
+        self.assertIn('class="dock-rim"', html)
+        self.assertIn("updateDockShellPath", script)
+        self.assertIn("const pressedScale = 78 / 56;", script)
+        self.assertIn("--liquid-press-progress", script)
+        self.assertIn("--liquid-lens-scale-x", script)
+        self.assertIn("--liquid-lens-scale-y", script)
+        self.assertIn("--liquid-panel-scale", script)
+        self.assertIn("--panel-offset", script)
+        self.assertIn("velocity * .75", script)
+        self.assertIn("velocity * .25", script)
+        self.assertIn("rgba(250,250,250,.4)", styles)
+        self.assertIn("rgba(18,18,18,.4)", styles)
+        self.assertIn("backdrop-filter:blur(8px) saturate(1.6)", styles)
+        self.assertIn("scaleX(var(--liquid-lens-scale-x))", styles)
+        self.assertIn("scaleY(var(--liquid-lens-scale-y))", styles)
+        self.assertIn(".bottom-nav.is-pressed .liquid-lens", styles)
+
+    def test_mobile_liquid_drag_deforms_lens_and_settles_on_target(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            exercise_liquid_drag=True,
+            window_width=562,
+        )
+
+        def metric(name: str) -> float:
+            match = re.search(rf'data-{name}="(-?[\d.]+)(?:px)?"', dom)
+            self.assertIsNotNone(match, name)
+            return float(match.group(1))
+
+        self.assertEqual(metric("liquid-drag-press"), 1)
+        self.assertGreater(metric("liquid-drag-scale-x"), metric("liquid-drag-scale-y"))
+        self.assertGreater(metric("liquid-drag-panel-offset"), 0)
+        self.assertIn('data-liquid-drag-target="catalog"', dom)
+        self.assertAlmostEqual(metric("liquid-drag-settled-scale-x"), 1, places=2)
+        self.assertAlmostEqual(metric("liquid-drag-settled-panel-offset"), 0, places=2)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(

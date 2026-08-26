@@ -405,6 +405,10 @@ const state = {
   expandedLogJobId: "",
   liquidPosition: 0,
   liquidAnimationFrame: 0,
+  liquidSettleTimer: 0,
+  liquidVelocity: 0,
+  liquidPressProgress: 0,
+  liquidPanelOffset: 0,
   liquidSuppressClick: false,
   greetingIndex: 0,
   greetingTimer: 0,
@@ -645,13 +649,63 @@ function nearestLiquidSlot(value) {
   return liquidSlots.reduce((best, slot) => Math.abs(slot - value) < Math.abs(best - value) ? slot : best, liquidSlots[0]);
 }
 
-function setLiquidPosition(value, velocity = 0, pressed = false) {
+function clampLiquid(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function updateDockShellPath() {
+  const nav = $(".bottom-nav");
+  const shellPath = $("#dock-shell-path");
+  const rimPath = $("#dock-rim-path");
+  if (!nav || !shellPath || !rimPath || innerWidth > 860) return;
+  const width = nav.getBoundingClientRect().width;
+  if (!width) return;
+  const center = width / 2;
+  const leftShoulder = center - 52;
+  const rightShoulder = center + 52;
+  const path = [
+    "M29 28",
+    `H${leftShoulder}`,
+    `C${center - 44} 28 ${center - 42} 22 ${center - 36} 14`,
+    `C${center - 27} 4 ${center - 16} 0 ${center} 0`,
+    `C${center + 16} 0 ${center + 27} 4 ${center + 36} 14`,
+    `C${center + 42} 22 ${center + 44} 28 ${rightShoulder} 28`,
+    `H${width - 29}`,
+    `A29 29 0 0 1 ${width} 57`,
+    `A29 29 0 0 1 ${width - 29} 86`,
+    "H29",
+    "A29 29 0 0 1 0 57",
+    "A29 29 0 0 1 29 28Z"
+  ].join(" ");
+  shellPath.setAttribute("d", path);
+  rimPath.setAttribute("d", path);
+  $(".dock-rim")?.setAttribute("viewBox", `0 0 ${width} 86`);
+}
+
+function setLiquidPosition(value, velocity = 0, pressProgress = 0, panelOffset = 0) {
   const nav = $(".bottom-nav");
   const position = Math.max(0, Math.min(4, Number(value) || 0));
+  const progress = clampLiquid(Number(pressProgress) || 0, 0, 1);
+  const pressedScale = 78 / 56;
+  const velocityX = clampLiquid(velocity * .75, -.2, .2);
+  const velocityY = clampLiquid(velocity * .25, -.2, .2);
+  const baseScale = 1 + (pressedScale - 1) * progress;
+  const lensScaleX = baseScale / (1 - velocityX);
+  const lensScaleY = baseScale * (1 - velocityY);
+  const panelScale = nav ? 1 + (16 / Math.max(nav.clientWidth, 1)) * progress : 1;
   state.liquidPosition = position;
+  state.liquidVelocity = velocity;
+  state.liquidPressProgress = progress;
+  state.liquidPanelOffset = panelOffset;
   nav?.style.setProperty("--liquid-position", String(position));
   nav?.style.setProperty("--liquid-offset", `${position * 100}%`);
-  nav?.style.setProperty("--liquid-press", pressed ? ".97" : "1");
+  nav?.style.setProperty("--liquid-press", String(baseScale));
+  nav?.style.setProperty("--liquid-press-progress", String(progress));
+  nav?.style.setProperty("--liquid-lens-scale-x", String(lensScaleX));
+  nav?.style.setProperty("--liquid-lens-scale-y", String(lensScaleY));
+  nav?.style.setProperty("--liquid-panel-scale", String(panelScale));
+  nav?.style.setProperty("--liquid-tab-scale", String(1 + .2 * progress));
+  nav?.style.setProperty("--panel-offset", `${panelOffset}px`);
 }
 
 function easeOutQuint(value) {
@@ -660,21 +714,37 @@ function easeOutQuint(value) {
 
 function animateLiquidPosition(target) {
   cancelAnimationFrame(state.liquidAnimationFrame);
+  clearTimeout(state.liquidSettleTimer);
   if (prefersReducedMotion()) { setLiquidPosition(target); return; }
   const start = state.liquidPosition;
   const distance = target - start;
+  const startVelocity = state.liquidVelocity;
+  const startPress = state.liquidPressProgress;
+  const startPanelOffset = state.liquidPanelOffset;
   const duration = 360;
   const startedAt = performance.now();
   const tick = (now) => {
     const progress = Math.min(1, (now - startedAt) / duration);
-    setLiquidPosition(start + distance * easeOutQuint(progress));
+    const eased = easeOutQuint(progress);
+    const remaining = 1 - eased;
+    setLiquidPosition(
+      start + distance * eased,
+      startVelocity * remaining,
+      startPress * remaining,
+      startPanelOffset * remaining
+    );
     if (progress >= 1) {
+      clearTimeout(state.liquidSettleTimer);
       setLiquidPosition(target);
       return;
     }
     state.liquidAnimationFrame = requestAnimationFrame(tick);
   };
   state.liquidAnimationFrame = requestAnimationFrame(tick);
+  state.liquidSettleTimer = setTimeout(() => {
+    cancelAnimationFrame(state.liquidAnimationFrame);
+    setLiquidPosition(target);
+  }, duration + 80);
 }
 
 function navigate(name, smooth = true) {
@@ -713,6 +783,10 @@ function bindLiquidBottomTabs() {
   const nav = $(".bottom-nav");
   const buttons = $$(".bottom-nav [data-nav]");
   if (!nav || !buttons.length || !("PointerEvent" in window)) return;
+  updateDockShellPath();
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(updateDockShellPath).observe(nav);
+  }
   let pointerId = null;
   let startX = 0;
   let startPosition = 0;
@@ -730,6 +804,7 @@ function bindLiquidBottomTabs() {
   nav.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 && event.pointerType !== "touch") return;
     cancelAnimationFrame(state.liquidAnimationFrame);
+    clearTimeout(state.liquidSettleTimer);
     pointerId = event.pointerId;
     startX = lastX = event.clientX;
     lastTime = performance.now();
@@ -738,7 +813,7 @@ function bindLiquidBottomTabs() {
     velocity = 0;
     nav.classList.add("is-pressed");
     nav.setPointerCapture?.(pointerId);
-    setLiquidPosition(startPosition, 0, true);
+    setLiquidPosition(startPosition, 0, 1, 0);
   });
   nav.addEventListener("pointermove", (event) => {
     if (event.pointerId !== pointerId) return;
@@ -749,8 +824,11 @@ function bindLiquidBottomTabs() {
     nav.classList.toggle("profile-dragging", dragged && nav.classList.contains("profile-active"));
     const instantaneous = ((event.clientX - lastX) / Math.max(8, now - lastTime)) * 16 / tabWidth;
     velocity = velocity * .6 + instantaneous * .4;
-    const position = Math.max(0, Math.min(4, startPosition + delta / tabWidth));
-    setLiquidPosition(position, velocity, true);
+    const rawPosition = startPosition + delta / tabWidth;
+    const position = Math.max(0, Math.min(4, rawPosition));
+    const dragFraction = clampLiquid(delta / Math.max(nav.clientWidth, 1), -1, 1);
+    const panelOffset = 4 * Math.sign(dragFraction) * easeOutQuint(Math.abs(dragFraction));
+    setLiquidPosition(position, velocity, 1, panelOffset);
     lastX = event.clientX;
     lastTime = now;
   });
@@ -766,7 +844,7 @@ function bindLiquidBottomTabs() {
       state.liquidSuppressClick = true;
       const targetButton = buttons.find((button) => Number(button.dataset.slot) === target);
       if (targetButton) navigate(targetButton.dataset.nav, false);
-      setLiquidPosition(releasedPosition, velocity, true);
+      setLiquidPosition(releasedPosition, velocity, 1, state.liquidPanelOffset);
       animateLiquidPosition(target);
     } else {
       const active = buttons.find((button) => button.classList.contains("active"));
@@ -2793,7 +2871,10 @@ function bindEvents() {
   let greetingResizeFrame = 0;
   window.addEventListener("resize", () => {
     cancelAnimationFrame(greetingResizeFrame);
-    greetingResizeFrame = requestAnimationFrame(updateGreetingOverflow);
+    greetingResizeFrame = requestAnimationFrame(() => {
+      updateGreetingOverflow();
+      updateDockShellPath();
+    });
   }, { passive: true });
   document.fonts?.ready?.then(updateGreetingOverflow).catch(() => {});
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
