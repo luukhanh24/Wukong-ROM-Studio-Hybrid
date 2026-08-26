@@ -786,6 +786,7 @@ function updateDispatchFab() {
   const fab = $("#dispatch-fab");
   if (!fab) return;
   const show = $("#build")?.classList.contains("active") && !state.docketInView;
+  $("main")?.classList.toggle("dispatch-fab-clearance", Boolean(show));
   clearTimeout(state.dispatchFabHideTimer);
   if (show) {
     fab.hidden = false;

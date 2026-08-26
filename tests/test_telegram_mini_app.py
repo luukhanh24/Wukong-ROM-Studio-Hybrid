@@ -287,10 +287,29 @@ window.addEventListener('load', () => {{
   setTimeout(() => {{
     document.body.dataset.viewportWidth = String(document.documentElement.clientWidth);
     document.body.dataset.documentWidth = String(document.documentElement.scrollWidth);
-    const dockCap = document.querySelector('.dock-shell .dock-cap');
     const dockAvatar = document.querySelector('#dock-profile');
-    document.body.dataset.dockCapDiameter = String(Number(dockCap?.getAttribute('r') || 0) * 2);
+    const dock = document.querySelector('.bottom-nav');
+    const dockSurface = document.querySelector('.liquid-surface');
+    const dispatchFab = document.querySelector('.dispatch-fab');
+    const surfaceStyle = dockSurface ? getComputedStyle(dockSurface) : null;
+    const surfaceColor = surfaceStyle?.backgroundColor.match(/[0-9.]+/g) || [];
+    const surfaceBlur = (surfaceStyle?.backdropFilter || surfaceStyle?.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
+    const dockRect = dock?.getBoundingClientRect();
+    const shellRect = dockSurface?.getBoundingClientRect();
+    const fabRect = dispatchFab?.getBoundingClientRect();
+    const lensStyle = getComputedStyle(document.querySelector('.bottom-nav .liquid-lens'));
+    const lensColor = lensStyle.backgroundColor.match(/[0-9.]+/g) || [];
+    const lensBlur = (lensStyle.backdropFilter || lensStyle.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
+    document.body.dataset.dockCapDiameter = String(Number.parseFloat(getComputedStyle(dock).getPropertyValue('--dock-cap-size')) || 0);
     document.body.dataset.dockAvatarWidth = String(Math.round(dockAvatar?.getBoundingClientRect().width || 0));
+    document.body.dataset.dockSurfaceAlpha = String(Number(surfaceColor.at(-1) || 1));
+    document.body.dataset.dockSurfaceBlur = String(Number(surfaceBlur?.[1] || 0));
+    document.body.dataset.dockLeft = String(Math.round(dockRect?.left || 0));
+    document.body.dataset.dockRightGap = String(Math.round(document.documentElement.clientWidth - (dockRect?.right || 0)));
+    document.body.dataset.dockFabGap = String(Math.round((shellRect?.top || 0) - (fabRect?.bottom || 0)));
+    document.body.dataset.dockLensAlpha = String(Number(lensColor.at(-1) || 1));
+    document.body.dataset.dockLensBlur = String(Number(lensBlur?.[1] || 0));
+    document.body.dataset.mobileMainPaddingBottom = String(Number.parseFloat(getComputedStyle(document.querySelector('main')).paddingBottom) || 0);
   }}, 1200);
 }});
 """
@@ -964,14 +983,13 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('mods.className = "job-mod-grid"', script)
         self.assertNotIn('input.focus({ preventScroll: true });\n  toast(t("sourceCleared"))', script)
         self.assertIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
-        self.assertIn('class="dock-shell"', html)
-        self.assertIn('.bottom-nav .dock-shell', styles)
-        self.assertIn('clipPathUnits="userSpaceOnUse"', html)
-        self.assertIn('<circle cx="50%" cy="38" r="38"/>', html)
-        self.assertIn('class="dock-cap" cx="50%" cy="38" r="38"', html)
-        self.assertIn('background:rgba(255,255,255,.18)', styles)
-        self.assertIn('backdrop-filter:blur(16px) saturate(1.6) contrast(1.06)', styles)
-        self.assertRegex(styles, r'\.bottom-nav \.dock-shell \{[^}]*inset:-14px 0 0[^}]*height:86px')
+        self.assertNotIn('class="dock-shell"', html)
+        self.assertNotIn('dock-shell-clip', html)
+        self.assertIn('--dock-cap-size:76px', styles)
+        self.assertIn('radial-gradient(circle 38px at 50% 38px', styles)
+        self.assertIn('radial-gradient(circle 29px at 29px 57px', styles)
+        self.assertIn('background:rgba(255,255,255,.075)', styles)
+        self.assertIn('backdrop-filter:blur(22px) saturate(1.75) contrast(1.08)', styles)
         self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
@@ -992,6 +1010,29 @@ class TelegramMiniAppTests(unittest.TestCase):
                 self.assertEqual(int(cap.group(1)), 76)
                 self.assertLessEqual(int(avatar.group(1)), 60)
                 self.assertLessEqual(int(cap.group(1)) - int(avatar.group(1)), 20)
+
+    def test_mobile_dock_material_remains_translucent_and_clears_build_action(self) -> None:
+        for dark_mode in (False, True):
+            with self.subTest(dark_mode=dark_mode):
+                dom, _ = _render_mini_app_in_chrome(
+                    api_enabled=True,
+                    click_theme_dark=dark_mode,
+                    window_width=562,
+                )
+
+                def metric(name: str) -> float:
+                    match = re.search(rf'data-{name}="(-?[\d.]+)"', dom)
+                    self.assertIsNotNone(match, name)
+                    return float(match.group(1))
+
+                self.assertLessEqual(metric("dock-surface-alpha"), 0.10)
+                self.assertGreaterEqual(metric("dock-surface-blur"), 20)
+                self.assertLessEqual(metric("dock-lens-alpha"), 0.10)
+                self.assertGreaterEqual(metric("dock-lens-blur"), 20)
+                self.assertGreaterEqual(metric("dock-left"), 8)
+                self.assertGreaterEqual(metric("dock-right-gap"), 8)
+                self.assertGreaterEqual(metric("dock-fab-gap"), 12)
+                self.assertGreaterEqual(metric("mobile-main-padding-bottom"), 180)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
