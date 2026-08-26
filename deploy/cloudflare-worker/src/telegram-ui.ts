@@ -345,15 +345,23 @@ export async function telegramUi(
     }
     if (["/account", "/me"].includes(command) || action === "account") return accountMessage(user, language);
     if (command === "/help") return helpMessage(user.role, language);
-    if (command === "/jobs" || action === "jobs") return jobsMenu(env, user, language);
+    if (command === "/jobs" || action === "jobs") return await jobsMenu(env, user, language);
     const callbackJob = action.match(/^(job|events|artifact|cancel|resume):(.+)$/);
-    if (callbackJob) return jobAction(env, user, language, callbackJob[1]!, callbackJob[2]!);
+    if (callbackJob) return await jobAction(env, user, language, callbackJob[1]!, callbackJob[2]!);
     if (["/job", "/events", "/artifacts", "/cancel", "/resume"].includes(command)) {
       if (!argument) return { text: `Cú pháp: ${command} <job_id>` };
-      return jobAction(env, user, language, command === "/artifacts" ? "artifact" : command.slice(1), argument);
+      return await jobAction(
+        env,
+        user,
+        language,
+        command === "/artifacts" ? "artifact" : command.slice(1),
+        argument
+      );
     }
-    if (command === "/cloud" || action === "cloud") return cloudMenu(env, language, argument || "sources");
-    if (command === "/diagnostics" || action === "diag") return diagnostics(env, language);
+    if (command === "/cloud" || action === "cloud") {
+      return await cloudMenu(env, language, argument || "sources");
+    }
+    if (command === "/diagnostics" || action === "diag") return await diagnostics(env, language);
     if (command === "/catalog") {
       const catalog = catalogPayload();
       return {

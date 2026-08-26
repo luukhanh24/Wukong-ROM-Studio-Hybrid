@@ -87,6 +87,8 @@ jobs:
       WUKONG_GOOGLE_CLIENT_ID: ${{ secrets.WUKONG_GOOGLE_CLIENT_ID }}
       WUKONG_GOOGLE_CLIENT_SECRET: ${{ secrets.WUKONG_GOOGLE_CLIENT_SECRET }}
       WUKONG_GOOGLE_REFRESH_TOKEN: ${{ secrets.WUKONG_GOOGLE_REFRESH_TOKEN }}
+      RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+      WUKONG_RCLONE_REMOTE: ${{ vars.WUKONG_RCLONE_REMOTE }}
     defaults:
       run:
         working-directory: deploy/cloudflare-worker
@@ -152,7 +154,7 @@ jobs:
           set -euo pipefail
           umask 077
           python - "$RUNNER_TEMP/wukong-worker-secrets.json" <<'PY'
-          import json, os, sys
+          import base64, configparser, json, os, sys
           names = (
               "WUKONG_TELEGRAM_BOT_TOKEN",
               "WUKONG_TELEGRAM_WEBHOOK_SECRET",
@@ -162,8 +164,31 @@ jobs:
               "WUKONG_GOOGLE_CLIENT_SECRET",
               "WUKONG_GOOGLE_REFRESH_TOKEN",
           )
+          secrets = {name: os.environ.get(name, "") for name in names}
+          encoded = os.environ.get("RCLONE_CONFIG_B64", "").strip()
+          if encoded:
+              parser = configparser.RawConfigParser()
+              parser.read_string(base64.b64decode(encoded, validate=True).decode("utf-8"))
+              preferred = os.environ.get("WUKONG_RCLONE_REMOTE", "").strip().rstrip(":")
+              candidates = [
+                  section for section in parser.sections()
+                  if parser.get(section, "type", fallback="").strip() == "drive"
+              ]
+              section = preferred if preferred in candidates else (candidates[0] if candidates else "")
+              if section:
+                  token = json.loads(parser.get(section, "token", fallback="{}"))
+                  synchronized = {
+                      "WUKONG_GOOGLE_CLIENT_ID": parser.get(section, "client_id", fallback="").strip(),
+                      "WUKONG_GOOGLE_CLIENT_SECRET": parser.get(section, "client_secret", fallback="").strip(),
+                      "WUKONG_GOOGLE_REFRESH_TOKEN": str(token.get("refresh_token") or "").strip(),
+                  }
+                  if all(synchronized.values()):
+                      secrets.update(synchronized)
+          missing = [name for name, value in secrets.items() if not value]
+          if missing:
+              raise SystemExit("Missing required Worker secret configuration")
           with open(sys.argv[1], "w", encoding="utf-8") as output:
-              json.dump({name: os.environ.get(name, "") for name in names}, output)
+              json.dump(secrets, output)
           PY
           npx wrangler secret bulk "$RUNNER_TEMP/wukong-worker-secrets.json" --env "$TARGET"
           rm -f "$RUNNER_TEMP/wukong-worker-secrets.json"
