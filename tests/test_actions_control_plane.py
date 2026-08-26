@@ -11,6 +11,26 @@ from tools import actions_control_plane
 
 
 class ActionsControlPlaneTests(unittest.TestCase):
+    def test_requests_use_an_explicit_cloudflare_compatible_user_agent(self) -> None:
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = b'{"ok":true}'
+        response.__enter__.return_value.status = 200
+        with mock.patch.object(
+            actions_control_plane.urllib.request,
+            "urlopen",
+            return_value=response,
+        ) as urlopen:
+            result = actions_control_plane._request_json(
+                "https://worker.example/internal/actions/bootstrap",
+                {"jobId": "user-agent-probe", "runId": 42},
+                headers={},
+                attempts=1,
+            )
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual("wukong-actions-control-plane/1.0", request.get_header("User-agent"))
+        self.assertEqual({"ok": True}, result)
+
     def test_http_error_includes_bounded_control_plane_json(self) -> None:
         error = urllib.error.HTTPError(
             "https://worker.example/internal/actions/bootstrap",
