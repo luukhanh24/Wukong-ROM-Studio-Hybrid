@@ -127,9 +127,12 @@ async function validateDestination(value: string): Promise<URL> {
 
 async function secureFetch(
   initialUrl: string,
-  init: RequestInit
+  init: RequestInit,
+  initialDestinationValidated = false
 ): Promise<{ response: Response; url: URL }> {
-  let url = await validateDestination(initialUrl);
+  let url = initialDestinationValidated
+    ? validatedUrl(initialUrl)
+    : await validateDestination(initialUrl);
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
     const response = await fetch(url, { ...init, redirect: "manual" });
     if (![301, 302, 303, 307, 308].includes(response.status)) {
@@ -140,6 +143,7 @@ async function secureFetch(
     if (redirectCount === MAX_REDIRECTS) {
       throw new SourceProbeHttpError("ROM source has too many redirects");
     }
+    await response.body?.cancel();
     url = await validateDestination(new URL(location, url).toString());
   }
   throw new SourceProbeHttpError("ROM source has too many redirects");
@@ -171,6 +175,8 @@ function filenameFrom(response: Response, url: URL): string {
 function checksumHeader(response: Response): string {
   const contentMd5 = response.headers.get("Content-MD5")?.trim();
   if (contentMd5) return contentMd5;
+  const oplusMd5 = response.headers.get("X-Amz-Meta-Filemd5")?.trim();
+  if (oplusMd5) return oplusMd5;
   const googleHash = response.headers.get("X-Goog-Hash") ?? "";
   return googleHash.split(",").map((value) => value.trim())
     .find((value) => value.toLowerCase().startsWith("md5="))
@@ -218,7 +224,14 @@ export async function createProbeSession(
       "User-Agent": "Wukong-ROM-Studio/1.0"
     }
   });
-  if ([403, 405, 501].includes(result.response.status)) {
+  const initialContentType = result.response.headers.get("Content-Type")?.toLowerCase() ?? "";
+  const resolverPath = new URL(uri).pathname.toLowerCase().replace(/\/$/, "");
+  if (
+    [403, 405, 501].includes(result.response.status) ||
+    initialContentType.includes("json") ||
+    resolverPath.endsWith("/downloadcheck")
+  ) {
+    await result.response.body?.cancel();
     result = await secureFetch(uri, {
       method: "GET",
       headers: {
@@ -230,6 +243,13 @@ export async function createProbeSession(
   }
   if (!result.response.ok && result.response.status !== 206) {
     throw new SourceProbeHttpError(`ROM source returned HTTP ${result.response.status}`);
+  }
+  if (
+    resolverPath.endsWith("/downloadcheck") &&
+    result.response.headers.get("Content-Type")?.toLowerCase().includes("json")
+  ) {
+    await result.response.body?.cancel();
+    throw new SourceProbeHttpError("OPlus OTA resolver did not return a ROM download");
   }
   const expiresAt = signedUrlExpiry(result.url);
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -372,6 +392,9 @@ export async function proxyProbeRange(
   if ((reserved.meta.changes ?? 0) !== 1) {
     throw new SourceProbeHttpError("ROM probe session budget is exhausted", 429);
   }
+  // The resolved URL was DNS-validated, redirect-by-redirect, when this
+  // short-lived session was created. Reuse that result for its first hop;
+  // any new redirect destination is still validated before it is fetched.
   const result = await secureFetch(String(session.resolved_url), {
     method: "GET",
     headers: {
@@ -379,7 +402,7 @@ export async function proxyProbeRange(
       "Accept-Encoding": "identity",
       "User-Agent": "Wukong-ROM-Studio/1.0"
     }
-  });
+  }, true);
   if (result.response.status !== 206) {
     const declared = Number(result.response.headers.get("Content-Length") ?? 0);
     if (!declared || declared > range.length) {
