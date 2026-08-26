@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSourceTransportHandler } from "./source-transport";
+import { createSourceTransportHandler } from "../../../api/source-transport";
 
 const claimUrl = "https://wukong-control-plane-staging.luuxuankhanh98.workers.dev/internal/source-transport/claim";
 const token = "a".repeat(43);
@@ -169,5 +169,26 @@ describe("Vercel source transport", () => {
     }));
     expect(forbidden.status).toBe(403);
   });
-});
 
+  it("rejects a 206 response for a different range", async () => {
+    const handler = createSourceTransportHandler({
+      resolveAddresses: publicDns,
+      fetchImpl: async (input, init) => {
+        const current = input instanceof Request ? input : new Request(input, init);
+        if (new URL(current.url).pathname === "/internal/source-transport/claim") {
+          return Response.json({
+            operation: "range",
+            sourceUrl: "https://cdn.allawnfs.com/rom.zip",
+            range: "bytes=1024-2047",
+            maximumBytes: 1024
+          });
+        }
+        return new Response(new Uint8Array(1024), {
+          status: 206,
+          headers: { "Content-Range": "bytes 0-1023/4096", "Content-Length": "1024" }
+        });
+      }
+    });
+    expect((await handler(request())).status).toBe(502);
+  });
+});

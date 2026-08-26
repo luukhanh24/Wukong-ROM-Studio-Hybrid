@@ -3,8 +3,6 @@ const SESSION_SECONDS = 120;
 const MAX_REQUESTS = 64;
 const MAX_SESSION_BYTES = 16 * 1024 * 1024;
 const MAX_RANGE_BYTES = 8 * 1024 * 1024;
-const MAX_CATALOG_PAGE_BYTES = 2 * 1024 * 1024;
-const MAX_RESOLVER_BYTES = 1024 * 1024;
 const TRANSPORT_CLAIM_SECONDS = 30;
 const MAX_TRANSPORT_METADATA_BYTES = 32 * 1024;
 
@@ -336,90 +334,6 @@ export async function claimSourceTransport(request: Request, env: Env): Promise<
   }, { headers: { "Cache-Control": "no-store" } });
 }
 
-function htmlAttribute(tag: string, name: string): string {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = tag.match(new RegExp(`${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
-  return (match?.[1] ?? match?.[2] ?? "")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">");
-}
-
-function cookieHeader(response: Response): string {
-  return response.headers.getSetCookie()
-    .map((value) => value.split(";", 1)[0]?.trim() ?? "")
-    .filter((value) => /^[!#$%&'*+.^_`|~0-9A-Za-z-]+=[^;\r\n]*$/.test(value))
-    .join("; ");
-}
-
-async function resolveDanielOtaPage(uri: string): Promise<string> {
-  const pageResult = await secureFetch(uri, {
-    method: "GET",
-    headers: {
-      Accept: "text/html,application/xhtml+xml",
-      "Accept-Encoding": "identity",
-      "User-Agent": "Wukong-ROM-Studio/1.0"
-    }
-  });
-  if (!pageResult.response.ok) {
-    await pageResult.response.body?.cancel();
-    throw new SourceProbeHttpError(`Daniel Springer OTA page returned HTTP ${pageResult.response.status}`);
-  }
-  const cookies = cookieHeader(pageResult.response);
-  const pageBytes = await limitedBody(pageResult.response, MAX_CATALOG_PAGE_BYTES);
-  const page = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(pageBytes);
-  const resultTag = page.match(/<[^>]+\bid\s*=\s*["']resultBox["'][^>]*>/i)?.[0] ?? "";
-  const readyUrl = htmlAttribute(resultTag, "data-url").trim();
-  if (readyUrl) return readyUrl;
-  const otaKey = htmlAttribute(resultTag, "data-ota-key").trim();
-  const csrf = htmlAttribute(resultTag, "data-csrf").trim();
-  if (!resultTag || !otaKey || !csrf || otaKey.length > 256 || csrf.length > 256) {
-    throw new SourceProbeHttpError(
-      "Daniel Springer OTA page does not contain valid resolver state"
-    );
-  }
-
-  const endpoint = new URL("/index.php?view=ota&ota_action=resolve_json", pageResult.url);
-  await validateDestination(endpoint.toString());
-  const body = new URLSearchParams({ k: otaKey, csrf });
-  const response = await fetch(endpoint, {
-    method: "POST",
-    redirect: "manual",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      Origin: "https://roms.danielspringer.at",
-      Referer: pageResult.url.toString(),
-      "User-Agent": "Wukong-ROM-Studio/1.0",
-      ...(cookies ? { Cookie: cookies } : {})
-    },
-    body
-  });
-  if ([301, 302, 303, 307, 308].includes(response.status)) {
-    await response.body?.cancel();
-    throw new SourceProbeHttpError("Daniel Springer OTA resolver returned an unexpected redirect");
-  }
-  const raw = await limitedBody(response, MAX_RESOLVER_BYTES);
-  let payload: Record<string, unknown>;
-  try {
-    payload = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(raw)
-    ) as Record<string, unknown>;
-  } catch {
-    throw new SourceProbeHttpError("Daniel Springer OTA resolver returned invalid JSON");
-  }
-  const resolved = String(payload.url ?? "").trim();
-  if (!response.ok || payload.ok !== true || !resolved) {
-    throw new SourceProbeHttpError(
-      String(payload.message ?? "Daniel Springer OTA link could not be prepared").slice(0, 256)
-    );
-  }
-  await validateDestination(resolved);
-  return resolved;
-}
-
 function initialProbeHeaders(url: URL): HeadersInit {
   const resolver = url.pathname.toLowerCase().replace(/\/$/, "").endsWith("/downloadcheck");
   return {
@@ -509,9 +423,7 @@ export async function createProbeSession(
     lastModified = metadata.lastModified;
     transportMode = "vercel";
   } else {
-    const resolvedInput = isDanielOtaPage(originalUrl)
-      ? await resolveDanielOtaPage(uri)
-      : uri;
+    const resolvedInput = uri;
     const probeUrl = validatedUrl(resolvedInput);
     const result = await secureFetch(resolvedInput, {
       method: "GET",
@@ -697,10 +609,17 @@ export async function proxyProbeRange(
     if (!declared || declared > range.length) {
       throw new SourceProbeHttpError("ROM source does not support safe byte ranges", 502);
     }
+  } else {
+    const contentRange = result.response.headers.get("Content-Range") ?? "";
+    const match = contentRange.match(/^bytes ([0-9]+)-([0-9]+)\/(?:[0-9]+|\*)$/i);
+    if (!match || Number(match[1]) !== range.start || Number(match[2]) !== range.end) {
+      await result.response.body?.cancel();
+      throw new SourceProbeHttpError("ROM source returned the wrong byte range", 502);
+    }
   }
   const body = await limitedBody(result.response, range.length);
-  if (body.byteLength > range.length) {
-    throw new SourceProbeHttpError("ROM source returned an oversized range", 502);
+  if (body.byteLength !== range.length) {
+    throw new SourceProbeHttpError("ROM source returned an incomplete byte range", 502);
   }
   const total = knownSize ?? "*";
   return new Response(body, {

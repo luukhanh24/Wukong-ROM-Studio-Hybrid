@@ -1,6 +1,3 @@
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
-
 const MAX_REDIRECTS = 5;
 const MAX_REQUEST_BODY = 16 * 1024;
 const MAX_CLAIM_BODY = 16 * 1024;
@@ -32,14 +29,15 @@ class TransportError extends Error {
 
 function privateAddress(value: string): boolean {
   const normalized = value.toLowerCase().replace(/^\[|\]$/g, "");
-  if (isIP(normalized) === 4) {
-    const [a = 0, b = 0] = normalized.split(".").map(Number);
+  const ipv4 = normalized.split(".");
+  if (ipv4.length === 4 && ipv4.every((part) => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255)) {
+    const [a = 0, b = 0] = ipv4.map(Number);
     return a === 0 || a === 10 || a === 127 ||
       (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) || (a === 192 && (b === 0 || b === 168)) ||
       (a === 198 && (b === 18 || b === 19)) || a >= 224;
   }
-  if (isIP(normalized) !== 6) return false;
+  if (!normalized.includes(":")) return false;
   return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") ||
     normalized.startsWith("fd") || /^fe[89ab]/.test(normalized) ||
     normalized.startsWith("ff") || normalized.startsWith("2001:db8:") ||
@@ -78,12 +76,28 @@ function parsePublicUrl(value: string): URL {
 }
 
 async function defaultResolveAddresses(hostname: string): Promise<string[]> {
-  if (isIP(hostname)) return [hostname];
-  try {
-    return (await lookup(hostname, { all: true, verbatim: true })).map((result) => result.address);
-  } catch {
-    return [];
+  if (privateAddress(hostname) || hostname.includes(":") || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+    return [hostname];
   }
+  const query = async (type: "A" | "AAAA"): Promise<string[]> => {
+    const url = new URL("https://cloudflare-dns.com/dns-query");
+    url.searchParams.set("name", hostname);
+    url.searchParams.set("type", type);
+    const response = await fetch(url, {
+      redirect: "manual",
+      headers: { Accept: "application/dns-json" }
+    });
+    if (!response.ok) return [];
+    const payload = await response.json() as {
+      Status?: number;
+      Answer?: Array<{ type?: number; data?: string }>;
+    };
+    if (payload.Status !== 0) return [];
+    return (payload.Answer ?? [])
+      .filter((answer) => answer.type === 1 || answer.type === 28)
+      .map((answer) => String(answer.data ?? "").trim()).filter(Boolean);
+  };
+  return [...new Set((await Promise.all([query("A"), query("AAAA")])).flat())];
 }
 
 async function validateDestination(value: string, resolveAddresses: ResolveAddresses): Promise<URL> {
@@ -109,6 +123,9 @@ async function secureFetch(
     await response.body?.cancel();
     if (!location || redirects === MAX_REDIRECTS) {
       throw new TransportError("Source redirect is invalid", 502);
+    }
+    if (!["GET", "HEAD"].includes(String(init.method ?? "GET").toUpperCase())) {
+      throw new TransportError("Source resolver returned an unexpected redirect", 502);
     }
     url = await validateDestination(new URL(location, url).toString(), resolveAddresses);
   }
@@ -238,9 +255,7 @@ function checksumFrom(response: Response): string {
 }
 
 function allowedClaimOrigins(): Set<string> {
-  const configured = (process.env.WUKONG_SOURCE_TRANSPORT_CLAIM_ORIGINS ?? "")
-    .split(",").map((value) => value.trim().replace(/\/+$/, "")).filter(Boolean);
-  return new Set([...PRODUCTION_WORKER_ORIGINS, ...configured]);
+  return PRODUCTION_WORKER_ORIGINS;
 }
 
 function claimUrl(value: string): URL {
@@ -268,14 +283,17 @@ function explicitRange(value: string, maximum: number): { start: number; end: nu
   return { start, end };
 }
 
-function limitedStream(body: ReadableStream<Uint8Array> | null, maximum: number): ReadableStream<Uint8Array> | null {
+function limitedStream(body: ReadableStream<Uint8Array> | null, expected: number): ReadableStream<Uint8Array> | null {
   if (!body) return null;
   let total = 0;
   return body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
       total += chunk.byteLength;
-      if (total > maximum) throw new TransportError("Source returned an oversized range", 502);
+      if (total > expected) throw new TransportError("Source returned an oversized range", 502);
       controller.enqueue(chunk);
+    },
+    flush() {
+      if (total !== expected) throw new TransportError("Source returned an incomplete range", 502);
     }
   }));
 }
@@ -339,7 +357,7 @@ export function createSourceTransportHandler(dependencies: {
         await result.response.body?.cancel();
         return Response.json(metadata, { headers: { "Cache-Control": "no-store" } });
       }
-      explicitRange(work.range, work.maximumBytes);
+      const requested = explicitRange(work.range, work.maximumBytes);
       if (sourceKind(new URL(source)) !== "cdn") throw new TransportError("Range source is not supported", 403);
       const result = await secureFetch(source, {
         method: "GET",
@@ -349,8 +367,22 @@ export function createSourceTransportHandler(dependencies: {
           "User-Agent": "Wukong-ROM-Studio/1.0"
         }
       }, fetchImpl, resolveAddresses);
+      if (!result.response.ok) {
+        await result.response.body?.cancel();
+        throw new TransportError("ROM source range failed", 502);
+      }
       const declared = Number(result.response.headers.get("Content-Length") ?? 0);
-      if (result.response.status !== 206 && (!declared || declared > work.maximumBytes)) {
+      const contentRange = result.response.headers.get("Content-Range") ?? "";
+      const contentRangeMatch = contentRange.match(/^bytes ([0-9]+)-([0-9]+)\/(?:[0-9]+|\*)$/i);
+      if (
+        result.response.status === 206 &&
+        (!contentRangeMatch || Number(contentRangeMatch[1]) !== requested.start ||
+          Number(contentRangeMatch[2]) !== requested.end)
+      ) {
+        await result.response.body?.cancel();
+        throw new TransportError("ROM source returned the wrong range", 502);
+      }
+      if (result.response.status !== 206 && declared !== work.maximumBytes) {
         await result.response.body?.cancel();
         throw new TransportError("ROM source does not support safe ranges", 502);
       }
@@ -359,7 +391,7 @@ export function createSourceTransportHandler(dependencies: {
         headers: {
           "Cache-Control": "no-store",
           "Content-Type": result.response.headers.get("Content-Type") ?? "application/octet-stream",
-          "Content-Range": result.response.headers.get("Content-Range") ?? "",
+          "Content-Range": contentRange,
           "Content-Length": String(work.maximumBytes)
         }
       });
@@ -373,8 +405,17 @@ export function createSourceTransportHandler(dependencies: {
 
 const handle = createSourceTransportHandler();
 
+declare const process: { env: Record<string, string | undefined> };
+
 export default {
-  fetch(request: Request): Promise<Response> {
-    return handle(request);
+  async fetch(request: Request): Promise<Response> {
+    const response = await handle(request);
+    const headers = new Headers(response.headers);
+    headers.set("X-Wukong-Release", process.env.VERCEL_GIT_COMMIT_SHA ?? "development");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
   }
 };

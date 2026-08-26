@@ -16,7 +16,10 @@ function mockDnsAndOrigin(handler: (request: Request) => Response | Promise<Resp
 }
 
 describe("bounded ROM source Range proxy", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it("creates a two-minute probe session and serves a bounded byte range", async () => {
     const bytes = new Uint8Array(1024).fill(0x50);
@@ -139,7 +142,10 @@ describe("bounded ROM source Range proxy", () => {
       }
       const match = request.headers.get("Range")?.match(/bytes=(\d+)-(\d+)/);
       const length = match ? Number(match[2]) - Number(match[1]) + 1 : 0;
-      return new Response(new Uint8Array(length), { status: 206 });
+      return new Response(new Uint8Array(length), {
+        status: 206,
+        headers: { "Content-Range": `bytes ${match?.[1]}-${match?.[2]}/4096` }
+      });
     }));
 
     const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
@@ -322,6 +328,37 @@ describe("bounded ROM source Range proxy", () => {
     });
     expect(range.status).toBe(206);
     expect((await range.arrayBuffer()).byteLength).toBe(32);
+  });
+
+  it("rejects an unclaimed source transport token after thirty seconds", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-26T12:00:00Z"));
+    let claimStatus = 0;
+    mockDnsAndOrigin(async (request) => {
+      if (new URL(request.url).pathname === "/api/source-transport") {
+        const body = await request.json() as { claimUrl: string; token: string };
+        vi.advanceTimersByTime(31_000);
+        claimStatus = (await SELF.fetch(body.claimUrl, {
+          method: "POST",
+          headers: { Authorization: `TransportClaim ${body.token}` }
+        })).status;
+        return Response.json({ error: "expired" }, { status: 403 });
+      }
+      throw new Error(`Unexpected fetch ${request.url}`);
+    });
+
+    const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
+      method: "POST",
+      headers: {
+        Origin: "https://wukong-rom-studio.vercel.app",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        uri: "https://component-ota-cn.allawntech.com/downloadCheck?fixture=expiry"
+      })
+    });
+    expect(probe.status).toBe(502);
+    expect(claimStatus).toBe(410);
   });
 
   it("preserves the OPlus MD5 response header", async () => {
