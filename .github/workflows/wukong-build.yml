@@ -236,10 +236,10 @@ jobs:
       - name: "03 · Mở rộng workspace / Expand hosted disk"
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
-          # The action creates its loop image as root, so ext4 reserved blocks
-          # are consumed beyond `df`'s non-root available count. Production
-          # smoke showed 6 GiB here leaves only ~625 MiB actually available.
-          root-reserve-mb: 12288
+          # The action creates loop-backed LVM storage as root. Production
+          # smoke showed 12 GiB here leaves only ~2.1 GiB actually available
+          # after runner setup, so keep a wider safety margin.
+          root-reserve-mb: 24576
           temp-reserve-mb: 512
           swap-size-mb: 2048
           remove-dotnet: 'true'
