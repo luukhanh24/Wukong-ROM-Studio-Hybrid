@@ -36,7 +36,11 @@ def _request_json(
             url,
             data=body,
             method="POST",
-            headers={"Content-Type": "application/json", **dict(headers)},
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "wukong-actions-control-plane/1.0",
+                **dict(headers),
+            },
         )
         try:
             with urllib.request.urlopen(request, timeout=45) as response:
