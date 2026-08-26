@@ -196,6 +196,13 @@ function mapD1JobError(error: unknown): JobHttpError {
   if (message.includes("access_denied")) {
     return new JobHttpError("Telegram account is not approved", 403, "access_denied");
   }
+  if (message.includes("build_concurrency_limit")) {
+    return new JobHttpError(
+      "The system has reached its concurrent build limit; wait for one to finish",
+      409,
+      "build_concurrency_limit"
+    );
+  }
   if (
     message.includes("wukong_build_locks") ||
     message.includes("UNIQUE constraint failed: wukong_build_locks.lock_key")
@@ -269,14 +276,6 @@ export async function createJob(
           next_event_sequence, owner_channel, owner_subject, device, status, stage, progress)
          VALUES (?, ?, ?, ?, ?, 2, 'telegram', ?, ?, 'queued', 'queued', 0)`
       ).bind(jobId, JSON.stringify(manifest), JSON.stringify(recipe), now, now, auth.subject, device),
-      env.DB.prepare(
-        `INSERT INTO wukong_build_locks
-         (lock_key, job_id, subject, device, created_at) VALUES (?, ?, ?, ?, ?)`
-      ).bind(`user:${auth.subject}`, jobId, auth.subject, device, now),
-      env.DB.prepare(
-        `INSERT INTO wukong_build_locks
-         (lock_key, job_id, subject, device, created_at) VALUES (?, ?, ?, ?, ?)`
-      ).bind(`device:${device.toLowerCase()}`, jobId, auth.subject, device, now),
       env.DB.prepare(
         `INSERT INTO wukong_job_events
          (job_id, sequence, timestamp, event_type, payload_json)
@@ -400,14 +399,6 @@ export async function resumeJob(
           next_event_sequence, owner_channel, owner_subject, device, status, stage, progress)
          VALUES (?, ?, ?, ?, ?, 2, 'telegram', ?, ?, 'queued', 'queued', 0)`
       ).bind(jobId, JSON.stringify(manifest), JSON.stringify(recipe), now, now, auth.subject, device),
-      env.DB.prepare(
-        `INSERT INTO wukong_build_locks
-         (lock_key, job_id, subject, device, created_at) VALUES (?, ?, ?, ?, ?)`
-      ).bind(`user:${auth.subject}`, jobId, auth.subject, device, now),
-      env.DB.prepare(
-        `INSERT INTO wukong_build_locks
-         (lock_key, job_id, subject, device, created_at) VALUES (?, ?, ?, ?, ?)`
-      ).bind(`device:${device.toLowerCase()}`, jobId, auth.subject, device, now),
       env.DB.prepare(
         `INSERT INTO wukong_job_events
          (job_id, sequence, timestamp, event_type, payload_json)
