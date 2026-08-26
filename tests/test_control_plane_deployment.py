@@ -13,7 +13,11 @@ from tools.control_plane_preflight import (
     run_preflight,
 )
 from tools.render_control_plane_env import render_environment
-from tools.build_vercel_mini_app import build_site
+from tools.build_vercel_mini_app import (
+    PRODUCTION_API_ORIGIN,
+    build_site,
+    configured_api_origin,
+)
 
 
 class ControlPlaneDeploymentTests(unittest.TestCase):
@@ -227,6 +231,11 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         )
         self.assertIn('"outputDirectory": ".vercel-static"', vercel)
         self.assertIn("X-Robots-Tag", vercel)
+
+    def test_vercel_git_integration_defaults_to_cloudflare_worker(self) -> None:
+        self.assertEqual(PRODUCTION_API_ORIGIN, configured_api_origin({}))
+        self.assertTrue(PRODUCTION_API_ORIGIN.endswith(".workers.dev"))
+        self.assertNotIn("onrender.com", PRODUCTION_API_ORIGIN)
 
 
 if __name__ == "__main__":
