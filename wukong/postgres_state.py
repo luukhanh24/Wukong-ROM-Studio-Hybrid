@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import hmac
+import json
+import re
+import secrets
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from collections.abc import Mapping
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Protocol
+from urllib.parse import urlsplit
 
 from .models import BuildRecipe, Identity, JobManifest, JobStatus, utc_now
 from .orchestrator import JobEvent, JobStore, OrchestrationError, TERMINAL_STATUSES
@@ -164,6 +169,200 @@ class _DatabaseStore:
             raise
         finally:
             connection.close()
+
+
+class PostgresTelegramSessionStore(_DatabaseStore):
+    """Durable Mini App pairing and per-user source drafts."""
+
+    def __init__(
+        self,
+        database_url: str | None = None,
+        *,
+        connect: ConnectionFactory | None = None,
+        dialect: str = "postgresql",
+        pairing_max_age_seconds: int = 5 * 60,
+        draft_max_age_seconds: int = 24 * 60 * 60,
+    ) -> None:
+        super().__init__(database_url, connect=connect, dialect=dialect)
+        self.pairing_max_age_seconds = max(60, min(int(pairing_max_age_seconds), 15 * 60))
+        self.draft_max_age_seconds = max(
+            60,
+            min(int(draft_max_age_seconds), 7 * 24 * 60 * 60),
+        )
+        self._lock = threading.RLock()
+        with self._connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_telegram_pairings (
+                    pair_id TEXT PRIMARY KEY,
+                    secret_hash TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    user_id TEXT
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS wukong_telegram_source_drafts (
+                    subject TEXT PRIMARY KEY,
+                    uri TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL
+                )
+                """
+            )
+
+    @staticmethod
+    def _subject(user_id: int | str) -> str:
+        subject = str(int(user_id))
+        if int(subject) <= 0:
+            raise ValueError("Telegram user ID must be positive")
+        return subject
+
+    def _cleanup(self, cursor: _Cursor, now: int) -> None:
+        cursor.execute(
+            self._sql("DELETE FROM wukong_telegram_pairings WHERE expires_at < ?"),
+            (now,),
+        )
+        cursor.execute(
+            self._sql("DELETE FROM wukong_telegram_source_drafts WHERE updated_at < ?"),
+            (now - self.draft_max_age_seconds,),
+        )
+
+    def begin(self, bot_username: str, *, now: int | None = None) -> dict[str, object]:
+        username = str(bot_username or "").strip().lstrip("@")
+        if not re.fullmatch(r"[A-Za-z0-9_]{5,32}", username):
+            raise ValueError("Telegram bot username is not configured")
+        current = int(time.time()) if now is None else int(now)
+        pair_id = secrets.token_urlsafe(12).rstrip("=")
+        pair_secret = secrets.token_urlsafe(24).rstrip("=")
+        expires_at = current + self.pairing_max_age_seconds
+        digest = hashlib.sha256(pair_secret.encode("ascii")).hexdigest()
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            self._cleanup(cursor, current)
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_pairings "
+                    "(pair_id, secret_hash, created_at, expires_at, user_id) "
+                    "VALUES (?, ?, ?, ?, NULL)"
+                ),
+                (pair_id, digest, current, expires_at),
+            )
+        return {
+            "pairId": pair_id,
+            "pairSecret": pair_secret,
+            "botLink": f"https://t.me/{username}?start=pair_{pair_id}",
+            "expiresIn": self.pairing_max_age_seconds,
+        }
+
+    def confirm(self, pair_id: str, user_id: int | str, *, now: int | None = None) -> bool:
+        current = int(time.time()) if now is None else int(now)
+        try:
+            subject = self._subject(user_id)
+        except (TypeError, ValueError):
+            return False
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            self._cleanup(cursor, current)
+            cursor.execute(
+                self._sql(
+                    "UPDATE wukong_telegram_pairings SET user_id = ? "
+                    "WHERE pair_id = ? AND expires_at >= ? "
+                    "AND (user_id IS NULL OR user_id = ?)"
+                ),
+                (subject, str(pair_id or ""), current, subject),
+            )
+            return cursor.rowcount == 1
+
+    def launch_token(
+        self,
+        pair_id: str,
+        pair_secret: str,
+        bot_token: str,
+        *,
+        now: int | None = None,
+    ) -> str | None:
+        from .telegram_mini_api import TelegramInitDataError, issue_telegram_launch_token
+
+        current = int(time.time()) if now is None else int(now)
+        supplied_hash = hashlib.sha256(str(pair_secret or "").encode("utf-8")).hexdigest()
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            self._cleanup(cursor, current)
+            cursor.execute(
+                self._sql(
+                    "SELECT secret_hash, user_id FROM wukong_telegram_pairings "
+                    "WHERE pair_id = ? AND expires_at >= ?"
+                ),
+                (str(pair_id or ""), current),
+            )
+            row = cursor.fetchone()
+        if row is None or not hmac.compare_digest(supplied_hash, str(row[0])):
+            raise TelegramInitDataError("Telegram pairing request is invalid or expired")
+        return (
+            issue_telegram_launch_token(int(row[1]), bot_token, now=current)
+            if row[1] is not None
+            else None
+        )
+
+    def remember_source(self, user_id: int | str, uri: str, *, now: int | None = None) -> bool:
+        value = str(uri or "").strip()
+        try:
+            subject = self._subject(user_id)
+            parsed = urlsplit(value)
+        except (TypeError, ValueError):
+            return False
+        if (
+            not value
+            or len(value) > 8192
+            or parsed.scheme.casefold() not in {"http", "https"}
+            or not parsed.netloc
+            or parsed.username
+            or parsed.password
+        ):
+            return False
+        current = int(time.time()) if now is None else int(now)
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            self._cleanup(cursor, current)
+            cursor.execute(
+                self._sql(
+                    "INSERT INTO wukong_telegram_source_drafts (subject, uri, updated_at) "
+                    "VALUES (?, ?, ?) ON CONFLICT (subject) DO UPDATE SET "
+                    "uri = excluded.uri, updated_at = excluded.updated_at"
+                ),
+                (subject, value, current),
+            )
+        return True
+
+    def source_draft(self, user_id: int | str, *, now: int | None = None) -> str:
+        try:
+            subject = self._subject(user_id)
+        except (TypeError, ValueError):
+            return ""
+        current = int(time.time()) if now is None else int(now)
+        with self._lock, self._connection() as connection:
+            cursor = connection.cursor()
+            self._cleanup(cursor, current)
+            cursor.execute(
+                self._sql("SELECT uri FROM wukong_telegram_source_drafts WHERE subject = ?"),
+                (subject,),
+            )
+            row = cursor.fetchone()
+        return str(row[0]) if row else ""
+
+    def forget_source(self, user_id: int | str) -> None:
+        try:
+            subject = self._subject(user_id)
+        except (TypeError, ValueError):
+            return
+        with self._lock, self._connection() as connection:
+            connection.cursor().execute(
+                self._sql("DELETE FROM wukong_telegram_source_drafts WHERE subject = ?"),
+                (subject,),
+            )
 
 
 class PostgresTelegramUIStateStore(_DatabaseStore):

@@ -48,7 +48,6 @@ from wukong.telegram_mini_api import (
     TelegramJobNotifier,
     TelegramMiniAppAPI,
     TelegramMiniAppAPIServer,
-    TelegramMiniAppSessionStore,
     public_artifact_url,
 )
 from wukong.runtime import HybridRuntime
@@ -228,7 +227,7 @@ def main() -> int:
         catalog["modReleaseVersions"] = fixed_release_versions()
         return catalog
     diagnostics_provider = lambda: {"system": diagnostics(), "cache": stage_cache_status()}
-    mini_app_sessions = TelegramMiniAppSessionStore()
+    mini_app_sessions = stores.sessions
 
     def artifact_download_url(manifest) -> str:
         return next(

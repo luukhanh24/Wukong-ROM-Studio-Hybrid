@@ -12,6 +12,7 @@ from wukong.postgres_state import (
     BuildQuotaError,
     PostgresJobStore,
     PostgresTelegramAccessStore,
+    PostgresTelegramSessionStore,
     PostgresTelegramUIStateStore,
     migrate_file_job_store,
     migrate_telegram_access_store,
@@ -79,6 +80,46 @@ class PostgresJobStoreTests(unittest.TestCase):
         self.assertEqual(recipe.to_dict(), restored.recipe(manifest.job_id).to_dict())
         self.assertEqual("submitted", restored.events(manifest.job_id)[0].type)
         self.assertEqual([manifest.job_id], [job.job_id for job in restored.list()])
+
+    def test_pairing_and_source_draft_survive_a_fresh_store_instance(self) -> None:
+        first = PostgresTelegramSessionStore(
+            connect=self.connect,
+            dialect="sqlite",
+            pairing_max_age_seconds=300,
+            draft_max_age_seconds=86400,
+        )
+
+        pairing = first.begin("WK_build_bot", now=1000)
+        self.assertTrue(first.confirm(pairing["pairId"], 42, now=1001))
+        self.assertTrue(
+            first.remember_source(
+                42,
+                "https://downloads.example/rom.zip?signature=short-lived",
+                now=1002,
+            )
+        )
+
+        restored = PostgresTelegramSessionStore(
+            connect=self.connect,
+            dialect="sqlite",
+            pairing_max_age_seconds=300,
+            draft_max_age_seconds=86400,
+        )
+
+        self.assertIsNotNone(
+            restored.launch_token(
+                pairing["pairId"],
+                pairing["pairSecret"],
+                "1234567:" + "a" * 32,
+                now=1003,
+            )
+        )
+        self.assertEqual(
+            "https://downloads.example/rom.zip?signature=short-lived",
+            restored.source_draft(42, now=1003),
+        )
+        restored.forget_source(42)
+        self.assertEqual("", restored.source_draft(42, now=1004))
 
     def test_legacy_file_migration_is_complete_and_idempotent(self) -> None:
         recipe = _recipe()
@@ -632,6 +673,7 @@ class PostgresJobStoreTests(unittest.TestCase):
         )
 
         self.assertIsInstance(configured.jobs, PostgresJobStore)
+        self.assertIsInstance(configured.sessions, PostgresTelegramSessionStore)
         self.assertEqual("legacy-control-plane-job", configured.jobs.list()[0].job_id)
         self.assertEqual("user", configured.access.identity(99).role)
         self.assertEqual("en", configured.ui_state.language(42))

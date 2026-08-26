@@ -10,6 +10,7 @@ from .postgres_state import (
     ConnectionFactory,
     PostgresJobStore,
     PostgresTelegramAccessStore,
+    PostgresTelegramSessionStore,
     PostgresTelegramUIStateStore,
     migrate_file_job_store,
     migrate_telegram_access_store,
@@ -28,6 +29,7 @@ class ControlPlaneStores:
     jobs: JobStore
     access: Any
     ui_state: Any
+    sessions: Any
     migration: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
@@ -55,8 +57,15 @@ def open_control_plane_stores(
     )
     normalized_url = database_url.strip()
     if not normalized_url:
+        from .telegram_mini_api import TelegramMiniAppSessionStore
+
         legacy_access.backfill_jobs(legacy_jobs.list())
-        return ControlPlaneStores(legacy_jobs, legacy_access, legacy_ui)
+        return ControlPlaneStores(
+            legacy_jobs,
+            legacy_access,
+            legacy_ui,
+            TelegramMiniAppSessionStore(),
+        )
 
     shared_options: dict[str, object] = {"dialect": dialect}
     if connect is not None:
@@ -68,6 +77,7 @@ def open_control_plane_stores(
         **shared_options,
     )
     ui_state = PostgresTelegramUIStateStore(normalized_url, **shared_options)
+    sessions = PostgresTelegramSessionStore(normalized_url, **shared_options)
     configured_admins = [str(value).strip() for value in admin_ids if str(value).strip()]
     if not configured_admins:
         raise ValueError("At least one configured Telegram admin is required")
@@ -86,4 +96,4 @@ def open_control_plane_stores(
     if jobs.metadata(TELEGRAM_PROFILE_BACKFILL_KEY) != "complete":
         access.backfill_jobs(jobs.list())
         jobs.set_metadata(TELEGRAM_PROFILE_BACKFILL_KEY, "complete")
-    return ControlPlaneStores(jobs, access, ui_state, migration)
+    return ControlPlaneStores(jobs, access, ui_state, sessions, migration)
