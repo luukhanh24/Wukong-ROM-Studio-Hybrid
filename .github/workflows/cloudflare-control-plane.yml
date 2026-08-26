@@ -23,6 +23,7 @@ on:
     branches: [main]
     paths:
       - "deploy/cloudflare-worker/**"
+      - "api/**"
       - "telegram_mini_app/**"
       - "tools/actions_control_plane.py"
       - "tools/migrate_postgres_to_d1.py"

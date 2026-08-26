@@ -240,6 +240,7 @@ export async function maintenance(env: Env): Promise<void> {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM wukong_telegram_pairings WHERE expires_at < ?").bind(nowSeconds),
     env.DB.prepare("DELETE FROM wukong_source_probe_sessions WHERE expires_at < ?").bind(nowSeconds),
+    env.DB.prepare("DELETE FROM wukong_source_transport_claims WHERE expires_at < ?").bind(nowSeconds),
     env.DB.prepare(
       "DELETE FROM wukong_telegram_source_drafts WHERE updated_at < ?"
     ).bind(nowSeconds - 24 * 60 * 60),

@@ -5,6 +5,8 @@ const MAX_SESSION_BYTES = 16 * 1024 * 1024;
 const MAX_RANGE_BYTES = 8 * 1024 * 1024;
 const MAX_CATALOG_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_RESOLVER_BYTES = 1024 * 1024;
+const TRANSPORT_CLAIM_SECONDS = 30;
+const MAX_TRANSPORT_METADATA_BYTES = 32 * 1024;
 
 type JsonObject = Record<string, unknown>;
 
@@ -216,6 +218,124 @@ function isDanielOtaPage(url: URL): boolean {
   );
 }
 
+function isOplusResolver(url: URL): boolean {
+  return (
+    /^component-ota(?:-[a-z0-9]+)?\.allawntech\.com$/i.test(url.hostname) &&
+    url.pathname.toLowerCase().replace(/\/$/, "").endsWith("/downloadcheck")
+  );
+}
+
+function usesVercelTransport(url: URL): boolean {
+  const host = url.hostname.toLowerCase();
+  return isDanielOtaPage(url) || isOplusResolver(url) || host.endsWith(".allawnfs.com");
+}
+
+function base64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const value of bytes) binary += String.fromCharCode(value);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)]
+    .map((part) => part.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function createTransportClaim(
+  request: Request,
+  env: Env,
+  operation: "probe" | "range",
+  sourceUrl: string,
+  rangeHeader: string,
+  maximumBytes: number
+): Promise<{ claimUrl: string; token: string }> {
+  const random = crypto.getRandomValues(new Uint8Array(32));
+  const token = base64Url(random);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO wukong_source_transport_claims
+     (token_hash, operation, source_url, range_header, maximum_bytes,
+      created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    await sha256Hex(token), operation, sourceUrl, rangeHeader,
+    maximumBytes, now, now + TRANSPORT_CLAIM_SECONDS
+  ).run();
+  return {
+    claimUrl: new URL("/internal/source-transport/claim", request.url).toString(),
+    token
+  };
+}
+
+async function callSourceTransport(
+  request: Request,
+  env: Env,
+  operation: "probe" | "range",
+  sourceUrl: string,
+  rangeHeader: string,
+  maximumBytes: number
+): Promise<Response> {
+  const transport = validatedUrl(env.WUKONG_SOURCE_TRANSPORT_URL);
+  if (transport.protocol !== "https:") {
+    throw new SourceProbeHttpError("ROM source transport is unavailable", 503);
+  }
+  const claim = await createTransportClaim(
+    request, env, operation, sourceUrl, rangeHeader, maximumBytes
+  );
+  let response: Response;
+  try {
+    response = await fetch(transport, {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        Accept: operation === "probe" ? "application/json" : "application/octet-stream",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(claim)
+    });
+  } catch {
+    throw new SourceProbeHttpError("ROM source transport is unavailable", 503);
+  }
+  if ([301, 302, 303, 307, 308].includes(response.status)) {
+    await response.body?.cancel();
+    throw new SourceProbeHttpError("ROM source transport returned an unexpected redirect", 502);
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new SourceProbeHttpError("ROM source transport could not reach this link", 502);
+  }
+  return response;
+}
+
+export async function claimSourceTransport(request: Request, env: Env): Promise<Response> {
+  const authorization = request.headers.get("Authorization") ?? "";
+  const token = authorization.match(/^TransportClaim ([A-Za-z0-9_-]{43})$/)?.[1] ?? "";
+  if (!token) return Response.json({ error: "Source transport claim is invalid" }, { status: 401 });
+  const now = Math.floor(Date.now() / 1000);
+  const tokenHash = await sha256Hex(token);
+  const claimed = await env.DB.prepare(
+    `UPDATE wukong_source_transport_claims
+     SET claimed_at = ?
+     WHERE token_hash = ? AND claimed_at = 0 AND expires_at >= ?`
+  ).bind(now, tokenHash, now).run();
+  if ((claimed.meta.changes ?? 0) !== 1) {
+    return Response.json({ error: "Source transport claim is invalid or expired" }, { status: 410 });
+  }
+  const row = await env.DB.prepare(
+    `SELECT operation, source_url, range_header, maximum_bytes
+     FROM wukong_source_transport_claims WHERE token_hash = ?`
+  ).bind(tokenHash).first<Record<string, unknown>>();
+  if (!row) return Response.json({ error: "Source transport claim is unavailable" }, { status: 410 });
+  return Response.json({
+    operation: String(row.operation),
+    sourceUrl: String(row.source_url),
+    range: String(row.range_header),
+    maximumBytes: Number(row.maximum_bytes)
+  }, { headers: { "Cache-Control": "no-store" } });
+}
+
 function htmlAttribute(tag: string, name: string): string {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = tag.match(new RegExp(`${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
@@ -314,6 +434,45 @@ function initialProbeHeaders(url: URL): HeadersInit {
   };
 }
 
+interface TransportProbeMetadata {
+  resolvedUrl: string;
+  filename: string;
+  sizeBytes: number | null;
+  contentType: string;
+  checksum: string;
+  etag: string | null;
+  lastModified: string | null;
+}
+
+async function transportProbeMetadata(response: Response): Promise<TransportProbeMetadata> {
+  const bytes = await limitedBody(response, MAX_TRANSPORT_METADATA_BYTES);
+  let value: Record<string, unknown>;
+  try {
+    value = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  } catch {
+    throw new SourceProbeHttpError("ROM source transport returned invalid metadata", 502);
+  }
+  const resolvedUrl = String(value.resolvedUrl ?? "").trim();
+  const url = validatedUrl(resolvedUrl);
+  if (!url.hostname.toLowerCase().endsWith(".allawnfs.com")) {
+    throw new SourceProbeHttpError("ROM source transport returned an unsupported destination", 502);
+  }
+  const rawSize = value.sizeBytes;
+  const sizeBytes = rawSize == null ? null : Number(rawSize);
+  if (sizeBytes != null && (!Number.isSafeInteger(sizeBytes) || sizeBytes < 0)) {
+    throw new SourceProbeHttpError("ROM source transport returned invalid metadata", 502);
+  }
+  return {
+    resolvedUrl: url.toString(),
+    filename: String(value.filename ?? "rom.zip").slice(0, 255),
+    sizeBytes,
+    contentType: String(value.contentType ?? "").slice(0, 255),
+    checksum: String(value.checksum ?? "").slice(0, 512),
+    etag: value.etag == null ? null : String(value.etag).slice(0, 512),
+    lastModified: value.lastModified == null ? null : String(value.lastModified).slice(0, 512)
+  };
+}
+
 export async function createProbeSession(
   request: Request,
   env: Env,
@@ -328,27 +487,58 @@ export async function createProbeSession(
     throw new SourceProbeHttpError("A valid ROM source URL is required");
   }
   const originalUrl = validatedUrl(uri);
-  const resolvedInput = isDanielOtaPage(originalUrl)
-    ? await resolveDanielOtaPage(uri)
-    : uri;
-  const probeUrl = validatedUrl(resolvedInput);
-  const result = await secureFetch(resolvedInput, {
-    method: "GET",
-    headers: initialProbeHeaders(probeUrl)
-  });
-  const resolverPath = probeUrl.pathname.toLowerCase().replace(/\/$/, "");
-  if (!result.response.ok && result.response.status !== 206) {
+  let resolvedUrl: URL;
+  let filename: string;
+  let sizeBytes: number | null;
+  let contentType: string;
+  let checksum: string;
+  let etag: string | null;
+  let lastModified: string | null;
+  let transportMode: "direct" | "vercel" = "direct";
+  if (usesVercelTransport(originalUrl)) {
+    const transportResponse = await callSourceTransport(
+      request, env, "probe", uri, "bytes=0-0", 1
+    );
+    const metadata = await transportProbeMetadata(transportResponse);
+    resolvedUrl = validatedUrl(metadata.resolvedUrl);
+    filename = metadata.filename;
+    sizeBytes = metadata.sizeBytes;
+    contentType = metadata.contentType;
+    checksum = metadata.checksum;
+    etag = metadata.etag;
+    lastModified = metadata.lastModified;
+    transportMode = "vercel";
+  } else {
+    const resolvedInput = isDanielOtaPage(originalUrl)
+      ? await resolveDanielOtaPage(uri)
+      : uri;
+    const probeUrl = validatedUrl(resolvedInput);
+    const result = await secureFetch(resolvedInput, {
+      method: "GET",
+      headers: initialProbeHeaders(probeUrl)
+    });
+    const resolverPath = probeUrl.pathname.toLowerCase().replace(/\/$/, "");
+    if (!result.response.ok && result.response.status !== 206) {
+      await result.response.body?.cancel();
+      throw new SourceProbeHttpError(`ROM source returned HTTP ${result.response.status}`);
+    }
+    if (
+      resolverPath.endsWith("/downloadcheck") &&
+      result.response.headers.get("Content-Type")?.toLowerCase().includes("json")
+    ) {
+      await result.response.body?.cancel();
+      throw new SourceProbeHttpError("OPlus OTA resolver did not return a ROM download");
+    }
+    resolvedUrl = result.url;
+    filename = filenameFrom(result.response, result.url);
+    sizeBytes = contentSize(result.response);
+    contentType = result.response.headers.get("Content-Type")?.split(";", 1)[0]?.trim() ?? "";
+    checksum = checksumHeader(result.response);
+    etag = result.response.headers.get("ETag");
+    lastModified = result.response.headers.get("Last-Modified");
     await result.response.body?.cancel();
-    throw new SourceProbeHttpError(`ROM source returned HTTP ${result.response.status}`);
   }
-  if (
-    resolverPath.endsWith("/downloadcheck") &&
-    result.response.headers.get("Content-Type")?.toLowerCase().includes("json")
-  ) {
-    await result.response.body?.cancel();
-    throw new SourceProbeHttpError("OPlus OTA resolver did not return a ROM download");
-  }
-  const expiresAt = signedUrlExpiry(result.url);
+  const expiresAt = signedUrlExpiry(resolvedUrl);
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (expiresAt && expiresAt <= nowSeconds) {
     throw new SourceProbeHttpError(
@@ -358,39 +548,33 @@ export async function createProbeSession(
     );
   }
   const sessionId = crypto.randomUUID().replaceAll("-", "");
-  const filename = filenameFrom(result.response, result.url);
-  const sizeBytes = contentSize(result.response);
-  const contentType = result.response.headers.get("Content-Type")?.split(";", 1)[0]?.trim() ?? "";
-  const checksum = checksumHeader(result.response);
-  const etag = result.response.headers.get("ETag");
-  const lastModified = result.response.headers.get("Last-Modified");
-  await result.response.body?.cancel();
   const createdAt = nowSeconds;
   await env.DB.prepare(
     `INSERT INTO wukong_source_probe_sessions
      (session_id, owner_subject, source_url, resolved_url, resolved_host,
       filename, content_type, size_bytes, checksum_header, signed_url_expires_at,
-      created_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      created_at, expires_at, transport_mode)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     sessionId,
     ownerSubject,
     uri,
-    result.url.toString(),
-    result.url.hostname,
+    resolvedUrl.toString(),
+    resolvedUrl.hostname,
     filename,
     contentType,
     sizeBytes,
     checksum,
     expiresAt ? new Date(expiresAt * 1000).toISOString() : "",
     createdAt,
-    createdAt + SESSION_SECONDS
+    createdAt + SESSION_SECONDS,
+    transportMode
   ).run();
   return {
-    provider: providerFor(result.url.hostname, originalUrl.hostname),
+    provider: providerFor(resolvedUrl.hostname, originalUrl.hostname),
     filename,
-    resolvedHost: result.url.hostname,
-    host: result.url.hostname,
+    resolvedHost: resolvedUrl.hostname,
+    host: resolvedUrl.hostname,
     sizeBytes,
     contentType: contentType || null,
     etag,
@@ -492,17 +676,22 @@ export async function proxyProbeRange(
   if ((reserved.meta.changes ?? 0) !== 1) {
     throw new SourceProbeHttpError("ROM probe session budget is exhausted", 429);
   }
-  // The resolved URL was DNS-validated, redirect-by-redirect, when this
-  // short-lived session was created. Reuse that result for its first hop;
-  // any new redirect destination is still validated before it is fetched.
-  const result = await secureFetch(String(session.resolved_url), {
-    method: "GET",
-    headers: {
-      Range: `bytes=${range.start}-${range.end}`,
-      "Accept-Encoding": "identity",
-      "User-Agent": "Wukong-ROM-Studio/1.0"
-    }
-  }, true);
+  const rangeHeader = `bytes=${range.start}-${range.end}`;
+  const result = String(session.transport_mode) === "vercel"
+    ? {
+        response: await callSourceTransport(
+          request, env, "range", String(session.resolved_url), rangeHeader, range.length
+        ),
+        url: validatedUrl(String(session.resolved_url))
+      }
+    : await secureFetch(String(session.resolved_url), {
+        method: "GET",
+        headers: {
+          Range: rangeHeader,
+          "Accept-Encoding": "identity",
+          "User-Agent": "Wukong-ROM-Studio/1.0"
+        }
+      }, true);
   if (result.response.status !== 206) {
     const declared = Number(result.response.headers.get("Content-Length") ?? 0);
     if (!declared || declared > range.length) {

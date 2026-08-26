@@ -210,28 +210,30 @@ describe("bounded ROM source Range proxy", () => {
   });
 
   it("resolves OPlus downloadCheck with one bounded GET instead of HEAD", async () => {
-    let sourceGets = 0;
-    mockDnsAndOrigin((request) => {
+    let claimedSource = "";
+    mockDnsAndOrigin(async (request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/downloadCheck") {
-        expect(request.method).toBe("GET");
-        expect(request.headers.get("Range")).toBe("bytes=0-0");
-        expect(request.headers.get("User-Agent")).toBe("okhttp/3.12.12");
-        expect(request.headers.get("userId")).toBe("oplus-ota|16002018");
-        sourceGets += 1;
-        return new Response(null, {
-          status: 302,
-          headers: { Location: "https://cdn.example/PKG110_16.0.9.zip" }
+      if (url.pathname === "/api/source-transport") {
+        const body = await request.json() as { claimUrl: string; token: string };
+        const claim = await SELF.fetch(body.claimUrl, {
+          method: "POST",
+          headers: { Authorization: `TransportClaim ${body.token}` }
+        });
+        expect(claim.status).toBe(200);
+        const work = await claim.json() as Record<string, unknown>;
+        expect(work).toMatchObject({ operation: "probe", range: "bytes=0-0", maximumBytes: 1 });
+        claimedSource = String(work.sourceUrl);
+        return Response.json({
+          resolvedUrl: "https://gauss-compota-c-cn.allawnfs.com/PKG110_16.0.9.zip?Expires=2000000000",
+          filename: "PKG110_16.0.9.zip",
+          sizeBytes: 8192,
+          contentType: "application/zip",
+          checksum: "",
+          etag: null,
+          lastModified: null
         });
       }
-      return new Response(new Uint8Array(1), {
-        status: 206,
-        headers: {
-          "Content-Range": "bytes 0-0/8192",
-          "Content-Type": "application/zip",
-          "Content-Disposition": 'attachment; filename="PKG110_16.0.9.zip"'
-        }
-      });
+      throw new Error(`Unexpected fetch ${request.url}`);
     });
 
     const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
@@ -246,51 +248,45 @@ describe("bounded ROM source Range proxy", () => {
     });
     const payload = await probe.json() as Record<string, unknown>;
 
-    expect(sourceGets).toBe(1);
+    expect(claimedSource).toContain("/downloadCheck?c=fixture");
     expect(payload.filename).toBe("PKG110_16.0.9.zip");
     expect(payload.contentType).toBe("application/zip");
   });
 
   it("resolves a Daniel Springer build page without exposing the signed URL", async () => {
-    let pageGets = 0;
-    let resolverPosts = 0;
+    let replayStatus = 0;
     mockDnsAndOrigin(async (request) => {
       const url = new URL(request.url);
-      if (url.hostname === "roms.danielspringer.at" && url.searchParams.has("build")) {
-        pageGets += 1;
-        return new Response(
-          '<div id="resultBox" data-url="" data-ota-key="ota-key" data-csrf="csrf-token"></div>',
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "text/html; charset=UTF-8",
-              "Set-Cookie": "PHPSESSID=fixture-session; Path=/; Secure; HttpOnly"
-            }
-          }
-        );
-      }
-      if (url.hostname === "roms.danielspringer.at" && url.searchParams.get("ota_action") === "resolve_json") {
-        resolverPosts += 1;
-        expect(request.method).toBe("POST");
-        expect(request.headers.get("Cookie")).toBe("PHPSESSID=fixture-session");
-        const form = await request.formData();
-        expect(form.get("k")).toBe("ota-key");
-        expect(form.get("csrf")).toBe("csrf-token");
+      if (url.pathname === "/api/source-transport") {
+        const body = await request.json() as { claimUrl: string; token: string };
+        const headers = { Authorization: `TransportClaim ${body.token}` };
+        const claim = await SELF.fetch(body.claimUrl, { method: "POST", headers });
+        expect(claim.status).toBe(200);
+        const work = await claim.json() as Record<string, unknown>;
+        replayStatus = (await SELF.fetch(body.claimUrl, { method: "POST", headers })).status;
+        if (work.operation === "range") {
+          expect(work).toMatchObject({ range: "bytes=0-31", maximumBytes: 32 });
+          expect(String(work.sourceUrl)).toContain("Signature=signed");
+          return new Response(new Uint8Array(32), {
+            status: 206,
+            headers: { "Content-Range": "bytes 0-31/8192" }
+          });
+        }
+        expect(work).toMatchObject({
+          operation: "probe",
+          sourceUrl: "https://roms.danielspringer.at/index.php?view=ota&build=fixture-build"
+        });
         return Response.json({
-          ok: true,
-          url: "https://cdn.example/PKG110.zip?Expires=2000000000&Signature=signed"
+          resolvedUrl: "https://gauss-compota-c-cn.allawnfs.com/PKG110.zip?Expires=2000000000&Signature=signed",
+          filename: "PKG110.zip",
+          sizeBytes: 8192,
+          contentType: "application/zip",
+          checksum: "a28632dc4e3e2c8b51cc6e938c87b6fb",
+          etag: null,
+          lastModified: null
         });
       }
-      expect(request.headers.get("Range")).toBe("bytes=0-0");
-      return new Response(new Uint8Array(1), {
-        status: 206,
-        headers: {
-          "Content-Range": "bytes 0-0/8192",
-          "Content-Type": "application/zip",
-          "Content-Disposition": 'attachment; filename="PKG110.zip"',
-          "x-amz-meta-filemd5": "a28632dc4e3e2c8b51cc6e938c87b6fb"
-        }
-      });
+      throw new Error(`Unexpected fetch ${request.url}`);
     });
 
     const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
@@ -307,17 +303,25 @@ describe("bounded ROM source Range proxy", () => {
     const payload = JSON.parse(text) as Record<string, unknown>;
 
     expect(probe.status).toBe(200);
-    expect(pageGets).toBe(1);
-    expect(resolverPosts).toBe(1);
+    expect(replayStatus).toBe(410);
     expect(payload).toMatchObject({
       provider: "Daniel Springer",
       filename: "PKG110.zip",
-      resolvedHost: "cdn.example",
+      resolvedHost: "gauss-compota-c-cn.allawnfs.com",
       sizeBytes: 8192,
       md5: "a28632dc4e3e2c8b51cc6e938c87b6fb"
     });
     expect(text).not.toContain("Signature=signed");
     expect(text).not.toContain("resolvedUrl");
+    const session = payload.rangeSession as { url: string };
+    const range = await SELF.fetch(session.url, {
+      headers: {
+        Origin: "https://wukong-rom-studio.vercel.app",
+        Range: "bytes=0-31"
+      }
+    });
+    expect(range.status).toBe(206);
+    expect((await range.arrayBuffer()).byteLength).toBe(32);
   });
 
   it("preserves the OPlus MD5 response header", async () => {
