@@ -40,6 +40,10 @@ runs:
         mkdir -p .wkstudio/secrets
         umask 077
         printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > .wkstudio/secrets/rclone.conf
+    - name: "B2 · Thư mục job dùng chung / Shared job store"
+      shell: bash
+      run: |
+        printf '%s\n' 'WUKONG_ACTIONS_JOBS_ROOT=.wkstudio/Jobs/hybrid' >> "$GITHUB_ENV"
     - name: "C · Recipe & content-pack / Fetch private build content"
       shell: bash
       env:
@@ -135,10 +139,10 @@ runs:
         WUKONG_DROP_MISSING_MODS: "0"
       run: |
         set -euo pipefail
-        job_json="$(python3 wukong_cli.py submit --recipe .wkstudio/recipe.json --job-id "$WUKONG_JOB_ID" --channel actions --subject "$GITHUB_ACTOR_ID" --role user)"
+        job_json="$(python3 wukong_cli.py --jobs-root "$WUKONG_ACTIONS_JOBS_ROOT" submit --recipe .wkstudio/recipe.json --job-id "$WUKONG_JOB_ID" --channel actions --subject "$GITHUB_ACTOR_ID" --role user)"
         job_id="$(printf '%s' "$job_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["job_id"])')"
         # Best-effort resume only; a missing/expired checkpoint must not fail the step.
-        python3 -m tools.sync_job "$job_id" --config "$WUKONG_RCLONE_CONFIG" --pull-checkpoint || true
+        python3 -m tools.sync_job "$job_id" --config "$WUKONG_RCLONE_CONFIG" --jobs-root "$WUKONG_ACTIONS_JOBS_ROOT" --pull-checkpoint || true
         reporter_pid=""
         if [[ -n "$WUKONG_CONTROL_PLANE_API_URL" && -n "$WUKONG_ACTIONS_CALLBACK_SECRET" && -n "$WUKONG_RUN_ID" ]]; then
           python3 -m tools.actions_control_plane progress \
@@ -146,13 +150,13 @@ runs:
             --job-id "$job_id" \
             --run-id "$WUKONG_RUN_ID" \
             --secret "$WUKONG_ACTIONS_CALLBACK_SECRET" \
-            --jobs-root .wkstudio/Jobs/hybrid \
+            --jobs-root "$WUKONG_ACTIONS_JOBS_ROOT" \
             --sequence-offset 2 &
           reporter_pid="$!"
         fi
         set +e
         echo "executor_started=true" >> "$GITHUB_OUTPUT"
-        python3 wukong_cli.py execute "$job_id"
+        python3 wukong_cli.py --jobs-root "$WUKONG_ACTIONS_JOBS_ROOT" execute "$job_id"
         result=$?
         set -e
         if [[ -n "$reporter_pid" ]]; then
@@ -172,7 +176,7 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
       run: |
         set +e
-        python3 -m tools.sync_job "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG"
+        python3 -m tools.sync_job "$WUKONG_JOB_ID" --config "$WUKONG_RCLONE_CONFIG" --jobs-root "$WUKONG_ACTIONS_JOBS_ROOT"
         # Pre-execute failures have no local job store yet; do not fail the workflow twice.
         exit 0
     - name: "G · Xác nhận kết quả / Enforce terminal status"

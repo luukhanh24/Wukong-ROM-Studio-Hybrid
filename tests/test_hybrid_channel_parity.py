@@ -153,6 +153,57 @@ class HybridChannelParityContractTests(unittest.TestCase):
 
         self.assertEqual(["manifest", None, "manifest", "manifest"], observations)
 
+    def test_actions_executor_persists_terminal_manifest_for_workflow_transfer(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "WukongStudio.svg"
+            source.write_bytes(b"<svg>fixture</svg>")
+            jobs_root = root / ".wkstudio" / "Jobs" / "hybrid"
+            recipe = BuildRecipe.from_dict(
+                {
+                    "task": "artifact_publish",
+                    "device": "PKG110",
+                    "source": {"kind": "local", "uri": str(source)},
+                    "execution": {"target": "github-auto"},
+                }
+            )
+            store = FileJobStore(jobs_root)
+            orchestrator = HybridOrchestrator(
+                store=store,
+                workspace_root=root / "workspace",
+                inventory_provider=lambda: RunnerInventory(False),
+            )
+            job = orchestrator.submit(
+                recipe,
+                Identity("actions", "100", "user"),
+                job_id="actions-manifest-transfer",
+            )
+
+            with patch.dict("os.environ", {"GITHUB_ACTIONS": "false"}), patch(
+                "wukong.executor.source_adapter_for",
+                return_value=_FixtureSourceAdapter(source),
+            ):
+                completed = LocalJobExecutor(
+                    store=store,
+                    workspace_root=root / "workspace",
+                    storage_factory=lambda _remote: _FixtureStorage(),
+                ).execute(job.job_id)
+
+            manifest_path = jobs_root / job.job_id / "manifest.json"
+            events_path = jobs_root / job.job_id / "events.jsonl"
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            artifact = payload["artifacts"][0]
+
+            self.assertEqual(JobStatus.SUCCEEDED, completed.status)
+            self.assertEqual("succeeded", payload["status"])
+            self.assertTrue(events_path.is_file())
+            self.assertEqual(
+                "https://drive.google.com/fixture/WukongStudio.svg",
+                artifact["public_url"],
+            )
+            self.assertNotIn("workers.dev", artifact["public_url"])
+            self.assertNotIn("onrender.com", artifact["public_url"])
+
     def test_actions_checkpoint_failure_does_not_stop_or_repeat_build(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
