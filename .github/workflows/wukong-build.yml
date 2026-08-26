@@ -236,11 +236,11 @@ jobs:
       - name: "03 · Mở rộng workspace / Expand hosted disk"
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
-          # The action creates its loop image as root, so ext4 reserved blocks
-          # are consumed beyond `df`'s non-root available count. Production
-          # smoke showed 6 GiB here leaves only ~625 MiB actually available.
+          # On the current GitHub image, /mnt shares the root filesystem.
+          # The action's second loop image therefore consumes root space down
+          # to temp-reserve-mb, regardless of the earlier root reserve.
           root-reserve-mb: 12288
-          temp-reserve-mb: 512
+          temp-reserve-mb: 8192
           swap-size-mb: 2048
           remove-dotnet: 'true'
           remove-android: 'true'

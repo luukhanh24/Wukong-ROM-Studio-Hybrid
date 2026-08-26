@@ -161,7 +161,8 @@ class GitHubActionsUITests(unittest.TestCase):
         )
 
         self.assertIn("root-reserve-mb: 12288", workflow)
-        self.assertIn("ext4 reserved blocks", workflow)
+        self.assertIn("temp-reserve-mb: 8192", workflow)
+        self.assertIn("/mnt shares the root filesystem", workflow)
         self.assertIn("04.1 · Kiểm tra dung lượng runner / Verify runner disk split", workflow)
         self.assertIn("--root-path /", workflow)
         self.assertIn("--min-root-disk-gib 4", workflow)
