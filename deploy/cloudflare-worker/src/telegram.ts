@@ -1,5 +1,6 @@
 import { confirmPairing, rememberSourceDraft } from "./sessions";
 import { observeUser, profile } from "./state";
+import { recoverPreBootstrapJobs } from "./recovery";
 
 type JsonObject = Record<string, unknown>;
 
@@ -235,6 +236,14 @@ export async function handleTelegramWebhook(
 }
 
 export async function maintenance(env: Env): Promise<void> {
+  try {
+    await recoverPreBootstrapJobs(env);
+  } catch (error) {
+    console.error(
+      "Pre-bootstrap GitHub Actions recovery failed",
+      error instanceof Error ? error.message : String(error)
+    );
+  }
   const nowSeconds = Math.floor(Date.now() / 1000);
   const oldIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   await env.DB.batch([

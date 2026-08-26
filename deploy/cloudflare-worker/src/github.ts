@@ -2,6 +2,17 @@ import type { JobRow } from "./jobs";
 
 type JsonObject = Record<string, unknown>;
 
+export interface WorkflowRun {
+  id: number;
+  event: string;
+  displayTitle: string;
+  path: string;
+  status: string;
+  conclusion: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class GitHubHttpError extends Error {
   constructor(message: string, readonly status = 502) {
     super(message);
@@ -67,6 +78,54 @@ export async function dispatchBuild(env: Env, jobId: string): Promise<void> {
     throw new GitHubHttpError(
       `GitHub Actions dispatch failed (${response.status})${detail ? `: ${detail}` : ""}`
     );
+  }
+}
+
+export async function listWorkflowRuns(env: Env): Promise<WorkflowRun[]> {
+  if (!env.WUKONG_GITHUB_TOKEN.trim()) {
+    throw new GitHubHttpError("GitHub Actions run lookup is not configured", 503);
+  }
+  const [owner, repository] = repositoryParts(env);
+  const workflow = encodeURIComponent(env.WUKONG_GITHUB_WORKFLOW || "wukong-build.yml");
+  const response = await githubFetch(
+    env,
+    `/repos/${owner}/${repository}/actions/workflows/${workflow}/runs?event=workflow_dispatch&per_page=100`
+  );
+  if (!response.ok) {
+    throw new GitHubHttpError(`GitHub Actions run lookup failed (${response.status})`);
+  }
+  const payload = await response.json() as JsonObject;
+  const runs = Array.isArray(payload.workflow_runs) ? payload.workflow_runs : [];
+  return runs.flatMap((value): WorkflowRun[] => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const item = value as JsonObject;
+    const id = Number(item.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return [];
+    return [{
+      id,
+      event: String(item.event ?? ""),
+      displayTitle: String(item.display_title ?? ""),
+      path: String(item.path ?? ""),
+      status: String(item.status ?? ""),
+      conclusion: String(item.conclusion ?? ""),
+      createdAt: String(item.created_at ?? ""),
+      updatedAt: String(item.updated_at ?? "")
+    }];
+  });
+}
+
+export async function rerunWorkflowRun(env: Env, runId: number): Promise<void> {
+  if (!env.WUKONG_GITHUB_TOKEN.trim()) {
+    throw new GitHubHttpError("GitHub Actions rerun is not configured", 503);
+  }
+  const [owner, repository] = repositoryParts(env);
+  const response = await githubFetch(
+    env,
+    `/repos/${owner}/${repository}/actions/runs/${runId}/rerun`,
+    { method: "POST" }
+  );
+  if (![201, 202].includes(response.status)) {
+    throw new GitHubHttpError(`GitHub Actions rerun failed (${response.status})`);
   }
 }
 
@@ -167,7 +226,7 @@ export async function bootstrapActions(
   await verifyRun(env, jobId, runId);
   const now = new Date().toISOString();
   const sequence = Number(row.next_event_sequence ?? 2);
-  await env.DB.batch([
+  const results = await env.DB.batch([
     env.DB.prepare(
       `UPDATE wukong_jobs SET github_run_id = ?, status = 'dispatched',
        stage = 'github-actions', updated_at = ?, next_event_sequence = MAX(next_event_sequence, ?)
@@ -176,9 +235,24 @@ export async function bootstrapActions(
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_job_events
        (job_id, sequence, timestamp, event_type, payload_json)
-       VALUES (?, ?, ?, 'dispatched', ?)`
-    ).bind(jobId, sequence, now, JSON.stringify({ runner: "github-actions" }))
+       SELECT ?, ?, ?, 'dispatched', ?
+       WHERE EXISTS (
+         SELECT 1 FROM wukong_jobs
+         WHERE job_id = ? AND status = 'dispatched'
+           AND stage = 'github-actions' AND github_run_id = ?
+       )`
+    ).bind(
+      jobId,
+      sequence,
+      now,
+      JSON.stringify({ runner: "github-actions" }),
+      jobId,
+      runId
+    )
   ]);
+  if ((results[0]?.meta.changes ?? 0) !== 1) {
+    throw new GitHubHttpError("Actions bootstrap job became terminal", 409);
+  }
   return {
     jobId,
     runId,
@@ -217,26 +291,14 @@ export async function cancelWorkflowRunForJob(
     await cancelWorkflowRun(env, knownRunId);
     return knownRunId;
   }
-  const [owner, repository] = repositoryParts(env);
-  const workflow = encodeURIComponent(env.WUKONG_GITHUB_WORKFLOW || "wukong-build.yml");
-  const response = await githubFetch(
-    env,
-    `/repos/${owner}/${repository}/actions/workflows/${workflow}/runs?event=workflow_dispatch&per_page=100`
-  );
-  if (!response.ok) {
-    throw new GitHubHttpError(`GitHub Actions run lookup failed (${response.status})`);
-  }
-  const payload = await response.json() as JsonObject;
-  const runs = Array.isArray(payload.workflow_runs) ? payload.workflow_runs : [];
-  const run = runs.find((value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-    const item = value as JsonObject;
+  const runs = await listWorkflowRuns(env);
+  const run = runs.find((item) => {
     return (
       item.event === "workflow_dispatch" &&
-      String(item.display_title ?? "").startsWith(`${jobId} ·`) &&
-      (!item.path || String(item.path).endsWith(`/${env.WUKONG_GITHUB_WORKFLOW}`))
+      item.displayTitle.startsWith(`${jobId} ·`) &&
+      (!item.path || item.path.endsWith(`/${env.WUKONG_GITHUB_WORKFLOW}`))
     );
-  }) as JsonObject | undefined;
+  });
   const runId = Number(run?.id);
   if (!Number.isSafeInteger(runId) || runId <= 0) return null;
   await cancelWorkflowRun(env, runId);
