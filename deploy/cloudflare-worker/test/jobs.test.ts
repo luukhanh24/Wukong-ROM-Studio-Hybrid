@@ -1,5 +1,5 @@
 import { env, SELF } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { tmaHeaders } from "./helpers";
 
 const recipe = {
@@ -45,6 +45,18 @@ describe("atomic Accepted Job creation", () => {
     await seedApprovedUser("42001", 5);
   });
 
+  afterEach(async () => {
+    const bindings = env as unknown as Env;
+    await bindings.DB.batch([
+      bindings.DB.prepare(
+        "DELETE FROM wukong_control_plane_metadata WHERE key = 'd1_migration_mode'"
+      ),
+      bindings.DB.prepare(
+        "DELETE FROM wukong_jobs WHERE job_id LIKE 'global-cap-fixture-%'"
+      )
+    ]);
+  });
+
   it("returns one Accepted Job for concurrent retries and consumes one credit", async () => {
     const headers = {
       ...(await tmaHeaders(42001)),
@@ -77,8 +89,8 @@ describe("atomic Accepted Job creation", () => {
     });
   });
 
-  it("allows only one active lock for a user and device", async () => {
-    await seedApprovedUser("42003", 5);
+  it("allows concurrent jobs for the same user and device", async () => {
+    await seedApprovedUser("42003", 25);
     const competingRecipe = { ...recipe, device: "PKG111" };
     const firstHeaders = {
       ...(await tmaHeaders(42003)),
@@ -101,9 +113,50 @@ describe("atomic Accepted Job creation", () => {
         body: JSON.stringify(competingRecipe)
       })
     ]);
-    expect([first.status, second.status].sort()).toEqual([201, 409]);
-    const conflict = first.status === 409 ? first : second;
-    await expect(conflict.json()).resolves.toMatchObject({ code: "build_concurrency_conflict" });
+    expect([first.status, second.status].sort()).toEqual([201, 201]);
+    const payloads = await Promise.all([
+      first.json() as Promise<{ job_id: string }>,
+      second.json() as Promise<{ job_id: string }>
+    ]);
+    expect(payloads[0].job_id).not.toBe(payloads[1].job_id);
+  });
+
+  it("rejects the twenty-first active job across the system", async () => {
+    const bindings = env as unknown as Env;
+    const now = new Date().toISOString();
+    await bindings.DB.prepare(
+      `INSERT INTO wukong_control_plane_metadata (key, value)
+       VALUES ('d1_migration_mode', 'migration')
+       ON CONFLICT (key) DO UPDATE SET value = 'migration'`
+    ).run();
+    for (let index = 0; index < 20; index += 1) {
+      const jobId = `global-cap-fixture-${index}`;
+      await bindings.DB.prepare(
+        `INSERT OR REPLACE INTO wukong_jobs
+         (job_id, manifest_json, recipe_json, created_at, updated_at,
+          next_event_sequence, owner_channel, owner_subject, device, status, stage, progress)
+         VALUES (?, '{}', ?, ?, ?, 2, 'telegram', '1678823419',
+          ?, 'running', 'fixture', 0.5)`
+      ).bind(jobId, JSON.stringify(recipe), now, now, `PKG${200 + index}`).run();
+    }
+    await bindings.DB.prepare(
+      "DELETE FROM wukong_control_plane_metadata WHERE key = 'd1_migration_mode'"
+    ).run();
+
+    const response = await SELF.fetch("https://worker.example/v1/jobs", {
+      method: "POST",
+      headers: {
+        ...(await tmaHeaders(1678823419)),
+        "Content-Type": "application/json",
+        "Idempotency-Key": "twenty-first-active-job"
+      },
+      body: JSON.stringify({ ...recipe, device: "PKG999" })
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "build_concurrency_limit"
+    });
   });
 
   it("does not accept a job after the Build Allowance is exhausted", async () => {
