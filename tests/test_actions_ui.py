@@ -155,6 +155,26 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))
         self.assertNotIn("${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}", workflow)
 
+    def test_hybrid_action_keeps_terminal_manifest_in_transfer_directory(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "wukong-build.yml").read_text(
+            encoding="utf-8"
+        )
+        action = (ROOT / ".github" / "actions" / "run-hybrid" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+
+        jobs_root = ".wkstudio/Jobs/hybrid"
+        self.assertEqual(action.count(f"WUKONG_ACTIONS_JOBS_ROOT={jobs_root}"), 1)
+        self.assertEqual(
+            action.count('--jobs-root "$WUKONG_ACTIONS_JOBS_ROOT"'),
+            5,
+            "submit, checkpoint pull, progress, execute and terminal sync must share one job store",
+        )
+        self.assertIn(f"{jobs_root}/${{{{ inputs.job_id }}}}/manifest.json", workflow)
+        self.assertIn(f"{jobs_root}/${{{{ inputs.job_id }}}}/events.jsonl", workflow)
+        self.assertIn(f'manifest="{jobs_root}/$WUKONG_JOB_ID/manifest.json"', workflow)
+        self.assertIn(f'events="{jobs_root}/$WUKONG_JOB_ID/events.jsonl"', workflow)
+
     def test_plain_progress_messages_are_not_command_escaped(self) -> None:
         reporter = GitHubActionsUI(enabled=True)
         output = io.StringIO()

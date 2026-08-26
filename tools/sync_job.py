@@ -14,12 +14,18 @@ def main() -> int:
     parser.add_argument("job_id")
     parser.add_argument("--config", required=True)
     parser.add_argument(
+        "--jobs-root",
+        type=Path,
+        default=JOBS_ROOT / "hybrid",
+        help="Local job store containing the manifest and events to synchronize",
+    )
+    parser.add_argument(
         "--pull-checkpoint",
         action="store_true",
         help="Import only a validated cloud checkpoint before execution",
     )
     args = parser.parse_args()
-    store = FileJobStore(JOBS_ROOT / "hybrid")
+    store = FileJobStore(args.jobs_root)
     if not store.get(args.job_id):
         print(f"Job manifest is unavailable: {args.job_id}")
         return 1
