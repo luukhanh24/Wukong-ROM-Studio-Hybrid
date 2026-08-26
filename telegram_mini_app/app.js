@@ -662,26 +662,28 @@ function updateDockShellPath() {
   if (!nav || !shell || !clipPath || !rimPath) return;
   const width = Math.max(1, nav.getBoundingClientRect().width);
   const height = 96;
-  const bodyTop = 24;
+  const bodyTop = 32;
   const bodyBottom = 96;
-  const capRadius = Math.min(38, width / 6);
+  const capRadius = Math.min(42, width / 5);
   const capCenterY = 45;
-  const capOffset = capCenterY - bodyTop;
-  const capShoulder = Math.sqrt(Math.max(0, capRadius * capRadius - capOffset * capOffset));
-  const sideRadius = Math.min(32, width / 8);
+  const capShoulder = capRadius + 10;
+  const capArcX = capRadius * Math.cos(Math.PI / 6);
+  const capArcY = capCenterY - capRadius / 2;
+  const capBlendHandle = 7;
+  const capTangentX = capBlendHandle / 2;
+  const capTangentY = capBlendHandle * Math.sqrt(3) / 2;
+  const sideRadius = (bodyBottom - bodyTop) / 2;
   const center = width / 2;
   const path = [
     `M ${sideRadius} ${bodyTop}`,
     `H ${center - capShoulder}`,
-    `A ${capRadius} ${capRadius} 0 0 1 ${center + capShoulder} ${bodyTop}`,
+    `C ${center - capRadius - 4} ${bodyTop} ${center - capArcX - capTangentX} ${capArcY + capTangentY} ${center - capArcX} ${capArcY}`,
+    `A ${capRadius} ${capRadius} 0 0 1 ${center + capArcX} ${capArcY}`,
+    `C ${center + capArcX + capTangentX} ${capArcY + capTangentY} ${center + capRadius + 4} ${bodyTop} ${center + capShoulder} ${bodyTop}`,
     `H ${width - sideRadius}`,
-    `C ${width - sideRadius * .45} ${bodyTop} ${width} ${bodyTop + sideRadius * .45} ${width} ${bodyTop + sideRadius}`,
-    `V ${bodyBottom - sideRadius}`,
-    `C ${width} ${bodyBottom - sideRadius * .45} ${width - sideRadius * .45} ${bodyBottom} ${width - sideRadius} ${bodyBottom}`,
+    `A ${sideRadius} ${sideRadius} 0 0 1 ${width - sideRadius} ${bodyBottom}`,
     `H ${sideRadius}`,
-    `C ${sideRadius * .45} ${bodyBottom} 0 ${bodyBottom - sideRadius * .45} 0 ${bodyBottom - sideRadius}`,
-    `V ${bodyTop + sideRadius}`,
-    `C 0 ${bodyTop + sideRadius * .45} ${sideRadius * .45} ${bodyTop} ${sideRadius} ${bodyTop}`,
+    `A ${sideRadius} ${sideRadius} 0 0 1 ${sideRadius} ${bodyTop}`,
     "Z"
   ].join(" ");
   shell.setAttribute("viewBox", `0 0 ${width} ${height}`);
