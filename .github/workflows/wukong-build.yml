@@ -236,8 +236,8 @@ jobs:
       - name: "03 · Mở rộng workspace / Expand hosted disk"
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
-          root-reserve-mb: 768
-          temp-reserve-mb: 128
+          root-reserve-mb: 6144
+          temp-reserve-mb: 512
           swap-size-mb: 2048
           remove-dotnet: 'true'
           remove-android: 'true'
@@ -274,6 +274,16 @@ jobs:
             OFX
             TWRP
           key: wukong-content-${{ needs.route.outputs.mod_version }}-${{ hashFiles('content-packs/index.json') }}
+      - name: "04.1 · Kiểm tra dung lượng runner / Verify runner disk split"
+        shell: bash
+        run: >-
+          python3 -m tools.runner_preflight
+          --path "$GITHUB_WORKSPACE"
+          --min-disk-gib 70
+          --root-path /
+          --min-root-disk-gib 4
+          --min-memory-gib 0
+          --min-cpus 0
       - name: "05–19 · Chạy pipeline ROM / Execute ROM pipeline"
         id: hybrid
         uses: ./.github/actions/run-hybrid
