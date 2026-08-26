@@ -35,6 +35,7 @@ import {
 import { cloudLibrary } from "./drive";
 import {
   SourceProbeHttpError,
+  claimSourceTransport,
   createProbeSession,
   proxyProbeRange
 } from "./source-probe";
@@ -472,6 +473,9 @@ const worker: ExportedHandler<Env> = {
         }
         return json({ error: error instanceof Error ? error.message : "Actions bootstrap failed" }, 400);
       }
+    }
+    if (path === "/internal/source-transport/claim" && request.method === "POST") {
+      return claimSourceTransport(request, env);
     }
     const ticketDownload = path.match(/^\/v1\/jobs\/([A-Za-z0-9-]{1,64})\/download$/);
     const ticket = new URL(request.url).searchParams.get("ticket") ?? "";

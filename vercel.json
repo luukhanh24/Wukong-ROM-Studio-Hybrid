@@ -3,6 +3,11 @@
   "buildCommand": "python -m tools.build_vercel_mini_app",
   "outputDirectory": ".vercel-static",
   "framework": null,
+  "functions": {
+    "api/source-transport.ts": {
+      "maxDuration": 60
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",

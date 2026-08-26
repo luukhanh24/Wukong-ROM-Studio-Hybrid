@@ -16,16 +16,19 @@ function mockDnsAndOrigin(handler: (request: Request) => Response | Promise<Resp
 }
 
 describe("bounded ROM source Range proxy", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it("creates a two-minute probe session and serves a bounded byte range", async () => {
     const bytes = new Uint8Array(1024).fill(0x50);
     mockDnsAndOrigin((request) => {
-      if (request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
+      if (request.headers.get("Range") === "bytes=0-0") {
+        return new Response(new Uint8Array(1), {
+          status: 206,
           headers: {
-            "Content-Length": String(16 * 1024 * 1024),
+            "Content-Range": `bytes 0-0/${16 * 1024 * 1024}`,
             "Content-Type": "application/zip",
             "Content-Disposition": 'attachment; filename="PJD110_OTA.zip"',
             "Accept-Ranges": "bytes",
@@ -127,11 +130,11 @@ describe("bounded ROM source Range proxy", () => {
           Answer: [{ type: 1, data: "8.8.8.8" }]
         });
       }
-      if (request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
+      if (request.headers.get("Range") === "bytes=0-0") {
+        return new Response(new Uint8Array(1), {
+          status: 206,
           headers: {
-            "Content-Length": "4096",
+            "Content-Range": "bytes 0-0/4096",
             "Content-Type": "application/zip",
             "Content-Disposition": 'attachment; filename="fixture.zip"'
           }
@@ -139,7 +142,10 @@ describe("bounded ROM source Range proxy", () => {
       }
       const match = request.headers.get("Range")?.match(/bytes=(\d+)-(\d+)/);
       const length = match ? Number(match[2]) - Number(match[1]) + 1 : 0;
-      return new Response(new Uint8Array(length), { status: 206 });
+      return new Response(new Uint8Array(length), {
+        status: 206,
+        headers: { "Content-Range": `bytes ${match?.[1]}-${match?.[2]}/4096` }
+      });
     }));
 
     const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
@@ -177,10 +183,10 @@ describe("bounded ROM source Range proxy", () => {
           Answer: [{ type: 1, data: host === "private.example" ? "127.0.0.1" : "8.8.8.8" }]
         });
       }
-      if (request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
-          headers: { "Content-Length": "4096", "Content-Type": "application/zip" }
+      if (request.headers.get("Range") === "bytes=0-0") {
+        return new Response(new Uint8Array(1), {
+          status: 206,
+          headers: { "Content-Range": "bytes 0-0/4096", "Content-Type": "application/zip" }
         });
       }
       return new Response(null, {
@@ -209,34 +215,31 @@ describe("bounded ROM source Range proxy", () => {
     await expect(range.json()).resolves.toMatchObject({ code: "source_unreachable" });
   });
 
-  it("resolves OPlus downloadCheck when HEAD returns JSON", async () => {
-    let sourceGets = 0;
-    mockDnsAndOrigin((request) => {
+  it("resolves OPlus downloadCheck with one bounded GET instead of HEAD", async () => {
+    let claimedSource = "";
+    mockDnsAndOrigin(async (request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/downloadCheck" && request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
-          headers: {
-            "Content-Length": "128",
-            "Content-Type": "application/json"
-          }
+      if (url.pathname === "/api/source-transport") {
+        const body = await request.json() as { claimUrl: string; token: string };
+        const claim = await SELF.fetch(body.claimUrl, {
+          method: "POST",
+          headers: { Authorization: `TransportClaim ${body.token}` }
+        });
+        expect(claim.status).toBe(200);
+        const work = await claim.json() as Record<string, unknown>;
+        expect(work).toMatchObject({ operation: "probe", range: "bytes=0-0", maximumBytes: 1 });
+        claimedSource = String(work.sourceUrl);
+        return Response.json({
+          resolvedUrl: "https://gauss-compota-c-cn.allawnfs.com/PKG110_16.0.9.zip?Expires=2000000000",
+          filename: "PKG110_16.0.9.zip",
+          sizeBytes: 8192,
+          contentType: "application/zip",
+          checksum: "",
+          etag: null,
+          lastModified: null
         });
       }
-      if (url.pathname === "/downloadCheck") {
-        sourceGets += 1;
-        return new Response(null, {
-          status: 302,
-          headers: { Location: "https://cdn.example/PKG110_16.0.9.zip" }
-        });
-      }
-      return new Response(null, {
-        status: 200,
-        headers: {
-          "Content-Length": "8192",
-          "Content-Type": "application/zip",
-          "Content-Disposition": 'attachment; filename="PKG110_16.0.9.zip"'
-        }
-      });
+      throw new Error(`Unexpected fetch ${request.url}`);
     });
 
     const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
@@ -251,9 +254,111 @@ describe("bounded ROM source Range proxy", () => {
     });
     const payload = await probe.json() as Record<string, unknown>;
 
-    expect(sourceGets).toBe(1);
+    expect(claimedSource).toContain("/downloadCheck?c=fixture");
     expect(payload.filename).toBe("PKG110_16.0.9.zip");
     expect(payload.contentType).toBe("application/zip");
+  });
+
+  it("resolves a Daniel Springer build page without exposing the signed URL", async () => {
+    let replayStatus = 0;
+    mockDnsAndOrigin(async (request) => {
+      const url = new URL(request.url);
+      if (url.pathname === "/api/source-transport") {
+        const body = await request.json() as { claimUrl: string; token: string };
+        const headers = { Authorization: `TransportClaim ${body.token}` };
+        const claim = await SELF.fetch(body.claimUrl, { method: "POST", headers });
+        expect(claim.status).toBe(200);
+        const work = await claim.json() as Record<string, unknown>;
+        replayStatus = (await SELF.fetch(body.claimUrl, { method: "POST", headers })).status;
+        if (work.operation === "range") {
+          expect(work).toMatchObject({ range: "bytes=0-31", maximumBytes: 32 });
+          expect(String(work.sourceUrl)).toContain("Signature=signed");
+          return new Response(new Uint8Array(32), {
+            status: 206,
+            headers: { "Content-Range": "bytes 0-31/8192" }
+          });
+        }
+        expect(work).toMatchObject({
+          operation: "probe",
+          sourceUrl: "https://roms.danielspringer.at/index.php?view=ota&build=fixture-build"
+        });
+        return Response.json({
+          resolvedUrl: "https://gauss-compota-c-cn.allawnfs.com/PKG110.zip?Expires=2000000000&Signature=signed",
+          filename: "PKG110.zip",
+          sizeBytes: 8192,
+          contentType: "application/zip",
+          checksum: "a28632dc4e3e2c8b51cc6e938c87b6fb",
+          etag: null,
+          lastModified: null
+        });
+      }
+      throw new Error(`Unexpected fetch ${request.url}`);
+    });
+
+    const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
+      method: "POST",
+      headers: {
+        Origin: "https://wukong-rom-studio.vercel.app",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        uri: "https://roms.danielspringer.at/index.php?view=ota&build=fixture-build"
+      })
+    });
+    const text = await probe.text();
+    const payload = JSON.parse(text) as Record<string, unknown>;
+
+    expect(probe.status).toBe(200);
+    expect(replayStatus).toBe(410);
+    expect(payload).toMatchObject({
+      provider: "Daniel Springer",
+      filename: "PKG110.zip",
+      resolvedHost: "gauss-compota-c-cn.allawnfs.com",
+      sizeBytes: 8192,
+      md5: "a28632dc4e3e2c8b51cc6e938c87b6fb"
+    });
+    expect(text).not.toContain("Signature=signed");
+    expect(text).not.toContain("resolvedUrl");
+    const session = payload.rangeSession as { url: string };
+    const range = await SELF.fetch(session.url, {
+      headers: {
+        Origin: "https://wukong-rom-studio.vercel.app",
+        Range: "bytes=0-31"
+      }
+    });
+    expect(range.status).toBe(206);
+    expect((await range.arrayBuffer()).byteLength).toBe(32);
+  });
+
+  it("rejects an unclaimed source transport token after thirty seconds", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-26T12:00:00Z"));
+    let claimStatus = 0;
+    mockDnsAndOrigin(async (request) => {
+      if (new URL(request.url).pathname === "/api/source-transport") {
+        const body = await request.json() as { claimUrl: string; token: string };
+        vi.advanceTimersByTime(31_000);
+        claimStatus = (await SELF.fetch(body.claimUrl, {
+          method: "POST",
+          headers: { Authorization: `TransportClaim ${body.token}` }
+        })).status;
+        return Response.json({ error: "expired" }, { status: 403 });
+      }
+      throw new Error(`Unexpected fetch ${request.url}`);
+    });
+
+    const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
+      method: "POST",
+      headers: {
+        Origin: "https://wukong-rom-studio.vercel.app",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        uri: "https://component-ota-cn.allawntech.com/downloadCheck?fixture=expiry"
+      })
+    });
+    expect(probe.status).toBe(502);
+    expect(claimStatus).toBe(410);
   });
 
   it("preserves the OPlus MD5 response header", async () => {

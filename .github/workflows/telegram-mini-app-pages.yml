@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "telegram_mini_app/**"
+      - "api/**"
       - "tools/build_vercel_mini_app.py"
       - "tools/export_mini_app_catalog.py"
       - "content-packs/index.json"

@@ -74,6 +74,7 @@ rclone*.conf
 # Generated Telegram Pages catalog
 /telegram_mini_app/catalog.json
 /.vercel-static/
+/.vercel_python_packages/
 /.vercel/
 /deploy/cloudflare-worker/node_modules/
 /deploy/cloudflare-worker/.wrangler/

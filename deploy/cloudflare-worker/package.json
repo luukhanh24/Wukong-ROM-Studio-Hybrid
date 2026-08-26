@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "npm run typecheck && npm test",
+    "check": "npm run typecheck && npm run typecheck:transport && npm test && npm run test:transport",
     "typecheck": "tsc --noEmit",
+    "typecheck:transport": "tsc --noEmit -p ../../api/tsconfig.json",
     "test": "vitest run",
+    "test:transport": "vitest run --config vitest.node.config.ts",
     "test:watch": "vitest",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production"
