@@ -662,16 +662,18 @@ function updateDockShellPath() {
   if (!nav || !shell || !clipPath || !rimPath) return;
   const width = Math.max(1, nav.getBoundingClientRect().width);
   const height = 96;
-  const bodyTop = 38;
+  const bodyTop = 24;
   const bodyBottom = 96;
   const capRadius = Math.min(38, width / 6);
-  const sideRadius = Math.min(29, width / 8);
+  const capCenterY = 45;
+  const capOffset = capCenterY - bodyTop;
+  const capShoulder = Math.sqrt(Math.max(0, capRadius * capRadius - capOffset * capOffset));
+  const sideRadius = Math.min(32, width / 8);
   const center = width / 2;
   const path = [
     `M ${sideRadius} ${bodyTop}`,
-    `H ${center - capRadius}`,
-    `C ${center - capRadius} ${bodyTop - capRadius * .55} ${center - capRadius * .55} 0 ${center} 0`,
-    `C ${center + capRadius * .55} 0 ${center + capRadius} ${bodyTop - capRadius * .55} ${center + capRadius} ${bodyTop}`,
+    `H ${center - capShoulder}`,
+    `A ${capRadius} ${capRadius} 0 0 1 ${center + capShoulder} ${bodyTop}`,
     `H ${width - sideRadius}`,
     `C ${width - sideRadius * .45} ${bodyTop} ${width} ${bodyTop + sideRadius * .45} ${width} ${bodyTop + sideRadius}`,
     `V ${bodyBottom - sideRadius}`,
