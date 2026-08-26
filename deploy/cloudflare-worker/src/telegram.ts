@@ -90,19 +90,22 @@ async function enqueueMessage(
 
 export async function drainTelegramOutbox(env: Env, limit = 10): Promise<void> {
   const now = new Date().toISOString();
+  const leaseExpiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
   const result = await env.DB.prepare(
     `SELECT notification_id, chat_id, method, payload_json, attempts
      FROM wukong_telegram_notification_outbox
-     WHERE state IN ('pending', 'failed') AND available_at <= ?
+     WHERE available_at <= ? AND state IN ('pending', 'failed', 'sending')
      ORDER BY created_at ASC LIMIT ?`
   ).bind(now, Math.max(1, Math.min(limit, 50))).all<Record<string, unknown>>();
   for (const row of result.results) {
     const notificationId = String(row.notification_id);
     const claimed = await env.DB.prepare(
       `UPDATE wukong_telegram_notification_outbox
-       SET state = 'sending', attempts = attempts + 1
-       WHERE notification_id = ? AND state IN ('pending', 'failed')`
-    ).bind(notificationId).run();
+       SET state = 'sending', attempts = attempts + 1, available_at = ?
+       WHERE notification_id = ?
+         AND available_at <= ?
+         AND state IN ('pending', 'failed', 'sending')`
+    ).bind(leaseExpiresAt, notificationId, now).run();
     if ((claimed.meta.changes ?? 0) !== 1) continue;
     let payload: JsonObject;
     try {

@@ -1,5 +1,6 @@
-import { SELF } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { drainTelegramOutbox } from "../src/telegram";
 
 describe("Telegram webhook and pairing", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -63,5 +64,35 @@ describe("Telegram webhook and pairing", () => {
     await expect(me.json()).resolves.toMatchObject({
       user: { telegramId: "99001", accessStatus: "pending" }
     });
+  });
+
+  it("reclaims an expired sending lease instead of losing the notification", async () => {
+    const sent: Array<Record<string, unknown>> = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return Response.json({ ok: true, result: { message_id: 2 } });
+    }));
+    const old = new Date(Date.now() - 60_000).toISOString();
+    await env.DB.prepare(
+      `INSERT INTO wukong_telegram_notification_outbox
+       (notification_id, dedupe_key, chat_id, payload_json, state, attempts, available_at, created_at)
+       VALUES (?, ?, ?, ?, 'sending', 1, ?, ?)`
+    ).bind(
+      "stale-notification",
+      "stale-notification-dedupe",
+      "99002",
+      JSON.stringify({ text: "Recovered" }),
+      old,
+      old
+    ).run();
+
+    await drainTelegramOutbox(env as unknown as Env, 10);
+
+    const row = await env.DB.prepare(
+      "SELECT state, attempts, sent_at FROM wukong_telegram_notification_outbox WHERE notification_id = ?"
+    ).bind("stale-notification").first<Record<string, unknown>>();
+    expect(row).toMatchObject({ state: "sent", attempts: 2 });
+    expect(String(row?.sent_at)).not.toBe("");
+    expect(sent).toEqual([{ chat_id: "99002", text: "Recovered" }]);
   });
 });

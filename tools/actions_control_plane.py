@@ -170,6 +170,7 @@ def monitor_progress(
     last_local_sequence = 0
     last_signature: tuple[str, str, float] | None = None
     last_upload_sent = 0.0
+    pending_events: list[dict[str, Any]] = []
     callback_sequence = sequence_offset + 1
     while time.monotonic() - started < timeout_seconds:
         manifest = _read_json(manifest_path)
@@ -182,19 +183,27 @@ def monitor_progress(
         if new_events:
             last_local_sequence = max(int(event.get("sequence") or 0) for event in new_events)
             callback_sequence = max(callback_sequence, sequence_offset + last_local_sequence)
+            pending_events.extend(new_events)
         status = str(manifest.get("status") or "running")
         stage = str(manifest.get("stage") or status)
         progress = max(0.0, min(1.0, float(manifest.get("progress") or 0.0)))
         if status in TERMINAL_STATUSES:
             return
         signature = (status, stage, progress)
-        upload_only = bool(new_events) and all(
-            str(event.get("type") or "") == "upload_progress" for event in new_events
+        upload_only = bool(pending_events) and all(
+            str(event.get("type") or "") == "upload_progress" for event in pending_events
         )
         now = time.monotonic()
+        stage_or_status_changed = (
+            last_signature is None
+            or signature[:2] != last_signature[:2]
+        )
+        progress_changed = last_signature is None or signature[2] != last_signature[2]
         should_send = bool(manifest) and (
-            signature != last_signature
-            or bool(new_events) and (not upload_only or now - last_upload_sent >= 5)
+            stage_or_status_changed
+            or bool(pending_events) and not upload_only
+            or upload_only and now - last_upload_sent >= 5
+            or progress_changed and not pending_events
         )
         if should_send:
             callback_sequence += 1
@@ -210,7 +219,7 @@ def monitor_progress(
                     "progress": progress,
                     "events": [
                         _translated_event(event, sequence_offset)
-                        for event in new_events
+                        for event in pending_events
                     ],
                 },
                 secret,
@@ -219,6 +228,7 @@ def monitor_progress(
             last_signature = signature
             if upload_only:
                 last_upload_sent = now
+            pending_events.clear()
         time.sleep(max(0.5, interval_seconds))
 
 
