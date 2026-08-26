@@ -3,6 +3,8 @@ const SESSION_SECONDS = 120;
 const MAX_REQUESTS = 64;
 const MAX_SESSION_BYTES = 16 * 1024 * 1024;
 const MAX_RANGE_BYTES = 8 * 1024 * 1024;
+const MAX_CATALOG_PAGE_BYTES = 2 * 1024 * 1024;
+const MAX_RESOLVER_BYTES = 1024 * 1024;
 
 type JsonObject = Record<string, unknown>;
 
@@ -197,11 +199,119 @@ function signedUrlExpiry(url: URL): number | null {
   return Math.floor(issued + seconds);
 }
 
-function providerFor(hostname: string): string {
+function providerFor(hostname: string, originalHostname = ""): string {
   const host = hostname.toLowerCase();
+  if (originalHostname.toLowerCase() === "roms.danielspringer.at") return "Daniel Springer";
   if (host.includes("google") || host.includes("drive")) return "Google Drive";
   if (host.includes("oplus") || host.includes("allawn")) return "OPlus OTA";
   return "HTTP";
+}
+
+function isDanielOtaPage(url: URL): boolean {
+  return (
+    url.hostname.toLowerCase() === "roms.danielspringer.at" &&
+    url.pathname.toLowerCase().replace(/\/$/, "") === "/index.php" &&
+    url.searchParams.get("view")?.toLowerCase() === "ota" &&
+    Boolean(url.searchParams.get("build")?.trim())
+  );
+}
+
+function htmlAttribute(tag: string, name: string): string {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = tag.match(new RegExp(`${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
+  return (match?.[1] ?? match?.[2] ?? "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">");
+}
+
+function cookieHeader(response: Response): string {
+  return response.headers.getSetCookie()
+    .map((value) => value.split(";", 1)[0]?.trim() ?? "")
+    .filter((value) => /^[!#$%&'*+.^_`|~0-9A-Za-z-]+=[^;\r\n]*$/.test(value))
+    .join("; ");
+}
+
+async function resolveDanielOtaPage(uri: string): Promise<string> {
+  const pageResult = await secureFetch(uri, {
+    method: "GET",
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+      "Accept-Encoding": "identity",
+      "User-Agent": "Wukong-ROM-Studio/1.0"
+    }
+  });
+  if (!pageResult.response.ok) {
+    await pageResult.response.body?.cancel();
+    throw new SourceProbeHttpError(`Daniel Springer OTA page returned HTTP ${pageResult.response.status}`);
+  }
+  const cookies = cookieHeader(pageResult.response);
+  const pageBytes = await limitedBody(pageResult.response, MAX_CATALOG_PAGE_BYTES);
+  const page = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(pageBytes);
+  const resultTag = page.match(/<[^>]+\bid\s*=\s*["']resultBox["'][^>]*>/i)?.[0] ?? "";
+  const readyUrl = htmlAttribute(resultTag, "data-url").trim();
+  if (readyUrl) return readyUrl;
+  const otaKey = htmlAttribute(resultTag, "data-ota-key").trim();
+  const csrf = htmlAttribute(resultTag, "data-csrf").trim();
+  if (!resultTag || !otaKey || !csrf || otaKey.length > 256 || csrf.length > 256) {
+    throw new SourceProbeHttpError(
+      "Daniel Springer OTA page does not contain valid resolver state"
+    );
+  }
+
+  const endpoint = new URL("/index.php?view=ota&ota_action=resolve_json", pageResult.url);
+  await validateDestination(endpoint.toString());
+  const body = new URLSearchParams({ k: otaKey, csrf });
+  const response = await fetch(endpoint, {
+    method: "POST",
+    redirect: "manual",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Origin: "https://roms.danielspringer.at",
+      Referer: pageResult.url.toString(),
+      "User-Agent": "Wukong-ROM-Studio/1.0",
+      ...(cookies ? { Cookie: cookies } : {})
+    },
+    body
+  });
+  if ([301, 302, 303, 307, 308].includes(response.status)) {
+    await response.body?.cancel();
+    throw new SourceProbeHttpError("Daniel Springer OTA resolver returned an unexpected redirect");
+  }
+  const raw = await limitedBody(response, MAX_RESOLVER_BYTES);
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(raw)
+    ) as Record<string, unknown>;
+  } catch {
+    throw new SourceProbeHttpError("Daniel Springer OTA resolver returned invalid JSON");
+  }
+  const resolved = String(payload.url ?? "").trim();
+  if (!response.ok || payload.ok !== true || !resolved) {
+    throw new SourceProbeHttpError(
+      String(payload.message ?? "Daniel Springer OTA link could not be prepared").slice(0, 256)
+    );
+  }
+  await validateDestination(resolved);
+  return resolved;
+}
+
+function initialProbeHeaders(url: URL): HeadersInit {
+  const resolver = url.pathname.toLowerCase().replace(/\/$/, "").endsWith("/downloadcheck");
+  return {
+    Range: "bytes=0-0",
+    "Accept-Encoding": "identity",
+    "User-Agent": resolver ? "okhttp/3.12.12" : "Wukong-ROM-Studio/1.0",
+    ...(resolver ? {
+      Accept: "*/*",
+      "Cache-Control": "no-cache",
+      userId: "oplus-ota|16002018"
+    } : {})
+  };
 }
 
 export async function createProbeSession(
@@ -217,15 +327,16 @@ export async function createProbeSession(
   if (!uri || uri.length > 8192) {
     throw new SourceProbeHttpError("A valid ROM source URL is required");
   }
-  const result = await secureFetch(uri, {
+  const originalUrl = validatedUrl(uri);
+  const resolvedInput = isDanielOtaPage(originalUrl)
+    ? await resolveDanielOtaPage(uri)
+    : uri;
+  const probeUrl = validatedUrl(resolvedInput);
+  const result = await secureFetch(resolvedInput, {
     method: "GET",
-    headers: {
-      Range: "bytes=0-0",
-      "Accept-Encoding": "identity",
-      "User-Agent": "Wukong-ROM-Studio/1.0"
-    }
+    headers: initialProbeHeaders(probeUrl)
   });
-  const resolverPath = new URL(uri).pathname.toLowerCase().replace(/\/$/, "");
+  const resolverPath = probeUrl.pathname.toLowerCase().replace(/\/$/, "");
   if (!result.response.ok && result.response.status !== 206) {
     await result.response.body?.cancel();
     throw new SourceProbeHttpError(`ROM source returned HTTP ${result.response.status}`);
@@ -276,7 +387,7 @@ export async function createProbeSession(
     createdAt + SESSION_SECONDS
   ).run();
   return {
-    provider: providerFor(result.url.hostname),
+    provider: providerFor(result.url.hostname, originalUrl.hostname),
     filename,
     resolvedHost: result.url.hostname,
     host: result.url.hostname,

@@ -216,6 +216,8 @@ describe("bounded ROM source Range proxy", () => {
       if (url.pathname === "/downloadCheck") {
         expect(request.method).toBe("GET");
         expect(request.headers.get("Range")).toBe("bytes=0-0");
+        expect(request.headers.get("User-Agent")).toBe("okhttp/3.12.12");
+        expect(request.headers.get("userId")).toBe("oplus-ota|16002018");
         sourceGets += 1;
         return new Response(null, {
           status: 302,
@@ -247,6 +249,75 @@ describe("bounded ROM source Range proxy", () => {
     expect(sourceGets).toBe(1);
     expect(payload.filename).toBe("PKG110_16.0.9.zip");
     expect(payload.contentType).toBe("application/zip");
+  });
+
+  it("resolves a Daniel Springer build page without exposing the signed URL", async () => {
+    let pageGets = 0;
+    let resolverPosts = 0;
+    mockDnsAndOrigin(async (request) => {
+      const url = new URL(request.url);
+      if (url.hostname === "roms.danielspringer.at" && url.searchParams.has("build")) {
+        pageGets += 1;
+        return new Response(
+          '<div id="resultBox" data-url="" data-ota-key="ota-key" data-csrf="csrf-token"></div>',
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "text/html; charset=UTF-8",
+              "Set-Cookie": "PHPSESSID=fixture-session; Path=/; Secure; HttpOnly"
+            }
+          }
+        );
+      }
+      if (url.hostname === "roms.danielspringer.at" && url.searchParams.get("ota_action") === "resolve_json") {
+        resolverPosts += 1;
+        expect(request.method).toBe("POST");
+        expect(request.headers.get("Cookie")).toBe("PHPSESSID=fixture-session");
+        const form = await request.formData();
+        expect(form.get("k")).toBe("ota-key");
+        expect(form.get("csrf")).toBe("csrf-token");
+        return Response.json({
+          ok: true,
+          url: "https://cdn.example/PKG110.zip?Expires=2000000000&Signature=signed"
+        });
+      }
+      expect(request.headers.get("Range")).toBe("bytes=0-0");
+      return new Response(new Uint8Array(1), {
+        status: 206,
+        headers: {
+          "Content-Range": "bytes 0-0/8192",
+          "Content-Type": "application/zip",
+          "Content-Disposition": 'attachment; filename="PKG110.zip"',
+          "x-amz-meta-filemd5": "a28632dc4e3e2c8b51cc6e938c87b6fb"
+        }
+      });
+    });
+
+    const probe = await SELF.fetch("https://worker.example/v1/sources/probe", {
+      method: "POST",
+      headers: {
+        Origin: "https://wukong-rom-studio.vercel.app",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        uri: "https://roms.danielspringer.at/index.php?view=ota&build=fixture-build"
+      })
+    });
+    const text = await probe.text();
+    const payload = JSON.parse(text) as Record<string, unknown>;
+
+    expect(probe.status).toBe(200);
+    expect(pageGets).toBe(1);
+    expect(resolverPosts).toBe(1);
+    expect(payload).toMatchObject({
+      provider: "Daniel Springer",
+      filename: "PKG110.zip",
+      resolvedHost: "cdn.example",
+      sizeBytes: 8192,
+      md5: "a28632dc4e3e2c8b51cc6e938c87b6fb"
+    });
+    expect(text).not.toContain("Signature=signed");
+    expect(text).not.toContain("resolvedUrl");
   });
 
   it("preserves the OPlus MD5 response header", async () => {
