@@ -6,9 +6,7 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true,
-    "types": ["node"],
-    "typeRoots": ["../deploy/cloudflare-worker/node_modules/@types"]
+    "skipLibCheck": true
   },
   "include": ["source-transport.ts"]
 }
