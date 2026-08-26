@@ -44,7 +44,17 @@ def _request_json(
                 if not isinstance(result, dict):
                     raise RuntimeError("Control-plane response must be an object")
                 return result
-        except (OSError, RuntimeError, ValueError, urllib.error.HTTPError) as exc:
+        except urllib.error.HTTPError as exc:
+            try:
+                detail = exc.read(1024).decode("utf-8", errors="replace").strip()
+            except OSError:
+                detail = ""
+            last_error = RuntimeError(
+                f"HTTP {exc.code}{f': {detail}' if detail else ''}"
+            )
+            if attempt + 1 < max(1, attempts):
+                time.sleep(min(10, 2 ** attempt))
+        except (OSError, RuntimeError, ValueError) as exc:
             last_error = exc
             if attempt + 1 < max(1, attempts):
                 time.sleep(min(10, 2 ** attempt))

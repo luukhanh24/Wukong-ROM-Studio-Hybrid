@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+import urllib.error
+from io import BytesIO
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest import mock
@@ -9,6 +11,32 @@ from tools import actions_control_plane
 
 
 class ActionsControlPlaneTests(unittest.TestCase):
+    def test_http_error_includes_bounded_control_plane_json(self) -> None:
+        error = urllib.error.HTTPError(
+            "https://worker.example/internal/actions/bootstrap",
+            403,
+            "Forbidden",
+            {},
+            BytesIO(b'{"error":"GitHub run verification failed (403)"}'),
+        )
+        with (
+            mock.patch.object(
+                actions_control_plane.urllib.request,
+                "urlopen",
+                side_effect=error,
+            ),
+            self.assertRaisesRegex(
+                RuntimeError,
+                r"HTTP 403: .*GitHub run verification failed",
+            ),
+        ):
+            actions_control_plane._request_json(
+                "https://worker.example/internal/actions/bootstrap",
+                {"jobId": "diagnostic", "runId": 42},
+                headers={},
+                attempts=1,
+            )
+
     def test_bootstrap_signs_request_and_preserves_github_bearer(self) -> None:
         with (
             TemporaryDirectory() as directory,
