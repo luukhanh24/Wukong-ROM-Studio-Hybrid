@@ -80,7 +80,6 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_admin_user = False
     click_admin_action = False
     exercise_dock_header = False
-    exercise_liquid_drag = False
     cache_clear_requests = 0
     admin_user = False
     pending_user = False
@@ -285,73 +284,9 @@ window.addEventListener('load', () => {{
     }};
     setTimeout(exerciseDockHeader, 350);
   }}
-  if ({str(self.exercise_liquid_drag).lower()}) {{
-    const exerciseLiquidDrag = () => {{
-      const nav = document.querySelector('.bottom-nav');
-      if (!nav || nav.hidden || !nav.clientWidth) {{ setTimeout(exerciseLiquidDrag, 50); return; }}
-      nav.setPointerCapture = () => {{}};
-      nav.releasePointerCapture = () => {{}};
-      const tabWidth = (nav.clientWidth - 8) / 5;
-      const startX = nav.getBoundingClientRect().left + tabWidth / 2;
-      const y = nav.getBoundingClientRect().top + 36;
-      nav.dispatchEvent(new PointerEvent('pointerdown', {{ bubbles:true, pointerId:41, pointerType:'touch', button:0, clientX:startX, clientY:y }}));
-      nav.dispatchEvent(new PointerEvent('pointermove', {{ bubbles:true, pointerId:41, pointerType:'touch', button:0, clientX:startX + tabWidth * 2.8, clientY:y }}));
-      document.body.dataset.liquidDragPress = nav.style.getPropertyValue('--liquid-press-progress');
-      document.body.dataset.liquidDragScaleX = nav.style.getPropertyValue('--liquid-lens-scale-x');
-      document.body.dataset.liquidDragScaleY = nav.style.getPropertyValue('--liquid-lens-scale-y');
-      document.body.dataset.liquidDragPanelOffset = nav.style.getPropertyValue('--panel-offset');
-      nav.dispatchEvent(new PointerEvent('pointerup', {{ bubbles:true, pointerId:41, pointerType:'touch', button:0, clientX:startX + tabWidth * 2.8, clientY:y }}));
-      setTimeout(() => {{
-        document.body.dataset.liquidDragTarget = document.querySelector('.bottom-nav [aria-current="page"]')?.dataset.nav || '';
-        document.body.dataset.liquidDragSettledScaleX = nav.style.getPropertyValue('--liquid-lens-scale-x');
-        document.body.dataset.liquidDragSettledPanelOffset = nav.style.getPropertyValue('--panel-offset');
-      }}, 700);
-    }};
-    setTimeout(exerciseLiquidDrag, 350);
-  }}
   setTimeout(() => {{
     document.body.dataset.viewportWidth = String(document.documentElement.clientWidth);
     document.body.dataset.documentWidth = String(document.documentElement.scrollWidth);
-    const dockAvatar = document.querySelector('#dock-profile');
-    const dock = document.querySelector('.bottom-nav');
-    const dockSurface = document.querySelector('.liquid-surface');
-    const dockLens = document.querySelector('.bottom-nav .liquid-lens');
-    const activeDockButton = document.querySelector('.bottom-nav button.active');
-    const dispatchFab = document.querySelector('.dispatch-fab');
-    const surfaceStyle = dockSurface ? getComputedStyle(dockSurface) : null;
-    const fabStyle = dispatchFab ? getComputedStyle(dispatchFab) : null;
-    const surfaceColor = surfaceStyle?.backgroundColor.match(/[0-9.]+/g) || [];
-    const surfaceBlur = (surfaceStyle?.backdropFilter || surfaceStyle?.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
-    const fabColor = fabStyle?.backgroundColor.match(/[0-9.]+/g) || [];
-    const fabBlur = (fabStyle?.backdropFilter || fabStyle?.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
-    const dockRect = dock?.getBoundingClientRect();
-    const shellRect = dockSurface?.getBoundingClientRect();
-    const fabRect = dispatchFab?.getBoundingClientRect();
-    const lensRect = dockLens?.getBoundingClientRect();
-    const activeDockRect = activeDockButton?.getBoundingClientRect();
-    const lensStyle = getComputedStyle(dockLens);
-    const lensColor = lensStyle.backgroundColor.match(/[0-9.]+/g) || [];
-    const lensBlur = (lensStyle.backdropFilter || lensStyle.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
-    document.body.dataset.dockCapDiameter = String(Number.parseFloat(getComputedStyle(dock).getPropertyValue('--dock-cap-size')) || 0);
-    document.body.dataset.dockAvatarWidth = String(Math.round(dockAvatar?.getBoundingClientRect().width || 0));
-    document.body.dataset.dockSurfaceAlpha = String(Number(surfaceColor.at(-1) || 1));
-    document.body.dataset.dockSurfaceBlur = String(Number(surfaceBlur?.[1] || 0));
-    document.body.dataset.dockLeft = String(Math.round(dockRect?.left || 0));
-    document.body.dataset.dockRightGap = String(Math.round(document.documentElement.clientWidth - (dockRect?.right || 0)));
-    document.body.dataset.dockFabGap = String(Math.round((shellRect?.top || 0) - (fabRect?.bottom || 0)));
-    document.body.dataset.dockLensAlpha = String(Number(lensColor.at(-1) || 1));
-    document.body.dataset.dockLensBlur = String(Number(lensBlur?.[1] || 0));
-    document.body.dataset.dockLensWidth = String(Math.round(lensRect?.width || 0));
-    document.body.dataset.dockLensHeight = String(Math.round(lensRect?.height || 0));
-    document.body.dataset.dockLensTopGap = String(Math.round((lensRect?.top || 0) - (dockRect?.top || 0)));
-    document.body.dataset.dockLensBottomGap = String(Math.round((dockRect?.bottom || 0) - (lensRect?.bottom || 0)));
-    document.body.dataset.dockLensCenterDelta = String(Math.round(Math.abs(
-      ((lensRect?.left || 0) + (lensRect?.width || 0) / 2) -
-      ((activeDockRect?.left || 0) + (activeDockRect?.width || 0) / 2)
-    )));
-    document.body.dataset.fabSurfaceAlpha = String(Number(fabColor.at(-1) || 1));
-    document.body.dataset.fabSurfaceBlur = String(Number(fabBlur?.[1] || 0));
-    document.body.dataset.mobileMainPaddingBottom = String(Number.parseFloat(getComputedStyle(document.querySelector('main')).paddingBottom) || 0);
   }}, 1200);
 }});
 """
@@ -599,7 +534,6 @@ def _render_mini_app_in_chrome(
     click_admin_user: bool = False,
     click_admin_action: bool = False,
     exercise_dock_header: bool = False,
-    exercise_liquid_drag: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
     screenshot_output: Path | None = None,
@@ -636,7 +570,6 @@ def _render_mini_app_in_chrome(
             "click_admin_user": click_admin_user,
             "click_admin_action": click_admin_action,
             "exercise_dock_header": exercise_dock_header,
-            "exercise_liquid_drag": exercise_liquid_drag,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
             "pending_user": pending_user,
@@ -882,7 +815,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotRegex(bottom_nav_html, r"<b>\d{2}</b>")
         self.assertNotIn(".bottom-nav button.active::before", styles)
         self.assertIn("updateDispatchFab", script)
-        self.assertIn('data-i18n="fabBuild">Build', html)
+        self.assertIn('data-i18n="finishBuild">Hoàn tất cấu hình build', html)
         self.assertIn("bindLiquidBottomTabs", script)
         self.assertIn("--liquid-press", styles)
         self.assertIn("chromatic", (ROOT / "DESIGN.md").read_text(encoding="utf-8"))
@@ -1023,111 +956,20 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn('class="process-key"', html)
         self.assertIn('id="admin-maintenance" hidden', html)
         self.assertRegex(dom, r'id="admin-maintenance"[^>]* hidden')
-        self.assertIn('data-i18n="fabBuild">Build', html)
+        self.assertIn('data-i18n="finishBuild">Hoàn tất cấu hình build', html)
         self.assertIn('mods.className = "job-mod-grid"', script)
         self.assertNotIn('input.focus({ preventScroll: true });\n  toast(t("sourceCleared"))', script)
-        self.assertIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
+        self.assertNotIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
         self.assertNotIn('class="dock-shell"', html)
-        self.assertIn('dock-shell-clip', html)
-        self.assertIn('--dock-cap-size:76px', styles)
-        self.assertIn('id="dock-shell-path"', html)
-        self.assertIn('background:rgba(255,255,255,.08)', styles)
-        self.assertIn('backdrop-filter:blur(10px) saturate(1.38)', styles)
-        self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
+        self.assertNotIn('dock-shell-clip', html)
+        self.assertNotIn('id="dock-shell-path"', html)
+        self.assertIn('background:rgba(255,255,255,.025)', styles)
+        self.assertIn('backdrop-filter:blur(20px) saturate(1.48)', styles)
+        self.assertIn('box-shadow:inset 0 1px 0 rgba(255,255,255,.48),inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
         self.assertIn("Promise.allSettled", script)
         self.assertNotIn('data-i18n="secretBoundary"', html)
-
-    def test_mobile_dock_cap_stays_round_and_avatar_fitted_at_wide_viewports(self) -> None:
-        for window_width in (390, 860):
-            with self.subTest(window_width=window_width):
-                dom, _ = _render_mini_app_in_chrome(
-                    api_enabled=True,
-                    window_width=window_width,
-                )
-                cap = re.search(r'data-dock-cap-diameter="(\d+)"', dom)
-                avatar = re.search(r'data-dock-avatar-width="(\d+)"', dom)
-                self.assertIsNotNone(cap)
-                self.assertIsNotNone(avatar)
-                self.assertEqual(int(cap.group(1)), 76)
-                self.assertLessEqual(int(avatar.group(1)), 60)
-                self.assertLessEqual(int(cap.group(1)) - int(avatar.group(1)), 20)
-
-    def test_mobile_dock_material_remains_translucent_and_clears_build_action(self) -> None:
-        for dark_mode in (False, True):
-            with self.subTest(dark_mode=dark_mode):
-                dom, _ = _render_mini_app_in_chrome(
-                    api_enabled=True,
-                    click_theme_dark=dark_mode,
-                    window_width=562,
-                )
-
-                def metric(name: str) -> float:
-                    match = re.search(rf'data-{name}="(-?[\d.]+)"', dom)
-                    self.assertIsNotNone(match, name)
-                    return float(match.group(1))
-
-                expected_surface_alpha = 0.12 if dark_mode else 0.08
-                expected_lens_alpha = 0.10
-                self.assertAlmostEqual(metric("dock-surface-alpha"), expected_surface_alpha, places=2)
-                self.assertAlmostEqual(metric("dock-surface-alpha"), metric("fab-surface-alpha"), places=2)
-                self.assertAlmostEqual(metric("dock-surface-blur"), 10, places=1)
-                self.assertAlmostEqual(metric("dock-surface-blur"), metric("fab-surface-blur"), places=1)
-                self.assertAlmostEqual(metric("dock-lens-alpha"), expected_lens_alpha, places=2)
-                self.assertAlmostEqual(metric("dock-lens-blur"), 10, places=1)
-                self.assertEqual(metric("dock-lens-height"), 56)
-                self.assertGreater(metric("dock-lens-width"), metric("dock-lens-height"))
-                self.assertLessEqual(abs(metric("dock-lens-top-gap") - metric("dock-lens-bottom-gap")), 1)
-                self.assertLessEqual(metric("dock-lens-center-delta"), 1)
-                self.assertGreaterEqual(metric("dock-left"), 8)
-                self.assertGreaterEqual(metric("dock-right-gap"), 8)
-                self.assertGreaterEqual(metric("dock-fab-gap"), 12)
-                self.assertGreaterEqual(metric("mobile-main-padding-bottom"), 180)
-
-    def test_mobile_dock_ports_liquid_bottom_tabs_material_and_motion(self) -> None:
-        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
-        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
-        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn('id="dock-shell-path"', html)
-        self.assertIn('class="dock-rim"', html)
-        self.assertIn("updateDockShellPath", script)
-        self.assertIn("const capRadius = 38;", script)
-        self.assertIn("`A${capRadius} ${capRadius} 0 0 1 ${center + capRadius} ${bodyTop}`", script)
-        self.assertIn("const pressedScale = 78 / 56;", script)
-        self.assertIn("--liquid-press-progress", script)
-        self.assertIn("--liquid-lens-scale-x", script)
-        self.assertIn("--liquid-lens-scale-y", script)
-        self.assertIn("--liquid-panel-scale", script)
-        self.assertIn("--panel-offset", script)
-        self.assertIn("velocity * .75", script)
-        self.assertIn("velocity * .25", script)
-        self.assertIn("rgba(255,255,255,.08)", styles)
-        self.assertIn("rgba(7,12,20,.12)", styles)
-        self.assertIn("backdrop-filter:blur(10px) saturate(1.38)", styles)
-        self.assertIn("scaleX(var(--liquid-lens-scale-x))", styles)
-        self.assertIn("scaleY(var(--liquid-lens-scale-y))", styles)
-        self.assertIn(".bottom-nav.is-pressed .liquid-lens", styles)
-
-    def test_mobile_liquid_drag_deforms_lens_and_settles_on_target(self) -> None:
-        dom, _ = _render_mini_app_in_chrome(
-            api_enabled=True,
-            exercise_liquid_drag=True,
-            window_width=562,
-        )
-
-        def metric(name: str) -> float:
-            match = re.search(rf'data-{name}="(-?[\d.]+)(?:px)?"', dom)
-            self.assertIsNotNone(match, name)
-            return float(match.group(1))
-
-        self.assertEqual(metric("liquid-drag-press"), 1)
-        self.assertGreater(metric("liquid-drag-scale-x"), metric("liquid-drag-scale-y"))
-        self.assertGreater(metric("liquid-drag-panel-offset"), 0)
-        self.assertIn('data-liquid-drag-target="catalog"', dom)
-        self.assertAlmostEqual(metric("liquid-drag-settled-scale-x"), 1, places=2)
-        self.assertAlmostEqual(metric("liquid-drag-settled-panel-offset"), 0, places=2)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(

@@ -242,7 +242,7 @@ Object.assign(translations.vi, {
   accessRevokedKicker: "QUYỀN TRUY CẬP ĐÃ THU HỒI", accessRevokedTitle: "Tài khoản chưa thể mở Studio", accessRevokedMessage: "Liên hệ quản trị viên nếu bạn cần khôi phục quyền truy cập.",
   accessConnectKicker: "CHƯA KẾT NỐI TELEGRAM", accessConnectTitle: "Kết nối tài khoản để tiếp tục", accessConnectMessage: "Mở Mini App từ bot hoặc kết nối Telegram để xác thực an toàn.",
   accountDetails: "Thông tin tài khoản", refreshAccess: "Kiểm tra lại quyền", runtimeAllowance: "LƯỢT BUILD · JOBS", allowanceSummary: "{remaining} còn lại · {used} đã dùng · {jobs} job",
-  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", fabBuild: "Build", totalUsers: "Tổng người dùng", revokedUsers: "Đã thu hồi",
+  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", totalUsers: "Tổng người dùng", revokedUsers: "Đã thu hồi",
   backToUsers: "Người dùng & lượt build", adminActionKicker: "CẬP NHẬT QUYỀN", creditValue: "Số lượt build", actionReason: "Lý do", confirmAction: "Xác nhận", adminActionMessage: "Thay đổi này sẽ được lưu vào nhật ký truy cập của người dùng.", actionValueInvalid: "Nhập số lượt hợp lệ.", actionReasonRequired: "Hãy nhập lý do cho thay đổi này."
 });
 Object.assign(translations.en, {
@@ -259,7 +259,7 @@ Object.assign(translations.en, {
   accessRevokedKicker: "ACCESS REVOKED", accessRevokedTitle: "Studio is not available for this account", accessRevokedMessage: "Contact an administrator if you need access restored.",
   accessConnectKicker: "TELEGRAM NOT CONNECTED", accessConnectTitle: "Connect your account to continue", accessConnectMessage: "Open the Mini App from the bot or connect Telegram for secure authentication.",
   accountDetails: "Account details", refreshAccess: "Check access again", runtimeAllowance: "BUILD ALLOWANCE · JOBS", allowanceSummary: "{remaining} left · {used} used · {jobs} jobs",
-  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", fabBuild: "Build", totalUsers: "Total users", revokedUsers: "Revoked",
+  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", totalUsers: "Total users", revokedUsers: "Revoked",
   backToUsers: "Users & build credits", adminActionKicker: "UPDATE ACCESS", creditValue: "Build credits", actionReason: "Reason", confirmAction: "Confirm", adminActionMessage: "This change will be retained in the user's access audit trail.", actionValueInvalid: "Enter a valid credit value.", actionReasonRequired: "Enter a reason for this change."
 });
 
@@ -405,10 +405,6 @@ const state = {
   expandedLogJobId: "",
   liquidPosition: 0,
   liquidAnimationFrame: 0,
-  liquidSettleTimer: 0,
-  liquidVelocity: 0,
-  liquidPressProgress: 0,
-  liquidPanelOffset: 0,
   liquidSuppressClick: false,
   greetingIndex: 0,
   greetingTimer: 0,
@@ -649,63 +645,13 @@ function nearestLiquidSlot(value) {
   return liquidSlots.reduce((best, slot) => Math.abs(slot - value) < Math.abs(best - value) ? slot : best, liquidSlots[0]);
 }
 
-function clampLiquid(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function updateDockShellPath() {
-  const nav = $(".bottom-nav");
-  const shellPath = $("#dock-shell-path");
-  const rimPath = $("#dock-rim-path");
-  if (!nav || !shellPath || !rimPath || innerWidth > 860) return;
-  const width = nav.getBoundingClientRect().width;
-  if (!width) return;
-  const center = width / 2;
-  const capRadius = 38;
-  const bodyTop = 38;
-  const bodyBottom = 96;
-  const sideRadius = 29;
-  const sideCenter = (bodyTop + bodyBottom) / 2;
-  const path = [
-    `M${sideRadius} ${bodyTop}`,
-    `H${center - capRadius}`,
-    `A${capRadius} ${capRadius} 0 0 1 ${center + capRadius} ${bodyTop}`,
-    `H${width - sideRadius}`,
-    `A${sideRadius} ${sideRadius} 0 0 1 ${width} ${sideCenter}`,
-    `A${sideRadius} ${sideRadius} 0 0 1 ${width - sideRadius} ${bodyBottom}`,
-    `H${sideRadius}`,
-    `A${sideRadius} ${sideRadius} 0 0 1 0 ${sideCenter}`,
-    `A${sideRadius} ${sideRadius} 0 0 1 ${sideRadius} ${bodyTop}Z`
-  ].join(" ");
-  shellPath.setAttribute("d", path);
-  rimPath.setAttribute("d", path);
-  $(".dock-rim")?.setAttribute("viewBox", `0 0 ${width} ${bodyBottom}`);
-}
-
-function setLiquidPosition(value, velocity = 0, pressProgress = 0, panelOffset = 0) {
+function setLiquidPosition(value, velocity = 0, pressed = false) {
   const nav = $(".bottom-nav");
   const position = Math.max(0, Math.min(4, Number(value) || 0));
-  const progress = clampLiquid(Number(pressProgress) || 0, 0, 1);
-  const pressedScale = 78 / 56;
-  const velocityX = clampLiquid(velocity * .75, -.2, .2);
-  const velocityY = clampLiquid(velocity * .25, -.2, .2);
-  const baseScale = 1 + (pressedScale - 1) * progress;
-  const lensScaleX = baseScale / (1 - velocityX);
-  const lensScaleY = baseScale * (1 - velocityY);
-  const panelScale = nav ? 1 + (16 / Math.max(nav.clientWidth, 1)) * progress : 1;
   state.liquidPosition = position;
-  state.liquidVelocity = velocity;
-  state.liquidPressProgress = progress;
-  state.liquidPanelOffset = panelOffset;
   nav?.style.setProperty("--liquid-position", String(position));
   nav?.style.setProperty("--liquid-offset", `${position * 100}%`);
-  nav?.style.setProperty("--liquid-press", String(baseScale));
-  nav?.style.setProperty("--liquid-press-progress", String(progress));
-  nav?.style.setProperty("--liquid-lens-scale-x", String(lensScaleX));
-  nav?.style.setProperty("--liquid-lens-scale-y", String(lensScaleY));
-  nav?.style.setProperty("--liquid-panel-scale", String(panelScale));
-  nav?.style.setProperty("--liquid-tab-scale", String(1 + .2 * progress));
-  nav?.style.setProperty("--panel-offset", `${panelOffset}px`);
+  nav?.style.setProperty("--liquid-press", pressed ? ".97" : "1");
 }
 
 function easeOutQuint(value) {
@@ -714,37 +660,21 @@ function easeOutQuint(value) {
 
 function animateLiquidPosition(target) {
   cancelAnimationFrame(state.liquidAnimationFrame);
-  clearTimeout(state.liquidSettleTimer);
   if (prefersReducedMotion()) { setLiquidPosition(target); return; }
   const start = state.liquidPosition;
   const distance = target - start;
-  const startVelocity = state.liquidVelocity;
-  const startPress = state.liquidPressProgress;
-  const startPanelOffset = state.liquidPanelOffset;
   const duration = 360;
   const startedAt = performance.now();
   const tick = (now) => {
     const progress = Math.min(1, (now - startedAt) / duration);
-    const eased = easeOutQuint(progress);
-    const remaining = 1 - eased;
-    setLiquidPosition(
-      start + distance * eased,
-      startVelocity * remaining,
-      startPress * remaining,
-      startPanelOffset * remaining
-    );
+    setLiquidPosition(start + distance * easeOutQuint(progress));
     if (progress >= 1) {
-      clearTimeout(state.liquidSettleTimer);
       setLiquidPosition(target);
       return;
     }
     state.liquidAnimationFrame = requestAnimationFrame(tick);
   };
   state.liquidAnimationFrame = requestAnimationFrame(tick);
-  state.liquidSettleTimer = setTimeout(() => {
-    cancelAnimationFrame(state.liquidAnimationFrame);
-    setLiquidPosition(target);
-  }, duration + 80);
 }
 
 function navigate(name, smooth = true) {
@@ -783,10 +713,6 @@ function bindLiquidBottomTabs() {
   const nav = $(".bottom-nav");
   const buttons = $$(".bottom-nav [data-nav]");
   if (!nav || !buttons.length || !("PointerEvent" in window)) return;
-  updateDockShellPath();
-  if ("ResizeObserver" in window) {
-    new ResizeObserver(updateDockShellPath).observe(nav);
-  }
   let pointerId = null;
   let startX = 0;
   let startPosition = 0;
@@ -804,7 +730,6 @@ function bindLiquidBottomTabs() {
   nav.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 && event.pointerType !== "touch") return;
     cancelAnimationFrame(state.liquidAnimationFrame);
-    clearTimeout(state.liquidSettleTimer);
     pointerId = event.pointerId;
     startX = lastX = event.clientX;
     lastTime = performance.now();
@@ -813,7 +738,7 @@ function bindLiquidBottomTabs() {
     velocity = 0;
     nav.classList.add("is-pressed");
     nav.setPointerCapture?.(pointerId);
-    setLiquidPosition(startPosition, 0, 1, 0);
+    setLiquidPosition(startPosition, 0, true);
   });
   nav.addEventListener("pointermove", (event) => {
     if (event.pointerId !== pointerId) return;
@@ -824,11 +749,8 @@ function bindLiquidBottomTabs() {
     nav.classList.toggle("profile-dragging", dragged && nav.classList.contains("profile-active"));
     const instantaneous = ((event.clientX - lastX) / Math.max(8, now - lastTime)) * 16 / tabWidth;
     velocity = velocity * .6 + instantaneous * .4;
-    const rawPosition = startPosition + delta / tabWidth;
-    const position = Math.max(0, Math.min(4, rawPosition));
-    const dragFraction = clampLiquid(delta / Math.max(nav.clientWidth, 1), -1, 1);
-    const panelOffset = 4 * Math.sign(dragFraction) * easeOutQuint(Math.abs(dragFraction));
-    setLiquidPosition(position, velocity, 1, panelOffset);
+    const position = Math.max(0, Math.min(4, startPosition + delta / tabWidth));
+    setLiquidPosition(position, velocity, true);
     lastX = event.clientX;
     lastTime = now;
   });
@@ -844,7 +766,7 @@ function bindLiquidBottomTabs() {
       state.liquidSuppressClick = true;
       const targetButton = buttons.find((button) => Number(button.dataset.slot) === target);
       if (targetButton) navigate(targetButton.dataset.nav, false);
-      setLiquidPosition(releasedPosition, velocity, 1, state.liquidPanelOffset);
+      setLiquidPosition(releasedPosition, velocity, true);
       animateLiquidPosition(target);
     } else {
       const active = buttons.find((button) => button.classList.contains("active"));
@@ -864,7 +786,6 @@ function updateDispatchFab() {
   const fab = $("#dispatch-fab");
   if (!fab) return;
   const show = $("#build")?.classList.contains("active") && !state.docketInView;
-  $("main")?.classList.toggle("dispatch-fab-clearance", Boolean(show));
   clearTimeout(state.dispatchFabHideTimer);
   if (show) {
     fab.hidden = false;
@@ -1664,7 +1585,7 @@ function updateSummary() {
     node.dataset.i18n = ready ? "launch" : "finishSource";
     node.textContent = t(ready ? "launch" : "finishSource");
   });
-  $("#dispatch-fab")?.setAttribute("aria-label", t("fabBuild"));
+  $("#dispatch-fab")?.setAttribute("aria-label", t("finishBuild"));
 }
 
 function profileInitials(profile) {
@@ -2871,10 +2792,7 @@ function bindEvents() {
   let greetingResizeFrame = 0;
   window.addEventListener("resize", () => {
     cancelAnimationFrame(greetingResizeFrame);
-    greetingResizeFrame = requestAnimationFrame(() => {
-      updateGreetingOverflow();
-      updateDockShellPath();
-    });
+    greetingResizeFrame = requestAnimationFrame(updateGreetingOverflow);
   }, { passive: true });
   document.fonts?.ready?.then(updateGreetingOverflow).catch(() => {});
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
