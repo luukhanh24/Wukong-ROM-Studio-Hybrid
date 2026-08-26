@@ -21,11 +21,11 @@ describe("bounded ROM source Range proxy", () => {
   it("creates a two-minute probe session and serves a bounded byte range", async () => {
     const bytes = new Uint8Array(1024).fill(0x50);
     mockDnsAndOrigin((request) => {
-      if (request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
+      if (request.headers.get("Range") === "bytes=0-0") {
+        return new Response(new Uint8Array(1), {
+          status: 206,
           headers: {
-            "Content-Length": String(16 * 1024 * 1024),
+            "Content-Range": `bytes 0-0/${16 * 1024 * 1024}`,
             "Content-Type": "application/zip",
             "Content-Disposition": 'attachment; filename="PJD110_OTA.zip"',
             "Accept-Ranges": "bytes",
@@ -127,11 +127,11 @@ describe("bounded ROM source Range proxy", () => {
           Answer: [{ type: 1, data: "8.8.8.8" }]
         });
       }
-      if (request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
+      if (request.headers.get("Range") === "bytes=0-0") {
+        return new Response(new Uint8Array(1), {
+          status: 206,
           headers: {
-            "Content-Length": "4096",
+            "Content-Range": "bytes 0-0/4096",
             "Content-Type": "application/zip",
             "Content-Disposition": 'attachment; filename="fixture.zip"'
           }
@@ -177,10 +177,10 @@ describe("bounded ROM source Range proxy", () => {
           Answer: [{ type: 1, data: host === "private.example" ? "127.0.0.1" : "8.8.8.8" }]
         });
       }
-      if (request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
-          headers: { "Content-Length": "4096", "Content-Type": "application/zip" }
+      if (request.headers.get("Range") === "bytes=0-0") {
+        return new Response(new Uint8Array(1), {
+          status: 206,
+          headers: { "Content-Range": "bytes 0-0/4096", "Content-Type": "application/zip" }
         });
       }
       return new Response(null, {
@@ -209,30 +209,23 @@ describe("bounded ROM source Range proxy", () => {
     await expect(range.json()).resolves.toMatchObject({ code: "source_unreachable" });
   });
 
-  it("resolves OPlus downloadCheck when HEAD returns JSON", async () => {
+  it("resolves OPlus downloadCheck with one bounded GET instead of HEAD", async () => {
     let sourceGets = 0;
     mockDnsAndOrigin((request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/downloadCheck" && request.method === "HEAD") {
-        return new Response(null, {
-          status: 200,
-          headers: {
-            "Content-Length": "128",
-            "Content-Type": "application/json"
-          }
-        });
-      }
       if (url.pathname === "/downloadCheck") {
+        expect(request.method).toBe("GET");
+        expect(request.headers.get("Range")).toBe("bytes=0-0");
         sourceGets += 1;
         return new Response(null, {
           status: 302,
           headers: { Location: "https://cdn.example/PKG110_16.0.9.zip" }
         });
       }
-      return new Response(null, {
-        status: 200,
+      return new Response(new Uint8Array(1), {
+        status: 206,
         headers: {
-          "Content-Length": "8192",
+          "Content-Range": "bytes 0-0/8192",
           "Content-Type": "application/zip",
           "Content-Disposition": 'attachment; filename="PKG110_16.0.9.zip"'
         }

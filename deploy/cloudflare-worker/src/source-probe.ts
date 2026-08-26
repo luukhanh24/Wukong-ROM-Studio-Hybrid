@@ -217,31 +217,17 @@ export async function createProbeSession(
   if (!uri || uri.length > 8192) {
     throw new SourceProbeHttpError("A valid ROM source URL is required");
   }
-  let result = await secureFetch(uri, {
-    method: "HEAD",
+  const result = await secureFetch(uri, {
+    method: "GET",
     headers: {
+      Range: "bytes=0-0",
       "Accept-Encoding": "identity",
       "User-Agent": "Wukong-ROM-Studio/1.0"
     }
   });
-  const initialContentType = result.response.headers.get("Content-Type")?.toLowerCase() ?? "";
   const resolverPath = new URL(uri).pathname.toLowerCase().replace(/\/$/, "");
-  if (
-    [403, 405, 501].includes(result.response.status) ||
-    initialContentType.includes("json") ||
-    resolverPath.endsWith("/downloadcheck")
-  ) {
-    await result.response.body?.cancel();
-    result = await secureFetch(uri, {
-      method: "GET",
-      headers: {
-        Range: "bytes=0-0",
-        "Accept-Encoding": "identity",
-        "User-Agent": "Wukong-ROM-Studio/1.0"
-      }
-    });
-  }
   if (!result.response.ok && result.response.status !== 206) {
+    await result.response.body?.cancel();
     throw new SourceProbeHttpError(`ROM source returned HTTP ${result.response.status}`);
   }
   if (
@@ -265,6 +251,9 @@ export async function createProbeSession(
   const sizeBytes = contentSize(result.response);
   const contentType = result.response.headers.get("Content-Type")?.split(";", 1)[0]?.trim() ?? "";
   const checksum = checksumHeader(result.response);
+  const etag = result.response.headers.get("ETag");
+  const lastModified = result.response.headers.get("Last-Modified");
+  await result.response.body?.cancel();
   const createdAt = nowSeconds;
   await env.DB.prepare(
     `INSERT INTO wukong_source_probe_sessions
@@ -293,8 +282,8 @@ export async function createProbeSession(
     host: result.url.hostname,
     sizeBytes,
     contentType: contentType || null,
-    etag: result.response.headers.get("ETag"),
-    lastModified: result.response.headers.get("Last-Modified"),
+    etag,
+    lastModified,
     md5: checksum || null,
     checksumHeader: checksum || null,
     productName: null,
