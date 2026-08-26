@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import re
 import shutil
@@ -7,6 +8,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlsplit
@@ -43,6 +45,31 @@ OPLUS_TEST_METADATA = {
 }
 
 
+def _partial_metadata_zip() -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr(
+            "META-INF/com/android/metadata",
+            "\n".join((
+                "oplus-product-name=PKG110",
+                "pre-device=OP5D2BL1",
+                "oplus-version-name=PKG110_16.0.9.400(CN01)",
+                "post-sdk-level=36",
+                "post-security-patch-level=2026-07-01",
+                "post-timestamp=1783327895",
+                "ota-type=AB",
+            )),
+            compress_type=zipfile.ZIP_DEFLATED,
+        )
+        archive.writestr(
+            "payload_properties.txt",
+            "FILE_HASH=fixture",
+            compress_type=zipfile.ZIP_BZIP2,
+        )
+    output.seek(0)
+    return output.read()
+
+
 def _chrome_path() -> str | None:
     candidates = [
         shutil.which("google-chrome"),
@@ -66,6 +93,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     server_draft_fallback = False
     probe_signed_expired = False
     source_metadata = OPLUS_TEST_METADATA
+    probe_zip_payload = None
     catalog_mod_versions = ("ColorOS_16.0.9",)
     catalog_mods_by_version = None
     jobs_fixture = False
@@ -97,6 +125,21 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
         path = urlsplit(self.path).path
+        if path == "/probe-range" and self.probe_zip_payload is not None:
+            match = re.fullmatch(r"bytes=(\d+)-(\d+)", self.headers.get("Range", ""))
+            if not match:
+                self._send(b'{"error":"range required"}', "application/json", 416)
+                return
+            start, end = map(int, match.groups())
+            payload = self.probe_zip_payload[start : end + 1]
+            self.send_response(206)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Range", f"bytes {start}-{end}/{len(self.probe_zip_payload)}")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         if path in {"/", "/index.html"}:
             origin = f"http://127.0.0.1:{self.server.server_port}" if self.api_enabled else ""
             html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -533,7 +576,24 @@ window.addEventListener('load', () => {{
                     400,
                 )
                 return
-            self._send(json.dumps(self.source_metadata).encode(), "application/json")
+            source_metadata = dict(self.source_metadata)
+            if self.probe_zip_payload is not None:
+                source_metadata.update({
+                    "filename": "fixture.zip",
+                    "sizeBytes": len(self.probe_zip_payload),
+                    "productName": None,
+                    "device": None,
+                    "version": None,
+                    "androidVersion": None,
+                    "securityPatch": None,
+                    "buildDate": None,
+                    "otaType": None,
+                    "deepInspected": False,
+                    "rangeSession": {
+                        "url": f"http://127.0.0.1:{self.server.server_port}/probe-range",
+                    },
+                })
+            self._send(json.dumps(source_metadata).encode(), "application/json")
             return
         if path == "/v1/cache/clear" and self.api_enabled and self.admin_user:
             type(self).cache_clear_requests += 1
@@ -556,6 +616,7 @@ def _render_mini_app_in_chrome(
     server_draft_fallback: bool = False,
     probe_signed_expired: bool = False,
     source_metadata: dict[str, object] | None = None,
+    probe_zip_payload: bytes | None = None,
     catalog_mod_versions: tuple[str, ...] = ("ColorOS_16.0.9",),
     catalog_mods_by_version: dict[str, list[str]] | None = None,
     initial_view: str = "",
@@ -593,6 +654,7 @@ def _render_mini_app_in_chrome(
             "server_draft_fallback": server_draft_fallback,
             "probe_signed_expired": probe_signed_expired,
             "source_metadata": source_metadata or OPLUS_TEST_METADATA,
+            "probe_zip_payload": probe_zip_payload,
             "catalog_mod_versions": catalog_mod_versions,
             "catalog_mods_by_version": catalog_mods_by_version,
             "jobs_fixture": jobs_fixture,
@@ -1200,7 +1262,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "c42d35ce2a9d460fa61db8a45c9b4db6.zip",
             "gauss-compotaauto-c-cn.allawnfs.com",
             "6fb0095cc9c07dbdb74074c87cbb643f",
-            "14/14 thông số",
+            "12/12 thông số",
         ):
             self.assertIn(value, dom)
         self.assertIn('<strong id="launch-summary">PKG110 · V5.0 / PLUS / GitHub Auto</strong>', dom)
@@ -1211,6 +1273,45 @@ class TelegramMiniAppTests(unittest.TestCase):
         submit_tag = dom.split('id="submit-recipe"', 1)[1].split(">", 1)[0]
         self.assertNotIn("disabled", submit_tag)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_optional_rom_headers_do_not_mark_core_metadata_as_incomplete(self) -> None:
+        metadata = {
+            **OPLUS_TEST_METADATA,
+            "md5": None,
+            "lastModified": None,
+        }
+
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            source_metadata=metadata,
+        )
+
+        self.assertIn("12/12 thông số", dom)
+        self.assertRegex(dom, r'class="[^"]*analyzed[^"]*" id="source-state"')
+        self.assertRegex(dom, r'<dd id="source-md5" data-empty="true"[^>]*>—</dd>')
+        self.assertRegex(dom, r'<dd id="source-last-modified" data-empty="true"[^>]*>—</dd>')
+
+    def test_one_unreadable_metadata_file_does_not_discard_valid_rom_fields(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            source_metadata={
+                **OPLUS_TEST_METADATA,
+                "md5": None,
+                "lastModified": None,
+            },
+            probe_zip_payload=_partial_metadata_zip(),
+        )
+
+        for value in (
+            "PKG110",
+            "OP5D2BL1",
+            "PKG110_16.0.9.400(CN01)",
+            "2026-07-01",
+            "12/12 thông số",
+            "Đã đọc metadata trong ZIP",
+        ):
+            self.assertIn(value, dom)
+        self.assertRegex(dom, r'class="[^"]*analyzed[^"]*" id="source-state"')
 
     def test_probe_selects_the_mod_pack_matching_the_detected_rom_version(self) -> None:
         metadata = {
@@ -1240,7 +1341,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('id="paste-source"', dom)
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
 
     def test_paste_button_falls_back_when_clipboard_apis_are_blocked(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
@@ -1250,7 +1351,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
         self.assertNotIn("Không đọc được clipboard", dom)
 
     def test_paste_fallback_runs_inside_the_original_user_gesture(self) -> None:
@@ -1261,7 +1362,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
         self.assertNotIn("Ô link đã được chọn", dom)
 
     def test_paste_button_retrieves_the_private_link_saved_by_the_bot(self) -> None:
@@ -1272,7 +1373,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
 
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)
@@ -1301,7 +1402,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             },
         )
 
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
         self.assertIn('<li id="check-source" class="complete">', dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)
@@ -1312,7 +1413,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('class="access-limited"', dom)
         self.assertIn("Kết nối tài khoản để tiếp tục", dom)
-        self.assertNotIn("14/14 thông số", dom)
+        self.assertNotIn("12/12 thông số", dom)
 
     def test_hash_init_data_survives_initial_navigation_and_enables_jobs(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
@@ -1321,7 +1422,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             telegram_hash_authenticated=True,
         )
 
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
         self.assertIn('<li id="check-api" class="complete">', dom)
         self.assertIn("phiên hợp lệ", dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
@@ -1335,7 +1436,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             signed_launch_authenticated=True,
         )
 
-        self.assertIn("14/14 thông số", dom)
+        self.assertIn("12/12 thông số", dom)
         self.assertIn('<li id="check-api" class="complete">', dom)
         self.assertIn("phiên dự phòng", dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)

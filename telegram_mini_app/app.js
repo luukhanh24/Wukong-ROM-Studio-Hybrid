@@ -905,7 +905,11 @@ const sourceFactDefinitions = [
 
 const requiredSourceFactIds = sourceFactDefinitions
   .map(([id]) => id)
-  .filter((id) => id !== "source-deep-inspection");
+  .filter((id) => ![
+    "source-md5",
+    "source-last-modified",
+    "source-deep-inspection"
+  ].includes(id));
 
 function setSourceFact(id, value) {
   const node = $(`#${id}`);
@@ -1447,9 +1451,15 @@ function metadataZipEntries(directory) {
     localOffset = zip64.localOffset ?? localOffset;
     const normalized = name.replaceAll("\\", "/").toLowerCase();
     if (ZIP_METADATA_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) {
-      if (flags & 1) throw new Error("Encrypted ROM metadata is not supported");
       if (uncompressedSize <= ZIP_MAX_METADATA_FILE_BYTES) {
-        entries.push({ name, method, compressedSize, uncompressedSize, localOffset });
+        entries.push({
+          name,
+          method,
+          compressedSize,
+          uncompressedSize,
+          localOffset,
+          encrypted: Boolean(flags & 1)
+        });
         if (entries.length > ZIP_MAX_METADATA_FILES) {
           throw new Error("ROM ZIP exposes too many metadata files");
         }
@@ -1461,17 +1471,33 @@ function metadataZipEntries(directory) {
   return entries;
 }
 
-async function readMetadataZipEntry(session, entry, signal) {
+async function readMetadataZipEntry(session, entry, sourceSize, signal) {
+  if (entry.encrypted) throw new Error("Encrypted ROM metadata is not supported");
   if (entry.compressedSize > ZIP_MAX_RANGE_BYTES) {
     throw new Error(`ROM metadata file is too large: ${entry.name}`);
   }
-  const header = await fetchProbeBytes(session, entry.localOffset, 30, signal);
+  // Metadata files are normally tiny. Prefetch the local header and first
+  // 64 KiB together so the common case needs one network round-trip.
+  const prefetchLength = Math.min(
+    ZIP_MAX_RANGE_BYTES,
+    zipNumber(Number(sourceSize), "ROM size") - entry.localOffset,
+    Math.max(64 * 1024, 30 + entry.compressedSize)
+  );
+  if (prefetchLength < 30) throw new Error("ROM ZIP local header is truncated");
+  const prefetched = await fetchProbeBytes(session, entry.localOffset, prefetchLength, signal);
+  const header = prefetched.subarray(0, 30);
   const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
   if (view.getUint32(0, true) !== 0x04034b50) throw new Error("ROM ZIP local header is invalid");
   const nameLength = view.getUint16(26, true);
   const extraLength = view.getUint16(28, true);
-  const dataOffset = entry.localOffset + 30 + nameLength + extraLength;
-  const compressed = await fetchProbeBytes(session, dataOffset, entry.compressedSize, signal);
+  const relativeDataOffset = 30 + nameLength + extraLength;
+  let compressed;
+  if (relativeDataOffset + entry.compressedSize <= prefetched.byteLength) {
+    compressed = prefetched.subarray(relativeDataOffset, relativeDataOffset + entry.compressedSize);
+  } else {
+    const dataOffset = entry.localOffset + relativeDataOffset;
+    compressed = await fetchProbeBytes(session, dataOffset, entry.compressedSize, signal);
+  }
   let content;
   if (entry.method === 0) content = compressed;
   else if (entry.method === 8 && window.fflate?.inflateSync) content = window.fflate.inflateSync(compressed);
@@ -1520,8 +1546,28 @@ async function inspectProbeZipMetadata(result, signal) {
   const entries = metadataZipEntries(directory);
   const metadata = {};
   let totalTextBytes = 0;
-  for (const entry of entries) {
-    const content = await readMetadataZipEntry(result.rangeSession, entry, signal);
+  const contents = new Array(entries.length);
+  const failures = [];
+  let nextEntry = 0;
+  const readNext = async () => {
+    while (nextEntry < entries.length) {
+      const index = nextEntry;
+      nextEntry += 1;
+      try {
+        contents[index] = await readMetadataZipEntry(
+          result.rangeSession,
+          entries[index],
+          result.sizeBytes,
+          signal
+        );
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        failures.push(entries[index].name);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(3, entries.length) }, readNext));
+  for (const content of contents.filter(Boolean)) {
     totalTextBytes += content.byteLength;
     if (totalTextBytes > ZIP_MAX_METADATA_TEXT_BYTES) {
       throw new Error("ROM ZIP metadata exceeds the 4 MiB text limit");
@@ -1538,7 +1584,12 @@ async function inspectProbeZipMetadata(result, signal) {
     });
   }
   if (!Object.keys(metadata).length) {
-    return { ...result, warning: "ROM ZIP does not expose recognized metadata files" };
+    return {
+      ...result,
+      warning: failures.length
+        ? "ROM ZIP metadata files could not be read"
+        : "ROM ZIP does not expose recognized metadata files"
+    };
   }
   const productName = firstMetadata(metadata, "oplus-product-name", "product-name");
   const device = firstMetadata(metadata, "pre-device", "product-name", "oplus-product-name");
@@ -1559,7 +1610,9 @@ async function inspectProbeZipMetadata(result, signal) {
     buildDate: metadataBuildDate(metadata),
     otaType: firstMetadata(metadata, "ota-type"),
     deepInspected: true,
-    warning: null,
+    warning: failures.length
+      ? `${failures.length} ROM metadata file(s) could not be read`
+      : null,
     metadata
   };
 }
