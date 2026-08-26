@@ -280,8 +280,8 @@ jobs:
           done
           test -n "$run_id"
           gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
-      - name: Move Telegram webhook after Vercel is live
-        if: (inputs.target || 'staging') == 'production' && inputs.cutover
+      - name: Ensure Telegram webhook and command menu
+        if: (inputs.target || 'staging') == 'production'
         env:
           PRODUCTION_URL: ${{ vars.WUKONG_CLOUDFLARE_PRODUCTION_URL }}
         shell: bash
@@ -308,6 +308,53 @@ jobs:
           payload = json.loads(sys.argv[1])
           assert payload.get("ok") is True, payload
           PY
+          user_commands='[
+            {"command":"start","description":"Mở menu Wukong ROM Studio"},
+            {"command":"app","description":"Mở Mini App để cấu hình và build"},
+            {"command":"jobs","description":"Xem các job gần đây"},
+            {"command":"account","description":"Xem tài khoản và lượt build"},
+            {"command":"cloud","description":"Xem thư viện Drive/cloud"},
+            {"command":"diagnostics","description":"Kiểm tra trạng thái hệ thống"},
+            {"command":"language","description":"Đổi ngôn ngữ Việt/Anh"},
+            {"command":"help","description":"Xem toàn bộ lệnh"}
+          ]'
+          admin_commands="$(python - "$user_commands" <<'PY'
+          import json, sys
+          commands = json.loads(sys.argv[1])
+          commands.extend([
+              {"command": "users", "description": "Xem danh sách người dùng"},
+              {"command": "approve", "description": "Duyệt Telegram user"},
+              {"command": "revoke", "description": "Thu hồi quyền người dùng"},
+              {"command": "cache", "description": "Xem GitHub Actions cache"},
+              {"command": "cache_clear", "description": "Xóa GitHub Actions cache"},
+          ])
+          print(json.dumps(commands, ensure_ascii=False, separators=(",", ":")))
+          PY
+          )"
+          set_commands() {
+            local commands="$1"
+            local scope="$2"
+            response="$(curl --fail --silent --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data "$(python - "$commands" "$scope" <<'PY'
+          import json, sys
+          commands, scope = sys.argv[1:]
+          print(json.dumps({
+              "commands": json.loads(commands),
+              "scope": json.loads(scope),
+          }, ensure_ascii=False, separators=(",", ":")))
+          PY
+          )" \
+              "https://api.telegram.org/bot${WUKONG_TELEGRAM_BOT_TOKEN}/setMyCommands")"
+            python - "$response" <<'PY'
+          import json, sys
+          payload = json.loads(sys.argv[1])
+          assert payload.get("ok") is True, payload
+          PY
+          }
+          set_commands "$user_commands" '{"type":"all_private_chats"}'
+          set_commands "$admin_commands" '{"type":"chat","chat_id":1678823419}'
       - name: Run bootstrap → progress → terminal synthetic Actions job
         if: (inputs.target || 'staging') == 'production' && inputs.cutover
         env:

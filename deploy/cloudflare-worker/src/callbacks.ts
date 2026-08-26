@@ -1,9 +1,9 @@
 import { bytes, constantTimeHexEqual, hmacHex, hmacSha256, sha256Hex } from "./crypto";
 import {
   acceptedJobCompensationStatements,
-  directArtifactUrl,
   type JobRow
 } from "./jobs";
+import { terminalTelegramNotification } from "./telegram-notifications";
 
 type JsonObject = Record<string, unknown>;
 
@@ -232,25 +232,11 @@ function mergedManifest(row: JobRow, payload: JsonObject, status: string, now: s
     stage: typeof incoming.stage === "string" ? incoming.stage : status === "succeeded" ? "complete" : status,
     progress: status === "succeeded" ? 1 : Math.max(Number(row.progress ?? 0), Number(incoming.progress ?? 0)),
     updated_at: now,
-    finished_at: now
-  };
-}
-
-function terminalNotification(env: Env, jobId: string, status: string, manifest: JsonObject): JsonObject {
-  const succeeded = status === "succeeded";
-  const icon = succeeded ? "✅" : status === "cancelled" ? "⏹" : "❌";
-  const title = succeeded ? "Build hoàn tất" : status === "cancelled" ? "Build đã hủy" : "Build thất bại";
-  const artifact = Array.isArray(manifest.artifacts) ? manifest.artifacts[0] as JsonObject | undefined : undefined;
-  const link = directArtifactUrl(artifact?.public_url ?? artifact?.publicUrl, env);
-  return {
-    text: [
-      `${icon} <b>${title}</b>`,
-      "",
-      `Job: <code>${jobId}</code>`,
-      succeeded && link ? `<a href="${link}">Mở artifact trên cloud</a>` : ""
-    ].filter(Boolean).join("\n"),
-    parse_mode: "HTML",
-    disable_web_page_preview: true
+    finished_at: typeof incoming.finished_at === "string"
+      ? incoming.finished_at
+      : typeof incoming.finishedAt === "string"
+        ? incoming.finishedAt
+        : now
   };
 }
 
@@ -335,7 +321,7 @@ export async function handleTerminal(
         crypto.randomUUID(),
         `job-terminal:${jobId}`,
         row.owner_subject,
-        JSON.stringify(terminalNotification(env, jobId, status, manifest)),
+        JSON.stringify(terminalTelegramNotification(env, row, status, manifest)),
         now,
         now
       ),
