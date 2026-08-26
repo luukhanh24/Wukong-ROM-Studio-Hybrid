@@ -5,14 +5,14 @@ WHEN NEW.owner_channel = 'telegram'
      SELECT value FROM wukong_control_plane_metadata WHERE key = 'd1_migration_mode'
  ), '') <> 'migration'
 BEGIN
-    SELECT CASE
+    SELECT (CASE
         WHEN NOT EXISTS (
             SELECT 1 FROM wukong_telegram_users
             WHERE subject = NEW.owner_subject AND access_status = 'approved'
         )
         THEN RAISE(ABORT, 'access_denied')
-    END;
-    SELECT CASE
+    END);
+    SELECT (CASE
         WHEN EXISTS (
             SELECT 1 FROM wukong_telegram_users
             WHERE subject = NEW.owner_subject
@@ -21,5 +21,5 @@ BEGIN
               AND build_credits <= 0
         )
         THEN RAISE(ABORT, 'build_quota_exhausted')
-    END;
+    END);
 END;

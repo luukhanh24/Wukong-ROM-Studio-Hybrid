@@ -23,7 +23,7 @@
     {
       "binding": "DB",
       "database_name": "wukong-control-plane-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "fa83d481-857e-4f6f-9dd6-38d46bdf8c86",
       "migrations_dir": "migrations"
     }
   ],
@@ -48,7 +48,7 @@
         {
           "binding": "DB",
           "database_name": "wukong-control-plane-staging-db",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "5d3e91be-51fd-4fe5-a26e-758632e12c77",
           "migrations_dir": "migrations"
         }
       ]
@@ -70,7 +70,7 @@
         {
           "binding": "DB",
           "database_name": "wukong-control-plane-db",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "fa83d481-857e-4f6f-9dd6-38d46bdf8c86",
           "migrations_dir": "migrations"
         }
       ]
