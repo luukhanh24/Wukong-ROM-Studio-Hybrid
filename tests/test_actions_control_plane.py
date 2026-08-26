@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest import mock
 
@@ -8,6 +9,31 @@ from tools import actions_control_plane
 
 
 class ActionsControlPlaneTests(unittest.TestCase):
+    def test_bootstrap_signs_request_and_preserves_github_bearer(self) -> None:
+        with (
+            TemporaryDirectory() as directory,
+            mock.patch.object(
+                actions_control_plane,
+                "_request_json",
+                return_value={"recipe": {"schemaVersion": 1}},
+            ) as request_json,
+        ):
+            root = Path(directory)
+            actions_control_plane.bootstrap(
+                "https://worker.example",
+                job_id="bootstrap-job",
+                run_id=42,
+                github_token="g" * 40,
+                secret="s" * 32,
+                output=root / "bootstrap.json",
+                recipe_output=root / "recipe.json",
+            )
+
+            headers = request_json.call_args.kwargs["headers"]
+            self.assertEqual(headers["Authorization"], f"Bearer {'g' * 40}")
+            self.assertIn("X-Wukong-Timestamp", headers)
+            self.assertIn("X-Wukong-Signature", headers)
+
     def test_upload_progress_is_batched_for_at_least_five_seconds(self) -> None:
         manifests = [
             {"status": "running", "stage": "uploading", "progress": progress}

@@ -459,9 +459,14 @@ const worker: ExportedHandler<Env> = {
       }
     }
     if (path === "/internal/actions/bootstrap" && request.method === "POST") {
+      const body = await request.text();
       try {
-        return json(await bootstrapActions(request, env, await request.json()));
+        await verifyActionsHmac(request, env, body);
+        return json(await bootstrapActions(request, env, JSON.parse(body)));
       } catch (error) {
+        if (error instanceof CallbackHttpError) {
+          return json({ error: error.message }, error.status);
+        }
         if (error instanceof GitHubHttpError) {
           return json({ error: error.message }, error.status);
         }

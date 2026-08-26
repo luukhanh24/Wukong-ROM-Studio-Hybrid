@@ -25,7 +25,7 @@ export default defineConfig(async () => {
             WUKONG_TELEGRAM_BOT_TOKEN: "123456789:fixture_bot_secret_value",
             WUKONG_TELEGRAM_WEBHOOK_SECRET: "fixture-webhook-secret",
             WUKONG_ACTIONS_CALLBACK_SECRET: "fixture-actions-callback-secret-value",
-            WUKONG_GITHUB_TOKEN: "",
+            WUKONG_GITHUB_TOKEN: "fixture-worker-github-token-value",
             WUKONG_DISABLE_EXTERNAL_DISPATCH: "1",
             WUKONG_GOOGLE_CLIENT_ID: "fixture-client-id",
             WUKONG_GOOGLE_CLIENT_SECRET: "fixture-client-secret",
