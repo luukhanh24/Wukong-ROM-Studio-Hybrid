@@ -160,7 +160,8 @@ class GitHubActionsUITests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("root-reserve-mb: 6144", workflow)
+        self.assertIn("root-reserve-mb: 12288", workflow)
+        self.assertIn("ext4 reserved blocks", workflow)
         self.assertIn("04.1 · Kiểm tra dung lượng runner / Verify runner disk split", workflow)
         self.assertIn("--root-path /", workflow)
         self.assertIn("--min-root-disk-gib 4", workflow)

@@ -236,7 +236,10 @@ jobs:
       - name: "03 · Mở rộng workspace / Expand hosted disk"
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
         with:
-          root-reserve-mb: 6144
+          # The action creates its loop image as root, so ext4 reserved blocks
+          # are consumed beyond `df`'s non-root available count. Production
+          # smoke showed 6 GiB here leaves only ~625 MiB actually available.
+          root-reserve-mb: 12288
           temp-reserve-mb: 512
           swap-size-mb: 2048
           remove-dotnet: 'true'
