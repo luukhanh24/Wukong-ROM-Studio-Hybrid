@@ -294,7 +294,7 @@ async function diagnostics(env: Env, language: string): Promise<TelegramUiRespon
       "",
       "Control plane  <b>ready</b>",
       "State backend  <code>D1</code>",
-      `Runner  <code>GitHub Actions · ${escape(env.WUKONG_GITHUB_REPOSITORY)}</code>`,
+      "Runner  <code>GitHub Actions</code>",
       `Cloud  <code>${env.WUKONG_GOOGLE_DRIVE_FOLDER_ID ? "Google Drive" : "chưa cấu hình"}</code>`,
       `Release  <code>${escape(env.WUKONG_RELEASE_SHA, 40)}</code>`
     ].join("\n")

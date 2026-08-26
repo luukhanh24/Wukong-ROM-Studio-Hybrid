@@ -1,6 +1,7 @@
 import { env, SELF } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { drainTelegramOutbox } from "../src/telegram";
+import { tmaHeaders } from "./helpers";
 
 describe("Telegram webhook and pairing", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -237,5 +238,48 @@ describe("Telegram webhook and pairing", () => {
     });
     expect(JSON.stringify(message?.payload)).not.toContain("workers.dev");
     expect(JSON.stringify(message?.payload)).not.toContain("onrender.com");
+  });
+
+  it("does not expose the private GitHub repository in bot or API diagnostics", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return Response.json({ ok: true, result: { message_id: calls.length } });
+    }));
+    await env.DB.prepare(
+      `INSERT INTO wukong_telegram_ui_state (subject, language, updated_at)
+       VALUES ('1678823419', 'vi', ?)
+       ON CONFLICT (subject) DO UPDATE SET language = 'vi', updated_at = excluded.updated_at`
+    ).bind(new Date().toISOString()).run();
+    const webhook = await SELF.fetch("https://worker.example/telegram/webhook", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "fixture-webhook-secret"
+      },
+      body: JSON.stringify({
+        update_id: 912351,
+        callback_query: {
+          id: "callback-diagnostics",
+          from: { id: 1678823419, first_name: "Admin", language_code: "vi" },
+          data: "v1:diag",
+          message: { message_id: 7, chat: { id: 1678823419 } }
+        }
+      })
+    });
+    expect(webhook.status).toBe(204);
+    const botMessage = calls.find((payload) => typeof payload.text === "string");
+    expect(String(botMessage?.text)).toContain("Runner  <code>GitHub Actions</code>");
+    expect(String(botMessage?.text)).not.toContain("luukhanh24");
+    expect(String(botMessage?.text)).not.toContain("Wukong-ROM-Studio-Hybrid");
+
+    const api = await SELF.fetch("https://worker.example/v1/diagnostics", {
+      headers: await tmaHeaders(1678823419)
+    });
+    expect(api.status).toBe(200);
+    const diagnostics = await api.json() as Record<string, unknown>;
+    expect(diagnostics.runner).toEqual({ provider: "github-actions" });
+    expect(JSON.stringify(diagnostics)).not.toContain("luukhanh24");
+    expect(JSON.stringify(diagnostics)).not.toContain("Wukong-ROM-Studio-Hybrid");
   });
 });
