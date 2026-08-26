@@ -155,6 +155,17 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))
         self.assertNotIn("${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}", workflow)
 
+    def test_hosted_workflow_preserves_and_checks_root_disk_space(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "wukong-build.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("root-reserve-mb: 6144", workflow)
+        self.assertIn("04.1 · Kiểm tra dung lượng runner / Verify runner disk split", workflow)
+        self.assertIn("--root-path /", workflow)
+        self.assertIn("--min-root-disk-gib 4", workflow)
+        self.assertIn("--min-disk-gib 70", workflow)
+
     def test_hybrid_action_keeps_terminal_manifest_in_transfer_directory(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "wukong-build.yml").read_text(
             encoding="utf-8"
