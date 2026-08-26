@@ -146,6 +146,7 @@ jobs:
           WUKONG_JOB_ID: ${{ inputs.job_id }}
           WUKONG_CONTROL_PLANE_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
           GITHUB_TOKEN: ${{ github.token }}
+          WUKONG_ACTIONS_CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           WUKONG_RUN_ID: ${{ github.run_id }}
           WUKONG_GITHUB_TOKEN: ${{ secrets.WUKONG_GITHUB_TOKEN }}
           WUKONG_INPUT_TASK: ${{ inputs.task }}
@@ -179,6 +180,7 @@ jobs:
               --job-id "$WUKONG_JOB_ID" \
               --run-id "$WUKONG_RUN_ID" \
               --github-token "$GITHUB_TOKEN" \
+              --secret "$WUKONG_ACTIONS_CALLBACK_SECRET" \
               --output .wkstudio/actions-bootstrap.json \
               --recipe-output .wkstudio/recipe.json
             effective_recipe_ref="wukong-gdrive:WukongROM/recipes/${WUKONG_JOB_ID}.json"

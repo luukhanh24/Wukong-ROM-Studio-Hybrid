@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { tmaHeaders } from "./helpers";
+import { actionsHeaders, tmaHeaders } from "./helpers";
 
 describe("GitHub Actions bootstrap", () => {
   afterEach(() => {
@@ -26,9 +26,12 @@ describe("GitHub Actions bootstrap", () => {
       })
     });
     const job = await created.json() as { job_id: string };
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe(
         "https://api.github.com/repos/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/7123"
+      );
+      expect(new Headers(init?.headers).get("Authorization")).toBe(
+        `Bearer ${(env as unknown as Env).WUKONG_GITHUB_TOKEN}`
       );
       return Response.json({
         id: 7123,
@@ -39,13 +42,14 @@ describe("GitHub Actions bootstrap", () => {
       });
     }));
 
+    const body = JSON.stringify({ jobId: job.job_id, runId: 7123 });
     const response = await SELF.fetch("https://worker.example/internal/actions/bootstrap", {
       method: "POST",
       headers: {
+        ...(await actionsHeaders(body)),
         Authorization: `Bearer ${"g".repeat(40)}`,
-        "Content-Type": "application/json"
       },
-      body: JSON.stringify({ jobId: job.job_id, runId: 7123 })
+      body
     });
 
     expect(response.status).toBe(200);
@@ -57,6 +61,18 @@ describe("GitHub Actions bootstrap", () => {
         source: { uri: "https://downloads.example/private-rom.zip" }
       }
     });
+  });
+
+  it("rejects bootstrap requests without the Actions callback signature", async () => {
+    const response = await SELF.fetch("https://worker.example/internal/actions/bootstrap", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${"g".repeat(40)}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ jobId: "unsigned-bootstrap", runId: 7122 })
+    });
+    expect(response.status).toBe(403);
   });
 
   it("does not bootstrap a job that was cancelled before its run appeared", async () => {
@@ -100,15 +116,16 @@ describe("GitHub Actions bootstrap", () => {
       throw new Error("A terminal job must be rejected before GitHub verification");
     }));
 
+    const body = JSON.stringify({ jobId: job.job_id, runId: 7124 });
     const response = await SELF.fetch(
       "https://worker.example/internal/actions/bootstrap",
       {
         method: "POST",
         headers: {
+          ...(await actionsHeaders(body)),
           Authorization: `Bearer ${"g".repeat(40)}`,
-          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ jobId: job.job_id, runId: 7124 })
+        body
       }
     );
     expect(response.status).toBe(409);

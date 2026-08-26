@@ -94,15 +94,23 @@ def bootstrap(
     job_id: str,
     run_id: int,
     github_token: str,
+    secret: str,
     output: Path,
     recipe_output: Path,
 ) -> dict[str, Any]:
     if len(github_token) < 20:
         raise ValueError("GITHUB_TOKEN is required for Actions bootstrap")
+    if len(secret) < 20:
+        raise ValueError("Actions callback secret is required for Actions bootstrap")
+    payload = {"jobId": job_id, "runId": int(run_id)}
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     result = _request_json(
         f"{_api_url(api_url)}/internal/actions/bootstrap",
-        {"jobId": job_id, "runId": int(run_id)},
-        headers={"Authorization": f"Bearer {github_token}"},
+        payload,
+        headers={
+            "Authorization": f"Bearer {github_token}",
+            **_signed_headers(secret, body),
+        },
         attempts=6,
     )
     recipe = result.get("recipe")
@@ -277,6 +285,10 @@ def _parser() -> argparse.ArgumentParser:
     bootstrap_parser.add_argument("--job-id", required=True)
     bootstrap_parser.add_argument("--run-id", type=int, required=True)
     bootstrap_parser.add_argument("--github-token", default=os.environ.get("GITHUB_TOKEN", ""))
+    bootstrap_parser.add_argument(
+        "--secret",
+        default=os.environ.get("WUKONG_ACTIONS_CALLBACK_SECRET", ""),
+    )
     bootstrap_parser.add_argument("--output", type=Path, default=Path(".wkstudio/actions-bootstrap.json"))
     bootstrap_parser.add_argument("--recipe-output", type=Path, default=Path(".wkstudio/recipe.json"))
 
@@ -309,6 +321,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             job_id=args.job_id,
             run_id=args.run_id,
             github_token=args.github_token,
+            secret=args.secret,
             output=args.output,
             recipe_output=args.recipe_output,
         )

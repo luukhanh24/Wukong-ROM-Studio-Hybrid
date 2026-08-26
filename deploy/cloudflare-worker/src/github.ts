@@ -98,16 +98,16 @@ function bootstrapPayload(value: unknown): { jobId: string; runId: number } {
 
 async function verifyRun(
   env: Env,
-  token: string,
   jobId: string,
   runId: number
 ): Promise<void> {
+  if (!env.WUKONG_GITHUB_TOKEN.trim()) {
+    throw new GitHubHttpError("GitHub Actions verification is not configured", 503);
+  }
   const [owner, repository] = repositoryParts(env);
   const response = await githubFetch(
     env,
-    `/repos/${owner}/${repository}/actions/runs/${runId}`,
-    {},
-    token
+    `/repos/${owner}/${repository}/actions/runs/${runId}`
   );
   if (!response.ok) {
     throw new GitHubHttpError("Actions bootstrap authentication failed", 403);
@@ -136,7 +136,7 @@ export async function bootstrapActions(
   env: Env,
   value: unknown
 ): Promise<JsonObject> {
-  const token = bearerToken(request);
+  bearerToken(request);
   const { jobId, runId } = bootstrapPayload(value);
   const row = await env.DB.prepare("SELECT * FROM wukong_jobs WHERE job_id = ?")
     .bind(jobId)
@@ -148,7 +148,7 @@ export async function bootstrapActions(
   if (row.github_run_id != null && Number(row.github_run_id) !== runId) {
     throw new GitHubHttpError("Actions bootstrap run does not match the job", 409);
   }
-  await verifyRun(env, token, jobId, runId);
+  await verifyRun(env, jobId, runId);
   const now = new Date().toISOString();
   const sequence = Number(row.next_event_sequence ?? 2);
   await env.DB.batch([
