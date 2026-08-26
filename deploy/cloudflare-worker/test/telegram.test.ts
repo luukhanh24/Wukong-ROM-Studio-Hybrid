@@ -282,4 +282,48 @@ describe("Telegram webhook and pairing", () => {
     expect(JSON.stringify(diagnostics)).not.toContain("luukhanh24");
     expect(JSON.stringify(diagnostics)).not.toContain("Wukong-ROM-Studio-Hybrid");
   });
+
+  it("answers the cloud callback with a visible error when Drive authorization expires", async () => {
+    const calls: Array<{ url: string; payload: Record<string, unknown> }> = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "https://oauth2.googleapis.com/token") {
+        return Response.json(
+          { error: "invalid_grant", error_description: "Token has been expired or revoked." },
+          { status: 400 }
+        );
+      }
+      calls.push({
+        url,
+        payload: JSON.parse(String(init?.body)) as Record<string, unknown>
+      });
+      return Response.json({ ok: true, result: { message_id: calls.length } });
+    }));
+    const response = await SELF.fetch("https://worker.example/telegram/webhook", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "fixture-webhook-secret"
+      },
+      body: JSON.stringify({
+        update_id: 912352,
+        callback_query: {
+          id: "callback-cloud-expired",
+          from: { id: 1678823419, first_name: "Admin", language_code: "vi" },
+          data: "v1:cloud",
+          message: { message_id: 8, chat: { id: 1678823419 } }
+        }
+      })
+    });
+    expect(response.status).toBe(204);
+    expect(calls.some((call) =>
+      call.url.endsWith("/answerCallbackQuery")
+      && call.payload.callback_query_id === "callback-cloud-expired"
+    )).toBe(true);
+    expect(calls.some((call) =>
+      call.url.endsWith("/sendMessage")
+      && String(call.payload.text).includes("Google Drive")
+      && String(call.payload.text).includes("xác thực")
+    )).toBe(true);
+  });
 });

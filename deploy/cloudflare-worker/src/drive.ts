@@ -26,7 +26,10 @@ async function googleAccessToken(env: Env): Promise<string> {
   });
   const payload = await response.json() as JsonObject;
   if (!response.ok || typeof payload.access_token !== "string") {
-    throw new Error("Google Drive OAuth refresh failed");
+    if (payload.error === "invalid_grant") {
+      throw new Error("Google Drive cần xác thực lại");
+    }
+    throw new Error("Google Drive tạm thời không thể xác thực");
   }
   cachedAccessToken = payload.access_token;
   cachedAccessTokenExpiresAt = now + Math.max(60, Number(payload.expires_in ?? 3600));

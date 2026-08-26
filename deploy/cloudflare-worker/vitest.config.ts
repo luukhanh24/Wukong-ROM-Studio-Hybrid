@@ -21,7 +21,7 @@ export default defineConfig(async () => {
             WUKONG_GITHUB_REPOSITORY: "luukhanh24/Wukong-ROM-Studio-Hybrid",
             WUKONG_GITHUB_WORKFLOW: "wukong-build.yml",
             WUKONG_GITHUB_REF: "main",
-            WUKONG_GOOGLE_DRIVE_FOLDER_ID: "",
+            WUKONG_GOOGLE_DRIVE_FOLDER_ID: "fixture-root-folder",
             WUKONG_SOURCE_TRANSPORT_URL: "https://wukong-rom-studio.vercel.app/api/source-transport",
             WUKONG_TELEGRAM_BOT_TOKEN: "123456789:fixture_bot_secret_value",
             WUKONG_TELEGRAM_WEBHOOK_SECRET: "fixture-webhook-secret",
