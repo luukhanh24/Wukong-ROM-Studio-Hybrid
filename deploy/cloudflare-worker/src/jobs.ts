@@ -198,7 +198,7 @@ function mapD1JobError(error: unknown): JobHttpError {
   }
   if (message.includes("build_concurrency_limit")) {
     return new JobHttpError(
-      "The system is already running 20 builds; wait for one to finish",
+      "The system has reached its concurrent build limit; wait for one to finish",
       409,
       "build_concurrency_limit"
     );
