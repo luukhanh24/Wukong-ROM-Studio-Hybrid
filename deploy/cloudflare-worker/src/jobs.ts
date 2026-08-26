@@ -209,6 +209,22 @@ function mapD1JobError(error: unknown): JobHttpError {
   return new JobHttpError("Build job could not be accepted", 400);
 }
 
+async function recordDispatchAttempt(env: Env, jobId: string): Promise<void> {
+  const dispatchedAt = new Date().toISOString();
+  try {
+    await env.DB.prepare(
+      `UPDATE wukong_jobs
+       SET dispatch_attempts = 1, dispatch_last_attempt_at = ?, updated_at = ?
+       WHERE job_id = ? AND status NOT IN ('succeeded', 'failed', 'cancelled')`
+    ).bind(dispatchedAt, dispatchedAt, jobId).run();
+  } catch (error) {
+    console.error("Failed to persist the initial GitHub dispatch attempt", {
+      jobId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 export async function createJob(
   env: Env,
   auth: AuthenticatedRequest,
@@ -313,6 +329,7 @@ export async function createJob(
     await compensateDispatchFailure(env, row, error instanceof Error ? error.message : "Dispatch failed");
     throw new JobHttpError(error instanceof Error ? error.message : "Build dispatch failed", 400);
   }
+  await recordDispatchAttempt(env, jobId);
   return { job: publicJob(row, env), created: true };
 }
 
@@ -456,6 +473,7 @@ export async function resumeJob(
     );
     throw new JobHttpError(error instanceof Error ? error.message : "Build dispatch failed", 400);
   }
+  await recordDispatchAttempt(env, jobId);
   return { job: publicJob(row, env), created: true };
 }
 
@@ -480,9 +498,19 @@ export function acceptedJobCompensationStatements(
   row: JobRow,
   reason: string,
   now: string,
-  lastJobStatus: string
+  lastJobStatus: string,
+  requiredJobState?: { status: string; stage: string }
 ): D1PreparedStatement[] {
   const compensationKey = `compensate:${row.job_id}`;
+  const jobGuard = requiredJobState
+    ? ` AND EXISTS (
+          SELECT 1 FROM wukong_jobs
+          WHERE job_id = ? AND status = ? AND stage = ?
+        )`
+    : "";
+  const jobGuardBindings = requiredJobState
+    ? [row.job_id, requiredJobState.status, requiredJobState.stage]
+    : [];
   return [
     env.DB.prepare(
       `UPDATE wukong_telegram_users SET
@@ -496,15 +524,17 @@ export function acceptedJobCompensationStatements(
            SELECT 1 FROM wukong_telegram_quota_ledger
            WHERE subject = ? AND job_id = ? AND entry_type = 'consume'
          )
-         AND NOT EXISTS (
-           SELECT 1 FROM wukong_telegram_quota_ledger WHERE idempotency_key = ?
-         )`
+          AND NOT EXISTS (
+            SELECT 1 FROM wukong_telegram_quota_ledger WHERE idempotency_key = ?
+          )
+          ${jobGuard}`
     ).bind(
       lastJobStatus.slice(0, 64),
       row.owner_subject,
       row.owner_subject,
       row.job_id,
-      compensationKey
+      compensationKey,
+      ...jobGuardBindings
     ),
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_telegram_quota_ledger
@@ -515,10 +545,11 @@ export function acceptedJobCompensationStatements(
               build_credits, ?, ?, CASE WHEN unlimited = 1 THEN 0 ELSE 1 END, ?, ?
        FROM wukong_telegram_users
        WHERE subject = ?
-         AND EXISTS (
-           SELECT 1 FROM wukong_telegram_quota_ledger
-           WHERE subject = ? AND job_id = ? AND entry_type = 'consume'
-         )`
+          AND EXISTS (
+            SELECT 1 FROM wukong_telegram_quota_ledger
+            WHERE subject = ? AND job_id = ? AND entry_type = 'consume'
+          )
+          ${jobGuard}`
     ).bind(
       crypto.randomUUID(),
       row.job_id,
@@ -527,23 +558,26 @@ export function acceptedJobCompensationStatements(
       now,
       row.owner_subject,
       row.owner_subject,
-      row.job_id
+      row.job_id,
+      ...jobGuardBindings
     ),
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_telegram_user_events
        (event_id, subject, event_type, details_json, created_at)
        SELECT ?, ?, 'build_compensated', ?, ?
-       WHERE EXISTS (
-         SELECT 1 FROM wukong_telegram_quota_ledger
-         WHERE subject = ? AND job_id = ? AND entry_type = 'compensate'
-       )`
+        WHERE EXISTS (
+          SELECT 1 FROM wukong_telegram_quota_ledger
+          WHERE subject = ? AND job_id = ? AND entry_type = 'compensate'
+        )
+        ${jobGuard}`
     ).bind(
       `build-compensated:${row.job_id}`,
       row.owner_subject,
       JSON.stringify({ jobId: row.job_id, reason: reason.slice(0, 1024) }),
       now,
       row.owner_subject,
-      row.job_id
+      row.job_id,
+      ...jobGuardBindings
     )
   ];
 }
