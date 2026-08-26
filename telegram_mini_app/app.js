@@ -619,7 +619,10 @@ async function apiRequest(path, options = {}) {
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(payload.error || `HTTP ${response.status}`);
+    const message = payload.code === "build_concurrency_limit"
+      ? t("buildConcurrencyLimit")
+      : payload.error || `HTTP ${response.status}`;
+    const error = new Error(message);
     error.code = payload.code || "";
     error.status = response.status;
     error.sourceRejected = response.status >= 400 && response.status < 500;
@@ -3123,9 +3126,6 @@ async function submitRecipe() {
     localStorage.removeItem("wukong-submit-request");
   } catch (error) {
     if (!error.connectionFailed) localStorage.removeItem("wukong-submit-request");
-    if (error.code === "build_concurrency_limit") {
-      error.message = t("buildConcurrencyLimit");
-    }
     throw error;
   }
   state.activeJobId = job.job_id || job.jobId;

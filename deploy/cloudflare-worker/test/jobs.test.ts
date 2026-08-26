@@ -157,6 +157,15 @@ describe("atomic Accepted Job creation", () => {
     await expect(response.json()).resolves.toMatchObject({
       code: "build_concurrency_limit"
     });
+    await expect(
+      bindings.DB.prepare(
+        `INSERT INTO wukong_jobs
+         (job_id, manifest_json, recipe_json, created_at, updated_at,
+          next_event_sequence, owner_channel, owner_subject, device, status, stage, progress)
+         VALUES ('internal-job-at-capacity', '{}', ?, ?, ?, 2, 'internal',
+          'system', 'PKG998', 'queued', 'queued', 0)`
+      ).bind(JSON.stringify(recipe), now, now).run()
+    ).rejects.toThrow("build_concurrency_limit");
   });
 
   it("does not accept a job after the Build Allowance is exhausted", async () => {

@@ -1,7 +1,6 @@
 CREATE TRIGGER IF NOT EXISTS wukong_job_global_concurrency_guard
 BEFORE INSERT ON wukong_jobs
-WHEN NEW.owner_channel = 'telegram'
- AND COALESCE((
+WHEN COALESCE((
      SELECT value FROM wukong_control_plane_metadata WHERE key = 'd1_migration_mode'
  ), '') <> 'migration'
  AND (
