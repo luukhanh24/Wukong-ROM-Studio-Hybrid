@@ -315,18 +315,21 @@ window.addEventListener('load', () => {{
     const dockAvatar = document.querySelector('#dock-profile');
     const dock = document.querySelector('.bottom-nav');
     const dockSurface = document.querySelector('.liquid-surface');
-    const dockLensGlass = document.querySelector('.bottom-nav .liquid-lens > span');
+    const dockLens = document.querySelector('.bottom-nav .liquid-lens');
     const activeDockButton = document.querySelector('.bottom-nav button.active');
     const dispatchFab = document.querySelector('.dispatch-fab');
     const surfaceStyle = dockSurface ? getComputedStyle(dockSurface) : null;
+    const fabStyle = dispatchFab ? getComputedStyle(dispatchFab) : null;
     const surfaceColor = surfaceStyle?.backgroundColor.match(/[0-9.]+/g) || [];
     const surfaceBlur = (surfaceStyle?.backdropFilter || surfaceStyle?.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
+    const fabColor = fabStyle?.backgroundColor.match(/[0-9.]+/g) || [];
+    const fabBlur = (fabStyle?.backdropFilter || fabStyle?.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
     const dockRect = dock?.getBoundingClientRect();
     const shellRect = dockSurface?.getBoundingClientRect();
     const fabRect = dispatchFab?.getBoundingClientRect();
-    const lensRect = dockLensGlass?.getBoundingClientRect();
+    const lensRect = dockLens?.getBoundingClientRect();
     const activeDockRect = activeDockButton?.getBoundingClientRect();
-    const lensStyle = getComputedStyle(dockLensGlass);
+    const lensStyle = getComputedStyle(dockLens);
     const lensColor = lensStyle.backgroundColor.match(/[0-9.]+/g) || [];
     const lensBlur = (lensStyle.backdropFilter || lensStyle.webkitBackdropFilter || '').match(/blur[(]([0-9.]+)px[)]/);
     document.body.dataset.dockCapDiameter = String(Number.parseFloat(getComputedStyle(dock).getPropertyValue('--dock-cap-size')) || 0);
@@ -340,10 +343,14 @@ window.addEventListener('load', () => {{
     document.body.dataset.dockLensBlur = String(Number(lensBlur?.[1] || 0));
     document.body.dataset.dockLensWidth = String(Math.round(lensRect?.width || 0));
     document.body.dataset.dockLensHeight = String(Math.round(lensRect?.height || 0));
+    document.body.dataset.dockLensTopGap = String(Math.round((lensRect?.top || 0) - (dockRect?.top || 0)));
+    document.body.dataset.dockLensBottomGap = String(Math.round((dockRect?.bottom || 0) - (lensRect?.bottom || 0)));
     document.body.dataset.dockLensCenterDelta = String(Math.round(Math.abs(
       ((lensRect?.left || 0) + (lensRect?.width || 0) / 2) -
       ((activeDockRect?.left || 0) + (activeDockRect?.width || 0) / 2)
     )));
+    document.body.dataset.fabSurfaceAlpha = String(Number(fabColor.at(-1) || 1));
+    document.body.dataset.fabSurfaceBlur = String(Number(fabBlur?.[1] || 0));
     document.body.dataset.mobileMainPaddingBottom = String(Number.parseFloat(getComputedStyle(document.querySelector('main')).paddingBottom) || 0);
   }}, 1200);
 }});
@@ -1024,8 +1031,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('dock-shell-clip', html)
         self.assertIn('--dock-cap-size:76px', styles)
         self.assertIn('id="dock-shell-path"', html)
-        self.assertIn('background:rgba(248,250,252,.34)', styles)
-        self.assertIn('backdrop-filter:blur(20px) saturate(1.5) contrast(1.04)', styles)
+        self.assertIn('background:rgba(255,255,255,.08)', styles)
+        self.assertIn('backdrop-filter:blur(10px) saturate(1.38)', styles)
         self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
@@ -1061,15 +1068,17 @@ class TelegramMiniAppTests(unittest.TestCase):
                     self.assertIsNotNone(match, name)
                     return float(match.group(1))
 
-                expected_surface_alpha = 0.28 if dark_mode else 0.34
-                expected_lens_alpha = 0.13 if dark_mode else 0.38
+                expected_surface_alpha = 0.12 if dark_mode else 0.08
+                expected_lens_alpha = 0.10
                 self.assertAlmostEqual(metric("dock-surface-alpha"), expected_surface_alpha, places=2)
-                self.assertAlmostEqual(metric("dock-surface-blur"), 20, places=1)
+                self.assertAlmostEqual(metric("dock-surface-alpha"), metric("fab-surface-alpha"), places=2)
+                self.assertAlmostEqual(metric("dock-surface-blur"), 10, places=1)
+                self.assertAlmostEqual(metric("dock-surface-blur"), metric("fab-surface-blur"), places=1)
                 self.assertAlmostEqual(metric("dock-lens-alpha"), expected_lens_alpha, places=2)
-                self.assertAlmostEqual(metric("dock-lens-blur"), 18, places=1)
-                self.assertLessEqual(abs(metric("dock-lens-width") - metric("dock-lens-height")), 2)
-                self.assertGreaterEqual(metric("dock-lens-width"), 58)
-                self.assertLessEqual(metric("dock-lens-width"), 64)
+                self.assertAlmostEqual(metric("dock-lens-blur"), 10, places=1)
+                self.assertEqual(metric("dock-lens-height"), 56)
+                self.assertGreater(metric("dock-lens-width"), metric("dock-lens-height"))
+                self.assertLessEqual(abs(metric("dock-lens-top-gap") - metric("dock-lens-bottom-gap")), 1)
                 self.assertLessEqual(metric("dock-lens-center-delta"), 1)
                 self.assertGreaterEqual(metric("dock-left"), 8)
                 self.assertGreaterEqual(metric("dock-right-gap"), 8)
@@ -1084,6 +1093,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="dock-shell-path"', html)
         self.assertIn('class="dock-rim"', html)
         self.assertIn("updateDockShellPath", script)
+        self.assertIn("const capRadius = 38;", script)
+        self.assertIn("`A${capRadius} ${capRadius} 0 0 1 ${center + capRadius} ${bodyTop}`", script)
         self.assertIn("const pressedScale = 78 / 56;", script)
         self.assertIn("--liquid-press-progress", script)
         self.assertIn("--liquid-lens-scale-x", script)
@@ -1092,13 +1103,12 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--panel-offset", script)
         self.assertIn("velocity * .75", script)
         self.assertIn("velocity * .25", script)
-        self.assertIn("rgba(248,250,252,.34)", styles)
-        self.assertIn("rgba(8,14,24,.28)", styles)
-        self.assertIn("backdrop-filter:blur(20px) saturate(1.5)", styles)
-        self.assertIn(".bottom-nav .liquid-lens > span", styles)
+        self.assertIn("rgba(255,255,255,.08)", styles)
+        self.assertIn("rgba(7,12,20,.12)", styles)
+        self.assertIn("backdrop-filter:blur(10px) saturate(1.38)", styles)
         self.assertIn("scaleX(var(--liquid-lens-scale-x))", styles)
         self.assertIn("scaleY(var(--liquid-lens-scale-y))", styles)
-        self.assertIn(".bottom-nav.is-pressed .liquid-lens > span", styles)
+        self.assertIn(".bottom-nav.is-pressed .liquid-lens", styles)
 
     def test_mobile_liquid_drag_deforms_lens_and_settles_on_target(self) -> None:
         dom, _ = _render_mini_app_in_chrome(

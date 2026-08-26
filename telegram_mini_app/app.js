@@ -661,25 +661,25 @@ function updateDockShellPath() {
   const width = nav.getBoundingClientRect().width;
   if (!width) return;
   const center = width / 2;
-  const leftShoulder = center - 52;
-  const rightShoulder = center + 52;
+  const capRadius = 38;
+  const bodyTop = 38;
+  const bodyBottom = 96;
+  const sideRadius = 29;
+  const sideCenter = (bodyTop + bodyBottom) / 2;
   const path = [
-    "M29 28",
-    `H${leftShoulder}`,
-    `C${center - 44} 28 ${center - 42} 22 ${center - 36} 14`,
-    `C${center - 27} 4 ${center - 16} 0 ${center} 0`,
-    `C${center + 16} 0 ${center + 27} 4 ${center + 36} 14`,
-    `C${center + 42} 22 ${center + 44} 28 ${rightShoulder} 28`,
-    `H${width - 29}`,
-    `A29 29 0 0 1 ${width} 57`,
-    `A29 29 0 0 1 ${width - 29} 86`,
-    "H29",
-    "A29 29 0 0 1 0 57",
-    "A29 29 0 0 1 29 28Z"
+    `M${sideRadius} ${bodyTop}`,
+    `H${center - capRadius}`,
+    `A${capRadius} ${capRadius} 0 0 1 ${center + capRadius} ${bodyTop}`,
+    `H${width - sideRadius}`,
+    `A${sideRadius} ${sideRadius} 0 0 1 ${width} ${sideCenter}`,
+    `A${sideRadius} ${sideRadius} 0 0 1 ${width - sideRadius} ${bodyBottom}`,
+    `H${sideRadius}`,
+    `A${sideRadius} ${sideRadius} 0 0 1 0 ${sideCenter}`,
+    `A${sideRadius} ${sideRadius} 0 0 1 ${sideRadius} ${bodyTop}Z`
   ].join(" ");
   shellPath.setAttribute("d", path);
   rimPath.setAttribute("d", path);
-  $(".dock-rim")?.setAttribute("viewBox", `0 0 ${width} 86`);
+  $(".dock-rim")?.setAttribute("viewBox", `0 0 ${width} ${bodyBottom}`);
 }
 
 function setLiquidPosition(value, velocity = 0, pressProgress = 0, panelOffset = 0) {
