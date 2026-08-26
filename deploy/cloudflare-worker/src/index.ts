@@ -188,7 +188,7 @@ async function routeWithIdentity(
   if (path === "/v1/diagnostics" && request.method === "GET") {
     return json({
       system: { status: "ready", stateBackend: "d1", release: env.WUKONG_RELEASE_SHA },
-      runner: { provider: "github-actions", repository: env.WUKONG_GITHUB_REPOSITORY },
+      runner: { provider: "github-actions" },
       cache: { provider: "github-actions" },
       cloud: { provider: "google-drive", configured: Boolean(env.WUKONG_GOOGLE_DRIVE_FOLDER_ID) }
     });
