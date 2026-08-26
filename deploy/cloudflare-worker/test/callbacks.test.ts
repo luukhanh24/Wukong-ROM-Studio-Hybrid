@@ -71,9 +71,12 @@ describe("GitHub Actions callbacks", () => {
         status: "succeeded",
         stage: "complete",
         progress: 1,
+        runner: "ubuntu-24.04",
+        created_at: "2026-08-26T15:00:00.000Z",
+        finished_at: "2026-08-26T15:42:05.000Z",
         artifacts: [{
-          name: "Wukong-PJD110.zip",
-          size_bytes: 1024,
+          name: "Wukong_Plus_V6.0_PJD110.zip",
+          size_bytes: 8_444_909_399,
           sha256: "a".repeat(64),
           public_url: "https://drive.google.com/file/d/fixture/view"
         }]
@@ -108,10 +111,34 @@ describe("GitHub Actions callbacks", () => {
       "SELECT COUNT(*) AS count FROM wukong_build_locks WHERE job_id = ?"
     ).bind(job.job_id).first<{ count: number }>();
     const notifications = await bindings.DB.prepare(
-      "SELECT COUNT(*) AS count FROM wukong_telegram_notification_outbox WHERE dedupe_key = ?"
-    ).bind(`job-terminal:${job.job_id}`).first<{ count: number }>();
+      `SELECT COUNT(*) AS count, payload_json
+       FROM wukong_telegram_notification_outbox WHERE dedupe_key = ?`
+    ).bind(`job-terminal:${job.job_id}`).first<{ count: number; payload_json: string }>();
     expect(Number(locks?.count)).toBe(0);
     expect(Number(notifications?.count)).toBe(1);
+    const notification = JSON.parse(String(notifications?.payload_json)) as {
+      text: string;
+      reply_markup: { inline_keyboard: Array<Array<Record<string, unknown>>> };
+    };
+    expect(notification.text).toContain("<b>Wukong ROM Studio</b>");
+    expect(notification.text).toContain("<b>Build ROM hoàn tất</b>");
+    expect(notification.text).toContain("Thiết bị  <code>PJD110</code>");
+    expect(notification.text).toContain("Preset  <code>custom</code>");
+    expect(notification.text).toContain("MOD pack  <code>ColorOS_16.0.10</code>");
+    expect(notification.text).toContain("Runner  <code>ubuntu-24.04</code>");
+    expect(notification.text).toContain("Thời gian  <code>42 phút 5 giây</code>");
+    expect(notification.text).toContain("<b>Plus</b> · 7.86 GiB");
+    expect(notification.text).toContain(`SHA-256  <code>${"a".repeat(64)}</code>`);
+    expect(notification.reply_markup.inline_keyboard).toEqual([
+      [{
+        text: "Tải Plus · 7.86 GiB",
+        url: "https://drive.google.com/file/d/fixture/view"
+      }],
+      [{
+        text: "Mở Wukong Mini App",
+        web_app: { url: "https://wukong-rom-studio.vercel.app/" }
+      }]
+    ]);
   });
 
   it("compensates a pre-executor failure exactly once", async () => {

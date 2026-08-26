@@ -1,5 +1,7 @@
 import type { AuthenticatedRequest } from "./auth";
 import { cancelWorkflowRunForJob, dispatchBuild } from "./github";
+import { directArtifactUrl } from "./public-links";
+import { terminalTelegramNotification } from "./telegram-notifications";
 
 const JOB_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -115,29 +117,7 @@ function publicRecipe(recipe: JsonObject): JsonObject {
   };
 }
 
-export function directArtifactUrl(value: unknown, env: Env): string {
-  const candidate = typeof value === "string" ? value.trim() : "";
-  if (!candidate || candidate.includes("\\") || /\s/.test(candidate)) return "";
-  try {
-    const parsed = new URL(candidate);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
-    const blocked = new Set(["wukong-mini-api.onrender.com"]);
-    try {
-      blocked.add(new URL(env.WUKONG_TELEGRAM_WEB_APP_URL).hostname.toLowerCase());
-    } catch {
-      // The web app URL is validated during deployment; ignore malformed local fixtures.
-    }
-    if (
-      blocked.has(parsed.hostname.toLowerCase()) ||
-      parsed.hostname.toLowerCase().endsWith(".workers.dev")
-    ) {
-      return "";
-    }
-    return candidate;
-  } catch {
-    return "";
-  }
-}
+export { directArtifactUrl } from "./public-links";
 
 export function publicJob(row: JobRow, env: Env): JsonObject {
   const manifest = parseJson(row.manifest_json);
@@ -689,11 +669,7 @@ export async function cancelJob(
       crypto.randomUUID(),
       `job-terminal:${jobId}`,
       row.owner_subject,
-      JSON.stringify({
-        text: `⏹ <b>Build đã hủy</b>\n\nJob: <code>${jobId}</code>`,
-        parse_mode: "HTML",
-        disable_web_page_preview: true
-      }),
+      JSON.stringify(terminalTelegramNotification(env, row, "cancelled", manifest)),
       now,
       now
     )

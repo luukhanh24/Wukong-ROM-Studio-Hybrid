@@ -95,4 +95,147 @@ describe("Telegram webhook and pairing", () => {
     expect(String(row?.sent_at)).not.toBe("");
     expect(sent).toEqual([{ chat_id: "99002", text: "Recovered" }]);
   });
+
+  it("restores the approved-user menu, account command, Mini App build launcher, and language callbacks", async () => {
+    const calls: Array<{ method: string; payload: Record<string, unknown> }> = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({
+        method: String(input).split("/").at(-1) ?? "",
+        payload: JSON.parse(String(init?.body)) as Record<string, unknown>
+      });
+      return Response.json({ ok: true, result: { message_id: calls.length } });
+    }));
+    const webhook = (update: Record<string, unknown>) => SELF.fetch(
+      "https://worker.example/telegram/webhook",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Telegram-Bot-Api-Secret-Token": "fixture-webhook-secret"
+        },
+        body: JSON.stringify(update)
+      }
+    );
+    const from = { id: 1678823419, first_name: "Admin", username: "wukong_admin", language_code: "vi" };
+    expect((await webhook({
+      update_id: 912346,
+      message: { message_id: 2, chat: { id: 1678823419 }, from, text: "/start" }
+    })).status).toBe(204);
+    expect(String(calls[0]?.payload.text)).toContain("Wukong ROM Studio");
+    expect(
+      (calls[0]?.payload.reply_markup as {
+        inline_keyboard: Array<Array<Record<string, unknown>>>;
+      }).inline_keyboard[0]
+    ).toEqual([
+      { text: "Mở Wukong Mini App", web_app: { url: "https://wukong-rom-studio.vercel.app/" } }
+    ]);
+
+    expect((await webhook({
+      update_id: 912347,
+      message: { message_id: 3, chat: { id: 1678823419 }, from, text: "/account" }
+    })).status).toBe(204);
+    expect(String(calls[1]?.payload.text)).toContain("Telegram ID  <code>1678823419</code>");
+    expect(String(calls[1]?.payload.text)).toContain("Lượt build  <b>Không giới hạn</b>");
+
+    expect((await webhook({
+      update_id: 912348,
+      message: { message_id: 4, chat: { id: 1678823419 }, from, text: "/new" }
+    })).status).toBe(204);
+    expect(String(calls[2]?.payload.text)).toContain("Mini App");
+    expect(String(calls[2]?.payload.text)).not.toContain("recipe JSON");
+
+    expect((await webhook({
+      update_id: 912349,
+      callback_query: {
+        id: "callback-language",
+        from,
+        data: "v1:lang:en",
+        message: { message_id: 5, chat: { id: 1678823419 } }
+      }
+    })).status).toBe(204);
+    expect(calls.some((call) =>
+      call.method === "answerCallbackQuery"
+      && call.payload.callback_query_id === "callback-language"
+    )).toBe(true);
+    expect(calls.some((call) => String(call.payload.text).includes("Choose a feature below"))).toBe(true);
+  });
+
+  it("restores job callbacks and exposes only a direct cloud artifact link", async () => {
+    const calls: Array<{ method: string; payload: Record<string, unknown> }> = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({
+        method: String(input).split("/").at(-1) ?? "",
+        payload: JSON.parse(String(init?.body)) as Record<string, unknown>
+      });
+      return Response.json({ ok: true, result: { message_id: calls.length } });
+    }));
+    const jobId = "telegram-parity-job";
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT INTO wukong_jobs
+       (job_id, manifest_json, recipe_json, created_at, updated_at, finished_at,
+        next_event_sequence, owner_channel, owner_subject, device, status, stage, progress)
+       VALUES (?, ?, ?, ?, ?, ?, 3, 'telegram', '1678823419', 'PJD110',
+               'succeeded', 'complete', 1)`
+    ).bind(
+      jobId,
+      JSON.stringify({
+        job_id: jobId,
+        status: "succeeded",
+        stage: "complete",
+        progress: 1,
+        artifacts: [{
+          name: "Wukong_Plus.zip",
+          sha256: "b".repeat(64),
+          size_bytes: 4096,
+          public_url: "https://drive.google.com/file/d/direct/view"
+        }]
+      }),
+      JSON.stringify({
+        schemaVersion: 1,
+        task: "build",
+        device: "PJD110",
+        source: { kind: "https", uri: "https://downloads.example/rom.zip" },
+        build: { preset: "plus", modVersion: "ColorOS_16.0.10" },
+        execution: { target: "github-auto" }
+      }),
+      now,
+      now,
+      now
+    ).run();
+    await env.DB.prepare(
+      `INSERT INTO wukong_telegram_ui_state (subject, language, updated_at)
+       VALUES ('1678823419', 'vi', ?)
+       ON CONFLICT (subject) DO UPDATE SET language = 'vi', updated_at = excluded.updated_at`
+    ).bind(now).run();
+    const from = { id: 1678823419, first_name: "Admin", language_code: "vi" };
+    const response = await SELF.fetch("https://worker.example/telegram/webhook", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "fixture-webhook-secret"
+      },
+      body: JSON.stringify({
+        update_id: 912350,
+        callback_query: {
+          id: "callback-artifact",
+          from,
+          data: `v1:artifact:${jobId}`,
+          message: { message_id: 6, chat: { id: 1678823419 } }
+        }
+      })
+    });
+    expect(response.status).toBe(204);
+    const message = calls.find((call) => call.method === "sendMessage");
+    expect(String(message?.payload.text)).toContain("Link Drive/cloud trực tiếp");
+    const keyboard = (message?.payload.reply_markup as {
+      inline_keyboard: Array<Array<Record<string, unknown>>>;
+    }).inline_keyboard;
+    expect(keyboard.flat()).toContainEqual({
+      text: "Tải artifact",
+      url: "https://drive.google.com/file/d/direct/view"
+    });
+    expect(JSON.stringify(message?.payload)).not.toContain("workers.dev");
+    expect(JSON.stringify(message?.payload)).not.toContain("onrender.com");
+  });
 });

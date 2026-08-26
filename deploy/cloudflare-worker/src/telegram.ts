@@ -1,6 +1,7 @@
 import { confirmPairing, rememberSourceDraft } from "./sessions";
 import { observeUser, profile } from "./state";
 import { recoverPreBootstrapJobs } from "./recovery";
+import { telegramUi } from "./telegram-ui";
 
 type JsonObject = Record<string, unknown>;
 
@@ -79,14 +80,15 @@ async function enqueueMessage(
   env: Env,
   chatId: string,
   dedupeKey: string,
-  payload: JsonObject
+  payload: JsonObject,
+  method = "sendMessage"
 ): Promise<void> {
   const now = new Date().toISOString();
   await env.DB.prepare(
     `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
-     (notification_id, dedupe_key, chat_id, payload_json, available_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(crypto.randomUUID(), dedupeKey, chatId, JSON.stringify(payload), now, now).run();
+     (notification_id, dedupe_key, chat_id, method, payload_json, available_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(crypto.randomUUID(), dedupeKey, chatId, method, JSON.stringify(payload), now, now).run();
 }
 
 export async function drainTelegramOutbox(env: Env, limit = 10): Promise<void> {
@@ -121,7 +123,10 @@ export async function drainTelegramOutbox(env: Env, limit = 10): Promise<void> {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: String(row.chat_id), ...payload })
+          body: JSON.stringify({
+            ...(method === "sendMessage" ? { chat_id: String(row.chat_id) } : {}),
+            ...payload
+          })
         }
       );
       const resultPayload = await response.json().catch(() => ({})) as JsonObject;
@@ -170,15 +175,20 @@ export async function handleTelegramWebhook(
   ).bind(updateId, JSON.stringify(payload), now).run();
   if ((accepted.meta.changes ?? 0) !== 1) return;
   try {
+    const callback = payload.callback_query && typeof payload.callback_query === "object"
+      ? payload.callback_query as JsonObject
+      : null;
     const message = payload.message && typeof payload.message === "object"
       ? payload.message as JsonObject
-      : null;
-    const user = telegramUser(message?.from);
+      : callback?.message && typeof callback.message === "object"
+        ? callback.message as JsonObject
+        : null;
+    const user = telegramUser(callback?.from ?? message?.from);
     const chat = message?.chat && typeof message.chat === "object"
       ? message.chat as JsonObject
       : {};
     const chatId = String(chat.id ?? user?.id ?? "");
-    if (message && user && chatId) {
+    if (user && chatId) {
       const observed = await observeUser(
         env,
         user,
@@ -186,7 +196,7 @@ export async function handleTelegramWebhook(
           headers: { "X-Telegram-Platform": "telegram-bot" }
         })
       );
-      const text = String(message.text ?? "").trim();
+      const text = String(message?.text ?? "").trim();
       const pairMatch = text.match(/^\/start(?:@\w+)?\s+pair_([0-9a-f]{24})$/i);
       const paired = pairMatch
         ? await confirmPairing(env, pairMatch[1]!, String(user.id))
@@ -203,12 +213,31 @@ export async function handleTelegramWebhook(
         const remembered = /^https?:\/\//i.test(text)
           ? await rememberSourceDraft(env, String(user.id), text)
           : false;
-        responseText = remembered
-          ? "🔗 <b>Đã lưu link ROM cho job hiện tại</b>\n\nMở Studio để phân tích metadata và hoàn tất cấu hình."
-          : paired
-            ? `${readyMessage(displayName, current.buildCredits, current.unlimited, current.jobCount)}\n\n🔗 Phiên Mini App đã được kết nối.`
-            : readyMessage(displayName, current.buildCredits, current.unlimited, current.jobCount);
-        replyMarkup = webAppKeyboard(env);
+        if (remembered) {
+          responseText = "🔗 <b>Đã lưu link ROM cho job hiện tại</b>\n\nMở Studio để phân tích metadata và hoàn tất cấu hình.";
+          replyMarkup = webAppKeyboard(env);
+        } else if (paired) {
+          responseText = `${readyMessage(displayName, current.buildCredits, current.unlimited, current.jobCount)}\n\n🔗 Phiên Mini App đã được kết nối.`;
+          replyMarkup = webAppKeyboard(env);
+        } else {
+          const ui = await telegramUi(env, current, {
+            text,
+            callbackData: String(callback?.data ?? ""),
+            ...(user.language_code ? { fallbackLanguage: user.language_code } : {})
+          });
+          responseText = ui.text;
+          replyMarkup = ui.reply_markup;
+        }
+      }
+      const callbackId = String(callback?.id ?? "");
+      if (callbackId) {
+        await enqueueMessage(
+          env,
+          chatId,
+          `telegram-callback-answer:${updateId}`,
+          { callback_query_id: callbackId },
+          "answerCallbackQuery"
+        );
       }
       await enqueueMessage(env, chatId, `telegram-update:${updateId}`, {
         text: responseText,
@@ -216,7 +245,9 @@ export async function handleTelegramWebhook(
         disable_web_page_preview: true,
         ...(replyMarkup ? { reply_markup: replyMarkup } : {})
       });
-      await drainTelegramOutbox(env, 1);
+      // A command can enqueue side-effect notifications (approval, revoke,
+      // cancellation) in addition to its direct response.
+      await drainTelegramOutbox(env, 10);
     }
     await env.DB.prepare(
       `UPDATE wukong_telegram_update_inbox
