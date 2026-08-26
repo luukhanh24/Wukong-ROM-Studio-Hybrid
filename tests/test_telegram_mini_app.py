@@ -287,6 +287,10 @@ window.addEventListener('load', () => {{
   setTimeout(() => {{
     document.body.dataset.viewportWidth = String(document.documentElement.clientWidth);
     document.body.dataset.documentWidth = String(document.documentElement.scrollWidth);
+    const dockCap = document.querySelector('.dock-shell .dock-cap');
+    const dockAvatar = document.querySelector('#dock-profile');
+    document.body.dataset.dockCapDiameter = String(Number(dockCap?.getAttribute('r') || 0) * 2);
+    document.body.dataset.dockAvatarWidth = String(Math.round(dockAvatar?.getBoundingClientRect().width || 0));
   }}, 1200);
 }});
 """
@@ -962,11 +966,32 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('.bottom-nav .liquid-surface::before { display:none; }', styles)
         self.assertIn('class="dock-shell"', html)
         self.assertIn('.bottom-nav .dock-shell', styles)
+        self.assertIn('clipPathUnits="userSpaceOnUse"', html)
+        self.assertIn('<circle cx="50%" cy="38" r="38"/>', html)
+        self.assertIn('class="dock-cap" cx="50%" cy="38" r="38"', html)
+        self.assertIn('background:rgba(255,255,255,.18)', styles)
+        self.assertIn('backdrop-filter:blur(16px) saturate(1.6) contrast(1.06)', styles)
+        self.assertRegex(styles, r'\.bottom-nav \.dock-shell \{[^}]*inset:-14px 0 0[^}]*height:86px')
         self.assertIn('box-shadow:inset 0 -1px 0 rgba(32,42,58,.08),0 18px 44px', styles)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
         self.assertIn("Promise.allSettled", script)
         self.assertNotIn('data-i18n="secretBoundary"', html)
+
+    def test_mobile_dock_cap_stays_round_and_avatar_fitted_at_wide_viewports(self) -> None:
+        for window_width in (390, 860):
+            with self.subTest(window_width=window_width):
+                dom, _ = _render_mini_app_in_chrome(
+                    api_enabled=True,
+                    window_width=window_width,
+                )
+                cap = re.search(r'data-dock-cap-diameter="(\d+)"', dom)
+                avatar = re.search(r'data-dock-avatar-width="(\d+)"', dom)
+                self.assertIsNotNone(cap)
+                self.assertIsNotNone(avatar)
+                self.assertEqual(int(cap.group(1)), 76)
+                self.assertLessEqual(int(avatar.group(1)), 60)
+                self.assertLessEqual(int(cap.group(1)) - int(avatar.group(1)), 20)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
