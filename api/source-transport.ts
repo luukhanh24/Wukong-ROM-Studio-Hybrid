@@ -407,15 +407,13 @@ const handle = createSourceTransportHandler();
 
 declare const process: { env: Record<string, string | undefined> };
 
-export default {
-  async fetch(request: Request): Promise<Response> {
-    const response = await handle(request);
-    const headers = new Headers(response.headers);
-    headers.set("X-Wukong-Release", process.env.VERCEL_GIT_COMMIT_SHA ?? "development");
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers
-    });
-  }
-};
+export default async function sourceTransport(request: Request): Promise<Response> {
+  const response = await handle(request);
+  const headers = new Headers(response.headers);
+  headers.set("X-Wukong-Release", process.env.VERCEL_GIT_COMMIT_SHA ?? "development");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
