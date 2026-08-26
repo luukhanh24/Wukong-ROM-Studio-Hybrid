@@ -9,6 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  cloudflare-worker:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: deploy/cloudflare-worker
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: deploy/cloudflare-worker/package-lock.json
+      - name: Install pinned Worker dependencies
+        run: npm ci
+      - name: Typecheck and test the D1 control plane
+        run: npm run check
+
   python:
     runs-on: windows-2025
     steps:

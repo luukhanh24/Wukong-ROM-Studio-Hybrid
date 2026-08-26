@@ -16,6 +16,8 @@ services:
         sync: false
       - key: WUKONG_GITHUB_TOKEN
         sync: false
+      - key: WUKONG_ACTIONS_CALLBACK_SECRET
+        sync: false
       - key: WUKONG_RCLONE_CONFIG_CONTENT_B64
         sync: false
       - key: DATABASE_URL
@@ -29,6 +31,8 @@ services:
       - key: WUKONG_GITHUB_REPOSITORY
         sync: false
       - key: WUKONG_CONTROL_PLANE_REQUIRE_POSTGRES
+        value: "true"
+      - key: WUKONG_CONTROL_PLANE_MIGRATION_COMPATIBLE
         value: "true"
       - key: WUKONG_RCLONE_REMOTE
         value: wukong-gdrive

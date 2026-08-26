@@ -388,6 +388,8 @@ const state = {
   activeEventsJobId: "",
   jobsPollTimer: null,
   jobsLoading: false,
+  jobsUnchangedPolls: 0,
+  jobsSyncSignature: "",
   jobDetailRequestId: 0,
   jobHistoryFilter: "",
   sourceProbeTimer: null,
@@ -396,6 +398,7 @@ const state = {
   sourceProbeController: null,
   sourceProbeRequestId: 0,
   pairingPollTimer: null,
+  pairingPollAttempt: 0,
   pairingInFlight: false,
   docketInView: true,
   releaseVersionOverrides: {},
@@ -1087,6 +1090,7 @@ async function pollTelegramPairing(pairing) {
   if (status === 200 && setSignedTelegramLaunchToken(payload.launchToken)) {
     try { sessionStorage.removeItem("wukong-telegram-pairing"); } catch (_) {}
     state.pairingInFlight = false;
+    state.pairingPollAttempt = 0;
     renderSessionDiagnostics();
     updateTelegramState();
     updateSummary();
@@ -1099,18 +1103,22 @@ async function pollTelegramPairing(pairing) {
   }
   const recoveryText = $("#session-recovery p");
   if (recoveryText) recoveryText.textContent = t("pairingWaiting");
+  const pairingBackoff = [3000, 5000, 8000, 10000];
+  const delay = pairingBackoff[Math.min(state.pairingPollAttempt, pairingBackoff.length - 1)];
+  state.pairingPollAttempt += 1;
   state.pairingPollTimer = setTimeout(() => {
     pollTelegramPairing(pairing).catch(() => {
       state.pairingInFlight = false;
       updateSummary();
       toast(t("pairingFailed"), true);
     });
-  }, 1800);
+  }, delay);
 }
 
 async function connectTelegramSession() {
   if (state.pairingInFlight || miniApiAvailable()) return;
   state.pairingInFlight = true;
+  state.pairingPollAttempt = 0;
   updateSummary();
   const recoveryText = $("#session-recovery p");
   if (recoveryText) recoveryText.textContent = t("pairingOpening");
@@ -1262,6 +1270,300 @@ async function probeSourceViaBackend(uri, signal) {
   return payload;
 }
 
+const ZIP_METADATA_SUFFIXES = [
+  "meta-inf/com/android/metadata",
+  "payload_properties.txt",
+  "android-info.txt"
+];
+const ZIP_MAX_METADATA_FILES = 8;
+const ZIP_MAX_METADATA_FILE_BYTES = 2 * 1024 * 1024;
+const ZIP_MAX_METADATA_TEXT_BYTES = 4 * 1024 * 1024;
+const ZIP_MAX_METADATA_FIELDS = 256;
+const ZIP_MAX_RANGE_BYTES = 8 * 1024 * 1024;
+const ZIP_MAX_CLIENT_BYTES = 16 * 1024 * 1024;
+
+function zipNumber(value, label) {
+  const maximum = BigInt(Number.MAX_SAFE_INTEGER);
+  if (typeof value === "bigint") {
+    if (value < 0n || value > maximum) throw new Error(`${label} exceeds the browser ZIP limit`);
+    return Number(value);
+  }
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} is invalid`);
+  return value;
+}
+
+async function fetchProbeRange(session, start, end, signal) {
+  if (!session?.url || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start) {
+    throw new Error("ROM range session is invalid");
+  }
+  const length = end - start + 1;
+  if (length > ZIP_MAX_RANGE_BYTES) throw new Error("ROM ZIP range exceeds 8 MiB");
+  const response = await fetch(session.url, {
+    headers: { Range: `bytes=${start}-${end}` },
+    cache: "no-store",
+    signal
+  });
+  if (response.status !== 206) throw new Error(`ROM range returned HTTP ${response.status}`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength !== length) throw new Error("ROM range length does not match the request");
+  return bytes;
+}
+
+async function fetchProbeBytes(session, start, length, signal) {
+  if (!Number.isSafeInteger(length) || length < 0 || length > ZIP_MAX_CLIENT_BYTES) {
+    throw new Error("ROM ZIP metadata exceeds the 16 MiB inspection budget");
+  }
+  const chunks = [];
+  let offset = 0;
+  while (offset < length) {
+    const chunkLength = Math.min(ZIP_MAX_RANGE_BYTES, length - offset);
+    chunks.push(await fetchProbeRange(
+      session,
+      start + offset,
+      start + offset + chunkLength - 1,
+      signal
+    ));
+    offset += chunkLength;
+  }
+  const output = new Uint8Array(length);
+  let outputOffset = 0;
+  chunks.forEach((chunk) => {
+    output.set(chunk, outputOffset);
+    outputOffset += chunk.byteLength;
+  });
+  return output;
+}
+
+function findZipSignature(bytes, signature) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  for (let offset = bytes.byteLength - 4; offset >= 0; offset -= 1) {
+    if (view.getUint32(offset, true) === signature) return offset;
+  }
+  return -1;
+}
+
+function zip64Extra(extra, needs) {
+  const view = new DataView(extra.buffer, extra.byteOffset, extra.byteLength);
+  let offset = 0;
+  while (offset + 4 <= extra.byteLength) {
+    const id = view.getUint16(offset, true);
+    const length = view.getUint16(offset + 2, true);
+    const start = offset + 4;
+    const end = start + length;
+    if (end > extra.byteLength) throw new Error("ZIP extra field is truncated");
+    if (id === 0x0001) {
+      let cursor = start;
+      const values = {};
+      for (const name of ["uncompressedSize", "compressedSize", "localOffset", "disk"]) {
+        if (!needs[name]) continue;
+        const width = name === "disk" ? 4 : 8;
+        if (cursor + width > end) throw new Error("ZIP64 extra field is truncated");
+        values[name] = width === 8
+          ? zipNumber(view.getBigUint64(cursor, true), `ZIP64 ${name}`)
+          : view.getUint32(cursor, true);
+        cursor += width;
+      }
+      return values;
+    }
+    offset = end;
+  }
+  return {};
+}
+
+async function zipDirectory(result, signal) {
+  const size = zipNumber(Number(result?.sizeBytes), "ROM size");
+  if (size < 22) throw new Error("ROM ZIP is too small");
+  const session = result?.rangeSession;
+  const tailLength = Math.min(size, 65557);
+  const tailStart = size - tailLength;
+  const tail = await fetchProbeBytes(session, tailStart, tailLength, signal);
+  const eocdOffset = findZipSignature(tail, 0x06054b50);
+  if (eocdOffset < 0 || eocdOffset + 22 > tail.byteLength) {
+    throw new Error("ROM ZIP central directory was not found");
+  }
+  const view = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
+  let entryCount = view.getUint16(eocdOffset + 10, true);
+  let directorySize = view.getUint32(eocdOffset + 12, true);
+  let directoryOffset = view.getUint32(eocdOffset + 16, true);
+  if (entryCount === 0xffff || directorySize === 0xffffffff || directoryOffset === 0xffffffff) {
+    const locatorOffset = findZipSignature(tail.slice(0, eocdOffset), 0x07064b50);
+    if (locatorOffset < 0 || locatorOffset + 20 > tail.byteLength) {
+      throw new Error("ROM ZIP64 locator was not found");
+    }
+    const zip64Offset = zipNumber(view.getBigUint64(locatorOffset + 8, true), "ZIP64 directory offset");
+    const zip64Header = await fetchProbeBytes(session, zip64Offset, 56, signal);
+    const zip64View = new DataView(zip64Header.buffer, zip64Header.byteOffset, zip64Header.byteLength);
+    if (zip64View.getUint32(0, true) !== 0x06064b50) throw new Error("ROM ZIP64 directory is invalid");
+    entryCount = zipNumber(zip64View.getBigUint64(32, true), "ZIP64 entry count");
+    directorySize = zipNumber(zip64View.getBigUint64(40, true), "ZIP64 directory size");
+    directoryOffset = zipNumber(zip64View.getBigUint64(48, true), "ZIP64 directory offset");
+  }
+  if (directorySize > ZIP_MAX_CLIENT_BYTES - tailLength) {
+    throw new Error("ROM ZIP central directory exceeds the inspection budget");
+  }
+  if (directoryOffset + directorySize > size || entryCount > 1000000) {
+    throw new Error("ROM ZIP central directory is invalid");
+  }
+  return {
+    entries: entryCount,
+    bytes: await fetchProbeBytes(session, directoryOffset, directorySize, signal)
+  };
+}
+
+function metadataZipEntries(directory) {
+  const bytes = directory.bytes;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const decoder = new TextDecoder("utf-8", { fatal: false });
+  const entries = [];
+  let offset = 0;
+  let parsed = 0;
+  while (offset < bytes.byteLength && parsed < directory.entries) {
+    if (offset + 46 > bytes.byteLength || view.getUint32(offset, true) !== 0x02014b50) {
+      throw new Error("ROM ZIP central directory entry is invalid");
+    }
+    const flags = view.getUint16(offset + 8, true);
+    const method = view.getUint16(offset + 10, true);
+    let compressedSize = view.getUint32(offset + 20, true);
+    let uncompressedSize = view.getUint32(offset + 24, true);
+    const nameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    let localOffset = view.getUint32(offset + 42, true);
+    const end = offset + 46 + nameLength + extraLength + commentLength;
+    if (end > bytes.byteLength) throw new Error("ROM ZIP central directory is truncated");
+    const name = decoder.decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
+    const extra = bytes.subarray(
+      offset + 46 + nameLength,
+      offset + 46 + nameLength + extraLength
+    );
+    const zip64 = zip64Extra(extra, {
+      uncompressedSize: uncompressedSize === 0xffffffff,
+      compressedSize: compressedSize === 0xffffffff,
+      localOffset: localOffset === 0xffffffff,
+      disk: view.getUint16(offset + 34, true) === 0xffff
+    });
+    uncompressedSize = zip64.uncompressedSize ?? uncompressedSize;
+    compressedSize = zip64.compressedSize ?? compressedSize;
+    localOffset = zip64.localOffset ?? localOffset;
+    const normalized = name.replaceAll("\\", "/").toLowerCase();
+    if (ZIP_METADATA_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) {
+      if (flags & 1) throw new Error("Encrypted ROM metadata is not supported");
+      if (uncompressedSize <= ZIP_MAX_METADATA_FILE_BYTES) {
+        entries.push({ name, method, compressedSize, uncompressedSize, localOffset });
+        if (entries.length > ZIP_MAX_METADATA_FILES) {
+          throw new Error("ROM ZIP exposes too many metadata files");
+        }
+      }
+    }
+    parsed += 1;
+    offset = end;
+  }
+  return entries;
+}
+
+async function readMetadataZipEntry(session, entry, signal) {
+  if (entry.compressedSize > ZIP_MAX_RANGE_BYTES) {
+    throw new Error(`ROM metadata file is too large: ${entry.name}`);
+  }
+  const header = await fetchProbeBytes(session, entry.localOffset, 30, signal);
+  const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+  if (view.getUint32(0, true) !== 0x04034b50) throw new Error("ROM ZIP local header is invalid");
+  const nameLength = view.getUint16(26, true);
+  const extraLength = view.getUint16(28, true);
+  const dataOffset = entry.localOffset + 30 + nameLength + extraLength;
+  const compressed = await fetchProbeBytes(session, dataOffset, entry.compressedSize, signal);
+  let content;
+  if (entry.method === 0) content = compressed;
+  else if (entry.method === 8 && window.fflate?.inflateSync) content = window.fflate.inflateSync(compressed);
+  else throw new Error(`Unsupported ROM metadata compression method: ${entry.method}`);
+  if (content.byteLength !== entry.uncompressedSize || content.byteLength > ZIP_MAX_METADATA_FILE_BYTES) {
+    throw new Error("ROM ZIP metadata file exceeds the inspection limit");
+  }
+  return content;
+}
+
+function firstMetadata(metadata, ...keys) {
+  return keys.map((key) => metadata[key]).find(Boolean) || "";
+}
+
+function metadataAndroidVersion(metadata, version) {
+  const explicit = firstMetadata(metadata, "android-version", "post-android-version");
+  if (explicit) return explicit;
+  const sdk = firstMetadata(metadata, "post-sdk-level", "sdk-level");
+  const versions = { 36: "16", 35: "15", 34: "14", 33: "13", 32: "12L", 31: "12", 30: "11", 29: "10" };
+  return versions[sdk] || String(version || "").match(/(?:^|_)(\d{2})(?:\.|_)/)?.[1] || "";
+}
+
+function metadataBuildDate(metadata) {
+  const explicit = firstMetadata(metadata, "build-date", "post-build-date", "build-timestamp");
+  if (explicit) return explicit.replace("T", " ").replace(/Z$/, "");
+  let timestamp = Number(firstMetadata(metadata, "post-timestamp", "timestamp"));
+  if (Number.isFinite(timestamp) && timestamp > 0) {
+    if (timestamp > 10000000000) timestamp = Math.floor(timestamp / 1000);
+    return new Date(timestamp * 1000).toISOString().replace("T", " ").slice(0, 19);
+  }
+  const otaBuild = firstMetadata(metadata, "ota-build");
+  const match = otaBuild.match(/_(\d{12})(?:\D|$)/);
+  if (!match) return "";
+  const value = match[1];
+  return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)} ${value.slice(8, 10)}:${value.slice(10, 12)}:00`;
+}
+
+async function inspectProbeZipMetadata(result, signal) {
+  if (
+    !result?.rangeSession ||
+    !Number.isSafeInteger(Number(result.sizeBytes)) ||
+    Number(result.sizeBytes) <= 0 ||
+    !String(result.filename || "").toLowerCase().endsWith(".zip")
+  ) return result;
+  const directory = await zipDirectory(result, signal);
+  const entries = metadataZipEntries(directory);
+  const metadata = {};
+  let totalTextBytes = 0;
+  for (const entry of entries) {
+    const content = await readMetadataZipEntry(result.rangeSession, entry, signal);
+    totalTextBytes += content.byteLength;
+    if (totalTextBytes > ZIP_MAX_METADATA_TEXT_BYTES) {
+      throw new Error("ROM ZIP metadata exceeds the 4 MiB text limit");
+    }
+    new TextDecoder("utf-8", { fatal: false }).decode(content).split(/\r?\n/).forEach((line) => {
+      const separator = line.indexOf("=");
+      if (separator <= 0) return;
+      const key = line.slice(0, separator).trim().toLowerCase().replaceAll("_", "-");
+      if (!key || key.length > 128) return;
+      metadata[key] = line.slice(separator + 1).trim().slice(0, 1024);
+      if (Object.keys(metadata).length > ZIP_MAX_METADATA_FIELDS) {
+        throw new Error("ROM ZIP metadata contains too many fields");
+      }
+    });
+  }
+  if (!Object.keys(metadata).length) {
+    return { ...result, warning: "ROM ZIP does not expose recognized metadata files" };
+  }
+  const productName = firstMetadata(metadata, "oplus-product-name", "product-name");
+  const device = firstMetadata(metadata, "pre-device", "product-name", "oplus-product-name");
+  const version = firstMetadata(
+    metadata,
+    "oplus-version-name",
+    "version-name",
+    "post-build-incremental",
+    "post-build"
+  );
+  return {
+    ...result,
+    productName,
+    device,
+    version,
+    androidVersion: metadataAndroidVersion(metadata, version),
+    securityPatch: firstMetadata(metadata, "post-security-patch-level"),
+    buildDate: metadataBuildDate(metadata),
+    otaType: firstMetadata(metadata, "ota-type"),
+    deepInspected: true,
+    warning: null,
+    metadata
+  };
+}
+
 function normalizeDevice(value) {
   return String(value || "").toLocaleUpperCase().replace(/[^A-Z0-9]/g, "");
 }
@@ -1353,7 +1655,17 @@ async function probeSourceInPlace() {
   button.textContent = t("probeAnalyzing");
   setProbePresentation("probing", "probeAnalyzing");
   try {
-    const result = await probeSourceViaBackend(uri, controller.signal);
+    let result = await probeSourceViaBackend(uri, controller.signal);
+    try {
+      result = await inspectProbeZipMetadata(result, controller.signal);
+    } catch (inspectionError) {
+      if (inspectionError?.name === "AbortError") throw inspectionError;
+      result = {
+        ...result,
+        deepInspected: false,
+        warning: inspectionError?.message || "ROM ZIP metadata is unavailable"
+      };
+    }
     if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
     const completeness = applyProbeResult(result, uri);
     const previewOnly = state.sourceProbe.status === "preview-only";
@@ -2636,12 +2948,15 @@ async function loadJobDetail(jobId) {
   const after = sameJob
     ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
     : 0;
-  const [job, eventsPayload] = await Promise.all([
-    apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}`),
-    apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/events?after=${after}`)
-  ]);
+  const payload = await apiRequest(
+    `/v1/sync?jobId=${encodeURIComponent(jobId)}&after=${after}`
+  );
   if (requestId !== state.jobDetailRequestId || state.activeJobId !== jobId) return;
-  const incoming = Array.isArray(eventsPayload.events) ? eventsPayload.events : [];
+  state.jobs = Array.isArray(payload.jobs) ? payload.jobs : state.jobs;
+  const job = payload.activeJob
+    || state.jobs.find((item) => (item.job_id || item.jobId) === jobId)
+    || null;
+  const incoming = Array.isArray(payload.events) ? payload.events : [];
   const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
   const unique = new Map();
   merged.forEach((event) => {
@@ -2652,14 +2967,23 @@ async function loadJobDetail(jobId) {
   state.activeEvents = [...unique.values()];
   state.activeEventsJobId = jobId;
   const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
-  if (index >= 0) state.jobs[index] = job;
+  if (index >= 0 && job) state.jobs[index] = job;
   renderActiveJob(job, state.activeEvents); renderJobHistory();
 }
 
-function scheduleJobsPoll(active) {
+function scheduleJobsPoll(active, changed = false) {
   clearTimeout(state.jobsPollTimer);
   if (document.hidden || !privateApiAvailable()) return;
-  state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), active ? 5000 : 30000);
+  if (changed) state.jobsUnchangedPolls = 0;
+  else state.jobsUnchangedPolls += 1;
+  const delay = !active
+    ? 30000
+    : state.jobsUnchangedPolls >= 6
+      ? 30000
+      : state.jobsUnchangedPolls >= 3
+        ? 15000
+        : 10000;
+  state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), delay);
 }
 
 async function loadJobs({ force = false } = {}) {
@@ -2667,19 +2991,58 @@ async function loadJobs({ force = false } = {}) {
   if (!privateApiAvailable()) { setJobsConnection(state.me ? "quotaRequiredHint" : miniApiUnavailableMessageKey(), true); return; }
   state.jobsLoading = true;
   try {
-    const payload = await apiRequest("/v1/jobs");
+    const requestedId = state.activeJobId;
+    const sameJob = state.activeEventsJobId === requestedId;
+    const after = sameJob
+      ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
+      : 0;
+    const query = requestedId
+      ? `?jobId=${encodeURIComponent(requestedId)}&after=${after}`
+      : "";
+    const payload = await apiRequest(`/v1/sync${query}`);
     state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
     const running = state.jobs.find((job) => !terminalJobStatuses.has(job.status));
     const selectedExists = state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
     if (!selectedExists) state.activeJobId = (running?.job_id || running?.jobId) || state.jobs[0]?.job_id || state.jobs[0]?.jobId || "";
     if (state.activeJobId) localStorage.setItem("wukong-active-job", state.activeJobId);
     else localStorage.removeItem("wukong-active-job");
+    const activeJob = payload.activeJob
+      && (payload.activeJob.job_id || payload.activeJob.jobId) === state.activeJobId
+      ? payload.activeJob
+      : state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId) || null;
+    const eventsSameJob = state.activeEventsJobId === state.activeJobId;
+    const incoming = Array.isArray(payload.events) ? payload.events : [];
+    const merged = eventsSameJob ? [...state.activeEvents, ...incoming] : incoming;
+    const unique = new Map();
+    merged.forEach((event) => {
+      const sequence = Number(event?.sequence || 0);
+      const fallback = `${event?.timestamp || ""}|${event?.type || ""}|${JSON.stringify(event || {})}`;
+      unique.set(sequence > 0 ? `sequence:${sequence}` : `event:${fallback}`, event);
+    });
+    state.activeEvents = [...unique.values()];
+    state.activeEventsJobId = state.activeJobId;
+    const nextSignature = JSON.stringify({
+      jobs: state.jobs.map((job) => [
+        job.job_id || job.jobId,
+        job.status,
+        job.stage,
+        job.progress,
+        job.updated_at || job.updatedAt
+      ]),
+      active: state.activeJobId,
+      sequence: state.activeEvents.reduce(
+        (maximum, event) => Math.max(maximum, Number(event.sequence || 0)),
+        0
+      )
+    });
+    const changed = nextSignature !== state.jobsSyncSignature;
+    state.jobsSyncSignature = nextSignature;
     renderJobHistory();
-    if (state.activeJobId) await loadJobDetail(state.activeJobId); else renderActiveJob(null, []);
+    renderActiveJob(activeJob, state.activeEvents);
     setJobsConnection("jobsConnected");
-    scheduleJobsPoll(Boolean(running));
+    scheduleJobsPoll(Boolean(running), changed);
   } catch (error) {
-    setJobsConnection("jobsOffline", true); scheduleJobsPoll(true); throw error;
+    setJobsConnection("jobsOffline", true); scheduleJobsPoll(true, false); throw error;
   } finally {
     state.jobsLoading = false;
   }

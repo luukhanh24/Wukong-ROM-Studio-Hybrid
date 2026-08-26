@@ -9,8 +9,18 @@ inputs:
     required: true
   github_token:
     required: false
+  control_plane_api_url:
+    required: false
+  actions_callback_secret:
+    required: false
+  github_run_id:
+    required: false
   self_hosted:
     required: true
+outputs:
+  executor_started:
+    description: Whether the ROM executor process was entered
+    value: ${{ steps.execute.outputs.executor_started }}
 runs:
   using: composite
   steps:
@@ -114,6 +124,9 @@ runs:
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
         WUKONG_GITHUB_REPOSITORY: ${{ github.repository }}
         WUKONG_GITHUB_TOKEN: ${{ inputs.github_token }}
+        WUKONG_CONTROL_PLANE_API_URL: ${{ inputs.control_plane_api_url }}
+        WUKONG_ACTIONS_CALLBACK_SECRET: ${{ inputs.actions_callback_secret }}
+        WUKONG_RUN_ID: ${{ inputs.github_run_id }}
         # Terminal reporting is owned by the always-on control plane after the
         # public artifact URL has been synchronized. Avoid an early duplicate
         # notification from the ephemeral Actions runner.
@@ -126,10 +139,30 @@ runs:
         job_id="$(printf '%s' "$job_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["job_id"])')"
         # Best-effort resume only; a missing/expired checkpoint must not fail the step.
         python3 -m tools.sync_job "$job_id" --config "$WUKONG_RCLONE_CONFIG" --pull-checkpoint || true
+        reporter_pid=""
+        if [[ -n "$WUKONG_CONTROL_PLANE_API_URL" && -n "$WUKONG_ACTIONS_CALLBACK_SECRET" && -n "$WUKONG_RUN_ID" ]]; then
+          python3 -m tools.actions_control_plane progress \
+            --api-url "$WUKONG_CONTROL_PLANE_API_URL" \
+            --job-id "$job_id" \
+            --run-id "$WUKONG_RUN_ID" \
+            --secret "$WUKONG_ACTIONS_CALLBACK_SECRET" \
+            --jobs-root .wkstudio/Jobs/hybrid \
+            --sequence-offset 2 &
+          reporter_pid="$!"
+        fi
         set +e
+        echo "executor_started=true" >> "$GITHUB_OUTPUT"
         python3 wukong_cli.py execute "$job_id"
         result=$?
         set -e
+        if [[ -n "$reporter_pid" ]]; then
+          for _ in {1..30}; do
+            kill -0 "$reporter_pid" 2>/dev/null || break
+            sleep 1
+          done
+          kill "$reporter_pid" 2>/dev/null || true
+          wait "$reporter_pid" 2>/dev/null || true
+        fi
         echo "result=$result" >> "$GITHUB_OUTPUT"
     - name: "F · Đồng bộ manifest & log / Sync result to Drive"
       if: always()

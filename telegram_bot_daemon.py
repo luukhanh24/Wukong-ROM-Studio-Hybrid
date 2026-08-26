@@ -298,8 +298,15 @@ def main() -> int:
                     telegram_transport.process_update if transport == "webhook" else None
                 ),
                 telegram_webhook_secret=webhook_secret if transport == "webhook" else None,
-                actions_callback_secret=os.environ.get("WUKONG_GITHUB_TOKEN", ""),
+                actions_callback_secret=os.environ.get(
+                    "WUKONG_ACTIONS_CALLBACK_SECRET",
+                    "",
+                ),
                 readiness_provider=readiness.is_set,
+                read_only_provider=lambda: (
+                    getattr(store, "metadata", lambda _key: None)("control_plane_mode")
+                    == "read_only"
+                ),
                 max_init_data_age_seconds=int(
                     os.environ.get("WUKONG_TELEGRAM_MINI_APP_MAX_AUTH_AGE", "3600")
                 ),

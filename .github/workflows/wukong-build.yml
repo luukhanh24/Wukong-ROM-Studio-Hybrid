@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       recipe_ref:
-        description: "Optional recipe JSON path/private Drive URI; leave empty to use the fields below"
+        description: "Worker recipe reference or private Drive URI; leave empty for a manual recipe"
         required: false
         default: ""
         type: string
@@ -15,13 +15,13 @@ on:
         type: string
       task:
         description: "Operation"
-        required: true
+        required: false
         default: "build"
         type: choice
         options: [build, source_mirror, artifact_publish]
       device:
         description: "Target product code"
-        required: true
+        required: false
         default: "PKG110"
         type: string
       source_uri:
@@ -41,12 +41,12 @@ on:
         type: string
       mod_version:
         description: "Private MOD content-pack version"
-        required: true
+        required: false
         default: "ColorOS_16.0.9"
         type: string
       preset:
         description: "Build edition"
-        required: true
+        required: false
         default: "plus"
         type: choice
         options: [lite, plus, both, custom]
@@ -67,7 +67,7 @@ on:
         type: string
       execution_target:
         description: "Runner routing policy"
-        required: true
+        required: false
         default: "github-auto"
         type: choice
         options: [github-auto, github-hosted, self-hosted-linux]
@@ -78,17 +78,17 @@ on:
         type: string
       package:
         description: "Create flashable ZIP"
-        required: true
+        required: false
         default: true
         type: boolean
       publish_artifact:
         description: "Upload successful artifact to Google Drive and create a link"
-        required: true
+        required: false
         default: true
         type: boolean
       notify_telegram:
         description: "Send completion notification through configured Telegram settings"
-        required: true
+        required: false
         default: true
         type: boolean
 
@@ -144,6 +144,9 @@ jobs:
         env:
           RECIPE_REF: ${{ inputs.recipe_ref }}
           WUKONG_JOB_ID: ${{ inputs.job_id }}
+          WUKONG_CONTROL_PLANE_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          WUKONG_RUN_ID: ${{ github.run_id }}
           WUKONG_GITHUB_TOKEN: ${{ secrets.WUKONG_GITHUB_TOKEN }}
           WUKONG_INPUT_TASK: ${{ inputs.task }}
           WUKONG_INPUT_DEVICE: ${{ inputs.device }}
@@ -169,7 +172,19 @@ jobs:
           if not job_id.isascii() or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,63}', job_id):
               raise SystemExit('job_id must contain only ASCII letters, numbers and hyphens (max 64)')
           PY
-          if [ -n "$RECIPE_REF" ]; then
+          if [[ "$RECIPE_REF" == worker://* ]]; then
+            test -n "$WUKONG_CONTROL_PLANE_API_URL"
+            python -m tools.actions_control_plane bootstrap \
+              --api-url "$WUKONG_CONTROL_PLANE_API_URL" \
+              --job-id "$WUKONG_JOB_ID" \
+              --run-id "$WUKONG_RUN_ID" \
+              --github-token "$GITHUB_TOKEN" \
+              --output .wkstudio/actions-bootstrap.json \
+              --recipe-output .wkstudio/recipe.json
+            effective_recipe_ref="wukong-gdrive:WukongROM/recipes/${WUKONG_JOB_ID}.json"
+            rclone copyto .wkstudio/recipe.json "$effective_recipe_ref" \
+              --config "$WUKONG_RCLONE_CONFIG" --retries 3
+          elif [ -n "$RECIPE_REF" ]; then
             python -m tools.fetch_recipe "$RECIPE_REF" --output .wkstudio/recipe.json --rclone-config "$WUKONG_RCLONE_CONFIG" --coerce-github
             effective_recipe_ref="$RECIPE_REF"
           else
@@ -213,6 +228,8 @@ jobs:
     needs: route
     if: needs.route.outputs.runner_kind == 'github-hosted'
     runs-on: ubuntu-24.04
+    outputs:
+      executor_started: ${{ steps.hybrid.outputs.executor_started }}
     steps:
       - name: "03 · Mở rộng workspace / Expand hosted disk"
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c # v10
@@ -256,19 +273,35 @@ jobs:
             TWRP
           key: wukong-content-${{ needs.route.outputs.mod_version }}-${{ hashFiles('content-packs/index.json') }}
       - name: "05–19 · Chạy pipeline ROM / Execute ROM pipeline"
+        id: hybrid
         uses: ./.github/actions/run-hybrid
         with:
           recipe_ref: ${{ needs.route.outputs.recipe_ref }}
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          control_plane_api_url: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          actions_callback_secret: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
+          github_run_id: ${{ github.run_id }}
           self_hosted: "false"
+      - name: "19.1 · Chuyển manifest cho callback / Transfer terminal manifest"
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wukong-control-plane-${{ inputs.job_id }}
+          path: |
+            .wkstudio/Jobs/hybrid/${{ inputs.job_id }}/manifest.json
+            .wkstudio/Jobs/hybrid/${{ inputs.job_id }}/events.jsonl
+          if-no-files-found: ignore
+          retention-days: 1
 
   self-hosted:
     name: "03–19 · Build trên Wukong self-hosted"
     needs: route
     if: needs.route.outputs.runner_kind == 'self-hosted'
     runs-on: [self-hosted, linux, x64, wukong-rom]
+    outputs:
+      executor_started: ${{ steps.hybrid.outputs.executor_started }}
     steps:
       - name: "03.1 · Lấy mã điều phối / Checkout orchestrator"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -278,13 +311,27 @@ jobs:
       - name: "03 · Kiểm tra CPU, RAM, disk / Runner preflight"
         run: python3 -m tools.runner_preflight
       - name: "04–19 · Chạy pipeline ROM / Execute ROM pipeline"
+        id: hybrid
         uses: ./.github/actions/run-hybrid
         with:
           recipe_ref: ${{ needs.route.outputs.recipe_ref }}
           job_id: ${{ inputs.job_id }}
           rclone_config_b64: ${{ secrets.RCLONE_CONFIG_B64 }}
           github_token: ${{ secrets.WUKONG_GITHUB_TOKEN }}
+          control_plane_api_url: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
+          actions_callback_secret: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
+          github_run_id: ${{ github.run_id }}
           self_hosted: "true"
+      - name: "19.1 · Chuyển manifest cho callback / Transfer terminal manifest"
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wukong-control-plane-${{ inputs.job_id }}
+          path: |
+            .wkstudio/Jobs/hybrid/${{ inputs.job_id }}/manifest.json
+            .wkstudio/Jobs/hybrid/${{ inputs.job_id }}/events.jsonl
+          if-no-files-found: ignore
+          retention-days: 1
 
   notify-control-plane:
     name: "20 · Đánh thức Mini App & báo kết quả"
@@ -292,16 +339,28 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
+      - name: "20.0 · Lấy mã callback / Checkout callback client"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - name: "20.0 · Nhận manifest / Download terminal manifest"
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        continue-on-error: true
+        with:
+          name: wukong-control-plane-${{ inputs.job_id }}
+          path: .wkstudio/Jobs/hybrid/${{ inputs.job_id }}
       - name: "20 · Đồng bộ kết quả / Wake control plane"
         env:
           API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL }}
-          CALLBACK_SECRET: ${{ github.token }}
+          CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           WUKONG_JOB_ID: ${{ inputs.job_id }}
           WUKONG_RUN_ID: ${{ github.run_id }}
           ROUTE_RESULT: ${{ needs.route.result }}
           RUNNER_KIND: ${{ needs.route.outputs.runner_kind }}
           HOSTED_RESULT: ${{ needs.hosted.result }}
           SELF_HOSTED_RESULT: ${{ needs.self-hosted.result }}
+          HOSTED_EXECUTOR_STARTED: ${{ needs.hosted.outputs.executor_started }}
+          SELF_HOSTED_EXECUTOR_STARTED: ${{ needs.self-hosted.outputs.executor_started }}
         shell: bash
         run: |
           set -euo pipefail
@@ -311,10 +370,8 @@ jobs:
           fi
           api_url="${API_URL%/}"
           [[ "$api_url" == https://* ]]
-          body="$(python - "$WUKONG_JOB_ID" "$WUKONG_RUN_ID" <<'PY'
-          import json
+          read -r workflow_result pre_executor_failure < <(python - <<'PY'
           import os
-          import sys
           route = os.environ.get("ROUTE_RESULT", "")
           runner = os.environ.get("RUNNER_KIND", "")
           selected = (
@@ -322,28 +379,29 @@ jobs:
               if runner == "github-hosted"
               else os.environ.get("SELF_HOSTED_RESULT", "")
           )
+          executor_started = (
+              os.environ.get("HOSTED_EXECUTOR_STARTED", "")
+              if runner == "github-hosted"
+              else os.environ.get("SELF_HOSTED_EXECUTOR_STARTED", "")
+          )
           result = route if route != "success" else selected
           if result not in {"success", "failure", "cancelled"}:
               result = "failure"
-          print(json.dumps({
-              "jobId": sys.argv[1],
-              "runId": int(sys.argv[2]),
-              "workflowResult": result,
-              "preExecutorFailure": route != "success",
-          }, separators=(",", ":")))
+          pre_executor = route != "success" or executor_started != "true"
+          print(result, "true" if pre_executor else "false")
           PY
-          )"
-          for attempt in {1..30}; do
-            if curl --fail --silent --show-error --connect-timeout 15 --max-time 45 \
-              -H 'Content-Type: application/json' \
-              -H "Authorization: Bearer $CALLBACK_SECRET" \
-              --data-binary "$body" \
-              "$api_url/internal/actions/callback"; then
-              exit 0
-            fi
-            if (( attempt == 30 )); then
-              echo "::warning title=20 · Control-plane callback::The ROM result is already stored on Drive, but the free control plane did not wake in time. Opening Mini App will retry synchronization."
-              exit 0
-            fi
-            sleep 10
-          done
+          )
+          args=(
+            --api-url "$api_url"
+            --job-id "$WUKONG_JOB_ID"
+            --run-id "$WUKONG_RUN_ID"
+            --secret "$CALLBACK_SECRET"
+            --workflow-result "$workflow_result"
+          )
+          manifest=".wkstudio/Jobs/hybrid/$WUKONG_JOB_ID/manifest.json"
+          events=".wkstudio/Jobs/hybrid/$WUKONG_JOB_ID/events.jsonl"
+          [[ -f "$manifest" ]] && args+=(--manifest "$manifest")
+          [[ -f "$events" ]] && args+=(--events "$events")
+          [[ "$pre_executor_failure" == true ]] && args+=(--pre-executor-failure)
+          python -m tools.actions_control_plane terminal "${args[@]}" || \
+            echo "::warning title=20 · Control-plane callback::The ROM result is already stored on Drive, but the terminal callback did not complete."

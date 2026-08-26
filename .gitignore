@@ -75,3 +75,5 @@ rclone*.conf
 /telegram_mini_app/catalog.json
 /.vercel-static/
 /.vercel/
+/deploy/cloudflare-worker/node_modules/
+/deploy/cloudflare-worker/.wrangler/

@@ -140,9 +140,16 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertIn("01–02 · Kiểm tra recipe & chọn runner", workflow)
         self.assertIn("03–19 · Build trên GitHub Hosted", workflow)
         self.assertIn("if: always()", workflow)
-        self.assertIn('"workflowResult": result', workflow)
-        self.assertIn('"preExecutorFailure": route != "success"', workflow)
-        self.assertIn("CALLBACK_SECRET: ${{ github.token }}", workflow)
+        self.assertIn("python -m tools.actions_control_plane terminal", workflow)
+        self.assertIn("--pre-executor-failure", workflow)
+        self.assertIn(
+            "CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}",
+            workflow,
+        )
+        self.assertIn("HOSTED_EXECUTOR_STARTED", workflow)
+        self.assertIn("SELF_HOSTED_EXECUTOR_STARTED", workflow)
+        self.assertIn("value: ${{ steps.execute.outputs.executor_started }}", action)
+        self.assertNotIn("CALLBACK_SECRET: ${{ github.token }}", workflow)
         self.assertIn("GITHUB_STEP_SUMMARY", workflow)
         self.assertIn("E · Pipeline 05–19", action)
         self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))

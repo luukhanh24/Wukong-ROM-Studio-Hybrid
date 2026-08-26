@@ -181,6 +181,20 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("/healthz", binder)
         self.assertIn("WUKONG_TELEGRAM_MINI_APP_API_URL", binder)
 
+    def test_cloudflare_production_deploy_is_gated_before_any_mutation(self) -> None:
+        workflow = (
+            Path(__file__).parents[1] / ".github/workflows/cloudflare-control-plane.yml"
+        ).read_text(encoding="utf-8")
+
+        gate = workflow.index(
+            "Require verified read-only migration before production deployment"
+        )
+        self.assertLess(gate, workflow.index("Upload Worker secrets"))
+        self.assertLess(gate, workflow.index("- name: Apply D1 migrations"))
+        self.assertLess(gate, workflow.index("- name: Deploy exact release"))
+        self.assertIn("if: (inputs.target || 'staging') == 'production'", workflow)
+        self.assertNotIn("Require verified read-only migration before cutover", workflow)
+
     def test_vercel_static_bundle_contains_no_personal_github_identity(self) -> None:
         output = self.root / "vercel-static"
 
