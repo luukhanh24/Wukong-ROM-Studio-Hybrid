@@ -207,8 +207,12 @@
     </section>
   </main>
 
-  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-label="Hoàn tất cấu hình build" aria-hidden="true" hidden><span data-i18n="finishBuild">Hoàn tất cấu hình build</span><svg class="dispatch-fab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+  <button class="dispatch-fab" id="dispatch-fab" type="button" aria-controls="submit-recipe" aria-label="Build" aria-hidden="true" hidden><span data-i18n="fabBuild">Build</span><svg class="dispatch-fab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
   <nav class="bottom-nav" aria-label="Mobile navigation">
+    <svg class="dock-shell" aria-hidden="true" preserveAspectRatio="none">
+      <defs><clipPath id="dock-shell-clip" clipPathUnits="userSpaceOnUse"><path id="dock-shell-path"/></clipPath></defs>
+      <path class="dock-rim" id="dock-rim-path"/>
+    </svg>
     <span class="liquid-surface" aria-hidden="true"></span><i class="liquid-lens" aria-hidden="true"><span></span></i>
     <button class="active" data-nav="build" data-slot="0"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button>
     <button data-nav="jobs" data-slot="1"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button>

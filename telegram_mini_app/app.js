@@ -121,7 +121,7 @@ const translations = {
     deliveryTitle: "Kết quả build", deliveryHint: "Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.", packageZip: "Tạo ZIP flashable",
     packageHint: "Đóng gói ROM sau khi repack", publish: "Upload lên Drive", publishHint: "Tạo link tải artifact khi thành công", notify: "Thông báo Telegram",
     notifyHint: "Nhận trạng thái và link ngay trong chat", readyLabel: "RECIPE SẴN SÀNG", fallbackWarning: "Auto ưu tiên runner phù hợp và dùng GitHub Hosted mở rộng đĩa khi self-hosted offline.",
-    launch: "Tạo job build", jobsTitle: "Tiến trình & lịch sử", jobsIntro: "Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.", myJobs: "Mở danh sách trong chat",
+    launch: "Tạo job build", fabBuild: "Build", jobsTitle: "Tiến trình & lịch sử", jobsIntro: "Theo dõi từng giai đoạn, thông số MOD và link tải của mỗi job.", myJobs: "Mở danh sách trong chat",
     refreshJob: "Làm mới", events: "Nhật ký", artifact: "Artifact", resume: "Tiếp tục", cancel: "Hủy job",
     systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", runDiagnostics: "Chạy chẩn đoán",
     authenticated: "Đã xác thực phiên hiện tại", keyboardConnected: "Kết nối qua nút Telegram · danh tính được xác nhận khi gửi", runnerChecked: "Runner được kiểm tra khi submit", driveChecked: "Quyền truy cập được kiểm tra trước upload",
@@ -147,7 +147,7 @@ const translations = {
     deliveryTitle: "Build result", deliveryHint: "Package the ZIP, upload it to Drive and send the link through Telegram.", packageZip: "Create flashable ZIP",
     packageHint: "Package the ROM after repacking", publish: "Upload to Drive", publishHint: "Create an artifact download link on success", notify: "Telegram notification",
     notifyHint: "Receive status and the link in chat", readyLabel: "RECIPE READY", fallbackWarning: "Auto selects a suitable runner and uses expanded GitHub Hosted storage when self-hosted is offline.",
-    launch: "Create build job", jobsTitle: "Progress & history", jobsIntro: "Follow every stage, MOD detail and download link for each job.", myJobs: "Open my jobs in chat",
+    launch: "Create build job", fabBuild: "Build", jobsTitle: "Progress & history", jobsIntro: "Follow every stage, MOD detail and download link for each job.", myJobs: "Open my jobs in chat",
     refreshJob: "Refresh", events: "Events", artifact: "Artifact", resume: "Resume", cancel: "Cancel job",
     systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", runDiagnostics: "Run diagnostics",
     authenticated: "Current session authenticated", keyboardConnected: "Connected through the Telegram button · identity is confirmed on send", runnerChecked: "Runner availability checked on submit", driveChecked: "Access verified before upload",
@@ -654,6 +654,39 @@ function setLiquidPosition(value, velocity = 0, pressed = false) {
   nav?.style.setProperty("--liquid-press", pressed ? ".97" : "1");
 }
 
+function updateDockShellPath() {
+  const nav = $(".bottom-nav");
+  const shell = $(".dock-shell");
+  const clipPath = $("#dock-shell-path");
+  const rimPath = $("#dock-rim-path");
+  if (!nav || !shell || !clipPath || !rimPath) return;
+  const width = Math.max(1, nav.getBoundingClientRect().width);
+  const height = 96;
+  const bodyTop = 38;
+  const bodyBottom = 96;
+  const capRadius = Math.min(38, width / 6);
+  const sideRadius = Math.min(29, width / 8);
+  const center = width / 2;
+  const path = [
+    `M ${sideRadius} ${bodyTop}`,
+    `H ${center - capRadius}`,
+    `C ${center - capRadius} ${bodyTop - capRadius * .55} ${center - capRadius * .55} 0 ${center} 0`,
+    `C ${center + capRadius * .55} 0 ${center + capRadius} ${bodyTop - capRadius * .55} ${center + capRadius} ${bodyTop}`,
+    `H ${width - sideRadius}`,
+    `C ${width - sideRadius * .45} ${bodyTop} ${width} ${bodyTop + sideRadius * .45} ${width} ${bodyTop + sideRadius}`,
+    `V ${bodyBottom - sideRadius}`,
+    `C ${width} ${bodyBottom - sideRadius * .45} ${width - sideRadius * .45} ${bodyBottom} ${width - sideRadius} ${bodyBottom}`,
+    `H ${sideRadius}`,
+    `C ${sideRadius * .45} ${bodyBottom} 0 ${bodyBottom - sideRadius * .45} 0 ${bodyBottom - sideRadius}`,
+    `V ${bodyTop + sideRadius}`,
+    `C 0 ${bodyTop + sideRadius * .45} ${sideRadius * .45} ${bodyTop} ${sideRadius} ${bodyTop}`,
+    "Z"
+  ].join(" ");
+  shell.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  clipPath.setAttribute("d", path);
+  rimPath.setAttribute("d", path);
+}
+
 function easeOutQuint(value) {
   return 1 - Math.pow(1 - value, 5);
 }
@@ -712,7 +745,14 @@ function navigate(name, smooth = true) {
 function bindLiquidBottomTabs() {
   const nav = $(".bottom-nav");
   const buttons = $$(".bottom-nav [data-nav]");
-  if (!nav || !buttons.length || !("PointerEvent" in window)) return;
+  if (!nav || !buttons.length) return;
+  updateDockShellPath();
+  state.dockResizeObserver?.disconnect?.();
+  if ("ResizeObserver" in window) {
+    state.dockResizeObserver = new ResizeObserver(() => updateDockShellPath());
+    state.dockResizeObserver.observe(nav);
+  }
+  if (!("PointerEvent" in window)) return;
   let pointerId = null;
   let startX = 0;
   let startPosition = 0;
@@ -1585,7 +1625,7 @@ function updateSummary() {
     node.dataset.i18n = ready ? "launch" : "finishSource";
     node.textContent = t(ready ? "launch" : "finishSource");
   });
-  $("#dispatch-fab")?.setAttribute("aria-label", t("finishBuild"));
+  $("#dispatch-fab")?.setAttribute("aria-label", t("fabBuild"));
 }
 
 function profileInitials(profile) {
@@ -2792,7 +2832,10 @@ function bindEvents() {
   let greetingResizeFrame = 0;
   window.addEventListener("resize", () => {
     cancelAnimationFrame(greetingResizeFrame);
-    greetingResizeFrame = requestAnimationFrame(updateGreetingOverflow);
+    greetingResizeFrame = requestAnimationFrame(() => {
+      updateGreetingOverflow();
+      updateDockShellPath();
+    });
   }, { passive: true });
   document.fonts?.ready?.then(updateGreetingOverflow).catch(() => {});
   $$('[data-action]').forEach((button) => button.addEventListener("click", () => {
