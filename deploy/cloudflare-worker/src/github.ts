@@ -110,7 +110,17 @@ async function verifyRun(
     `/repos/${owner}/${repository}/actions/runs/${runId}`
   );
   if (!response.ok) {
-    throw new GitHubHttpError("Actions bootstrap authentication failed", 403);
+    let detail = "";
+    try {
+      const payload = await response.json() as JsonObject;
+      detail = typeof payload.message === "string" ? payload.message.slice(0, 256) : "";
+    } catch {
+      detail = "";
+    }
+    throw new GitHubHttpError(
+      `GitHub run verification failed (${response.status})${detail ? `: ${detail}` : ""}`,
+      403
+    );
   }
   const run = await response.json() as JsonObject;
   const repositoryInfo = run.repository && typeof run.repository === "object"
@@ -120,14 +130,20 @@ async function verifyRun(
   const displayTitle = String(run.display_title ?? "");
   const workflowPath = String(run.path ?? "");
   const expectedRepository = env.WUKONG_GITHUB_REPOSITORY.toLowerCase();
-  if (
-    Number(run.id) !== runId ||
-    fullName !== expectedRepository ||
-    run.event !== "workflow_dispatch" ||
-    !displayTitle.includes(jobId) ||
-    (workflowPath && !workflowPath.endsWith(`/${env.WUKONG_GITHUB_WORKFLOW}`))
-  ) {
-    throw new GitHubHttpError("Actions bootstrap run does not match the job", 403);
+  if (Number(run.id) !== runId) {
+    throw new GitHubHttpError("Actions bootstrap run ID does not match", 403);
+  }
+  if (fullName !== expectedRepository) {
+    throw new GitHubHttpError("Actions bootstrap repository does not match", 403);
+  }
+  if (run.event !== "workflow_dispatch") {
+    throw new GitHubHttpError("Actions bootstrap event does not match", 403);
+  }
+  if (!displayTitle.includes(jobId)) {
+    throw new GitHubHttpError("Actions bootstrap job title does not match", 403);
+  }
+  if (workflowPath && !workflowPath.endsWith(`/${env.WUKONG_GITHUB_WORKFLOW}`)) {
+    throw new GitHubHttpError("Actions bootstrap workflow does not match", 403);
   }
 }
 

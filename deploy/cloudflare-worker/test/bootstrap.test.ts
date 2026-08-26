@@ -75,6 +75,57 @@ describe("GitHub Actions bootstrap", () => {
     expect(response.status).toBe(403);
   });
 
+  it("returns a bounded GitHub verification error without exposing credentials", async () => {
+    const bindings = env as unknown as Env;
+    const now = new Date().toISOString();
+    await bindings.DB.batch([
+      bindings.DB.prepare(
+        `INSERT INTO wukong_telegram_users
+         (subject, access_status, role, first_seen_at, last_seen_at,
+          build_credits, lifetime_granted)
+         VALUES ('45002', 'approved', 'user', ?, ?, 1, 1)`
+      ).bind(now, now),
+      bindings.DB.prepare(
+        "INSERT INTO wukong_telegram_access (subject, role) VALUES ('45002', 'user')"
+      )
+    ]);
+    const headers = {
+      ...(await tmaHeaders(45002)),
+      "Content-Type": "application/json",
+      "Idempotency-Key": "bootstrap-github-error"
+    };
+    const created = await SELF.fetch("https://worker.example/v1/jobs", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        schemaVersion: 1,
+        task: "build",
+        device: "PKG112",
+        source: { kind: "https", uri: "https://downloads.example/private-rom.zip" },
+        execution: { target: "github-auto" },
+        build: { preset: "plus", modVersion: "ColorOS_16.0.10", mods: [] }
+      })
+    });
+    const job = await created.json() as { job_id: string };
+    vi.stubGlobal("fetch", vi.fn(() => Response.json(
+      { message: "Resource not accessible by integration", secret: "must-not-leak" },
+      { status: 403 }
+    )));
+    const body = JSON.stringify({ jobId: job.job_id, runId: 7125 });
+    const response = await SELF.fetch("https://worker.example/internal/actions/bootstrap", {
+      method: "POST",
+      headers: {
+        ...(await actionsHeaders(body)),
+        Authorization: `Bearer ${"g".repeat(40)}`
+      },
+      body
+    });
+    const payload = await response.json() as { error: string };
+    expect(response.status).toBe(403);
+    expect(payload.error).toContain("Resource not accessible by integration");
+    expect(payload.error).not.toContain("must-not-leak");
+  });
+
   it("does not bootstrap a job that was cancelled before its run appeared", async () => {
     const bindings = env as unknown as Env;
     const now = new Date().toISOString();
