@@ -58,8 +58,19 @@
     </article>
   </section>
 
+  <section class="maintenance-gate" id="maintenance-gate" hidden aria-live="polite">
+    <article class="maintenance-card">
+      <div class="maintenance-mark" aria-hidden="true"><span>WK</span></div>
+      <small data-i18n="maintenanceGateKicker">BẢO TRÌ HỆ THỐNG</small>
+      <h1 data-i18n="maintenanceGateTitle">Studio đang tạm đóng</h1>
+      <p id="maintenance-gate-message">Hệ thống đang được bảo trì. Vui lòng quay lại sau.</p>
+      <div class="maintenance-status"><i></i><span data-i18n="maintenanceGateStatus">Các job đang chạy vẫn được xử lý an toàn.</span></div>
+      <button id="refresh-maintenance" class="primary compact" type="button" data-i18n="maintenanceRefresh">Kiểm tra lại</button>
+    </article>
+  </section>
+
   <nav class="contents-rail" aria-label="Mini App navigation">
-    <button class="active" data-nav="build"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><svg class="nav-icon" aria-hidden="true"><use href="#nav-catalog"/></svg><span data-i18n="navCatalog">Catalog</span></button><button data-nav="system"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
+    <button class="active" data-nav="build"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><svg class="nav-icon" aria-hidden="true"><use href="#nav-catalog"/></svg><span data-i18n="navCatalog">Thư viện</span></button><button data-nav="system"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
   </nav>
 
   <main>
@@ -75,7 +86,7 @@
           <header class="section-heading"><span>01</span><div><h2 data-i18n="sourceTitle">Nguồn ROM</h2></div></header>
           <div class="smart-source">
             <div class="field field-wide source-input-field">
-              <div class="source-input-head"><label for="source-uri" data-i18n="sourceUrl">Dán link ROM</label><div><button id="paste-source" type="button" data-i18n="pasteLink">Dán</button><button id="clear-source" type="button" data-i18n="clearLink">Xóa</button></div></div>
+              <div class="source-input-head"><label for="source-uri" data-i18n="sourceUrl">Dán link ROM</label><div><button id="open-rom-catalog" type="button" data-i18n="findRom">Tìm ROM</button><button id="paste-source" type="button" data-i18n="pasteLink">Dán</button><button id="clear-source" type="button" data-i18n="clearLink">Xóa</button></div></div>
               <textarea id="source-uri" rows="3" required spellcheck="false" aria-describedby="source-state source-facts" placeholder="https://component-ota-cn.allawntech.com/downloadCheck?…"></textarea><small data-i18n="sourceSecure">Chấp nhận link trực tiếp và OPlus chưa resolve. URL ký tạm thời không xuất hiện trong log.</small>
             </div>
             <div class="source-state idle" id="source-state" aria-live="polite">
@@ -158,10 +169,29 @@
     </section>
 
     <section class="view" id="catalog" aria-labelledby="catalog-title">
-      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Catalog kỹ thuật</h1></div><div class="catalog-total" id="catalog-total">···</div></header>
+      <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Thư viện</h1><p data-i18n="libraryIntro">Tìm ROM nguồn, tra cứu thiết bị và bộ MOD.</p></div></header>
+      <div class="library-tabs" role="tablist" aria-label="Thư viện" data-i18n-aria="catalogTitle">
+        <button id="library-rom-tab" type="button" role="tab" aria-selected="true" aria-controls="rom-catalog-panel" data-library-tab="rom" data-i18n="libraryRom">ROM / OTA</button>
+        <button id="library-technical-tab" type="button" role="tab" aria-selected="false" aria-controls="library-technical" tabindex="-1" data-library-tab="technical" data-i18n="libraryTechnical">Thiết bị & MOD</button>
+      </div>
+      <section class="rom-catalog-panel" id="rom-catalog-panel" role="tabpanel" aria-labelledby="library-rom-tab">
+        <header><h2 id="rom-catalog-title" data-i18n="romCatalogTitle">Tìm ROM nguồn</h2><p data-i18n="romCatalogHint">Nhập dòng máy hoặc mã model. Chọn bản ROM để phân tích trong Studio.</p></header>
+        <form class="rom-catalog-filters" id="rom-catalog-form">
+          <label><span data-i18n="romDeviceFilter">Dòng máy</span><input id="rom-device-filter" type="search" maxlength="128" placeholder="OP 13" autocomplete="off"></label>
+          <label><span data-i18n="romModelFilter">Mã model</span><input id="rom-model-filter" type="search" maxlength="128" placeholder="CPH2653" autocomplete="off"></label>
+          <label><span data-i18n="romRegionFilter">Khu vực</span><select id="rom-region-filter"><option value="" data-i18n="romAllRegions">Tất cả khu vực</option><option>CN</option><option>EU</option><option>GLO</option><option>IN</option><option>NA</option></select></label>
+          <button class="primary compact" id="search-rom-catalog" type="submit" data-i18n="searchRom">Tìm ROM</button>
+        </form>
+        <div class="rom-results-heading"><span id="rom-catalog-status" role="status" aria-live="polite"></span><span data-i18n="romLatestOnly">Bản mới nhất mỗi khu vực</span></div>
+        <div class="rom-catalog-results" id="rom-catalog-results" aria-busy="false"></div>
+        <p class="rom-catalog-note" data-i18n="romCatalogNote">Nguồn: Daniel Springer · Wukong phân tích lại link trước khi build.</p>
+      </section>
+      <section id="library-technical" role="tabpanel" aria-labelledby="library-technical-tab" hidden>
+      <div class="library-technical-summary"><h2 data-i18n="libraryTechnical">Thiết bị & MOD</h2><span class="catalog-total" id="catalog-total">···</span></div>
       <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
       <section class="catalog-sheet"><header><h2 data-i18n="devicesTitle">Thiết bị</h2><span id="device-count">0</span></header><div class="device-table" id="device-list"></div></section>
       <section class="catalog-sheet"><header><h2 data-i18n="modsTitle">MOD trong pack</h2><span id="catalog-mod-count">0</span></header><div class="catalog-mods" id="catalog-mod-list"></div></section>
+      </section>
     </section>
 
     <section class="view profile-view" id="profile" aria-labelledby="profile-view-name">
@@ -191,7 +221,12 @@
         <div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div>
       </div>
       <section class="system-actions"><h2 data-i18n="sessionDiagTitle">Phiên Telegram</h2><p id="session-diag" style="margin:4px 0 0;font-size:12px;line-height:1.5;opacity:.85">…</p></section>
-      <section class="system-actions" id="admin-maintenance" hidden><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div></section>
+      <section class="system-actions admin-maintenance" id="admin-maintenance" hidden>
+        <header><div><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><p id="maintenance-admin-status">Studio đang mở cho người dùng.</p></div><span class="maintenance-state-badge" id="maintenance-state-badge">ĐANG MỞ</span></header>
+        <label class="field field-wide"><span data-i18n="maintenanceMessage">Thông báo cho người dùng</span><textarea id="maintenance-message-input" rows="3" maxlength="500">Hệ thống đang được bảo trì. Vui lòng quay lại sau.</textarea></label>
+        <button class="maintenance-toggle" id="maintenance-toggle" type="button"><span data-i18n="enableMaintenance">Bật chế độ bảo trì</span><small data-i18n="maintenanceAdminHint">Admin vẫn truy cập đầy đủ; người dùng chỉ thấy màn hình bảo trì.</small></button>
+        <div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div>
+      </section>
       <section class="user-admin" id="user-admin" hidden>
         <header><div><small data-i18n="userLedgerKicker">QUẢN TRỊ TRUY CẬP</small><h2 data-i18n="userLedgerTitle">Người dùng & lượt build</h2><p data-i18n="userLedgerHint">Duyệt tài khoản, cấp lượt và xem lịch sử mà không xóa dấu vết.</p></div><button class="primary compact" id="add-user" type="button" data-i18n="addUser">Thêm Telegram ID</button></header>
         <div class="user-admin-stats"><div><small data-i18n="totalUsers">Tổng người dùng</small><strong id="user-total-count">0</strong></div><div><small data-i18n="approvedUsers">Đã cấp quyền</small><strong id="user-approved-count">0</strong></div><div><small data-i18n="pendingUsers">Chờ cấp quyền</small><strong id="user-pending-count">0</strong></div><div><small data-i18n="revokedUsers">Đã thu hồi</small><strong id="user-revoked-count">0</strong></div></div>
@@ -217,7 +252,7 @@
     <button class="active" data-nav="build" data-slot="0"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button>
     <button data-nav="jobs" data-slot="1"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button>
     <button id="dock-profile" class="dock-profile" type="button" data-nav="profile" data-slot="2" data-i18n-aria="openProfile" aria-label="Mở hồ sơ"><span>WK</span></button>
-    <button data-nav="catalog" data-slot="3"><svg class="nav-icon" aria-hidden="true"><use href="#nav-catalog"/></svg><span data-i18n="navCatalog">Catalog</span></button>
+    <button data-nav="catalog" data-slot="3"><svg class="nav-icon" aria-hidden="true"><use href="#nav-catalog"/></svg><span data-i18n="navCatalog">Thư viện</span></button>
     <button data-nav="system" data-slot="4"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
   </nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

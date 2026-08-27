@@ -297,6 +297,14 @@ Three cells expose runner choice, pipeline readiness, and recent job access. Aqu
 
 ### Smart Source
 
+### Library and maintenance surfaces
+
+The former Catalog destination is labeled **Thư viện / Library**, retaining its `#catalog` route for existing links. Its first subtab is ROM / OTA: device/model/region filters, explicit search, a quiet empty state, and ruled release rows. Device, region, version, patch and size remain distinct; “Analyze in Studio” selects the original OTA link and returns to source analysis without submitting a build. Devices & MODs remains a separate read-only subtab. Both subtabs support keyboard navigation. Search uses 44px controls, reflows into two columns on compact screens and one column on narrow phones, and uses existing light/dark tokens.
+
+The System maintenance control is admin-only. A normal Telegram User sees a dedicated maintenance gate instead of workspace navigation; the Configured Admin retains the workspace. Maintenance copy is plain text, and the gate offers a recheck action plus a 30-second visible-page refresh. Running jobs and internal callbacks are unaffected.
+
+### Source analysis
+
 The ROM URL, source state, analysis control, and six metadata facts form one bordered instrument. Pasting identifies supported source types immediately. “Phân tích ROM” performs a small in-place inspection and updates the same view through `probing`, `analyzed`, `probe-limited`, or `probe-failed`; it must never send a Telegram payload or return the user to the bot. Limited browser inspection explains that build preflight will continue server-side rather than pretending analysis succeeded.
 
 ### Delivery State Row

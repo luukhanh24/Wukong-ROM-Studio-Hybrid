@@ -111,6 +111,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     cache_clear_requests = 0
     admin_user = False
     pending_user = False
+    library_scenario = ""
+    maintenance_enabled = False
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -180,6 +182,32 @@ Object.defineProperty(navigator, 'clipboard', { value: {
             source = f"""
 window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, setHeaderColor(value) {{ document.body.dataset.telegramHeaderColor = value; }}, setBackgroundColor(value) {{ document.body.dataset.telegramBackgroundColor = value; }}, openTelegramLink() {{}}, openLink(url) {{ document.body.dataset.openedArtifact = url; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}}, impactOccurred() {{}}, selectionChanged() {{ document.body.dataset.hapticSelections = String(Number(document.body.dataset.hapticSelections || 0) + 1); }} }} }} }};
 {exec_fallback}
+window.addEventListener('DOMContentLoaded', () => {{
+  if (!{json.dumps(self.library_scenario)}) return;
+  const exerciseLibrary = () => {{
+    if (document.body.classList.contains('access-checking')) {{ setTimeout(exerciseLibrary, 50); return; }}
+    document.querySelector('[data-nav="catalog"]').click();
+    document.body.dataset.libraryTitle = document.querySelector('#catalog-title').textContent;
+    document.body.dataset.romInLibrary = String(document.querySelector('#catalog').contains(document.querySelector('#rom-catalog-panel')));
+    document.querySelector('#library-technical-tab').click();
+    document.body.dataset.technicalVisible = String(!document.querySelector('#library-technical').hidden);
+    document.querySelector('#library-rom-tab').click();
+    document.querySelector('#rom-device-filter').value = 'OP 13';
+    document.querySelector('#search-rom-catalog').click();
+    const checkResult = () => {{
+      const result = document.querySelector('.rom-release button');
+      if (!result) {{ setTimeout(checkResult, 50); return; }}
+      document.body.dataset.romResults = String(document.querySelectorAll('.rom-release').length);
+      if ({json.dumps(self.library_scenario)} === 'select') {{
+        result.click();
+        document.body.dataset.selectedSource = document.querySelector('#source-uri').value;
+        document.body.dataset.selectedView = document.querySelector('main>.view.active').id;
+      }}
+    }};
+    checkResult();
+  }};
+  setTimeout(exerciseLibrary, 400);
+}});
 {navigator_fallback}
 {artifact_clipboard}
 window.addEventListener('load', () => {{
@@ -436,7 +464,10 @@ window.addEventListener('load', () => {{
             }).encode(), "application/json")
             return
         if path == "/v1/me":
-            self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
+            self._send(json.dumps({"user": self._fixture_user(), "maintenance": {"enabled": self.maintenance_enabled, "message": "Đang nâng cấp Studio."}}).encode(), "application/json")
+            return
+        if path == "/v1/rom-catalog":
+            self._send(json.dumps({"releases": [{"id": "rom-fixture", "device": "OnePlus 13", "model": "CPH2653", "region": "EU", "version": "CPH2653_16.0.10.501(EX01)", "securityPatch": "2026-08-01", "sizeBytes": 8304912951, "sourceUrl": OPLUS_TEST_URI}]}).encode(), "application/json")
             return
         if path == "/test/cache-count":
             self._send(json.dumps({"count": type(self).cache_clear_requests}).encode(), "application/json")
@@ -579,7 +610,7 @@ window.addEventListener('load', () => {{
             }).encode(), "application/json")
             return
         if path == "/v1/session/open" and self.api_enabled:
-            self._send(json.dumps({"user": self._fixture_user()}).encode(), "application/json")
+            self._send(json.dumps({"user": self._fixture_user(), "maintenance": {"enabled": self.maintenance_enabled, "message": "Đang nâng cấp Studio."}}).encode(), "application/json")
             return
         if path == "/v1/sources/probe" and self.api_enabled:
             length = int(self.headers.get("Content-Length", "0"))
@@ -652,6 +683,8 @@ def _render_mini_app_in_chrome(
     exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
+    library_scenario: str = "",
+    maintenance_enabled: bool = False,
     screenshot_output: Path | None = None,
     window_width: int = 390,
 ) -> tuple[str, int]:
@@ -690,6 +723,8 @@ def _render_mini_app_in_chrome(
             "cache_clear_requests": 0,
             "admin_user": admin_user,
             "pending_user": pending_user,
+            "library_scenario": library_scenario,
+            "maintenance_enabled": maintenance_enabled,
         },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -1024,6 +1059,47 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("Không giới hạn", dom)
         self.assertIn("Không giới hạn lượt còn lại", dom)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_maintenance_gate_and_admin_control_are_wired_to_the_public_api(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="maintenance-gate"', html)
+        self.assertIn('id="maintenance-toggle"', html)
+        self.assertIn('id="maintenance-message-input"', html)
+        self.assertIn('body.maintenance-limited', styles)
+        self.assertIn('apiRequest("/v1/system/maintenance"', script)
+        self.assertIn('state.maintenance = payload.maintenance', script)
+
+    def test_rom_catalog_selection_uses_the_existing_source_probe_flow(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="open-rom-catalog"', html)
+        self.assertIn('id="rom-catalog-results"', html)
+        self.assertIn('apiRequest(`/v1/rom-catalog?', script)
+        self.assertIn('source.value = release.sourceUrl;', script)
+        self.assertIn("scheduleSourceProbe();", script)
+
+    def test_library_search_selects_rom_and_returns_to_studio(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, library_scenario="select")
+        self.assertIn('data-library-title="Thư viện"', dom)
+        self.assertIn('data-rom-in-library="true"', dom)
+        self.assertIn('data-technical-visible="true"', dom)
+        self.assertIn('data-rom-results="1"', dom)
+        self.assertIn('data-selected-view="build"', dom)
+        self.assertIn('data-selected-source="https://component-ota-cn.allawntech.com/downloadCheck?', dom)
+        self.assertRegex(dom, r'id="source-product-detected"[^>]*>PKG110')
+
+    def test_user_sees_maintenance_gate_but_admin_keeps_workspace(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, maintenance_enabled=True)
+        self.assertRegex(dom, r'<body class="[^"]*maintenance-limited')
+        self.assertNotRegex(dom, r'id="maintenance-gate"[^>]*hidden')
+        self.assertIn('Đang nâng cấp Studio.', dom)
+        admin, _ = _render_mini_app_in_chrome(api_enabled=True, maintenance_enabled=True, admin_user=True)
+        self.assertNotRegex(admin, r'<body class="[^"]*maintenance-limited')
+        self.assertRegex(admin, r'id="maintenance-gate"[^>]*hidden')
 
     def test_admin_user_opens_as_a_system_page_in_dark_mode(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")

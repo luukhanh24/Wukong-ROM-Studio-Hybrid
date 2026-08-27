@@ -64,6 +64,14 @@ import {
   updateAllowance,
   userEvents
 } from "./state";
+import {
+  maintenanceState,
+  setMaintenanceState
+} from "./system";
+import {
+  RomCatalogHttpError,
+  romCatalog
+} from "./rom-catalog";
 
 const RELEASE_SHA = /^[0-9a-f]{40}$/;
 
@@ -114,7 +122,7 @@ async function routeWithIdentity(
   if (path === "/v1/session/open" && request.method === "POST") {
     try {
       const user = await openSession(env, auth.subject, request.headers.get("X-Wukong-Session-Id") ?? "");
-      return json({ user });
+      return json({ user, maintenance: await maintenanceState(env) });
     } catch (error) {
       return json({
         error: error instanceof Error ? error.message : "Mini App session is invalid",
@@ -124,7 +132,24 @@ async function routeWithIdentity(
   }
   if (path === "/v1/me" && request.method === "GET") {
     const user = await profile(env, auth.subject);
-    return user ? json({ user }) : json({ error: "Telegram profile is unavailable" }, 404);
+    return user
+      ? json({ user, maintenance: await maintenanceState(env) })
+      : json({ error: "Telegram profile is unavailable" }, 404);
+  }
+  if (path === "/v1/system/maintenance" && request.method === "GET") {
+    if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
+    return json({ maintenance: await maintenanceState(env) });
+  }
+  if (path === "/v1/system/maintenance" && request.method === "PUT") {
+    if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
+    const payload = await request.json().catch(() => ({})) as Record<string, unknown>;
+    try {
+      return json({ maintenance: await setMaintenanceState(env, auth.subject, payload) });
+    } catch (error) {
+      return json({
+        error: error instanceof Error ? error.message : "Maintenance state is invalid"
+      }, 400);
+    }
   }
   if (path === "/v1/drafts/source" && request.method === "GET") {
     return json({ uri: await sourceDraft(env, auth.subject) });
@@ -135,6 +160,21 @@ async function routeWithIdentity(
   }
   if (path === "/v1/catalog" && request.method === "GET") {
     return json(catalogPayload());
+  }
+  if (path === "/v1/rom-catalog" && request.method === "GET") {
+    try {
+      return json(await romCatalog(request), 200, {
+        "Cache-Control": "private, max-age=300"
+      });
+    } catch (error) {
+      if (error instanceof RomCatalogHttpError) {
+        return json({ error: error.message, code: "rom_catalog_unavailable" }, error.status);
+      }
+      return json({
+        error: "ROM catalog is temporarily unavailable",
+        code: "rom_catalog_unavailable"
+      }, 503);
+    }
   }
   if (path === "/v1/mod-release-versions" && request.method === "GET") {
     return json({
@@ -179,6 +219,7 @@ async function routeWithIdentity(
     }
     return json({
       user: await profile(env, auth.subject),
+      maintenance: await maintenanceState(env),
       jobs,
       activeJob,
       events,
@@ -389,6 +430,14 @@ async function privateRoute(request: Request, env: Env, path: string): Promise<R
     return json({ error: error instanceof Error ? error.message : "Authentication failed" }, 401);
   }
   const pendingAllowed = path === "/v1/session/open" || path === "/v1/me";
+  const systemMaintenance = await maintenanceState(env);
+  if (systemMaintenance.enabled && auth.role !== "admin" && !pendingAllowed) {
+    return json({
+      error: systemMaintenance.message,
+      code: "maintenance_mode",
+      maintenance: systemMaintenance
+    }, 503);
+  }
   if (auth.profile.accessStatus !== "approved" && !pendingAllowed) {
     const revoked = auth.profile.accessStatus === "revoked";
     return json({

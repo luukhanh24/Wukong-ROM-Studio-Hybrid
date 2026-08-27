@@ -355,6 +355,77 @@ Object.assign(translations.en, {
   openArtifactCloud: "Open in {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet."
 });
 
+Object.assign(translations.vi, {
+  maintenanceGateKicker: "BẢO TRÌ HỆ THỐNG",
+  navCatalog: "Thư viện", catalogTitle: "Thư viện",
+  libraryIntro: "Tìm ROM nguồn, tra cứu thiết bị và bộ MOD.",
+  libraryRom: "ROM / OTA", libraryTechnical: "Thiết bị & MOD",
+  romCatalogHint: "Nhập dòng máy hoặc mã model. Chọn bản ROM để phân tích trong Studio.",
+  romAllRegions: "Tất cả khu vực", romLatestOnly: "Bản mới nhất mỗi khu vực",
+  romCatalogIdle: "Tìm ROM theo thiết bị của bạn",
+  romCatalogIdleHint: "Ví dụ: dòng máy OP 13 hoặc mã model CPH2653.",
+  romCatalogCount: "{count} bản ROM", romCatalogRetry: "Không tải được kho ROM. Hãy thử tìm lại.",
+  romFilterRequired: "Nhập dòng máy hoặc mã model để tìm ROM.",
+  maintenanceGateTitle: "Studio đang tạm đóng",
+  maintenanceGateStatus: "Các job đang chạy vẫn được xử lý an toàn.",
+  maintenanceRefresh: "Kiểm tra lại",
+  maintenanceMessage: "Thông báo cho người dùng",
+  enableMaintenance: "Bật chế độ bảo trì",
+  disableMaintenance: "Mở lại Mini App",
+  maintenanceAdminHint: "Admin vẫn truy cập đầy đủ; người dùng chỉ thấy màn hình bảo trì.",
+  maintenanceOpenStatus: "Studio đang mở cho người dùng.",
+  maintenanceClosedStatus: "Người dùng đang bị chuyển tới màn hình bảo trì.",
+  maintenanceEnabledToast: "Đã bật chế độ bảo trì.",
+  maintenanceDisabledToast: "Mini App đã mở lại cho người dùng.",
+  findRom: "Tìm ROM",
+  romCatalogKicker: "KHO OTA CÔNG KHAI",
+  romCatalogTitle: "Tìm ROM nguồn",
+  romDeviceFilter: "Thiết bị / dòng máy",
+  romModelFilter: "Mã model",
+  romRegionFilter: "Khu vực",
+  searchRom: "Tìm ROM",
+  romCatalogNote: "Nguồn: Daniel Springer · Wukong phân tích lại link trước khi build.",
+  romCatalogEmpty: "Không tìm thấy bản ROM phù hợp.",
+  romCatalogLoading: "Đang tìm bản ROM mới nhất…",
+  useRom: "Phân tích trong Studio",
+  romSelected: "Đã đưa link OTA vào Studio và bắt đầu phân tích."
+});
+Object.assign(translations.en, {
+  maintenanceGateKicker: "SYSTEM MAINTENANCE",
+  navCatalog: "Library", catalogTitle: "Library",
+  libraryIntro: "Find a source ROM or explore supported devices and MOD packs.",
+  libraryRom: "ROM / OTA", libraryTechnical: "Devices & MODs",
+  romCatalogHint: "Enter a device family or model code. Choose a release to analyze in Studio.",
+  romAllRegions: "All regions", romLatestOnly: "Latest release per region",
+  romCatalogIdle: "Find a ROM for your device",
+  romCatalogIdleHint: "For example: device OP 13 or model CPH2653.",
+  romCatalogCount: "{count} releases", romCatalogRetry: "Could not load the ROM library. Search again to retry.",
+  romFilterRequired: "Enter a device family or model code to find a ROM.",
+  maintenanceGateTitle: "Studio is temporarily closed",
+  maintenanceGateStatus: "Running jobs continue safely in the background.",
+  maintenanceRefresh: "Check again",
+  maintenanceMessage: "Message shown to users",
+  enableMaintenance: "Enable maintenance",
+  disableMaintenance: "Reopen Mini App",
+  maintenanceAdminHint: "The admin keeps full access; users only see the maintenance screen.",
+  maintenanceOpenStatus: "Studio is open to users.",
+  maintenanceClosedStatus: "Users are being redirected to the maintenance screen.",
+  maintenanceEnabledToast: "Maintenance mode enabled.",
+  maintenanceDisabledToast: "The Mini App is open to users again.",
+  findRom: "Find ROM",
+  romCatalogKicker: "PUBLIC OTA CATALOG",
+  romCatalogTitle: "Find a source ROM",
+  romDeviceFilter: "Device / family",
+  romModelFilter: "Model code",
+  romRegionFilter: "Region",
+  searchRom: "Find ROM",
+  romCatalogNote: "Source: Daniel Springer · Wukong rechecks the link before building.",
+  romCatalogEmpty: "No matching ROM release was found.",
+  romCatalogLoading: "Searching for the latest ROM…",
+  useRom: "Analyze in Studio",
+  romSelected: "The OTA link was added to Studio and analysis has started."
+});
+
 const pipelineLabels = {
   vi: {
     inspect_rom: "Kiểm tra ROM", extract_payload: "Tách payload", unpack_partitions: "Giải nén partition",
@@ -414,6 +485,12 @@ const state = {
   mastheadFrame: 0,
   cacheClearPending: false,
   me: null,
+  maintenance: { enabled: false, message: "", updatedAt: "", updatedBy: "" },
+  maintenancePollTimer: null,
+  maintenanceMessageDirty: false,
+  romCatalogReleases: [],
+  romCatalogStatus: "idle",
+  romCatalogRequestId: 0,
   miniSessionId: "",
   adminUsers: [],
   adminUsersTotal: 0,
@@ -452,6 +529,7 @@ function applyLanguage() {
   renderSelectedJob();
   renderSessionDiagnostics();
   renderAccount();
+  renderRomCatalogResults();
   renderAdminUsers();
   renderDebloatSummary();
   updateSummary();
@@ -574,7 +652,8 @@ function miniApiAvailable() {
 }
 
 function privateApiAvailable() {
-  return miniApiAvailable() && state.me?.accessStatus === "approved";
+  return miniApiAvailable() && state.me?.accessStatus === "approved"
+    && (!state.maintenance?.enabled || state.me?.role === "admin");
 }
 
 function getMiniSessionId() {
@@ -621,6 +700,10 @@ async function apiRequest(path, options = {}) {
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (payload.code === "maintenance_mode" && payload.maintenance) {
+      state.maintenance = payload.maintenance;
+      renderAccessGate();
+    }
     const message = payload.code === "build_concurrency_limit"
       ? t("buildConcurrencyLimit")
       : payload.error || `HTTP ${response.status}`;
@@ -724,6 +807,7 @@ function animateLiquidPosition(target) {
 
 function navigate(name, smooth = true) {
   if (!document.getElementById(name)) name = "build";
+  document.body.dataset.view = name;
   if ($("#system")?.classList.contains("admin-user-open")) {
     closeAdminUserPage({ restoreFocus: false, scroll: false });
   }
@@ -2173,8 +2257,13 @@ function renderProfileView() {
 
 function initializeApprovedWorkspace() {
   if (state.me?.accessStatus !== "approved") return;
-  document.body.classList.remove("access-checking", "access-limited");
+  if (state.maintenance?.enabled && state.me?.role !== "admin") {
+    renderAccessGate();
+    return;
+  }
+  document.body.classList.remove("access-checking", "access-limited", "maintenance-limited");
   $("#access-gate").hidden = true;
+  $("#maintenance-gate").hidden = true;
   if (state.workspaceLoaded) return;
   state.workspaceLoaded = true;
   navigate(location.hash.slice(1) || "build", false);
@@ -2187,9 +2276,32 @@ function renderAccessGate() {
   const profile = state.me;
   const gate = $("#access-gate");
   if (!gate) return;
+  const maintenanceGate = $("#maintenance-gate");
+  const maintenanceLimited = Boolean(state.maintenance?.enabled && profile?.role !== "admin");
+  if (maintenanceLimited) {
+    document.body.classList.remove("access-checking", "access-limited");
+    document.body.classList.add("maintenance-limited");
+    gate.hidden = true;
+    maintenanceGate.hidden = false;
+    $("#maintenance-gate-message").textContent = state.maintenance.message || t("maintenanceGateTitle");
+    clearTimeout(state.jobsPollTimer);
+    clearTimeout(state.sourceProbeTimer);
+    state.sourceProbeController?.abort();
+    $$("dialog[open]").forEach((dialog) => dialog.close());
+    clearTimeout(state.maintenancePollTimer);
+    if (!document.hidden) state.maintenancePollTimer = setTimeout(() => {
+      loadSession({ countOpen: false }).catch(() => renderAccessGate());
+    }, 30000);
+    return;
+  }
+  const wasLimited = document.body.classList.contains("maintenance-limited");
+  clearTimeout(state.maintenancePollTimer);
+  document.body.classList.remove("maintenance-limited");
+  maintenanceGate.hidden = true;
   const approved = profile?.accessStatus === "approved";
   if (approved) {
     initializeApprovedWorkspace();
+    if (wasLimited && state.workspaceLoaded) loadJobs().catch(() => {});
     return;
   }
   document.body.classList.remove("access-checking");
@@ -2214,6 +2326,27 @@ function renderAccessGate() {
     const avatar = $(".access-card .profile-avatar");
     if (avatar) avatar.id = "access-avatar";
   }
+}
+
+function renderMaintenanceAdmin() {
+  const maintenance = state.maintenance || { enabled: false, message: "" };
+  const enabled = Boolean(maintenance.enabled);
+  const input = $("#maintenance-message-input");
+  const toggle = $("#maintenance-toggle");
+  const badge = $("#maintenance-state-badge");
+  if (input && !state.maintenanceMessageDirty) {
+    input.value = maintenance.message || "Hệ thống đang được bảo trì. Vui lòng quay lại sau.";
+  }
+  if (toggle) {
+    toggle.classList.toggle("enabled", enabled);
+    toggle.querySelector("span").textContent = t(enabled ? "disableMaintenance" : "enableMaintenance");
+  }
+  if (badge) {
+    badge.classList.toggle("enabled", enabled);
+    badge.textContent = enabled ? "BẢO TRÌ" : "ĐANG MỞ";
+  }
+  const status = $("#maintenance-admin-status");
+  if (status) status.textContent = t(enabled ? "maintenanceClosedStatus" : "maintenanceOpenStatus");
 }
 
 function renderAccount() {
@@ -2242,6 +2375,7 @@ function renderAccount() {
   const admin = profile.role === "admin";
   $("#user-admin").hidden = !admin;
   $("#admin-maintenance").hidden = !admin;
+  renderMaintenanceAdmin();
   renderAccessGate();
 }
 
@@ -2251,10 +2385,145 @@ async function loadSession({ countOpen = true } = {}) {
     method: countOpen ? "POST" : "GET"
   });
   state.me = payload.user || null;
+  state.maintenance = payload.maintenance || state.maintenance;
   renderAccount();
   updateSummary();
   if (state.me?.role === "admin") loadAdminUsers().catch(() => {});
   return state.me;
+}
+
+async function updateMaintenance() {
+  if (state.me?.role !== "admin") return;
+  const button = $("#maintenance-toggle");
+  const enabled = !Boolean(state.maintenance?.enabled);
+  const message = $("#maintenance-message-input").value.trim();
+  if (!message) {
+    toast(t("maintenanceMessage"), true);
+    return;
+  }
+  button.disabled = true;
+  try {
+    const payload = await apiRequest("/v1/system/maintenance", {
+      method: "PUT",
+      body: JSON.stringify({ enabled, message })
+    });
+    state.maintenance = payload.maintenance;
+    state.maintenanceMessageDirty = false;
+    renderMaintenanceAdmin();
+    toast(t(enabled ? "maintenanceEnabledToast" : "maintenanceDisabledToast"));
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderRomCatalogResults() {
+  const target = $("#rom-catalog-results");
+  if (!target) return;
+  const status = state.romCatalogStatus;
+  target.setAttribute("aria-busy", String(status === "loading"));
+  $("#rom-catalog-status").textContent = status === "ready"
+    ? t("romCatalogCount", { count: state.romCatalogReleases.length })
+    : status === "loading" ? t("romCatalogLoading") : "";
+  if (status !== "ready") {
+    const empty = document.createElement("div");
+    empty.className = "rom-catalog-empty";
+    const title = document.createElement("strong");
+    title.textContent = t(status === "loading" ? "romCatalogLoading" : status === "error" ? "romCatalogRetry" : "romCatalogIdle");
+    empty.append(title);
+    if (status === "idle") {
+      const hint = document.createElement("p");
+      hint.textContent = t("romCatalogIdleHint");
+      empty.append(hint);
+    }
+    target.replaceChildren(empty);
+    return;
+  }
+  if (!state.romCatalogReleases.length) {
+    const empty = document.createElement("p");
+    empty.className = "rom-catalog-empty";
+    empty.textContent = t("romCatalogEmpty");
+    target.replaceChildren(empty);
+    return;
+  }
+  target.replaceChildren(...state.romCatalogReleases.map((release) => {
+    const row = document.createElement("article");
+    row.className = "rom-release";
+    const copy = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = [release.device || release.model || "ROM", release.region].filter(Boolean).join(" · ");
+    const version = document.createElement("p");
+    version.className = "rom-release-version";
+    version.textContent = release.version || release.otaVersion || "—";
+    const meta = document.createElement("small");
+    meta.textContent = [
+      release.model,
+      release.securityPatch ? `${t("securityPatch")}: ${release.securityPatch}` : "",
+      Number(release.sizeBytes) > 0 ? formatBytes(release.sizeBytes) : ""
+    ].filter(Boolean).join(" · ");
+    copy.append(title, version, meta);
+    const use = document.createElement("button");
+    use.type = "button";
+    use.textContent = t("useRom");
+    use.addEventListener("click", () => {
+      const source = $("#source-uri");
+      source.value = release.sourceUrl;
+      source.dispatchEvent(new Event("input", { bubbles: true }));
+      navigate("build");
+      source.focus({ preventScroll: true });
+      toast(t("romSelected"));
+    });
+    row.append(copy, use);
+    return row;
+  }));
+}
+
+async function searchRomCatalog() {
+  if (state.romCatalogStatus === "loading") return;
+  const button = $("#search-rom-catalog");
+  const params = new URLSearchParams({ latest: "1" });
+  const filters = {
+    device: $("#rom-device-filter").value.trim(),
+    model: $("#rom-model-filter").value.trim(),
+    region: $("#rom-region-filter").value.trim()
+  };
+  if (!filters.device && !filters.model) {
+    toast(t("romFilterRequired"), true);
+    $("#rom-device-filter").focus();
+    return;
+  }
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  button.disabled = true;
+  const requestId = ++state.romCatalogRequestId;
+  state.romCatalogStatus = "loading";
+  renderRomCatalogResults();
+  try {
+    const payload = await apiRequest(`/v1/rom-catalog?${params.toString()}`);
+    if (requestId !== state.romCatalogRequestId) return;
+    state.romCatalogReleases = Array.isArray(payload.releases) ? payload.releases : [];
+    state.romCatalogStatus = "ready";
+    renderRomCatalogResults();
+  } catch (error) {
+    if (requestId !== state.romCatalogRequestId) return;
+    state.romCatalogReleases = [];
+    state.romCatalogStatus = "error";
+    renderRomCatalogResults();
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function selectLibraryTab(name, focus = false) {
+  const rom = name === "rom";
+  $("#rom-catalog-panel").hidden = !rom;
+  $("#library-technical").hidden = rom;
+  $$('[data-library-tab]').forEach((button) => {
+    const selected = button.dataset.libraryTab === name;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (selected && focus) button.focus();
+  });
 }
 
 function accessLabel(status) { return t(["pending", "approved", "revoked"].includes(status) ? status : "pending"); }
@@ -3091,6 +3360,8 @@ async function loadJobs({ force = false } = {}) {
       ? `?jobId=${encodeURIComponent(requestedId)}&after=${after}`
       : "";
     const payload = await apiRequest(`/v1/sync${query}`);
+    state.maintenance = payload.maintenance || state.maintenance;
+    renderAccount();
     state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
     const running = state.jobs.find((job) => !terminalJobStatuses.has(job.status));
     const selectedExists = state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
@@ -3309,12 +3580,38 @@ function bindEvents() {
   });
   $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
   $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
+  $("#open-rom-catalog").addEventListener("click", () => {
+    selectLibraryTab("rom");
+    navigate("catalog");
+    $("#rom-device-filter").focus();
+  });
+  $("#rom-catalog-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    searchRomCatalog();
+  });
+  $$('[data-library-tab]').forEach((button) => {
+    button.addEventListener("click", () => selectLibraryTab(button.dataset.libraryTab));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const name = event.key === "Home" ? "rom" : event.key === "End" ? "technical"
+        : button.dataset.libraryTab === "rom" ? "technical" : "rom";
+      selectLibraryTab(name, true);
+    });
+  });
   $("#paste-source").addEventListener("click", () => pasteSourceFromClipboard().catch((error) => toast(error.message, true)));
   $("#connect-telegram").addEventListener("click", () => connectTelegramSession());
   $("#refresh-access").addEventListener("click", () => {
     if (!miniApiAvailable()) { connectTelegramSession(); return; }
     loadSession({ countOpen: false }).catch((error) => toast(error.message, true));
   });
+  $("#refresh-maintenance").addEventListener("click", () => {
+    loadSession({ countOpen: false }).catch((error) => toast(error.message, true));
+  });
+  $("#maintenance-toggle").addEventListener("click", () => {
+    updateMaintenance().catch((error) => toast(error.message, true));
+  });
+  $("#maintenance-message-input").addEventListener("input", () => { state.maintenanceMessageDirty = true; });
   $("#clear-source").addEventListener("click", clearSource);
   $("#probe-source").addEventListener("click", () => {
     clearTimeout(state.sourceProbeTimer);
@@ -3388,6 +3685,7 @@ function bindEvents() {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       clearTimeout(state.jobsPollTimer);
+      clearTimeout(state.maintenancePollTimer);
       clearInterval(state.greetingTimer);
     }
     else {
