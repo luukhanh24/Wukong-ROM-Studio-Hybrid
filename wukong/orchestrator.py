@@ -290,6 +290,7 @@ class HybridOrchestrator:
             owner=identity,
             recipe_digest=recipe.digest,
             runner=decision.runner,
+            rom_metadata=dict(recipe.source.metadata),
         )
 
     def compensate_submission(

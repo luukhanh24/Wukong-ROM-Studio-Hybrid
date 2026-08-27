@@ -152,6 +152,14 @@ class GitHubActionsUITests(unittest.TestCase):
         self.assertNotIn("CALLBACK_SECRET: ${{ github.token }}", workflow)
         self.assertIn("GITHUB_STEP_SUMMARY", workflow)
         self.assertIn("E · Pipeline 05–19", action)
+        self.assertIn(
+            "python3 -m tools.merge_source_probe --recipe .wkstudio/recipe.json --probe .wkstudio/source-probe.json",
+            action,
+        )
+        self.assertLess(
+            action.index("python3 -m tools.merge_source_probe"),
+            action.index('submit --recipe .wkstudio/recipe.json'),
+        )
         self.assertIn("Terminal notification deferred to the always-on control plane", (ROOT / "studio_core.py").read_text(encoding="utf-8"))
         self.assertNotIn("${{ secrets.WUKONG_TELEGRAM_BOT_TOKEN }}", workflow)
 

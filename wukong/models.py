@@ -106,6 +106,33 @@ def _boolean(data: Mapping[str, Any], key: str, default: bool) -> bool:
     return value
 
 
+def _source_metadata(value: object, *, reject_invalid: bool) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        if reject_invalid:
+            raise RecipeValidationError("ROM source metadata must be an object")
+        return {}
+    metadata: dict[str, str] = {}
+    for key, raw_value in value.items():
+        name = str(key)
+        if name not in SOURCE_METADATA_KEYS:
+            if reject_invalid:
+                raise RecipeValidationError(f"Unsupported ROM source metadata field: {name}")
+            continue
+        if not isinstance(raw_value, str):
+            if reject_invalid:
+                raise RecipeValidationError(f"ROM source metadata {name} must be text")
+            continue
+        normalized = raw_value.strip()
+        if not normalized:
+            continue
+        if len(normalized) > 1024 or any(ord(character) < 32 for character in normalized):
+            if reject_invalid:
+                raise RecipeValidationError(f"ROM source metadata {name} is invalid")
+            continue
+        metadata[name] = normalized
+    return metadata
+
+
 class JobStatus(str, Enum):
     QUEUED = "queued"
     PREFLIGHT = "preflight"
@@ -170,21 +197,7 @@ class SourceSpec:
         sha256 = str(payload.get("sha256") or "").strip().casefold() or None
         raw_size = payload.get("sizeBytes")
         size_bytes = int(raw_size) if raw_size is not None else None
-        raw_metadata = payload.get("metadata", {})
-        if not isinstance(raw_metadata, Mapping):
-            raise RecipeValidationError("ROM source metadata must be an object")
-        metadata: dict[str, str] = {}
-        for key, raw_value in raw_metadata.items():
-            name = str(key)
-            if name not in SOURCE_METADATA_KEYS:
-                raise RecipeValidationError(f"Unsupported ROM source metadata field: {name}")
-            if not isinstance(raw_value, str):
-                raise RecipeValidationError(f"ROM source metadata {name} must be text")
-            value = raw_value.strip()
-            if value:
-                if len(value) > 1024 or any(ord(character) < 32 for character in value):
-                    raise RecipeValidationError(f"ROM source metadata {name} is invalid")
-                metadata[name] = value
+        metadata = _source_metadata(payload.get("metadata", {}), reject_invalid=True)
         if kind not in SOURCE_KINDS:
             raise RecipeValidationError(f"Unsupported ROM source kind: {kind or '<empty>'}")
         if not uri:
@@ -466,6 +479,7 @@ class JobManifest:
     external_run_id: int | None = None
     checkpoint: str | None = None
     checkpoint_at: str | None = None
+    rom_metadata: dict[str, str] = field(default_factory=dict)
     artifacts: list[ArtifactRecord] = field(default_factory=list)
     error: str | None = None
     created_at: str = field(default_factory=utc_now)
@@ -494,6 +508,10 @@ class JobManifest:
             ),
             checkpoint=(str(payload.get("checkpoint") or "") or None),
             checkpoint_at=(str(payload.get("checkpoint_at", payload.get("checkpointAt")) or "") or None),
+            rom_metadata=_source_metadata(
+                payload.get("rom_metadata", payload.get("romMetadata", {})),
+                reject_invalid=False,
+            ),
             artifacts=[
                 ArtifactRecord.from_dict(item)
                 for item in payload.get("artifacts", [])

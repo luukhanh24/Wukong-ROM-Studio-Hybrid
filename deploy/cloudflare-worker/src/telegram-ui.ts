@@ -75,7 +75,6 @@ function menu(env: Env, language: string): TelegramUiResponse {
         { text: en ? "📦 Jobs" : "📦 Job", callback_data: "v1:jobs" },
         { text: en ? "👤 Account" : "👤 Tài khoản", callback_data: "v1:account" }
       ],
-      [{ text: en ? "☁️ Cloud library" : "☁️ Thư viện cloud", callback_data: "v1:cloud" }],
       [
         { text: en ? "🩺 Diagnostics" : "🩺 Chẩn đoán", callback_data: "v1:diag" },
         { text: en ? "🇻🇳 Tiếng Việt" : "🇬🇧 English", callback_data: `v1:lang:${en ? "vi" : "en"}` }
