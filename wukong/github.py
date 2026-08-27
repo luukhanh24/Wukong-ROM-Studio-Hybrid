@@ -94,7 +94,17 @@ class GitHubActionsAdapter:
         }
 
     def runner_inventory(self) -> RunnerInventory:
-        result = self._call("GET", f"{self.repo_url}/actions/runners?per_page=100", None)
+        try:
+            result = self._call("GET", f"{self.repo_url}/actions/runners?per_page=100", None)
+        except GitHubApiError as exc:
+            # The workflow-scoped GITHUB_TOKEN can dispatch and inspect runs,
+            # but GitHub does not grant it repository runner-administration
+            # permission. Runner discovery is an optional optimization for
+            # github-auto, so an authorization failure means "no usable
+            # self-hosted runner is visible" rather than aborting the build.
+            if "HTTP 403" not in str(exc):
+                raise
+            return RunnerInventory(False)
         entries = result.get("runners", []) if isinstance(result, dict) else []
         required = set(SELF_HOSTED_LABELS)
         online = False

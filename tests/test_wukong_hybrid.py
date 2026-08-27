@@ -1728,6 +1728,20 @@ class ControlAdapterContractTests(unittest.TestCase):
         inventory = GitHubActionsAdapter("owner", "repo", "token", transport=transport).runner_inventory()
         self.assertTrue(inventory.self_hosted_online)
 
+    def test_github_runner_inventory_treats_forbidden_listing_as_unavailable(self) -> None:
+        def transport(method: str, url: str, payload: dict[str, object] | None = None) -> object:
+            raise GitHubApiError(
+                "GitHub returned HTTP 403: You must have repository read permissions "
+                "or have the repository runners fine-grained permission."
+            )
+
+        inventory = GitHubActionsAdapter("owner", "repo", "token", transport=transport).runner_inventory()
+
+        self.assertFalse(inventory.self_hosted_online)
+        self.assertEqual(0, inventory.free_disk_bytes)
+        self.assertEqual(0, inventory.memory_bytes)
+        self.assertEqual(0, inventory.logical_cpus)
+
     def test_github_api_error_redacts_token(self) -> None:
         adapter = GitHubActionsAdapter(
             "owner",
