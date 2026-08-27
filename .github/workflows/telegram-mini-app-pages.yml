@@ -66,32 +66,30 @@ jobs:
         run: npm install --global vercel@59.5.0
       - name: Build production bundle locally
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           WUKONG_RELEASE_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ steps.deployment-mode.outputs.mode }}" == cli ]]; then
-            vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
-            vercel build --prod --token "$VERCEL_TOKEN"
-          else
-            python -m tools.build_vercel_mini_app
-          fi
+          python -m tools.build_vercel_mini_app
           legacy_github_owner='luukhan''h24'
           legacy_cloudflare_handle='luuxuank''hanh98'
           repository_name="${GITHUB_REPOSITORY#*/}"
           ! grep -R -Ei \
             "github\.com|github\.io|${GITHUB_REPOSITORY_OWNER}|${repository_name}|${legacy_github_owner}|${legacy_cloudflare_handle}|DATABASE_URL|github_pat_" \
             .vercel-static
-      - name: Deploy prebuilt bundle to Vercel
+      - name: Deploy bundle to Vercel
         if: steps.deployment-mode.outputs.mode == 'cli'
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          WUKONG_RELEASE_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")"
+          deployment_url="$(vercel deploy --yes --prod --archive=tgz \
+            --build-env "WUKONG_TELEGRAM_MINI_APP_API_URL=$WUKONG_TELEGRAM_MINI_APP_API_URL" \
+            --build-env "WUKONG_RELEASE_SHA=$WUKONG_RELEASE_SHA" \
+            --token "$VERCEL_TOKEN")"
           [[ "$deployment_url" == https://* ]]
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
       - name: Verify stable production domain
