@@ -38,14 +38,17 @@ describe("ROM discovery catalog", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it("returns selectable historical versions newest first", async () => {
+    const upstreamUrls: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
-      expect(new URL(String(input)).searchParams.get("latest")).toBe("0");
+      upstreamUrls.push(String(input));
       return Response.json({ releases: [
         { id: "old", device: "OP ACE 5", version: "16.0.9.500", build_timestamp: 1700000000, source_url: "https://cdn.example/old.zip" },
         { id: "new", device: "OP ACE 5", version: "16.0.10.500", build_timestamp: 1800000000, source_url: "https://cdn.example/new.zip" }
       ] });
     }));
     const response = await SELF.fetch("https://worker.example/v1/rom-catalog?device=OP+ACE+5&latest=0", { headers: await tmaHeaders(1678823419) });
+    // Public API accepts only latest=1; history must omit the parameter.
+    expect(upstreamUrls).toEqual(["https://roms.danielspringer.at/api/ota.php?device=OP+ACE+5"]);
     expect((await response.json() as { releases: {id:string}[] }).releases.map(r => r.id)).toEqual(["new", "old"]);
   });
   afterEach(() => {

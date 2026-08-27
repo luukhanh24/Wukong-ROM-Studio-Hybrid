@@ -125,6 +125,8 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
     upstream.searchParams.set(key, value);
   }
   if (!upstream.searchParams.has("latest")) upstream.searchParams.set("latest", "1");
+  // The public catalog accepts latest=1 only; absence means full history.
+  if (upstream.searchParams.get("latest") === "0") upstream.searchParams.delete("latest");
   if (!devicesOnly && !upstream.searchParams.has("device") && !upstream.searchParams.has("model")) {
     throw new RomCatalogHttpError("Enter a device or model filter", 400);
   }
