@@ -112,8 +112,8 @@ function effectiveInitDataUnsafe() {
 const translations = {
   vi: {
     connected: "BOT ĐÃ KẾT NỐI", buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
-    routePolicy: "ĐỊNH TUYẾN", sourceTitle: "ROM nguồn", sourceHint: "Dùng URL trực tiếp, trang build Daniel Springer hoặc đường dẫn Drive riêng tư.",
-    taskBuild: "Build đầy đủ", sourceUrl: "URL hoặc Drive reference", sourceSecure: "URL ký tạm thời được che khỏi bản tóm tắt và log.",
+    routePolicy: "ĐỊNH TUYẾN", sourceTitle: "ROM nguồn", sourceHint: "Dùng URL trực tiếp, link OPlus chưa resolve hoặc trang build Daniel Springer.",
+    taskBuild: "Build đầy đủ", sourceUrl: "Dán link ROM", sourceSecure: "URL ký tạm thời được che khỏi bản tóm tắt và log.",
     device: "Thiết bị", sourceSize: "Dung lượng ROM (byte)", recipeTitle: "Cấu hình bản ROM",
     recipeHint: "Preset đặt mặc định; bạn vẫn có thể chọn chính xác từng MOD và bước pipeline.", runner: "Runner", edition: "Phiên bản", modPack: "Bộ MOD",
     mods: "MOD áp dụng", defaults: "Mặc định", selectAll: "Chọn tất cả", clear: "Bỏ chọn", advanced: "Thiết đặt pipeline nâng cao",
@@ -138,8 +138,8 @@ const translations = {
   },
   en: {
     connected: "BOT CONNECTED", buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
-    routePolicy: "ROUTING", sourceTitle: "Source ROM", sourceHint: "Use a direct URL, Daniel Springer build page, or a private Drive reference.",
-    taskBuild: "Full build", sourceUrl: "URL or Drive reference", sourceSecure: "Short-lived signed URLs are hidden from summaries and logs.",
+    routePolicy: "ROUTING", sourceTitle: "Source ROM", sourceHint: "Use a direct URL, unresolved OPlus link, or Daniel Springer build page.",
+    taskBuild: "Full build", sourceUrl: "Paste a ROM link", sourceSecure: "Short-lived signed URLs are hidden from summaries and logs.",
     device: "Device", sourceSize: "ROM size (bytes)", recipeTitle: "ROM configuration",
     recipeHint: "Presets provide defaults; every MOD and pipeline stage remains selectable.", runner: "Runner", edition: "Edition", modPack: "MOD pack",
     mods: "Applied MODs", defaults: "Defaults", selectAll: "Select all", clear: "Clear", advanced: "Advanced pipeline settings",
@@ -167,7 +167,7 @@ const translations = {
 Object.assign(translations.vi, {
   navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Wukong Studio",
   buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.", routePolicy: "RUNNER",
-  sourceHint: "URL trực tiếp, link OPlus chưa resolve hoặc Drive riêng tư.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp, OPlus chưa resolve và Drive. URL ký tạm thời không xuất hiện trong log.",
+  sourceHint: "URL trực tiếp hoặc link OPlus chưa resolve.", sourceUrl: "Dán link ROM", sourceSecure: "Chấp nhận link trực tiếp và OPlus chưa resolve. URL ký tạm thời không xuất hiện trong log.",
   recipeHint: "Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.", runner: "Nơi chạy", modPack: "Nền MOD",
   deliveryTitle: "Kết quả build", deliveryHint: "Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.",
   packageZip: "ZIP flashable", packageHint: "Đóng gói sau repack", publish: "Upload Drive", publishHint: "Tạo link tải khi thành công",
@@ -210,7 +210,7 @@ Object.assign(translations.vi, {
 Object.assign(translations.en, {
   navBuild: "Studio", navCatalog: "Catalog", buildTitle: "Wukong Studio",
   buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.", routePolicy: "RUNNER",
-  sourceHint: "Use a direct URL, unresolved OPlus link, or private Drive reference.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct links, unresolved OPlus links and Drive are supported. Signed URLs never appear in logs.",
+  sourceHint: "Use a direct URL or unresolved OPlus link.", sourceUrl: "Paste a ROM link", sourceSecure: "Direct and unresolved OPlus links are supported. Signed URLs never appear in logs.",
   recipeHint: "A preset is the starting point; every MOD and stage remains editable.", runner: "Run on", modPack: "MOD base",
   deliveryTitle: "Build result", deliveryHint: "Package the ZIP, upload it to Drive and send the link through Telegram.",
   packageZip: "Flashable ZIP", packageHint: "Package after repacking", publish: "Upload to Drive", publishHint: "Create a link after success",
@@ -242,7 +242,7 @@ Object.assign(translations.vi, {
   accessRevokedKicker: "QUYỀN TRUY CẬP ĐÃ THU HỒI", accessRevokedTitle: "Tài khoản chưa thể mở Studio", accessRevokedMessage: "Liên hệ quản trị viên nếu bạn cần khôi phục quyền truy cập.",
   accessConnectKicker: "CHƯA KẾT NỐI TELEGRAM", accessConnectTitle: "Kết nối tài khoản để tiếp tục", accessConnectMessage: "Mở Mini App từ bot hoặc kết nối Telegram để xác thực an toàn.",
   accountDetails: "Thông tin tài khoản", refreshAccess: "Kiểm tra lại quyền", runtimeAllowance: "LƯỢT BUILD · JOBS", allowanceSummary: "{remaining} còn lại · {used} đã dùng · {jobs} job",
-  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", totalUsers: "Tổng người dùng", revokedUsers: "Đã thu hồi",
+  lastJob: "Job gần nhất", role: "Vai trò", lifetime: "Tổng lượt", lifetimeSummary: "{granted} đã cấp · {used} đã dùng", client: "Thiết bị khách", approvedAt: "Thời điểm duyệt", revokedAt: "Thời điểm thu hồi", accessActor: "Người thao tác", accessReason: "Lý do", totalUsers: "Tổng người dùng", approvedUsers: "Đã cấp quyền", pendingUsers: "Chờ cấp quyền", revokedUsers: "Đã thu hồi",
   backToUsers: "Người dùng & lượt build", adminActionKicker: "CẬP NHẬT QUYỀN", creditValue: "Số lượt build", actionReason: "Lý do", confirmAction: "Xác nhận", adminActionMessage: "Thay đổi này sẽ được lưu vào nhật ký truy cập của người dùng.", actionValueInvalid: "Nhập số lượt hợp lệ.", actionReasonRequired: "Hãy nhập lý do cho thay đổi này."
 });
 Object.assign(translations.en, {
@@ -259,7 +259,7 @@ Object.assign(translations.en, {
   accessRevokedKicker: "ACCESS REVOKED", accessRevokedTitle: "Studio is not available for this account", accessRevokedMessage: "Contact an administrator if you need access restored.",
   accessConnectKicker: "TELEGRAM NOT CONNECTED", accessConnectTitle: "Connect your account to continue", accessConnectMessage: "Open the Mini App from the bot or connect Telegram for secure authentication.",
   accountDetails: "Account details", refreshAccess: "Check access again", runtimeAllowance: "BUILD ALLOWANCE · JOBS", allowanceSummary: "{remaining} left · {used} used · {jobs} jobs",
-  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", totalUsers: "Total users", revokedUsers: "Revoked",
+  lastJob: "Last job", role: "Role", lifetime: "Lifetime allowance", lifetimeSummary: "{granted} granted · {used} used", client: "Client", approvedAt: "Approved at", revokedAt: "Revoked at", accessActor: "Access actor", accessReason: "Access reason", totalUsers: "Total users", approvedUsers: "Approved", pendingUsers: "Pending approval", revokedUsers: "Revoked",
   backToUsers: "Users & build credits", adminActionKicker: "UPDATE ACCESS", creditValue: "Build credits", actionReason: "Reason", confirmAction: "Confirm", adminActionMessage: "This change will be retained in the user's access audit trail.", actionValueInvalid: "Enter a valid credit value.", actionReasonRequired: "Enter a reason for this change."
 });
 
@@ -417,8 +417,7 @@ const state = {
   miniSessionId: "",
   adminUsers: [],
   adminUsersTotal: 0,
-  adminUsersOverallTotal: 0,
-  adminUsersRevokedTotal: 0,
+  adminUserStatusCounts: { approved: 0, pending: 0, revoked: 0 },
   adminUsersOffset: 0,
   adminUsersLoading: false,
   selectedAdminUserId: "",
@@ -906,6 +905,10 @@ const sourceFactDefinitions = [
   ["source-deep-inspection", "deepInspection"]
 ];
 
+const completenessSourceFactIds = sourceFactDefinitions
+  .map(([id]) => id)
+  .filter((id) => id !== "source-deep-inspection");
+
 const requiredSourceFactIds = sourceFactDefinitions
   .map(([id]) => id)
   .filter((id) => ![
@@ -924,13 +927,20 @@ function setSourceFact(id, value) {
 }
 
 function updateMetadataCompleteness() {
-  const complete = requiredSourceFactIds.filter((id) => {
+  const completed = (ids) => ids.filter((id) => {
     const value = $(`#${id}`)?.textContent?.trim();
     return value && value !== "—" && value !== "···";
   }).length;
-  const total = requiredSourceFactIds.length;
+  const complete = completed(completenessSourceFactIds);
+  const total = completenessSourceFactIds.length;
+  const requiredComplete = completed(requiredSourceFactIds);
   $("#source-metadata-count").textContent = t("metadataCompleteness", { complete, total });
-  return { complete, total };
+  return {
+    complete,
+    total,
+    requiredComplete,
+    requiredTotal: requiredSourceFactIds.length
+  };
 }
 
 function resetSourceFacts(detection, uri) {
@@ -1234,7 +1244,8 @@ function updateSourceDetection() {
   if (state.sourceProbeUri === currentUri && state.sourceProbe?.result) {
     const completeness = applyProbeResult(state.sourceProbe.result, currentUri, { announce: false });
     const previewOnly = state.sourceProbe.status === "preview-only";
-    setProbePresentation(previewOnly ? "preview-only" : completeness.complete === completeness.total ? "analyzed" : "probe-limited", previewOnly ? "probeSignedPreviewOnly" : completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
+    const coreComplete = completeness.requiredComplete === completeness.requiredTotal;
+    setProbePresentation(previewOnly ? "preview-only" : coreComplete ? "analyzed" : "probe-limited", previewOnly ? "probeSignedPreviewOnly" : coreComplete ? "probeSuccess" : "probePartial");
     return;
   }
   if (!probe.hidden && !miniApiEndpoint) presentMissingApi();
@@ -1689,7 +1700,7 @@ function applyProbeResult(result, uri, { announce = true } = {}) {
   selectModPackForVersion(version);
   state.sourceProbeUri = uri;
   const completeness = updateMetadataCompleteness();
-  state.sourceProbe = { status: result?.cloudBuildReady === false ? "preview-only" : completeness.complete === completeness.total ? "analyzed" : "partial", result };
+  state.sourceProbe = { status: result?.cloudBuildReady === false ? "preview-only" : completeness.requiredComplete === completeness.requiredTotal ? "analyzed" : "partial", result };
   updateSummary();
   return completeness;
 }
@@ -1725,7 +1736,8 @@ async function probeSourceInPlace() {
     if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
     const completeness = applyProbeResult(result, uri);
     const previewOnly = state.sourceProbe.status === "preview-only";
-    setProbePresentation(previewOnly ? "preview-only" : completeness.complete === completeness.total ? "analyzed" : "probe-limited", previewOnly ? "probeSignedPreviewOnly" : completeness.complete === completeness.total ? "probeSuccess" : "probePartial");
+    const coreComplete = completeness.requiredComplete === completeness.requiredTotal;
+    setProbePresentation(previewOnly ? "preview-only" : coreComplete ? "analyzed" : "probe-limited", previewOnly ? "probeSignedPreviewOnly" : coreComplete ? "probeSuccess" : "probePartial");
   } catch (error) {
     if (requestId !== state.sourceProbeRequestId || uri !== $("#source-uri").value.trim()) return;
     if (error?.name === "AbortError" && !timedOut) return;
@@ -2273,8 +2285,11 @@ function renderAdminUsers() {
   const start = state.adminUsersTotal ? state.adminUsersOffset + 1 : 0;
   const end = Math.min(state.adminUsersOffset + state.adminUsers.length, state.adminUsersTotal);
   $("#user-page-summary").textContent = `${start}–${end} / ${state.adminUsersTotal}`;
-  $("#user-total-count").textContent = String(state.adminUsersOverallTotal);
-  $("#user-revoked-count").textContent = String(state.adminUsersRevokedTotal);
+  const counts = state.adminUserStatusCounts;
+  $("#user-total-count").textContent = String(counts.approved + counts.pending + counts.revoked);
+  $("#user-approved-count").textContent = String(counts.approved);
+  $("#user-pending-count").textContent = String(counts.pending);
+  $("#user-revoked-count").textContent = String(counts.revoked);
   $("#user-prev").disabled = state.adminUsersOffset <= 0;
   $("#user-next").disabled = end >= state.adminUsersTotal;
 }
@@ -2292,13 +2307,12 @@ async function loadAdminUsers({ reset = false } = {}) {
     const payload = await apiRequest(`/v1/admin/users?query=${query}&status=${status}&quota=${quota}&activity=${activity}&sort=${sort}&offset=${state.adminUsersOffset}&limit=25`);
     state.adminUsers = Array.isArray(payload.users) ? payload.users : [];
     state.adminUsersTotal = Number(payload.total || 0);
-    renderAdminUsers();
-    const [totalResult, revokedResult] = await Promise.allSettled([
-      apiRequest("/v1/admin/users?offset=0&limit=1"),
-      apiRequest("/v1/admin/users?status=revoked&offset=0&limit=1")
-    ]);
-    if (totalResult.status === "fulfilled") state.adminUsersOverallTotal = Number(totalResult.value.total || 0);
-    if (revokedResult.status === "fulfilled") state.adminUsersRevokedTotal = Number(revokedResult.value.total || 0);
+    const statusCounts = payload.statusCounts || {};
+    state.adminUserStatusCounts = {
+      approved: Number(statusCounts.approved || 0),
+      pending: Number(statusCounts.pending || 0),
+      revoked: Number(statusCounts.revoked || 0)
+    };
     renderAdminUsers();
   } finally { state.adminUsersLoading = false; }
 }

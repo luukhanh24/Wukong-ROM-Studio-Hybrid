@@ -442,11 +442,12 @@ window.addEventListener('load', () => {{
             self._send(json.dumps({"count": type(self).cache_clear_requests}).encode(), "application/json")
             return
         if path == "/v1/admin/users" and self.admin_user:
-            if "status=revoked" in self.path:
-                self._send(json.dumps({"users": [], "total": 2}).encode(), "application/json")
-                return
             user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
-            self._send(json.dumps({"users": [user], "total": 7}).encode(), "application/json")
+            self._send(json.dumps({
+                "users": [user],
+                "total": 7,
+                "statusCounts": {"approved": 4, "pending": 1, "revoked": 2},
+            }).encode(), "application/json")
             return
         if path == "/v1/admin/users/88" and self.admin_user:
             user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
@@ -1009,7 +1010,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotRegex(dom, r'id="user-admin"[^>]* hidden')
         self.assertIn("Người dùng &amp; lượt build", dom)
         self.assertIn('id="user-total-count">7</strong>', dom)
+        self.assertIn('id="user-approved-count">4</strong>', dom)
+        self.assertIn('id="user-pending-count">1</strong>', dom)
         self.assertIn('id="user-revoked-count">2</strong>', dom)
+        self.assertIn("Đã cấp quyền", dom)
+        self.assertIn("Chờ cấp quyền", dom)
         self.assertNotRegex(dom, r'id="admin-maintenance"[^>]* hidden')
         self.assertIn("New User", dom)
         self.assertIn("@new_user", dom)
@@ -1093,7 +1098,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("`A ${sideRadius} ${sideRadius} 0 0 1", script)
         self.assertIn('.profile-highlight { text-align:center; }', styles)
         self.assertIn('$("#admin-maintenance").hidden = true;', script)
-        self.assertIn("Promise.allSettled", script)
+        self.assertIn("payload.statusCounts", script)
+        self.assertNotIn("Promise.allSettled", script)
         self.assertNotIn('data-i18n="secretBoundary"', html)
 
     def test_profile_sheet_excludes_open_count_and_theme_can_be_overridden(self) -> None:
@@ -1265,6 +1271,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn('send("probe_source"', script)
         self.assertNotIn("resolvedUrl", html + script)
         self.assertNotIn("Signature=signed", html + script)
+        self.assertNotIn("OPlus chưa resolve và Drive", html + script)
+        self.assertNotIn("unresolved OPlus links and Drive", html + script)
         self.assertIn("matchCatalogDevice", script)
         self.assertIn("result?.productName", script)
         self.assertIn("selectModPackForVersion", script)
@@ -1297,7 +1305,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "c42d35ce2a9d460fa61db8a45c9b4db6.zip",
             "gauss-compotaauto-c-cn.allawnfs.com",
             "6fb0095cc9c07dbdb74074c87cbb643f",
-            "12/12 thông số",
+            "14/14 thông số",
         ):
             self.assertIn(value, dom)
         self.assertIn('<strong id="launch-summary">PKG110 · V5.0 / PLUS / GitHub Auto</strong>', dom)
@@ -1321,7 +1329,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             source_metadata=metadata,
         )
 
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("12/14 thông số", dom)
         self.assertRegex(dom, r'class="[^"]*analyzed[^"]*" id="source-state"')
         self.assertRegex(dom, r'<dd id="source-md5" data-empty="true"[^>]*>—</dd>')
         self.assertRegex(dom, r'<dd id="source-last-modified" data-empty="true"[^>]*>—</dd>')
@@ -1342,7 +1350,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "OP5D2BL1",
             "PKG110_16.0.9.400(CN01)",
             "2026-07-01",
-            "12/12 thông số",
+            "12/14 thông số",
             "Đã đọc metadata trong ZIP",
         ):
             self.assertIn(value, dom)
@@ -1376,7 +1384,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('id="paste-source"', dom)
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
 
     def test_paste_button_falls_back_when_clipboard_apis_are_blocked(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
@@ -1386,7 +1394,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
         self.assertNotIn("Không đọc được clipboard", dom)
 
     def test_paste_fallback_runs_inside_the_original_user_gesture(self) -> None:
@@ -1397,7 +1405,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
         self.assertNotIn("Ô link đã được chọn", dom)
 
     def test_paste_button_retrieves_the_private_link_saved_by_the_bot(self) -> None:
@@ -1408,7 +1416,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn(OPLUS_TEST_URI.split("?", 1)[0], dom.replace("&amp;", "&"))
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
 
     def test_mobile_preview_explains_missing_api_instead_of_claiming_preflight_ready(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(api_enabled=False)
@@ -1437,7 +1445,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             },
         )
 
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
         self.assertIn('<li id="check-source" class="complete">', dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
         self.assertIsNotNone(submit_match)
@@ -1448,7 +1456,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('class="access-limited"', dom)
         self.assertIn("Kết nối tài khoản để tiếp tục", dom)
-        self.assertNotIn("12/12 thông số", dom)
+        self.assertNotIn("14/14 thông số", dom)
 
     def test_hash_init_data_survives_initial_navigation_and_enables_jobs(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
@@ -1457,7 +1465,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             telegram_hash_authenticated=True,
         )
 
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
         self.assertIn('<li id="check-api" class="complete">', dom)
         self.assertIn("phiên hợp lệ", dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)
@@ -1471,7 +1479,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             signed_launch_authenticated=True,
         )
 
-        self.assertIn("12/12 thông số", dom)
+        self.assertIn("14/14 thông số", dom)
         self.assertIn('<li id="check-api" class="complete">', dom)
         self.assertIn("phiên dự phòng", dom)
         submit_match = re.search(r'<button[^>]*id="submit-recipe"[^>]*>', dom)

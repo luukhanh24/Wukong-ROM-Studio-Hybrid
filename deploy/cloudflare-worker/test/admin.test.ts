@@ -25,6 +25,11 @@ describe("admin user management", () => {
     expect(listed.status).toBe(200);
     await expect(listed.json()).resolves.toMatchObject({
       total: 1,
+      statusCounts: {
+        approved: 1,
+        pending: 1,
+        revoked: 0
+      },
       users: [{
         telegramId: "88001",
         username: "rom_user",

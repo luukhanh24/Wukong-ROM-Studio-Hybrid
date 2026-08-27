@@ -497,7 +497,13 @@ export function decodeAuditCursor(
 export async function listUsers(
   env: Env,
   search: URLSearchParams
-): Promise<{ users: TelegramProfile[]; total: number; limit: number; offset: number }> {
+): Promise<{
+  users: TelegramProfile[];
+  total: number;
+  limit: number;
+  offset: number;
+  statusCounts: Record<"approved" | "pending" | "revoked", number>;
+}> {
   const query = (search.get("query") ?? "").trim().slice(0, 256);
   const status = (search.get("status") ?? "").trim().toLowerCase();
   const quota = (search.get("quota") ?? "").trim().toLowerCase();
@@ -531,11 +537,22 @@ export async function listUsers(
     `SELECT ${PROFILE_COLUMNS} FROM wukong_telegram_users ${clause}
      ORDER BY ${sort} ${direction}, subject ASC LIMIT ? OFFSET ?`
   ).bind(...bindings, limit, offset).all<Record<string, unknown>>();
+  const statusRows = await env.DB.prepare(
+    `SELECT access_status, COUNT(*) AS count
+     FROM wukong_telegram_users
+     GROUP BY access_status`
+  ).all<{ access_status: string; count: number }>();
+  const statusCounts = { approved: 0, pending: 0, revoked: 0 };
+  for (const row of statusRows.results) {
+    const key = String(row.access_status) as keyof typeof statusCounts;
+    if (key in statusCounts) statusCounts[key] = Number(row.count ?? 0);
+  }
   return {
     users: page.results.map(profilePayload).filter((value): value is TelegramProfile => Boolean(value)),
     total: Number(count?.count ?? 0),
     limit,
-    offset
+    offset,
+    statusCounts
   };
 }
 
