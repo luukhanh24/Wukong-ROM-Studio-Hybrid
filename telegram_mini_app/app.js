@@ -356,6 +356,8 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, {
+  backToUserJobs: "Lịch sử job của user", userJobDetail: "Chi tiết job của user",
+  userJobLoading: "Đang đồng bộ job…", userJobSynced: "Đã đồng bộ · trang tự cập nhật tiến độ",
   maintenanceGateKicker: "BẢO TRÌ HỆ THỐNG",
   navCatalog: "Thư viện", catalogTitle: "Thư viện",
   libraryIntro: "Tìm ROM nguồn, tra cứu thiết bị và bộ MOD.",
@@ -401,6 +403,8 @@ Object.assign(translations.vi, {
   romSelected: "Đã đưa link OTA vào Studio và bắt đầu phân tích."
 });
 Object.assign(translations.en, {
+  backToUserJobs: "User job history", userJobDetail: "User job details",
+  userJobLoading: "Syncing job…", userJobSynced: "Synced · progress updates automatically",
   maintenanceGateKicker: "SYSTEM MAINTENANCE",
   navCatalog: "Library", catalogTitle: "Library",
   libraryIntro: "Find a source ROM or explore supported devices and MOD packs.",
@@ -541,6 +545,7 @@ const state = {
   adminUsersLoading: false,
   selectedAdminUserId: "",
   adminUserReturnScrollY: 0,
+  adminJobView: null,
   workspaceLoaded: false
 };
 
@@ -551,6 +556,7 @@ function t(key, values = {}) {
 }
 
 function renderSelectedJob() {
+  if (state.adminJobView) renderActiveJob(state.adminJobView.job, state.adminJobView.events, state.adminJobView);
   const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
   if (!activeJob) return;
   const activeId = activeJob.job_id || activeJob.jobId;
@@ -2836,6 +2842,7 @@ function adminAuditArticle(event) {
 }
 
 function closeAdminUserPage({ restoreFocus = true, scroll = true } = {}) {
+  closeAdminJobPage({ restoreFocus: false, scroll: false });
   const system = $("#system");
   const page = $("#admin-user-page");
   if (!system || !page) return;
@@ -2993,7 +3000,7 @@ async function openAdminUser(telegramId) {
     copy.append(name, detail);
     const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
     open.dataset.openUserJob = job.job_id || job.jobId; open.textContent = t("openUserJob");
-    open.addEventListener("click", () => openJob({ ...job, createdBy: job.createdBy || user }, true));
+    open.addEventListener("click", () => openAdminJobPage({ ...job, createdBy: job.createdBy || user }));
     article.append(copy, open); return article;
   };
   jobHistory.replaceChildren(...jobs.map(historyEntry));
@@ -3316,7 +3323,7 @@ function renderArtifacts(job) {
   if (!artifacts.length) {
     const empty = document.createElement("p"); empty.textContent = t("noArtifacts"); section.append(empty); return section;
   }
-  artifacts.forEach((artifact) => {
+  artifacts.forEach((artifact, index) => {
     const card = document.createElement("article");
     const header = document.createElement("div");
     const name = document.createElement("strong"); name.textContent = artifact.name || "Artifact";
@@ -3334,12 +3341,14 @@ function renderArtifacts(job) {
       const open = document.createElement("button");
       open.type = "button";
       open.className = "artifact-open";
+      open.dataset.jobFocus = `artifact-open-${index}`;
       open.textContent = t("openArtifactCloud", { provider: providerName });
       open.setAttribute("aria-label", `${open.textContent}: ${artifact.name || "Artifact"}`);
       open.addEventListener("click", () => openArtifactUrl(cloudUrl));
       const copy = document.createElement("button");
       copy.type = "button";
       copy.className = "artifact-copy";
+      copy.dataset.jobFocus = `artifact-copy-${index}`;
       copy.textContent = t("copyArtifactLink");
       copy.setAttribute("aria-label", `${copy.textContent}: ${artifact.name || "Artifact"}`);
       copy.addEventListener("click", () => {
@@ -3413,12 +3422,89 @@ function renderEvents(events, expanded = false) {
 
 function jobAction(label, action, job, danger = false) {
   const button = document.createElement("button"); button.type = "button"; button.textContent = label;
+  button.dataset.jobFocus = `job-action-${action}`;
   if (danger) button.classList.add("danger");
   button.addEventListener("click", () => runJobAction(action, job.job_id || job.jobId).catch((error) => toast(error.message, true)));
   return button;
 }
 
-function openJob(job, navigateToJobs = false) {
+function openAdminJobPage(job) {
+  if (state.me?.role !== "admin" || !state.selectedAdminUserId) return;
+  closeAdminJobPage({ restoreFocus: false, scroll: false });
+  clearTimeout(state.jobsPollTimer);
+  ++state.jobDetailRequestId;
+  const view = {
+    jobId: job.job_id || job.jobId, job, events: [], requestId: 0, timer: null,
+    returnScrollY: window.scrollY, expandedConfigJobId: "", expandedLogJobId: "",
+    jobEventsHasMore: false, unchangedPolls: 0, signature: ""
+  };
+  state.adminJobView = view;
+  $("#system").classList.add("admin-job-open");
+  $("#admin-job-page").hidden = false;
+  renderActiveJob(job, [], view);
+  const status = $("#admin-job-connection");
+  status.classList.remove("error");
+  if (status.textContent !== t("userJobLoading")) status.textContent = t("userJobLoading");
+  window.scrollTo({ top: 0, behavior: "instant" });
+  $("#admin-job-back").focus({ preventScroll: true });
+  loadAdminJobDetail();
+}
+
+function closeAdminJobPage({ restoreFocus = true, scroll = true } = {}) {
+  const view = state.adminJobView;
+  if (!view) return;
+  clearTimeout(view.timer);
+  state.adminJobView = null;
+  $("#system").classList.remove("admin-job-open");
+  $("#admin-job-page").hidden = true;
+  $("#admin-job-detail").replaceChildren();
+  if (scroll) window.scrollTo({ top: view.returnScrollY, behavior: "instant" });
+  if (restoreFocus) $$("[data-open-user-job]").find(button => button.dataset.openUserJob === view.jobId)?.focus({ preventScroll: true });
+  scheduleJobsPoll(true);
+}
+
+async function loadAdminJobDetail() {
+  const view = state.adminJobView;
+  if (!view || document.hidden || state.me?.role !== "admin") return;
+  clearTimeout(view.timer);
+  const requestId = ++view.requestId;
+  const after = view.events.reduce((max, event) => Math.max(max, Number(event.sequence || 0)), 0);
+  const status = $("#admin-job-connection");
+  try {
+    const payload = await apiRequest(`/v1/sync?jobId=${encodeURIComponent(view.jobId)}&after=${after}`);
+    if (state.adminJobView !== view || requestId !== view.requestId) return;
+    const job = payload.activeJob;
+    if (!job || (job.job_id || job.jobId) !== view.jobId) {
+      renderActiveJob(null, [], view);
+      throw new Error(t("jobUnavailable"));
+    }
+    const incoming = Array.isArray(payload.events) ? payload.events : [];
+    const unique = new Map([...view.events, ...incoming].map(event => [
+      Number(event.sequence) > 0 ? `sequence:${event.sequence}` : JSON.stringify(event), event
+    ]));
+    view.events = [...unique.values()];
+    view.job = job;
+    view.jobEventsHasMore = incoming.length >= 500;
+    const signature = JSON.stringify([job.status, job.stage, job.progress, job.updated_at || job.updatedAt, view.events.length]);
+    view.unchangedPolls = signature === view.signature ? view.unchangedPolls + 1 : 0;
+    view.signature = signature;
+    renderActiveJob(job, view.events, view);
+    if (status.textContent !== t("userJobSynced")) status.textContent = t("userJobSynced");
+    status.classList.remove("error");
+  } catch (error) {
+    if (state.adminJobView !== view || requestId !== view.requestId) return;
+    const message = error.connectionFailed ? t("jobsOffline") : error.message;
+    if (status.textContent !== message) status.textContent = message;
+    status.classList.add("error");
+  } finally {
+    if (state.adminJobView === view && requestId === view.requestId && !document.hidden) {
+      const delay = terminalJobStatuses.has(view.job.status) || view.unchangedPolls >= 6 ? 30000 : view.unchangedPolls >= 3 ? 15000 : 10000;
+      view.timer = setTimeout(loadAdminJobDetail, delay);
+    }
+  }
+}
+
+function openJob(job) {
   state.activeJobId = job.job_id || job.jobId;
   localStorage.setItem("wukong-active-job", state.activeJobId);
   ++state.jobDetailRequestId;
@@ -3428,19 +3514,18 @@ function openJob(job, navigateToJobs = false) {
   state.jobHistoryFilter = job.status === "succeeded" ? "succeeded" : terminalJobStatuses.has(job.status) ? "failed" : "active";
   if (!state.jobs.some(item => (item.job_id || item.jobId) === state.activeJobId)) state.jobs.unshift(job);
   renderActiveJob(job, []); renderJobHistory();
-  if (navigateToJobs) navigate("jobs");
-  else loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true));
+  loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true));
 }
 
-function renderJobParameters(job) {
+function renderJobParameters(job, root, reader) {
   const id = job.job_id || job.jobId;
-  const previous = $("#active-job > .job-config");
+  const previous = root.querySelector(":scope > .job-config");
   const details = previous?.dataset.jobId === id ? previous : document.createElement("details");
   details.className = "job-config"; details.dataset.jobId = id;
-  details.open = state.expandedConfigJobId === id;
+  details.open = reader.expandedConfigJobId === id;
   if (!details.children.length) {
     details.append(document.createElement("summary"), document.createElement("p"), document.createElement("button"));
-    details.addEventListener("toggle", () => { if (details.isConnected) state.expandedConfigJobId = details.open ? id : ""; });
+    details.addEventListener("toggle", () => { if (details.isConnected) reader.expandedConfigJobId = details.open ? id : ""; });
   }
   details.querySelector("summary").textContent = t("jobParameters");
   details.querySelector("p").textContent = t("jobParametersHint");
@@ -3464,9 +3549,14 @@ function renderJobParameters(job) {
   return details;
 }
 
-function renderActiveJob(job, events) {
-  const root = $("#active-job");
+function renderActiveJob(job, events, inspection = null) {
+  const root = inspection ? $("#admin-job-detail") : $("#active-job");
+  const reader = inspection || state;
   if (!root) return;
+  const focusedJobControl = root.contains(document.activeElement)
+    ? document.activeElement.closest("[data-job-focus]")
+    : null;
+  const focusedJobControlKey = focusedJobControl?.dataset.jobFocus || "";
   if (!job) { root.hidden = true; root.replaceChildren(); delete root.dataset.jobId; return; }
   root.hidden = false;
   root.dataset.jobId = job.job_id || job.jobId;
@@ -3489,7 +3579,8 @@ function renderActiveJob(job, events) {
     text.append(label, name, identity);
     const open = document.createElement("button"); open.type = "button"; open.className = "secondary"; open.textContent = t("viewJobUser");
     open.addEventListener("click", () => { navigate("system"); openAdminUser(user.telegramId).catch(error => toast(error.message, true)); });
-    creator.append(profileAvatar(user), text, open);
+    creator.append(profileAvatar(user), text);
+    if (!inspection) creator.append(open);
   } else creator.hidden = true;
   const progress = document.createElement("div"); progress.className = "job-progress";
   const progressCopy = document.createElement("div");
@@ -3544,24 +3635,26 @@ function renderActiveJob(job, events) {
   const artifacts = renderArtifacts(job);
   const actions = document.createElement("div"); actions.className = "job-controls";
   const jobId = job.job_id || job.jobId;
-  const logExpanded = state.expandedLogJobId === jobId;
+  const logExpanded = reader.expandedLogJobId === jobId;
   const logButton = document.createElement("button"); logButton.type = "button"; logButton.className = "job-log-toggle";
+  logButton.dataset.jobFocus = "log-toggle";
   logButton.textContent = t(logExpanded ? "hideFullLog" : "viewFullLog");
   logButton.setAttribute("aria-expanded", String(logExpanded));
   logButton.addEventListener("click", () => {
-    state.expandedLogJobId = logExpanded ? "" : jobId;
-    renderActiveJob(job, events);
-    if (!logExpanded) requestAnimationFrame(() => $(".job-events")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" }));
+    reader.expandedLogJobId = logExpanded ? "" : jobId;
+    renderActiveJob(job, events, inspection);
+    if (!logExpanded) requestAnimationFrame(() => root.querySelector(".job-events")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" }));
   });
   actions.append(logButton);
-  if (state.jobEventsHasMore) {
+  if (reader.jobEventsHasMore) {
     const more = document.createElement("button"); more.type = "button"; more.textContent = t("loadMoreJobEvents");
-    more.addEventListener("click", () => { more.disabled = true; loadJobDetail(jobId).catch(error => { more.disabled = false; toast(error.message, true); }); });
+    more.dataset.jobFocus = "load-more-events";
+    more.addEventListener("click", () => { more.disabled = true; (inspection ? loadAdminJobDetail() : loadJobDetail(jobId)).catch(error => toast(error.message, true)).finally(() => { more.disabled = false; }); });
     actions.append(more);
   }
-  if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
-  if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
-  const config = state.me?.role === "admin" ? renderJobParameters(job) : null;
+  if (!inspection && !terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
+  if (!inspection && ["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
+  const config = state.me?.role === "admin" ? renderJobParameters(job, root, reader) : null;
   const before = [header, creator, progress, context, facts];
   const after = [artifacts, actions, renderEvents(events, logExpanded)];
   if (config?.parentElement === root) {
@@ -3569,6 +3662,9 @@ function renderActiveJob(job, events) {
     for (const child of [...root.children]) if (child !== config) child.remove();
     config.before(...before); config.after(...after);
   } else root.replaceChildren(...before, ...(config ? [config] : []), ...after);
+  if (focusedJobControlKey) {
+    root.querySelector(`[data-job-focus="${focusedJobControlKey}"]`)?.focus({ preventScroll: true });
+  }
 }
 
 function renderJobHistory() {
@@ -3666,7 +3762,7 @@ async function loadJobDetail(jobId) {
 
 function scheduleJobsPoll(active, changed = false) {
   clearTimeout(state.jobsPollTimer);
-  if (document.hidden || !privateApiAvailable()) return;
+  if (document.hidden || !privateApiAvailable() || state.adminJobView) return;
   if (changed) state.jobsUnchangedPolls = 0;
   else state.jobsUnchangedPolls += 1;
   const delay = !active
@@ -3680,6 +3776,7 @@ function scheduleJobsPoll(active, changed = false) {
 }
 
 async function loadJobs({ force = false } = {}) {
+  if (state.adminJobView) return;
   if (state.jobsLoading && !force) return;
   if (!privateApiAvailable()) { setJobsConnection(state.me ? "quotaRequiredHint" : miniApiUnavailableMessageKey(), true); return; }
   state.jobsLoading = true;
@@ -4026,6 +4123,8 @@ function bindEvents() {
   $("#user-next").addEventListener("click", () => { state.adminUsersOffset += 25; loadAdminUsers().catch(() => {}); });
   $("#add-user").addEventListener("click", () => $("#user-create-dialog").showModal());
   $("#admin-user-back").addEventListener("click", () => closeAdminUserPage());
+  $("#admin-job-back").addEventListener("click", () => closeAdminJobPage());
+  $("#refresh-admin-job").addEventListener("click", () => loadAdminJobDetail());
   $("#user-create-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -4043,11 +4142,13 @@ function bindEvents() {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
+      clearTimeout(state.adminJobView?.timer);
       clearTimeout(state.jobsPollTimer);
       clearTimeout(state.maintenancePollTimer);
       clearInterval(state.greetingTimer);
     }
     else {
+      if (state.adminJobView) loadAdminJobDetail();
       scheduleGreeting();
       ensureAutomaticTelegramConnection();
       loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});

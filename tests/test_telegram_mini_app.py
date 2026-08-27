@@ -383,6 +383,7 @@ window.addEventListener('load', () => {{
         return response;
       }};
       document.querySelector('#refresh-jobs').click();
+      const originalJob = localStorage.getItem('wukong-active-job');
       button.click();
       setTimeout(() => {{
         let sameJobCalls = 0;
@@ -398,14 +399,16 @@ window.addEventListener('load', () => {{
           await new Promise(resolve => setTimeout(resolve, number === 1 ? 450 : 30));
           return new Response(JSON.stringify(data), {{status:200, headers:{{'Content-Type':'application/json'}}}});
         }};
-        document.querySelector('#refresh-jobs').click();
-        setTimeout(() => document.querySelector('#refresh-jobs').click(), 40);
+        document.querySelector('#refresh-admin-job')?.click();
+        setTimeout(() => document.querySelector('#refresh-admin-job')?.click(), 40);
         setTimeout(() => {{
-          document.body.dataset.inspectedJob = document.querySelector('#active-job')?.dataset.jobId || '';
-          document.body.dataset.inspectedEvents = document.querySelector('#active-job .job-events')?.textContent || '';
-          document.body.dataset.inspectedOwner = document.querySelector('#active-job .job-creator')?.textContent || '';
+          document.body.dataset.inspectedJob = document.querySelector('#admin-job-detail')?.dataset.jobId || '';
+          document.body.dataset.inspectedEvents = document.querySelector('#admin-job-detail .job-events')?.textContent || '';
+          document.body.dataset.inspectedOwner = document.querySelector('#admin-job-detail .job-creator')?.textContent || '';
           document.body.dataset.inspectedView = document.body.dataset.view;
-          const reader = document.querySelector('.job-config');
+          document.body.dataset.adminSelectionUnchanged = String(localStorage.getItem('wukong-active-job') === originalJob);
+          const reader = document.querySelector('#admin-job-detail .job-config');
+          if (!reader) return;
           reader.open = true;
           const pre = reader.querySelector('pre');
           pre.focus(); pre.scrollTop = 200;
@@ -413,11 +416,44 @@ window.addEventListener('load', () => {{
           range.setStart(pre.firstChild, 5); range.setEnd(pre.firstChild, 20);
           selection.removeAllRanges(); selection.addRange(range);
           const selectedText = selection.toString();
-          document.querySelector('#refresh-jobs').click();
+          document.querySelector('#refresh-admin-job').click();
           setTimeout(() => {{
-            document.body.dataset.parametersPreserved = String(document.querySelector('.job-config pre') === pre && pre.scrollTop === 200 && document.activeElement === pre && selection.toString() === selectedText);
+            document.body.dataset.parametersPreserved = String(document.querySelector('#admin-job-detail .job-config pre') === pre && pre.scrollTop === 200 && document.activeElement === pre && selection.toString() === selectedText);
             reader.open = false;
-            document.body.dataset.inspectedStage = document.querySelector('#active-job .job-progress strong')?.textContent || '';
+            document.body.dataset.inspectedStage = document.querySelector('#admin-job-detail .job-progress strong')?.textContent || '';
+            const logButton = document.querySelector('#admin-job-detail .job-log-toggle');
+            logButton.focus();
+            let statusMutations = 0;
+            const statusObserver = new MutationObserver(() => statusMutations++);
+            statusObserver.observe(document.querySelector('#admin-job-connection'), {{childList:true, characterData:true, subtree:true}});
+            document.querySelector('#refresh-admin-job').click();
+            setTimeout(() => {{
+              statusObserver.disconnect();
+              document.body.dataset.adminJobStatusQuiet = String(statusMutations === 0);
+              document.body.dataset.adminJobFocusPreserved = String(document.activeElement?.dataset.jobFocus === 'log-toggle');
+              const successfulFetch = window.fetch.bind(window);
+              window.fetch = async (...args) => String(args[0]).includes('/v1/sync?jobId=archived-job')
+                ? new Response(JSON.stringify({{error:'Fixture offline'}}), {{status:503, headers:{{'Content-Type':'application/json'}}}})
+                : successfulFetch(...args);
+              let errorStatusMutations = 0;
+              const errorStatusObserver = new MutationObserver(() => errorStatusMutations++);
+              errorStatusObserver.observe(document.querySelector('#admin-job-connection'), {{childList:true, characterData:true,subtree:true}});
+              document.querySelector('#refresh-admin-job').click();
+              setTimeout(() => {{
+                document.querySelector('#refresh-admin-job').click();
+                setTimeout(() => {{
+                  errorStatusObserver.disconnect();
+                  document.body.dataset.adminJobErrorStatusQuiet = String(errorStatusMutations === 1);
+                  window.fetch = successfulFetch;
+                  document.querySelector('#admin-job-back').click();
+                  document.body.dataset.userHistoryRestored = String(document.querySelector('#admin-user-page').hidden === false && !document.querySelector('#system').classList.contains('admin-job-open') && document.activeElement === button);
+                  setTimeout(() => {{
+                    document.body.dataset.closedJobStayedClosed = String(document.querySelector('#admin-job-page').hidden && localStorage.getItem('wukong-active-job') === originalJob);
+                    button.click();
+                  }}, 100);
+                }}, 200);
+              }}, 100);
+            }}, 200);
           }}, 200);
         }}, 700);
       }}, 1100);
@@ -1816,15 +1852,21 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("ColorOS_16.0.8", dom)
         self.assertGreater(screenshot_size, 10_000)
 
-    def test_admin_opens_user_job_outside_recent_list_and_ignores_old_poll(self) -> None:
+    def test_admin_opens_user_job_on_separate_page_without_changing_own_job(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
             api_enabled=True, admin_user=True, initial_view="system",
             jobs_fixture=True, click_admin_user=True, admin_job_scenario=True,
         )
         self.assertIn('data-inspected-job="archived-job"', dom)
-        self.assertIn('data-inspected-view="jobs"', dom)
+        self.assertIn('data-inspected-view="system"', dom)
+        self.assertIn('data-admin-selection-unchanged="true"', dom)
+        self.assertIn('data-user-history-restored="true"', dom)
+        self.assertIn('data-closed-job-stayed-closed="true"', dom)
         self.assertIn('data-inspected-stage="new-stage"', dom)
         self.assertIn('data-parameters-preserved="true"', dom)
+        self.assertIn('data-admin-job-focus-preserved="true"', dom)
+        self.assertIn('data-admin-job-status-quiet="true"', dom)
+        self.assertIn('data-admin-job-error-status-quiet="true"', dom)
         self.assertRegex(dom, r'data-inspected-owner="[^"]*New User')
         events = re.search(r'data-inspected-events="([^"]*)"', dom)
         self.assertIsNotNone(events)
@@ -1835,6 +1877,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         for route, flags in (
             ("", {"click_mod_toggle": True}),
             ("jobs", {"jobs_fixture": True, "click_other_job": True}),
+            ("system", {
+                "admin_user": True, "jobs_fixture": True, "click_admin_user": True,
+                "admin_job_scenario": True,
+            }),
         ):
             with self.subTest(route=route or "studio"):
                 dom, _ = _render_mini_app_in_chrome(

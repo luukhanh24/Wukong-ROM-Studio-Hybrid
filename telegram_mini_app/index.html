@@ -249,6 +249,15 @@
         <button class="admin-user-back" id="admin-user-back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h11"/></svg><span data-i18n="backToUsers">Người dùng & lượt build</span></button>
         <div id="user-detail-content"></div>
       </section>
+      <section class="admin-job-page" id="admin-job-page" hidden aria-labelledby="admin-job-title">
+        <div class="admin-job-toolbar">
+          <button class="admin-user-back" id="admin-job-back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h11"/></svg><span data-i18n="backToUserJobs">Lịch sử job của user</span></button>
+          <button id="refresh-admin-job" type="button" data-i18n="refreshJob">Làm mới</button>
+        </div>
+        <h1 id="admin-job-title" data-i18n="userJobDetail">Chi tiết job của user</h1>
+        <p class="jobs-connection" id="admin-job-connection" role="status"></p>
+        <section class="active-job" id="admin-job-detail" hidden></section>
+      </section>
     </section>
   </main>
 

@@ -972,6 +972,13 @@ h2 { letter-spacing: -.015em; }
 }
 /* System user detail is a navigable page, not an interrupting modal. */
 #system.admin-user-open > :not(.admin-user-page) { display:none; }
+#system.admin-job-open > :not(.admin-job-page) { display:none; }
+#system.admin-job-open > .admin-job-page { display:block; }
+.admin-job-page { min-height:calc(100dvh - 190px); padding-bottom:calc(108px + env(safe-area-inset-bottom)); }
+.admin-job-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.admin-job-toolbar .admin-user-back { position:static; margin:0; font-size:13px; }
+.admin-job-toolbar > button { min-height:44px; padding:8px 12px; border:1px solid var(--line-strong); border-radius:var(--radius-md); background:var(--surface-raised); color:var(--ink); }
+.admin-job-page > h1 { margin:0 0 18px; font-size:clamp(24px,4vw,32px); }
 .admin-user-page { min-height:calc(100dvh - 190px); padding:2px 0 28px; }
 .admin-user-back { position:sticky; top:124px; z-index:8; display:inline-flex; min-height:44px; align-items:center; gap:8px; margin-bottom:18px; padding:8px 12px; border:1px solid var(--line-strong); border-radius:var(--radius-md); color:var(--ink); background:var(--surface-raised); box-shadow:var(--shadow-sm); font-size:11px; font-weight:700; }
 .admin-user-back svg { width:18px; height:18px; }
