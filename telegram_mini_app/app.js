@@ -2746,26 +2746,6 @@ function jobFact(label, value) {
   return node;
 }
 
-function artifactEdition(artifact, index, preset) {
-  const supplied = String(artifact?.edition || "").trim();
-  if (supplied) return supplied;
-  const name = String(artifact?.name || "").toLowerCase();
-  if (name.includes("lite")) return "Lite";
-  if (name.includes("plus")) return "Plus";
-  if (name.includes("custom") || preset === "custom") return "Custom";
-  return `Artifact ${index + 1}`;
-}
-
-function completedArtifactFacts(job) {
-  if (!terminalJobStatuses.has(job?.status)) return [];
-  const artifacts = Array.isArray(job?.artifacts) ? job.artifacts : [];
-  const preset = String(job?.recipe?.build?.preset || "").toLowerCase();
-  return artifacts.map((artifact, index) => jobFact(
-    artifactEdition(artifact, index, preset),
-    `${formatBytes(artifact.size_bytes ?? artifact.sizeBytes)} · ${artifact.name || "Artifact"}`
-  ));
-}
-
 function artifactCloudUrl(artifact) {
   const candidate = String(artifact?.publicUrl || artifact?.public_url || "").trim();
   try {
@@ -2975,10 +2955,7 @@ function renderActiveJob(job, events) {
     factNodes.push(jobFact(t(job.status === "uploading" ? "uploadingNow" : "uploadSummary"), uploadDetail));
   }
   facts.append(...factNodes);
-  const editionFacts = document.createElement("div");
-  editionFacts.className = "job-facts job-edition-facts";
-  editionFacts.append(...completedArtifactFacts(job));
-  editionFacts.hidden = !editionFacts.childElementCount;
+  const artifacts = renderArtifacts(job);
   const actions = document.createElement("div"); actions.className = "job-controls";
   const jobId = job.job_id || job.jobId;
   const logExpanded = state.expandedLogJobId === jobId;
@@ -2993,7 +2970,7 @@ function renderActiveJob(job, events) {
   actions.append(logButton);
   if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
   if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
-  root.replaceChildren(header, progress, context, facts, editionFacts, actions, renderEvents(events, logExpanded), renderArtifacts(job));
+  root.replaceChildren(header, progress, context, facts, artifacts, actions, renderEvents(events, logExpanded));
 }
 
 function renderJobHistory() {
