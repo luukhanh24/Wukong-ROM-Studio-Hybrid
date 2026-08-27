@@ -118,7 +118,7 @@ async function secureFetch(
 ): Promise<{ response: Response; url: URL }> {
   let url = await validateDestination(initial, resolveAddresses);
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
-    const response = await fetchImpl(url, { ...init, redirect: "manual" });
+    const response = await fetchImpl(url, { ...init, redirect: "manual", cache: "no-store" });
     if (![301, 302, 303, 307, 308].includes(response.status)) return { response, url };
     const location = response.headers.get("Location");
     await response.body?.cancel();

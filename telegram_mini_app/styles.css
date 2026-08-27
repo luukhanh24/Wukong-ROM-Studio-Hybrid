@@ -210,6 +210,20 @@ h2 { letter-spacing: -.015em; }
 .rom-release small { color:var(--muted); font-size:12px; line-height:1.6; }
 .rom-release button { min-height:44px; padding:8px 16px; border:1px solid var(--accent); border-radius:6px; color:var(--accent-strong); background:var(--accent-soft); font-size:13px; font-weight:600; }
 .rom-release button:hover { background:var(--accent); color:#fff; }
+.rom-release-actions { display:flex; flex-wrap:wrap; gap:8px; min-width:0; }
+.rom-release-actions [data-rom-action="analyze"] { background:var(--accent); color:#fff; }
+.rom-resolved-result, .rom-resolve-error { grid-column:1/-1; min-width:0; }
+.rom-resolved-result label { display:block; font-size:12px; font-weight:600; }
+.rom-resolved-url { display:block; width:100%; min-height:80px; margin-top:8px; padding:12px; resize:vertical; overflow-wrap:anywhere; border:1px solid var(--line-strong); border-radius:6px; color:var(--ink); background:var(--surface); font:12px/1.6 "JetBrains Mono",monospace; }
+.rom-resolved-result p { margin:8px 0 12px; color:var(--muted); font-size:12px; }
+.rom-resolve-error { margin:0; font-size:13px; color:var(--danger); }
+@media (max-width:600px) {
+  .rom-catalog-panel .rom-catalog-filters { grid-template-columns:minmax(0,1fr); }
+  .rom-catalog-filters select, .rom-catalog-filters input { font-size:16px; }
+  .rom-release-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .rom-release-actions [data-rom-action="analyze"] { grid-column:1/-1; }
+  .rom-release-actions button { width:100%; }
+}
 .rom-catalog-empty { padding:40px 16px; color:var(--muted); text-align:center; font-size:14px; }
 .rom-catalog-empty strong { display:block; color:var(--ink); font-size:16px; }
 .rom-catalog-empty p { margin:8px 0 0; }

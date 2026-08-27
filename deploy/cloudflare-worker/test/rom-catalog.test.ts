@@ -3,11 +3,24 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { tmaHeaders } from "./helpers";
 
 describe("ROM discovery catalog", () => {
+  it("returns a direct resolved link only for an approved private resolve request", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      resolvedUrl: "https://cdn.allawnfs.com/rom.zip?Signature=temporary",
+      filename: "rom.zip", sizeBytes: 4096, contentType: "application/zip"
+    })));
+    const url = "https://worker.example/v1/sources/resolve";
+    const body = JSON.stringify({ uri: "https://component-ota-cn.allawntech.com/downloadCheck?resolve=1" });
+    expect((await SELF.fetch(url, { method: "POST", body, headers: await tmaHeaders(77041) })).status).toBe(403);
+    const response = await SELF.fetch(url, { method: "POST", body, headers: await tmaHeaders(1678823419) });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ resolvedUrl: "https://cdn.allawnfs.com/rom.zip?Signature=temporary" });
+  });
   it("lists unique devices and their regions across the entire latest catalog, with caching and approval", async () => {
     const rows = Array.from({ length: 201 }, (_, i) => ({ device: "OP 13", region: i % 2 ? "EU" : "CN", model: i % 2 ? "CPH2653" : "PJZ110" }));
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       expect(String(input)).toBe("https://roms.danielspringer.at/api/ota.php?latest=1");
-      return Response.json({ releases: [...rows, { device: "OPPO FIND X8", region: "CN", model: "PKB110" }] });
+      return Response.json({ releases: [...rows, { device: "OPPO FIND X8", region: "CN", model: "PKB110" }, { device: "Xiaomi 15", region: "CN" }, { device: "Realme GT7", region: "CN" }] });
     });
     vi.stubGlobal("fetch", fetchMock);
     const url = "https://worker.example/v1/rom-catalog/devices";
@@ -18,10 +31,22 @@ describe("ROM discovery catalog", () => {
     const payload = await response.json();
     expect(payload).toMatchObject({ devices: [
       { id: "OP 13", label: "OnePlus 13", brand: "OnePlus", regions: [{ code: "CN", models: ["PJZ110"] }, { code: "EU", models: ["CPH2653"] }] },
-      { id: "OPPO FIND X8", label: "OPPO Find X8", brand: "OPPO" }
+      { id: "OPPO FIND X8", label: "OPPO Find X8", brand: "OPPO" },
+      { id: "Realme GT7", brand: "Realme" }
     ] });
     expect(await (await SELF.fetch(url, { headers })).json()).toEqual(payload);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("returns selectable historical versions newest first", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      expect(new URL(String(input)).searchParams.get("latest")).toBe("0");
+      return Response.json({ releases: [
+        { id: "old", device: "OP ACE 5", version: "16.0.9.500", build_timestamp: 1700000000, source_url: "https://cdn.example/old.zip" },
+        { id: "new", device: "OP ACE 5", version: "16.0.10.500", build_timestamp: 1800000000, source_url: "https://cdn.example/new.zip" }
+      ] });
+    }));
+    const response = await SELF.fetch("https://worker.example/v1/rom-catalog?device=OP+ACE+5&latest=0", { headers: await tmaHeaders(1678823419) });
+    expect((await response.json() as { releases: {id:string}[] }).releases.map(r => r.id)).toEqual(["new", "old"]);
   });
   afterEach(() => {
     vi.unstubAllGlobals();

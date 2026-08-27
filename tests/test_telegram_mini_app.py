@@ -184,6 +184,15 @@ window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expa
 {exec_fallback}
 window.addEventListener('DOMContentLoaded', () => {{
   if (!{json.dumps(self.library_scenario)}) return;
+  Object.defineProperty(navigator, 'clipboard', {{ configurable: true, value: {{ writeText: async (text) => {{ document.body.dataset.romCopied = text; }} }} }});
+  if ({json.dumps(self.library_scenario)} === 'timeout') {{
+    const nativeTimeout = window.setTimeout.bind(window);
+    window.setTimeout = (callback, delay, ...args) => nativeTimeout(callback, delay === 70000 ? 20 : delay, ...args);
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, options) => String(input).endsWith('/v1/sources/resolve')
+      ? new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))))
+      : nativeFetch(input, options);
+  }}
   const exerciseLibrary = () => {{
     if (document.body.classList.contains('access-checking')) {{ setTimeout(exerciseLibrary, 50); return; }}
     document.querySelector('[data-nav="catalog"]').click();
@@ -208,13 +217,36 @@ window.addEventListener('DOMContentLoaded', () => {{
     document.body.dataset.deviceRegions = [...document.querySelector('#rom-region-filter').options].map(o => o.value).join(',');
     document.querySelector('#search-rom-catalog').click();
     const checkResult = () => {{
-      const result = document.querySelector('.rom-release button');
+      const result = document.querySelector('[data-rom-action="analyze"]');
       if (!result) {{ setTimeout(checkResult, 50); return; }}
       document.body.dataset.romResults = String(document.querySelectorAll('.rom-release').length);
+      const versions = document.querySelector('#rom-version-filter');
+      document.body.dataset.romVersionCount = String(versions.options.length);
+      versions.value = 'rom-old';
+      versions.dispatchEvent(new Event('change'));
+      document.body.dataset.oldVersionSelected = String(document.querySelector('.rom-release-version').textContent.includes('16.0.9'));
+      versions.value = 'rom-fixture';
+      versions.dispatchEvent(new Event('change'));
+      if ({json.dumps(self.library_scenario)} === 'timeout') {{
+        document.querySelector('[data-rom-action="resolve"]').click();
+        const checkTimeout = () => {{
+          if (!document.querySelector('.rom-resolve-error')) {{ setTimeout(checkTimeout, 50); return; }}
+          document.body.dataset.resolveTimeoutRecovered = String(!document.querySelector('[data-rom-action="resolve"]').disabled);
+        }};
+        checkTimeout();
+      }}
       if ({json.dumps(self.library_scenario)} === 'select') {{
-        result.click();
+        document.querySelector('[data-rom-action="copy"]').click();
+        document.querySelector('[data-rom-action="resolve"]').click();
+        const finishSelection = () => {{
+        const resolved = document.querySelector('.rom-resolved-url');
+        if (!resolved) {{ setTimeout(finishSelection, 50); return; }}
+        document.body.dataset.resolvedRomLink = resolved.value;
+        document.querySelector('[data-rom-action="analyze"]').click();
         document.body.dataset.selectedSource = document.querySelector('#source-uri').value;
         document.body.dataset.selectedView = document.querySelector('main>.view.active').id;
+        }};
+        finishSelection();
       }}
     }};
     checkResult();
@@ -482,7 +514,7 @@ window.addEventListener('load', () => {{
             self._send(json.dumps({"user": self._fixture_user(), "maintenance": {"enabled": self.maintenance_enabled, "message": "Đang nâng cấp Studio."}}).encode(), "application/json")
             return
         if path == "/v1/rom-catalog":
-            self._send(json.dumps({"releases": [{"id": "rom-fixture", "device": "OnePlus 13", "model": "CPH2653", "region": "EU", "version": "CPH2653_16.0.10.501(EX01)", "securityPatch": "2026-08-01", "sizeBytes": 8304912951, "sourceUrl": OPLUS_TEST_URI}]}).encode(), "application/json")
+            self._send(json.dumps({"releases": [{"id": "rom-fixture", "device": "OnePlus 13", "model": "CPH2653", "region": "EU", "version": "CPH2653_16.0.10.501(EX01)", "securityPatch": "2026-08-01", "sizeBytes": 8304912951, "sourceUrl": OPLUS_TEST_URI}, {"id": "rom-old", "device": "OnePlus 13", "region": "EU", "version": "CPH2653_16.0.9.500(EX01)", "sourceUrl": "https://cdn.example/old.zip"}]}).encode(), "application/json")
             return
         if path == "/v1/rom-catalog/devices":
             self._send(json.dumps({"devices": [
@@ -617,6 +649,9 @@ window.addEventListener('load', () => {{
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
         path = urlsplit(self.path).path
+        if path == "/v1/sources/resolve":
+            self._send(json.dumps({"resolvedUrl": "https://cdn.allawnfs.com/rom.zip?Signature=fixture", "signedUrlExpiresAt": 9999999999}).encode(), "application/json")
+            return
         if path == "/v1/session/pair" and self.pairing_recovery:
             self._send(json.dumps({
                 "pairId": "fixture-pair",
@@ -1110,6 +1145,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-rom-in-library="true"', dom)
         self.assertIn('data-technical-visible="true"', dom)
         self.assertIn('data-rom-results="1"', dom)
+        self.assertNotIn('id="rom-model-filter"', dom)
+        self.assertIn('data-rom-version-count="2"', dom)
+        self.assertIn('data-old-version-selected="true"', dom)
+        self.assertIn('data-resolved-rom-link="https://cdn.allawnfs.com/rom.zip?Signature=fixture"', dom)
+        self.assertIn('data-rom-copied="https://component-ota-cn.allawntech.com/downloadCheck?', dom)
         self.assertIn('data-filtered-devices="1"', dom)
         self.assertIn('data-natural-device-match="true"', dom)
         self.assertIn('data-device-label="OnePlus 13"', dom)
@@ -1126,6 +1166,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         admin, _ = _render_mini_app_in_chrome(api_enabled=True, maintenance_enabled=True, admin_user=True)
         self.assertNotRegex(admin, r'<body class="[^"]*maintenance-limited')
         self.assertRegex(admin, r'id="maintenance-gate"[^>]*hidden')
+
+    def test_rom_resolve_timeout_is_retryable(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(api_enabled=True, library_scenario="timeout")
+        self.assertIn('data-resolve-timeout-recovered="true"', dom)
 
     def test_admin_user_opens_as_a_system_page_in_dark_mode(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -1387,7 +1431,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("__WUKONG_TELEGRAM_MINI_APP_API_URL__", html)
         self.assertNotIn("fetch(uri", script)
         self.assertNotIn('send("probe_source"', script)
-        self.assertNotIn("resolvedUrl", html + script)
+        # Explicit Library Resolve may reveal a temporary link; automatic Smart Source must not.
+        probe_start = script.index("async function probeSourceViaBackend")
+        probe_end = script.index("const ZIP_METADATA_SUFFIXES", probe_start)
+        self.assertNotIn("resolvedUrl", script[probe_start:probe_end])
         self.assertNotIn("Signature=signed", html + script)
         self.assertNotIn("OPlus chưa resolve và Drive", html + script)
         self.assertNotIn("unresolved OPlus links and Drive", html + script)

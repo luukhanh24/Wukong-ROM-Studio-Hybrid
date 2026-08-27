@@ -188,11 +188,11 @@
               <div id="rom-device-options" class="rom-device-options"></div>
             </details>
           </div>
-          <label><span data-i18n="romModelFilter">Mã model</span><input id="rom-model-filter" type="search" maxlength="128" placeholder="CPH2653" autocomplete="off"></label>
           <label><span data-i18n="romRegionFilter">Khu vực</span><select id="rom-region-filter"><option value="" data-i18n="romAllRegions">Tất cả khu vực</option><option>CN</option><option>EU</option><option>GLO</option><option>IN</option><option>NA</option></select></label>
+          <label class="rom-version-field"><span data-i18n="romVersionFilter">Phiên bản</span><select id="rom-version-filter" disabled><option value="" data-i18n="romChooseDeviceFirst">Chọn thiết bị trước</option></select></label>
           <button class="primary compact" id="search-rom-catalog" type="submit" data-i18n="searchRom">Tìm ROM</button>
         </form>
-        <div class="rom-results-heading"><span id="rom-catalog-status" role="status" aria-live="polite"></span><span data-i18n="romLatestOnly">Bản mới nhất mỗi khu vực</span></div>
+        <div class="rom-results-heading"><span id="rom-catalog-status" role="status" aria-live="polite"></span><span data-i18n="romVersionsOrder">Phiên bản mới nhất xếp trước</span></div>
         <div class="rom-catalog-results" id="rom-catalog-results" aria-busy="false"></div>
         <p class="rom-catalog-note" data-i18n="romCatalogNote">Nguồn: Daniel Springer · Wukong phân tích lại link trước khi build.</p>
       </section>

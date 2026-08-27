@@ -88,7 +88,7 @@ function deviceChoices(rows: UpstreamRelease[]) {
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
     const id = stringValue(row.device, 128);
-    if (!id) continue;
+    if (!/^(OP\s|OnePlus\s|OPPO\s|Realme\s)/i.test(id)) continue;
     const key = id.toUpperCase();
     if (!devices.has(key)) {
       if (devices.size >= 512) throw new RomCatalogHttpError("Device catalog is too large");
@@ -128,7 +128,7 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
   if (!devicesOnly && !upstream.searchParams.has("device") && !upstream.searchParams.has("model")) {
     throw new RomCatalogHttpError("Enter a device or model filter", 400);
   }
-  const cacheKey = new Request(`https://rom-catalog-cache.wukong.invalid/${devicesOnly ? "devices" : "v1"}?${upstream.searchParams}`);
+  const cacheKey = new Request(`https://rom-catalog-cache.wukong.invalid/${devicesOnly ? "devices-oplus-v2" : "releases-v2"}?${upstream.searchParams}`);
   const cached = await caches.default.match(cacheKey);
   if (cached) return await cached.json() as Record<string, unknown>;
 
@@ -181,9 +181,11 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
   }
   const rows = releaseRows(payload);
   const releases = (devicesOnly ? [] : rows)
-    .slice(0, MAX_RELEASES)
     .map(normalizeRelease)
-    .filter((release): release is Record<string, unknown> => release !== null);
+    .filter((release): release is Record<string, unknown> => release !== null)
+    .sort((a, b) => String(b.buildTimestamp).localeCompare(String(a.buildTimestamp)) ||
+      String(b.version).localeCompare(String(a.version), "en", { numeric: true }))
+    .slice(0, MAX_RELEASES);
   const result = {
     source: "daniel-springer",
     fetchedAt: new Date().toISOString(),

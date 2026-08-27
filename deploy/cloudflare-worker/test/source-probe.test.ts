@@ -16,6 +16,23 @@ function mockDnsAndOrigin(handler: (request: Request) => Response | Promise<Resp
 }
 
 describe("bounded ROM source Range proxy", () => {
+  it("retries a transient probe transport failure with a fresh single-use claim", async () => {
+    const tokens: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      expect(request.url).toBe("https://wukong-rom-studio.vercel.app/api/source-transport");
+      tokens.push((await request.json() as { token: string }).token);
+      if (tokens.length === 1) return Response.json({ error: "ROM source probe failed" }, { status: 502 });
+      return Response.json({ resolvedUrl: "https://cdn.allawnfs.com/rom.zip", filename: "rom.zip", sizeBytes: 4096, contentType: "application/zip" });
+    }));
+    const response = await SELF.fetch("https://worker.example/v1/sources/probe", {
+      method: "POST", headers: { Origin: "https://wukong-rom-studio.vercel.app", "Content-Type": "application/json" },
+      body: JSON.stringify({ uri: "https://component-ota-cn.allawntech.com/downloadCheck?transient=1" })
+    });
+    expect(response.status).toBe(200);
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0]).not.toBe(tokens[1]);
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();

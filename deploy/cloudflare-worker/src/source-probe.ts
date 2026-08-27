@@ -291,7 +291,8 @@ export async function callSourceTransport(
         Accept: operation === "range" ? "application/octet-stream" : "application/json",
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(claim)
+      body: JSON.stringify(claim),
+      ...(operation === "probe" ? { signal: AbortSignal.timeout(25_000) } : {})
     });
   } catch {
     throw new SourceProbeHttpError("ROM source transport is unavailable", 503);
@@ -391,7 +392,8 @@ export async function createProbeSession(
   request: Request,
   env: Env,
   value: unknown,
-  ownerSubject = ""
+  ownerSubject = "",
+  exposeResolvedUrl = false
 ): Promise<JsonObject> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new SourceProbeHttpError("A valid ROM source URL is required");
@@ -410,9 +412,14 @@ export async function createProbeSession(
   let lastModified: string | null;
   let transportMode: "direct" | "vercel" = "direct";
   if (usesVercelTransport(originalUrl)) {
-    const transportResponse = await callSourceTransport(
-      request, env, "probe", uri, "bytes=0-0", 1
-    );
+    let transportResponse: Response;
+    try {
+      transportResponse = await callSourceTransport(request, env, "probe", uri, "bytes=0-0", 1);
+    } catch (error) {
+      if (!(error instanceof SourceProbeHttpError) || error.status < 500) throw error;
+      // Re-resolve from the original URL and mint a new claim: claims are single-use.
+      transportResponse = await callSourceTransport(request, env, "probe", uri, "bytes=0-0", 1);
+    }
     const metadata = await transportProbeMetadata(transportResponse);
     resolvedUrl = validatedUrl(metadata.resolvedUrl);
     filename = metadata.filename;
@@ -484,6 +491,7 @@ export async function createProbeSession(
   ).run();
   return {
     provider: providerFor(resolvedUrl.hostname, originalUrl.hostname),
+    ...(exposeResolvedUrl && ownerSubject ? { resolvedUrl: resolvedUrl.toString() } : {}),
     filename,
     resolvedHost: resolvedUrl.hostname,
     host: resolvedUrl.hostname,

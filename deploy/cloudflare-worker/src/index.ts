@@ -161,6 +161,14 @@ async function routeWithIdentity(
   if (path === "/v1/catalog" && request.method === "GET") {
     return json(catalogPayload());
   }
+  if (path === "/v1/sources/resolve" && request.method === "POST") {
+    try {
+      return json(await createProbeSession(request, env, await request.json(), auth.subject, true));
+    } catch (error) {
+      if (error instanceof SourceProbeHttpError) return json({ error: error.message, code: error.code }, error.status);
+      return json({ error: "ROM source could not be resolved", code: "source_unreachable" }, 502);
+    }
+  }
   if (["/v1/rom-catalog", "/v1/rom-catalog/devices"].includes(path) && request.method === "GET") {
     try {
       return json(await romCatalog(request, env), 200, {

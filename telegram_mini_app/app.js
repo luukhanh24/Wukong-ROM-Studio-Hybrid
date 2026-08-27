@@ -362,14 +362,20 @@ Object.assign(translations.vi, {
   libraryRom: "ROM / OTA", libraryTechnical: "Thiết bị & MOD",
   romCatalogHint: "Chọn thiết bị và khu vực. Chọn bản ROM để phân tích trong Studio.",
   romDeviceChoose: "Chọn thiết bị", romDeviceSearch: "Tìm tên máy hoặc mã model",
-  romDevicesLoading: "Đang tải danh sách thiết bị…", romDevicesError: "Chưa tải được danh sách. Thử lại hoặc tìm ROM bằng mã model.",
+  romDevicesLoading: "Đang tải danh sách thiết bị…", romDevicesError: "Chưa tải được danh sách thiết bị. Hãy bấm Tải lại danh sách.",
   romDevicesRetry: "Tải lại danh sách", romDevicesEmpty: "Không có thiết bị phù hợp.", romDevicesCount: "{count} thiết bị",
-  romDeviceClear: "Bỏ chọn · Tìm bằng mã model",
+  romDeviceClear: "Bỏ chọn thiết bị",
+  romVersionFilter: "Phiên bản", romChooseDeviceFirst: "Chọn thiết bị trước", romVersionsOrder: "Phiên bản mới nhất xếp trước",
+  romCopyLink: "Copy link ROM", romLinkCopied: "Đã sao chép link ROM gốc.", romResolve: "Resolve", romResolving: "Đang resolve…",
+  romResolveFailed: "Chưa resolve được link. Hãy thử lại hoặc chọn phiên bản khác.", romResolvedCopy: "Copy link đã resolve",
+  romResolvedCopied: "Đã sao chép link tải trực tiếp.", romResolvedLabel: "Link tải đã resolve",
+  romResolvedHint: "Link tải tạm thời; nếu hết hạn, bấm Resolve lại. Build vẫn dùng link ROM gốc.",
+  romVersionsTruncated: "Chỉ hiển thị các phiên bản mới nhất trong giới hạn dữ liệu.",
   romAllRegions: "Tất cả khu vực", romLatestOnly: "Bản mới nhất mỗi khu vực",
   romCatalogIdle: "Tìm ROM theo thiết bị của bạn",
-  romCatalogIdleHint: "Chọn thiết bị trong danh sách hoặc nhập mã model, ví dụ CPH2653.",
+  romCatalogIdleHint: "Chọn thiết bị OnePlus, OPPO hoặc Realme, sau đó chọn khu vực và phiên bản.",
   romCatalogCount: "{count} bản ROM", romCatalogRetry: "Không tải được kho ROM. Hãy thử tìm lại.",
-  romFilterRequired: "Chọn thiết bị hoặc nhập mã model để tìm ROM.",
+  romFilterRequired: "Chọn thiết bị để tải các phiên bản ROM.",
   maintenanceGateTitle: "Studio đang tạm đóng",
   maintenanceGateStatus: "Các job đang chạy vẫn được xử lý an toàn.",
   maintenanceRefresh: "Kiểm tra lại",
@@ -390,7 +396,7 @@ Object.assign(translations.vi, {
   searchRom: "Tìm ROM",
   romCatalogNote: "Nguồn: Daniel Springer · Danh sách ROM không đồng nghĩa mọi thiết bị đều được Wukong hỗ trợ build.",
   romCatalogEmpty: "Không tìm thấy bản ROM phù hợp.",
-  romCatalogLoading: "Đang tìm bản ROM mới nhất…",
+  romCatalogLoading: "Đang tải các phiên bản ROM…",
   useRom: "Phân tích trong Studio",
   romSelected: "Đã đưa link OTA vào Studio và bắt đầu phân tích."
 });
@@ -401,14 +407,20 @@ Object.assign(translations.en, {
   libraryRom: "ROM / OTA", libraryTechnical: "Devices & MODs",
   romCatalogHint: "Choose a device and region, then select a release to analyze in Studio.",
   romDeviceChoose: "Choose a device", romDeviceSearch: "Search device name or model",
-  romDevicesLoading: "Loading devices…", romDevicesError: "Could not load devices. Retry or search for a ROM by model code.",
+  romDevicesLoading: "Loading devices…", romDevicesError: "Could not load devices. Use Reload devices to retry.",
   romDevicesRetry: "Reload devices", romDevicesEmpty: "No matching devices.", romDevicesCount: "{count} devices",
-  romDeviceClear: "Clear selection · Search by model",
+  romDeviceClear: "Clear device selection",
+  romVersionFilter: "Version", romChooseDeviceFirst: "Choose a device first", romVersionsOrder: "Newest versions first",
+  romCopyLink: "Copy ROM link", romLinkCopied: "Original ROM link copied.", romResolve: "Resolve", romResolving: "Resolving…",
+  romResolveFailed: "Could not resolve this link. Retry or choose another version.", romResolvedCopy: "Copy resolved link",
+  romResolvedCopied: "Direct download link copied.", romResolvedLabel: "Resolved download link",
+  romResolvedHint: "This temporary link can expire. Resolve again to refresh it; builds still use the original ROM link.",
+  romVersionsTruncated: "Only the newest versions within the data limit are shown.",
   romAllRegions: "All regions", romLatestOnly: "Latest release per region",
   romCatalogIdle: "Find a ROM for your device",
-  romCatalogIdleHint: "Choose a device from the list or enter a model code, such as CPH2653.",
+  romCatalogIdleHint: "Choose a OnePlus, OPPO or Realme device, then select a region and version.",
   romCatalogCount: "{count} releases", romCatalogRetry: "Could not load the ROM library. Search again to retry.",
-  romFilterRequired: "Choose a device or enter a model code to find a ROM.",
+  romFilterRequired: "Choose a device to load its ROM versions.",
   maintenanceGateTitle: "Studio is temporarily closed",
   maintenanceGateStatus: "Running jobs continue safely in the background.",
   maintenanceRefresh: "Check again",
@@ -429,7 +441,7 @@ Object.assign(translations.en, {
   searchRom: "Find ROM",
   romCatalogNote: "Source: Daniel Springer · A listed ROM does not mean Wukong supports building for that device.",
   romCatalogEmpty: "No matching ROM release was found.",
-  romCatalogLoading: "Searching for the latest ROM…",
+  romCatalogLoading: "Loading ROM versions…",
   useRom: "Analyze in Studio",
   romSelected: "The OTA link was added to Studio and analysis has started."
 });
@@ -501,6 +513,9 @@ const state = {
   romCatalogRequestId: 0,
   romDevices: [],
   romDevicesStatus: "idle",
+  romResolved: null,
+  romResolveController: null,
+  romCatalogTruncated: false,
   miniSessionId: "",
   adminUsers: [],
   adminUsersTotal: 0,
@@ -539,6 +554,7 @@ function applyLanguage() {
   renderSelectedJob();
   renderSessionDiagnostics();
   renderAccount();
+  renderRomVersions();
   renderRomCatalogResults();
   renderRomDevices();
   renderAdminUsers();
@@ -1057,8 +1073,10 @@ function sourceMetadataText() {
 }
 
 async function copyText(text) {
-  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
-  else {
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(text); return; } catch (_) { /* Try the WebView-compatible copy path. */ }
+  }
+  {
     const input = document.createElement("textarea"); input.value = text;
     input.style.position = "fixed"; input.style.opacity = "0"; input.style.pointerEvents = "none";
     document.body.append(input); input.select();
@@ -1850,7 +1868,7 @@ async function probeSourceInPlace() {
       $("#source-state-message").textContent = t("probeSignedExpired");
     }
     if (apiOffline) $("#source-kicker").textContent = t("apiOfflineKicker");
-    toast(error?.code === "source_signed_url_expired" ? t("probeSignedExpired") : sourceFailed ? t("probeFailed") : apiOffline ? t("apiOfflineMessage") : error.message, true);
+    toast(error?.code === "source_signed_url_expired" ? t("probeSignedExpired") : sourceFailed ? t("probeFailed") : apiOffline ? t("apiOfflineMessage") : t("probeDeferred"), true);
   } finally {
     clearTimeout(timeout);
     if (requestId === state.sourceProbeRequestId) {
@@ -2483,7 +2501,7 @@ async function loadRomDevices() {
   try {
     const payload = await apiRequest("/v1/rom-catalog/devices");
     if (!Array.isArray(payload.devices)) throw new Error("Invalid device catalog");
-    state.romDevices = payload.devices;
+    state.romDevices = payload.devices.filter((device) => ["oneplus", "oppo", "realme"].includes(String(device.brand).toLowerCase()));
     state.romDevicesStatus = "ready";
   } catch (_) {
     state.romDevicesStatus = "error";
@@ -2493,7 +2511,6 @@ async function loadRomDevices() {
 
 function chooseRomDevice(device) {
   $("#rom-device-filter").value = device?.id || "";
-  $("#rom-model-filter").value = "";
   const region = $("#rom-region-filter");
   const codes = device ? device.regions.map((entry) => entry.code) : ["CN", "EU", "GLO", "IN", "NA"];
   region.replaceChildren(new Option(t("romAllRegions"), ""), ...codes.map((code) => new Option(code, code)));
@@ -2504,9 +2521,61 @@ function chooseRomDevice(device) {
   state.romCatalogRequestId += 1;
   state.romCatalogStatus = "idle";
   state.romCatalogReleases = [];
+  resetRomResolved();
+  renderRomVersions(false);
   $("#search-rom-catalog").disabled = false;
   renderRomDevices();
   renderRomCatalogResults();
+  if (device) searchRomCatalog();
+}
+
+function resetRomResolved() {
+  state.romResolveController?.abort();
+  state.romResolveController = null;
+  state.romResolved = null;
+}
+
+function filteredRomReleases() {
+  const region = $("#rom-region-filter").value;
+  return state.romCatalogReleases.filter((release) => !region || release.region === region);
+}
+
+function renderRomVersions(preserve = true) {
+  const select = $("#rom-version-filter");
+  const previous = preserve ? select.value : "";
+  const releases = state.romCatalogStatus === "ready" ? filteredRomReleases() : [];
+  select.replaceChildren(...releases.map((release) => new Option(`${release.version || release.otaVersion} · ${release.region}`, release.id)));
+  select.disabled = !releases.length;
+  if (!releases.length) select.add(new Option(t(state.romCatalogStatus === "loading" ? "romCatalogLoading" : state.romCatalogStatus === "ready" ? "romCatalogEmpty" : "romChooseDeviceFirst"), ""));
+  else if (releases.some((release) => release.id === previous)) select.value = previous;
+}
+
+async function resolveRomRelease(release) {
+  if (state.romResolved?.status === "loading") return;
+  const controller = new AbortController();
+  state.romResolveController = controller;
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 70_000);
+  state.romResolved = { id: release.id, status: "loading" };
+  renderRomCatalogResults();
+  try {
+    const payload = await apiRequest("/v1/sources/resolve", {
+      method: "POST", body: JSON.stringify({ uri: release.sourceUrl }), signal: controller.signal
+    });
+    if (controller.signal.aborted || $("#rom-version-filter").value !== release.id) return;
+    const url = new URL(payload.resolvedUrl);
+    if (!["https:", "http:"].includes(url.protocol)) throw new Error("Invalid resolved link");
+    state.romResolved = { id: release.id, status: "ready", url: url.toString(), expiresAt: payload.signedUrlExpiresAt };
+  } catch (error) {
+    if ((controller.signal.aborted && !timedOut) || $("#rom-version-filter").value !== release.id) return;
+    state.romResolved = { id: release.id, status: "error" };
+  } finally {
+    clearTimeout(timeout);
+    if (state.romResolveController === controller) {
+      state.romResolveController = null;
+      renderRomCatalogResults();
+    }
+  }
 }
 
 function renderRomCatalogResults() {
@@ -2515,7 +2584,7 @@ function renderRomCatalogResults() {
   const status = state.romCatalogStatus;
   target.setAttribute("aria-busy", String(status === "loading"));
   $("#rom-catalog-status").textContent = status === "ready"
-    ? t("romCatalogCount", { count: state.romCatalogReleases.length })
+    ? t("romCatalogCount", { count: filteredRomReleases().length })
     : status === "loading" ? t("romCatalogLoading") : "";
   if (status !== "ready") {
     const empty = document.createElement("div");
@@ -2531,14 +2600,14 @@ function renderRomCatalogResults() {
     target.replaceChildren(empty);
     return;
   }
-  if (!state.romCatalogReleases.length) {
+  if (!filteredRomReleases().length) {
     const empty = document.createElement("p");
     empty.className = "rom-catalog-empty";
     empty.textContent = t("romCatalogEmpty");
     target.replaceChildren(empty);
     return;
   }
-  target.replaceChildren(...state.romCatalogReleases.map((release) => {
+  target.replaceChildren(...filteredRomReleases().filter((release) => release.id === $("#rom-version-filter").value).map((release) => {
     const row = document.createElement("article");
     row.className = "rom-release";
     const copy = document.createElement("div");
@@ -2556,6 +2625,7 @@ function renderRomCatalogResults() {
     copy.append(title, version, meta);
     const use = document.createElement("button");
     use.type = "button";
+    use.dataset.romAction = "analyze";
     use.textContent = t("useRom");
     use.addEventListener("click", () => {
       const source = $("#source-uri");
@@ -2565,21 +2635,67 @@ function renderRomCatalogResults() {
       source.focus({ preventScroll: true });
       toast(t("romSelected"));
     });
-    row.append(copy, use);
+    const actions = document.createElement("div");
+    actions.className = "rom-release-actions";
+    const copyLink = document.createElement("button");
+    copyLink.type = "button";
+    copyLink.dataset.romAction = "copy";
+    copyLink.textContent = t("romCopyLink");
+    copyLink.addEventListener("click", () => copyText(release.sourceUrl).then(() => toast(t("romLinkCopied"))).catch(() => toast(t("clipboardDenied"), true)));
+    const resolve = document.createElement("button");
+    resolve.type = "button";
+    resolve.dataset.romAction = "resolve";
+    const resolved = state.romResolved?.id === release.id ? state.romResolved : null;
+    resolve.disabled = resolved?.status === "loading";
+    resolve.textContent = t(resolve.disabled ? "romResolving" : "romResolve");
+    resolve.addEventListener("click", () => resolveRomRelease(release));
+    actions.append(copyLink, resolve, use);
+    row.append(copy, actions);
+    if (resolved?.status === "error") {
+      const error = document.createElement("p");
+      error.className = "rom-resolve-error";
+      error.setAttribute("role", "alert");
+      error.textContent = t("romResolveFailed");
+      row.append(error);
+    }
+    if (resolved?.status === "ready") {
+      const result = document.createElement("div");
+      result.className = "rom-resolved-result";
+      const label = document.createElement("label");
+      label.textContent = t("romResolvedLabel");
+      const link = document.createElement("textarea");
+      link.className = "rom-resolved-url";
+      link.readOnly = true;
+      link.rows = 2;
+      link.value = resolved.url;
+      label.append(link);
+      const hint = document.createElement("p");
+      hint.textContent = t("romResolvedHint");
+      const resolvedCopy = document.createElement("button");
+      resolvedCopy.type = "button";
+      resolvedCopy.dataset.romAction = "copy-resolved";
+      resolvedCopy.textContent = t("romResolvedCopy");
+      resolvedCopy.addEventListener("click", () => copyText(resolved.url).then(() => toast(t("romResolvedCopied"))).catch(() => { link.focus(); link.select(); toast(t("clipboardDenied"), true); }));
+      result.append(label, hint, resolvedCopy);
+      row.append(result);
+    }
     return row;
   }));
+  if (state.romCatalogTruncated) {
+    const note = document.createElement("p");
+    note.textContent = t("romVersionsTruncated");
+    target.append(note);
+  }
 }
 
 async function searchRomCatalog() {
   if (state.romCatalogStatus === "loading") return;
   const button = $("#search-rom-catalog");
-  const params = new URLSearchParams({ latest: "1" });
+  const params = new URLSearchParams({ latest: "0" });
   const filters = {
-    device: $("#rom-device-filter").value.trim(),
-    model: $("#rom-model-filter").value.trim(),
-    region: $("#rom-region-filter").value.trim()
+    device: $("#rom-device-filter").value.trim()
   };
-  if (!filters.device && !filters.model) {
+  if (!filters.device) {
     toast(t("romFilterRequired"), true);
     $("#rom-device-picker").open = true;
     $("#rom-device-search").focus();
@@ -2590,18 +2706,23 @@ async function searchRomCatalog() {
   });
   button.disabled = true;
   const requestId = ++state.romCatalogRequestId;
+  resetRomResolved();
   state.romCatalogStatus = "loading";
+  renderRomVersions(false);
   renderRomCatalogResults();
   try {
     const payload = await apiRequest(`/v1/rom-catalog?${params.toString()}`);
     if (requestId !== state.romCatalogRequestId) return;
     state.romCatalogReleases = Array.isArray(payload.releases) ? payload.releases : [];
     state.romCatalogStatus = "ready";
+    state.romCatalogTruncated = payload.truncated === true;
+    renderRomVersions(false);
     renderRomCatalogResults();
   } catch (error) {
     if (requestId !== state.romCatalogRequestId) return;
     state.romCatalogReleases = [];
     state.romCatalogStatus = "error";
+    renderRomVersions(false);
     renderRomCatalogResults();
   } finally {
     if (requestId === state.romCatalogRequestId) button.disabled = false;
@@ -3684,6 +3805,8 @@ function bindEvents() {
     searchRomCatalog();
   });
   $("#rom-device-search").addEventListener("input", renderRomDevices);
+  $("#rom-region-filter").addEventListener("change", () => { resetRomResolved(); renderRomVersions(false); renderRomCatalogResults(); });
+  $("#rom-version-filter").addEventListener("change", () => { resetRomResolved(); renderRomCatalogResults(); });
   $("#rom-device-search").addEventListener("keydown", (event) => {
     if (event.key === "Enter") { event.preventDefault(); $("[data-rom-device]")?.focus(); }
   });
