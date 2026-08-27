@@ -3,6 +3,26 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { tmaHeaders } from "./helpers";
 
 describe("ROM discovery catalog", () => {
+  it("lists unique devices and their regions across the entire latest catalog, with caching and approval", async () => {
+    const rows = Array.from({ length: 201 }, (_, i) => ({ device: "OP 13", region: i % 2 ? "EU" : "CN", model: i % 2 ? "CPH2653" : "PJZ110" }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      expect(String(input)).toBe("https://roms.danielspringer.at/api/ota.php?latest=1");
+      return Response.json({ releases: [...rows, { device: "OPPO FIND X8", region: "CN", model: "PKB110" }] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const url = "https://worker.example/v1/rom-catalog/devices";
+    expect((await SELF.fetch(url, { headers: await tmaHeaders(77040) })).status).toBe(403);
+    const headers = await tmaHeaders(1678823419);
+    const response = await SELF.fetch(url, { headers });
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload).toMatchObject({ devices: [
+      { id: "OP 13", label: "OnePlus 13", brand: "OnePlus", regions: [{ code: "CN", models: ["PJZ110"] }, { code: "EU", models: ["CPH2653"] }] },
+      { id: "OPPO FIND X8", label: "OPPO Find X8", brand: "OPPO" }
+    ] });
+    expect(await (await SELF.fetch(url, { headers })).json()).toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });

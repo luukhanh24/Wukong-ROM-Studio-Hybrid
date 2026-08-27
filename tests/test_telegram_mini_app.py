@@ -192,7 +192,20 @@ window.addEventListener('DOMContentLoaded', () => {{
     document.querySelector('#library-technical-tab').click();
     document.body.dataset.technicalVisible = String(!document.querySelector('#library-technical').hidden);
     document.querySelector('#library-rom-tab').click();
-    document.querySelector('#rom-device-filter').value = 'OP 13';
+    const chooseDevice = () => {{
+    const choice = document.querySelector('[data-rom-device="OP 13"]');
+    if (!choice) {{ setTimeout(chooseDevice, 50); return; }}
+    document.querySelector('#rom-device-picker').open = true;
+    const search = document.querySelector('#rom-device-search');
+    search.value = 'OnePlus Pad 2';
+    search.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    document.body.dataset.naturalDeviceMatch = String(Boolean(document.querySelector('[data-rom-device="OP PAD2"]')));
+    search.value = 'cph2653';
+    search.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    document.body.dataset.filteredDevices = String(document.querySelectorAll('[data-rom-device]').length);
+    document.querySelector('[data-rom-device="OP 13"]').click();
+    document.body.dataset.deviceLabel = document.querySelector('#rom-device-label').textContent;
+    document.body.dataset.deviceRegions = [...document.querySelector('#rom-region-filter').options].map(o => o.value).join(',');
     document.querySelector('#search-rom-catalog').click();
     const checkResult = () => {{
       const result = document.querySelector('.rom-release button');
@@ -205,6 +218,8 @@ window.addEventListener('DOMContentLoaded', () => {{
       }}
     }};
     checkResult();
+    }};
+    chooseDevice();
   }};
   setTimeout(exerciseLibrary, 400);
 }});
@@ -468,6 +483,13 @@ window.addEventListener('load', () => {{
             return
         if path == "/v1/rom-catalog":
             self._send(json.dumps({"releases": [{"id": "rom-fixture", "device": "OnePlus 13", "model": "CPH2653", "region": "EU", "version": "CPH2653_16.0.10.501(EX01)", "securityPatch": "2026-08-01", "sizeBytes": 8304912951, "sourceUrl": OPLUS_TEST_URI}]}).encode(), "application/json")
+            return
+        if path == "/v1/rom-catalog/devices":
+            self._send(json.dumps({"devices": [
+                {"id": "OP 13", "label": "OnePlus 13", "brand": "OnePlus", "regions": [{"code": "CN", "models": ["PJZ110"]}, {"code": "EU", "models": ["CPH2653"]}]},
+                {"id": "OPPO FIND X8", "label": "OPPO Find X8", "brand": "OPPO", "regions": [{"code": "CN", "models": ["PKB110"]}]},
+                {"id": "OP PAD2", "label": "OnePlus PAD2", "brand": "OnePlus", "regions": [{"code": "EU", "models": ["fixture-pad"]}]},
+            ]}).encode(), "application/json")
             return
         if path == "/test/cache-count":
             self._send(json.dumps({"count": type(self).cache_clear_requests}).encode(), "application/json")
@@ -1088,6 +1110,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-rom-in-library="true"', dom)
         self.assertIn('data-technical-visible="true"', dom)
         self.assertIn('data-rom-results="1"', dom)
+        self.assertIn('data-filtered-devices="1"', dom)
+        self.assertIn('data-natural-device-match="true"', dom)
+        self.assertIn('data-device-label="OnePlus 13"', dom)
+        self.assertIn('data-device-regions=",CN,EU"', dom)
         self.assertIn('data-selected-view="build"', dom)
         self.assertIn('data-selected-source="https://component-ota-cn.allawntech.com/downloadCheck?', dom)
         self.assertRegex(dom, r'id="source-product-detected"[^>]*>PKG110')

@@ -335,7 +335,7 @@ export function createSourceTransportHandler(dependencies: {
         if (sourceKind(catalog) !== "catalog" || work.maximumBytes !== MAX_CATALOG_PAGE ||
           ![...catalog.searchParams.keys()].every((key) => ["device", "model", "region", "latest", "since"].includes(key)) ||
           ![...catalog.searchParams.values()].every((value) => value.length <= 128) ||
-          !(catalog.searchParams.get("device") || catalog.searchParams.get("model"))) {
+          !(catalog.searchParams.get("device") || catalog.searchParams.get("model") || catalog.search === "?latest=1")) {
           throw new TransportError("Catalog claim is invalid", 403);
         }
         const response = await fetchImpl(catalog, {

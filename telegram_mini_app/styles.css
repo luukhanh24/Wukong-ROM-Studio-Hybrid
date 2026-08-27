@@ -178,11 +178,27 @@ h2 { letter-spacing: -.015em; }
 .rom-catalog-panel>header { margin-bottom:24px; }
 .rom-catalog-panel h2, .library-technical-summary h2 { margin:0 0 8px; font-size:20px; }
 .rom-catalog-panel>header p { margin:0; max-width:65ch; color:var(--muted); font-size:14px; }
-.rom-catalog-filters { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:end; }
+.rom-catalog-filters { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:end; }
 .rom-catalog-filters label { min-width:0; }
 .rom-catalog-filters label span { display:block; margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:600; }
 .rom-catalog-filters input, .rom-catalog-filters select { width:100%; min-height:44px; padding:8px 12px; border:1px solid var(--line-strong); border-radius:6px; color:var(--ink); background:var(--surface); font-size:14px; }
 .rom-catalog-filters button { min-height:44px; }
+.rom-device-field { grid-column:1/-1; min-width:0; }
+.rom-device-field>span { display:block; margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:600; }
+.rom-device-picker { border:1px solid var(--line-strong); border-radius:6px; background:var(--surface); }
+.rom-device-picker summary { min-height:44px; padding:12px; cursor:pointer; font-size:14px; }
+.rom-device-picker summary span { margin-left:8px; }
+.rom-device-search-box { padding:12px 12px 0; border-top:1px solid var(--line); }
+.rom-device-search-box label { display:block; margin-bottom:8px; color:var(--muted); font-size:12px; }
+#rom-device-status { margin:12px; font-size:12px; color:var(--muted); }
+#rom-devices-retry { margin:0 12px 12px; }
+.rom-device-options { max-height:min(360px,50vh); overflow:auto; overscroll-behavior:contain; scrollbar-color:var(--line-strong) var(--surface); padding:0 12px 12px; }
+.rom-device-options h3 { margin:20px 0 8px; color:var(--muted); font-size:12px; }
+.rom-device-options button { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:10px 12px; text-align:left; border:0; border-radius:4px; background:transparent; }
+.rom-device-options button span { overflow-wrap:anywhere; }
+.rom-device-options button small { color:var(--muted); font-size:11px; text-align:right; }
+.rom-device-options button:hover, .rom-device-options button[aria-pressed="true"] { background:var(--accent-soft); color:var(--accent); }
+.rom-device-options .rom-device-clear { color:var(--muted); font-size:12px; border-bottom:1px solid var(--line); border-radius:0; }
 .rom-catalog-note { margin:20px 0 0; color:var(--muted); font-size:12px; }
 .rom-results-heading { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:28px 0 12px; color:var(--muted); font-size:12px; }
 .rom-results-heading>span:first-child { color:var(--ink); font-weight:600; }

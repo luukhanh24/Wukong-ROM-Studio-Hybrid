@@ -299,6 +299,8 @@ Three cells expose runner choice, pipeline readiness, and recent job access. Aqu
 
 ### Library and maintenance surfaces
 
+ROM discovery starts with a searchable, brand-grouped device picker backed by the latest OTA catalog. The disclosure expands in normal page flow with a bounded scrolling list; choosing a device closes it, returns focus, clears old search results/model filters and resets regions to the device's actual availability. Model-code search remains available if the device directory fails to load. Catalog availability never implies build support.
+
 The former Catalog destination is labeled **Thư viện / Library**, retaining its `#catalog` route for existing links. Its first subtab is ROM / OTA: device/model/region filters, explicit search, a quiet empty state, and ruled release rows. Device, region, version, patch and size remain distinct; “Analyze in Studio” selects the original OTA link and returns to source analysis without submitting a build. Devices & MODs remains a separate read-only subtab. Both subtabs support keyboard navigation. Search uses 44px controls, reflows into two columns on compact screens and one column on narrow phones, and uses existing light/dark tokens.
 
 The System maintenance control is admin-only. A normal Telegram User sees a dedicated maintenance gate instead of workspace navigation; the Configured Admin retains the workspace. Maintenance copy is plain text, and the gate offers a recheck action plus a 30-second visible-page refresh. Running jobs and internal callbacks are unaffected.

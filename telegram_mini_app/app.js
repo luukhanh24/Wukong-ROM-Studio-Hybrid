@@ -360,12 +360,16 @@ Object.assign(translations.vi, {
   navCatalog: "Thư viện", catalogTitle: "Thư viện",
   libraryIntro: "Tìm ROM nguồn, tra cứu thiết bị và bộ MOD.",
   libraryRom: "ROM / OTA", libraryTechnical: "Thiết bị & MOD",
-  romCatalogHint: "Nhập dòng máy hoặc mã model. Chọn bản ROM để phân tích trong Studio.",
+  romCatalogHint: "Chọn thiết bị và khu vực. Chọn bản ROM để phân tích trong Studio.",
+  romDeviceChoose: "Chọn thiết bị", romDeviceSearch: "Tìm tên máy hoặc mã model",
+  romDevicesLoading: "Đang tải danh sách thiết bị…", romDevicesError: "Chưa tải được danh sách. Thử lại hoặc tìm ROM bằng mã model.",
+  romDevicesRetry: "Tải lại danh sách", romDevicesEmpty: "Không có thiết bị phù hợp.", romDevicesCount: "{count} thiết bị",
+  romDeviceClear: "Bỏ chọn · Tìm bằng mã model",
   romAllRegions: "Tất cả khu vực", romLatestOnly: "Bản mới nhất mỗi khu vực",
   romCatalogIdle: "Tìm ROM theo thiết bị của bạn",
-  romCatalogIdleHint: "Ví dụ: dòng máy OP 13 hoặc mã model CPH2653.",
+  romCatalogIdleHint: "Chọn thiết bị trong danh sách hoặc nhập mã model, ví dụ CPH2653.",
   romCatalogCount: "{count} bản ROM", romCatalogRetry: "Không tải được kho ROM. Hãy thử tìm lại.",
-  romFilterRequired: "Nhập dòng máy hoặc mã model để tìm ROM.",
+  romFilterRequired: "Chọn thiết bị hoặc nhập mã model để tìm ROM.",
   maintenanceGateTitle: "Studio đang tạm đóng",
   maintenanceGateStatus: "Các job đang chạy vẫn được xử lý an toàn.",
   maintenanceRefresh: "Kiểm tra lại",
@@ -384,7 +388,7 @@ Object.assign(translations.vi, {
   romModelFilter: "Mã model",
   romRegionFilter: "Khu vực",
   searchRom: "Tìm ROM",
-  romCatalogNote: "Nguồn: Daniel Springer · Wukong phân tích lại link trước khi build.",
+  romCatalogNote: "Nguồn: Daniel Springer · Danh sách ROM không đồng nghĩa mọi thiết bị đều được Wukong hỗ trợ build.",
   romCatalogEmpty: "Không tìm thấy bản ROM phù hợp.",
   romCatalogLoading: "Đang tìm bản ROM mới nhất…",
   useRom: "Phân tích trong Studio",
@@ -395,12 +399,16 @@ Object.assign(translations.en, {
   navCatalog: "Library", catalogTitle: "Library",
   libraryIntro: "Find a source ROM or explore supported devices and MOD packs.",
   libraryRom: "ROM / OTA", libraryTechnical: "Devices & MODs",
-  romCatalogHint: "Enter a device family or model code. Choose a release to analyze in Studio.",
+  romCatalogHint: "Choose a device and region, then select a release to analyze in Studio.",
+  romDeviceChoose: "Choose a device", romDeviceSearch: "Search device name or model",
+  romDevicesLoading: "Loading devices…", romDevicesError: "Could not load devices. Retry or search for a ROM by model code.",
+  romDevicesRetry: "Reload devices", romDevicesEmpty: "No matching devices.", romDevicesCount: "{count} devices",
+  romDeviceClear: "Clear selection · Search by model",
   romAllRegions: "All regions", romLatestOnly: "Latest release per region",
   romCatalogIdle: "Find a ROM for your device",
-  romCatalogIdleHint: "For example: device OP 13 or model CPH2653.",
+  romCatalogIdleHint: "Choose a device from the list or enter a model code, such as CPH2653.",
   romCatalogCount: "{count} releases", romCatalogRetry: "Could not load the ROM library. Search again to retry.",
-  romFilterRequired: "Enter a device family or model code to find a ROM.",
+  romFilterRequired: "Choose a device or enter a model code to find a ROM.",
   maintenanceGateTitle: "Studio is temporarily closed",
   maintenanceGateStatus: "Running jobs continue safely in the background.",
   maintenanceRefresh: "Check again",
@@ -419,7 +427,7 @@ Object.assign(translations.en, {
   romModelFilter: "Model code",
   romRegionFilter: "Region",
   searchRom: "Find ROM",
-  romCatalogNote: "Source: Daniel Springer · Wukong rechecks the link before building.",
+  romCatalogNote: "Source: Daniel Springer · A listed ROM does not mean Wukong supports building for that device.",
   romCatalogEmpty: "No matching ROM release was found.",
   romCatalogLoading: "Searching for the latest ROM…",
   useRom: "Analyze in Studio",
@@ -491,6 +499,8 @@ const state = {
   romCatalogReleases: [],
   romCatalogStatus: "idle",
   romCatalogRequestId: 0,
+  romDevices: [],
+  romDevicesStatus: "idle",
   miniSessionId: "",
   adminUsers: [],
   adminUsersTotal: 0,
@@ -530,6 +540,7 @@ function applyLanguage() {
   renderSessionDiagnostics();
   renderAccount();
   renderRomCatalogResults();
+  renderRomDevices();
   renderAdminUsers();
   renderDebloatSummary();
   updateSummary();
@@ -835,6 +846,7 @@ function navigate(name, smooth = true) {
   updateDispatchFab();
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
   if (name === "profile") renderProfileView();
+  if (name === "catalog") loadRomDevices();
   if (name === "system" && state.me?.role === "admin") loadAdminUsers().catch(() => {});
 }
 
@@ -2416,6 +2428,87 @@ async function updateMaintenance() {
   }
 }
 
+function renderRomDevices() {
+  const selected = state.romDevices.find((device) => device.id === $("#rom-device-filter").value);
+  $("#rom-device-label").textContent = selected?.label || t("romDeviceChoose");
+  const status = state.romDevicesStatus;
+  $("#rom-devices-retry").hidden = status !== "error";
+  const target = $("#rom-device-options");
+  target.setAttribute("aria-busy", String(status === "loading"));
+  target.replaceChildren();
+  if (status !== "ready") {
+    $("#rom-device-status").textContent = t(status === "error" ? "romDevicesError" : "romDevicesLoading");
+    return;
+  }
+  const searchKey = (value) => String(value).toLocaleLowerCase().replace(/[\s_-]+/g, "");
+  const query = searchKey($("#rom-device-search").value);
+  const devices = state.romDevices.filter((device) => [device.id, device.label,
+    ...device.regions.flatMap((region) => region.models)].some((value) => searchKey(value).includes(query)));
+  $("#rom-device-status").textContent = devices.length ? t("romDevicesCount", { count: devices.length }) : t("romDevicesEmpty");
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "rom-device-clear";
+  clear.textContent = t("romDeviceClear");
+  clear.addEventListener("click", () => chooseRomDevice(null));
+  target.append(clear);
+  const groups = new Map();
+  devices.forEach((device) => {
+    if (!groups.has(device.brand)) groups.set(device.brand, []);
+    groups.get(device.brand).push(device);
+  });
+  groups.forEach((items, brand) => {
+    const heading = document.createElement("h3");
+    heading.textContent = `${brand} · ${items.length}`;
+    target.append(heading);
+    items.forEach((device) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.romDevice = device.id;
+      button.setAttribute("aria-pressed", String(selected?.id === device.id));
+      const label = document.createElement("span");
+      label.textContent = device.label;
+      const regions = document.createElement("small");
+      regions.textContent = device.regions.map((region) => region.code).join(" · ");
+      button.append(label, regions);
+      button.addEventListener("click", () => chooseRomDevice(device));
+      target.append(button);
+    });
+  });
+}
+
+async function loadRomDevices() {
+  if (!privateApiAvailable() || ["loading", "ready"].includes(state.romDevicesStatus)) return;
+  state.romDevicesStatus = "loading";
+  renderRomDevices();
+  try {
+    const payload = await apiRequest("/v1/rom-catalog/devices");
+    if (!Array.isArray(payload.devices)) throw new Error("Invalid device catalog");
+    state.romDevices = payload.devices;
+    state.romDevicesStatus = "ready";
+  } catch (_) {
+    state.romDevicesStatus = "error";
+  }
+  renderRomDevices();
+}
+
+function chooseRomDevice(device) {
+  $("#rom-device-filter").value = device?.id || "";
+  $("#rom-model-filter").value = "";
+  const region = $("#rom-region-filter");
+  const codes = device ? device.regions.map((entry) => entry.code) : ["CN", "EU", "GLO", "IN", "NA"];
+  region.replaceChildren(new Option(t("romAllRegions"), ""), ...codes.map((code) => new Option(code, code)));
+  region.options[0].dataset.i18n = "romAllRegions";
+  $("#rom-device-picker").open = false;
+  $("#rom-device-picker summary").focus();
+  $("#rom-device-search").value = "";
+  state.romCatalogRequestId += 1;
+  state.romCatalogStatus = "idle";
+  state.romCatalogReleases = [];
+  $("#search-rom-catalog").disabled = false;
+  renderRomDevices();
+  renderRomCatalogResults();
+}
+
 function renderRomCatalogResults() {
   const target = $("#rom-catalog-results");
   if (!target) return;
@@ -2488,7 +2581,8 @@ async function searchRomCatalog() {
   };
   if (!filters.device && !filters.model) {
     toast(t("romFilterRequired"), true);
-    $("#rom-device-filter").focus();
+    $("#rom-device-picker").open = true;
+    $("#rom-device-search").focus();
     return;
   }
   Object.entries(filters).forEach(([key, value]) => {
@@ -2510,7 +2604,7 @@ async function searchRomCatalog() {
     state.romCatalogStatus = "error";
     renderRomCatalogResults();
   } finally {
-    button.disabled = false;
+    if (requestId === state.romCatalogRequestId) button.disabled = false;
   }
 }
 
@@ -3583,11 +3677,25 @@ function bindEvents() {
   $("#open-rom-catalog").addEventListener("click", () => {
     selectLibraryTab("rom");
     navigate("catalog");
-    $("#rom-device-filter").focus();
+    $("#rom-device-picker summary").focus();
   });
   $("#rom-catalog-form").addEventListener("submit", (event) => {
     event.preventDefault();
     searchRomCatalog();
+  });
+  $("#rom-device-search").addEventListener("input", renderRomDevices);
+  $("#rom-device-search").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); $("[data-rom-device]")?.focus(); }
+  });
+  $("#rom-devices-retry").addEventListener("click", loadRomDevices);
+  $("#rom-device-picker").addEventListener("toggle", () => {
+    if ($("#rom-device-picker").open) loadRomDevices();
+  });
+  $("#rom-device-picker").addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    $("#rom-device-picker").open = false;
+    $("#rom-device-picker summary").focus();
   });
   $$('[data-library-tab]').forEach((button) => {
     button.addEventListener("click", () => selectLibraryTab(button.dataset.libraryTab));

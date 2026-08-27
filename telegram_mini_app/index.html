@@ -175,9 +175,19 @@
         <button id="library-technical-tab" type="button" role="tab" aria-selected="false" aria-controls="library-technical" tabindex="-1" data-library-tab="technical" data-i18n="libraryTechnical">Thiết bị & MOD</button>
       </div>
       <section class="rom-catalog-panel" id="rom-catalog-panel" role="tabpanel" aria-labelledby="library-rom-tab">
-        <header><h2 id="rom-catalog-title" data-i18n="romCatalogTitle">Tìm ROM nguồn</h2><p data-i18n="romCatalogHint">Nhập dòng máy hoặc mã model. Chọn bản ROM để phân tích trong Studio.</p></header>
+        <header><h2 id="rom-catalog-title" data-i18n="romCatalogTitle">Tìm ROM nguồn</h2><p data-i18n="romCatalogHint">Chọn thiết bị và khu vực. Chọn bản ROM để phân tích trong Studio.</p></header>
         <form class="rom-catalog-filters" id="rom-catalog-form">
-          <label><span data-i18n="romDeviceFilter">Dòng máy</span><input id="rom-device-filter" type="search" maxlength="128" placeholder="OP 13" autocomplete="off"></label>
+          <div class="rom-device-field">
+            <span id="rom-device-field-label" data-i18n="romDeviceFilter">Thiết bị</span>
+            <input id="rom-device-filter" type="hidden">
+            <details id="rom-device-picker" class="rom-device-picker">
+              <summary aria-labelledby="rom-device-field-label rom-device-label"><span id="rom-device-label">Chọn thiết bị</span></summary>
+              <div class="rom-device-search-box"><label for="rom-device-search" data-i18n="romDeviceSearch">Tìm tên máy hoặc mã model</label><input id="rom-device-search" type="search" maxlength="128" autocomplete="off" placeholder="OnePlus 13, CPH2653…"></div>
+              <p id="rom-device-status" role="status" aria-live="polite"></p>
+              <button id="rom-devices-retry" type="button" data-i18n="romDevicesRetry" hidden>Tải lại danh sách</button>
+              <div id="rom-device-options" class="rom-device-options"></div>
+            </details>
+          </div>
           <label><span data-i18n="romModelFilter">Mã model</span><input id="rom-model-filter" type="search" maxlength="128" placeholder="CPH2653" autocomplete="off"></label>
           <label><span data-i18n="romRegionFilter">Khu vực</span><select id="rom-region-filter"><option value="" data-i18n="romAllRegions">Tất cả khu vực</option><option>CN</option><option>EU</option><option>GLO</option><option>IN</option><option>NA</option></select></label>
           <button class="primary compact" id="search-rom-catalog" type="submit" data-i18n="searchRom">Tìm ROM</button>

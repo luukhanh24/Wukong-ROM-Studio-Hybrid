@@ -161,7 +161,7 @@ async function routeWithIdentity(
   if (path === "/v1/catalog" && request.method === "GET") {
     return json(catalogPayload());
   }
-  if (path === "/v1/rom-catalog" && request.method === "GET") {
+  if (["/v1/rom-catalog", "/v1/rom-catalog/devices"].includes(path) && request.method === "GET") {
     try {
       return json(await romCatalog(request, env), 200, {
         "Cache-Control": "private, max-age=300"

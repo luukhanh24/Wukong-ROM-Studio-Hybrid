@@ -82,10 +82,40 @@ function releaseRows(payload: unknown): UpstreamRelease[] {
   return [];
 }
 
+function deviceChoices(rows: UpstreamRelease[]) {
+  const devices = new Map<string, { id: string; label: string; brand: string; regions: Map<string, Set<string>> }>();
+  const words: Record<string, string> = { OP: "OnePlus", PRO: "Pro", ULTRA: "Ultra", ACE: "Ace", FIND: "Find", RENO: "Reno", NORD: "Nord", PAD: "Pad", OPEN: "Open", TURBO: "Turbo", LITE: "Lite", RACING: "Racing", GO: "Go", REALME: "Realme", REDMI: "Redmi", XIAOMI: "Xiaomi" };
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const id = stringValue(row.device, 128);
+    if (!id) continue;
+    const key = id.toUpperCase();
+    if (!devices.has(key)) {
+      if (devices.size >= 512) throw new RomCatalogHttpError("Device catalog is too large");
+      const label = id.split(/\s+/).map((word) => words[word.toUpperCase()] || word).join(" ");
+      const brand = /^(OnePlus|OPPO|Realme|Xiaomi|Redmi|POCO)\b/i.exec(label)?.[1] || "Other";
+      devices.set(key, { id, label, brand, regions: new Map() });
+    }
+    const device = devices.get(key)!;
+    const region = stringValue(row.region, 64).toUpperCase();
+    const model = stringValue(row.model, 128);
+    if (region) {
+      if (!device.regions.has(region)) device.regions.set(region, new Set());
+      if (model) device.regions.get(region)!.add(model);
+    }
+  }
+  return [...devices.values()]
+    .sort((a, b) => a.brand.localeCompare(b.brand) || a.label.localeCompare(b.label, "en", { numeric: true }))
+    .map((device) => ({ ...device, regions: [...device.regions.entries()].sort(([a], [b]) => a.localeCompare(b))
+      .map(([code, models]) => ({ code, models: [...models].sort() })) }));
+}
+
 export async function romCatalog(request: Request, env: Env): Promise<Record<string, unknown>> {
   const input = new URL(request.url);
+  const devicesOnly = input.pathname === "/v1/rom-catalog/devices";
   const upstream = new URL(DANIEL_API);
   for (const key of QUERY_KEYS) {
+    if (devicesOnly) break;
     const value = input.searchParams.get(key)?.trim() ?? "";
     if (!value) continue;
     if (value.length > 128) throw new RomCatalogHttpError(`${key} filter is too long`, 400);
@@ -95,10 +125,10 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
     upstream.searchParams.set(key, value);
   }
   if (!upstream.searchParams.has("latest")) upstream.searchParams.set("latest", "1");
-  if (!upstream.searchParams.has("device") && !upstream.searchParams.has("model")) {
+  if (!devicesOnly && !upstream.searchParams.has("device") && !upstream.searchParams.has("model")) {
     throw new RomCatalogHttpError("Enter a device or model filter", 400);
   }
-  const cacheKey = new Request(`https://rom-catalog-cache.wukong.invalid/v1?${upstream.searchParams}`);
+  const cacheKey = new Request(`https://rom-catalog-cache.wukong.invalid/${devicesOnly ? "devices" : "v1"}?${upstream.searchParams}`);
   const cached = await caches.default.match(cacheKey);
   if (cached) return await cached.json() as Record<string, unknown>;
 
@@ -149,15 +179,15 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
   } catch {
     throw new RomCatalogHttpError("ROM catalog source returned invalid JSON", 502);
   }
-  const releases = releaseRows(payload)
+  const rows = releaseRows(payload);
+  const releases = (devicesOnly ? [] : rows)
     .slice(0, MAX_RELEASES)
     .map(normalizeRelease)
     .filter((release): release is Record<string, unknown> => release !== null);
   const result = {
     source: "daniel-springer",
     fetchedAt: new Date().toISOString(),
-    releases,
-    truncated: releaseRows(payload).length > MAX_RELEASES
+    ...(devicesOnly ? { devices: deviceChoices(rows) } : { releases, truncated: rows.length > MAX_RELEASES })
   };
   await caches.default.put(cacheKey, Response.json(result, {
     headers: { "Cache-Control": "public, max-age=900" }

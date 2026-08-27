@@ -15,6 +15,18 @@ function request(): Request {
 const publicDns = async () => ["8.8.8.8"];
 
 describe("Vercel source transport", () => {
+  it("allows only the bounded latest snapshot for device discovery without a model filter", async () => {
+    for (const query of ["latest=1", "latest=0", "latest=1&help=1"]) {
+      const handler = createSourceTransportHandler({
+        resolveAddresses: publicDns,
+        fetchImpl: async (input) => String(input) === claimUrl ? Response.json({
+          operation: "catalog", sourceUrl: `https://roms.danielspringer.at/api/ota.php?${query}`,
+          range: "", maximumBytes: 2 * 1024 * 1024
+        }) : Response.json({ releases: [] })
+      });
+      expect((await handler(request())).status).toBe(query === "latest=1" ? 200 : 403);
+    }
+  });
   it("fetches a bounded catalog only with a redeemed claim and rejects redirects", async () => {
     for (const redirect of [false, true]) {
       const handler = createSourceTransportHandler({
