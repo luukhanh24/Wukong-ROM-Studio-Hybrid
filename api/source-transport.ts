@@ -12,7 +12,7 @@ type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 type ResolveAddresses = (hostname: string) => Promise<string[]>;
 
 interface TransportWork {
-  operation: "probe" | "range";
+  operation: "probe" | "range" | "catalog";
   sourceUrl: string;
   range: string;
   maximumBytes: number;
@@ -44,9 +44,10 @@ function privateAddress(value: string): boolean {
     normalized.startsWith("::ffff:");
 }
 
-function sourceKind(url: URL): "daniel" | "resolver" | "cdn" | null {
+function sourceKind(url: URL): "daniel" | "resolver" | "cdn" | "catalog" | null {
   const host = url.hostname.toLowerCase();
   const path = url.pathname.toLowerCase().replace(/\/$/, "");
+  if (url.protocol === "https:" && host === "roms.danielspringer.at" && url.pathname === "/api/ota.php") return "catalog";
   if (
     host === "roms.danielspringer.at" && path === "/index.php" &&
     ((url.searchParams.get("view")?.toLowerCase() === "ota" && Boolean(url.searchParams.get("build"))) ||
@@ -325,10 +326,32 @@ export function createSourceTransportHandler(dependencies: {
       if (!claimResponse.ok) throw new TransportError("Transport claim was rejected", 403);
       const claimBytes = await boundedBytes(claimResponse, MAX_CLAIM_BODY);
       const work = JSON.parse(new TextDecoder().decode(claimBytes)) as TransportWork;
-      if (!["probe", "range"].includes(work.operation) || !Number.isSafeInteger(work.maximumBytes)) {
+      if (!["probe", "range", "catalog"].includes(work.operation) || !Number.isSafeInteger(work.maximumBytes)) {
         throw new TransportError("Transport claim is invalid", 403);
       }
       let source = (await validateDestination(work.sourceUrl, resolveAddresses)).toString();
+      if (work.operation === "catalog") {
+        const catalog = new URL(source);
+        if (sourceKind(catalog) !== "catalog" || work.maximumBytes !== MAX_CATALOG_PAGE ||
+          ![...catalog.searchParams.keys()].every((key) => ["device", "model", "region", "latest", "since"].includes(key)) ||
+          ![...catalog.searchParams.values()].every((value) => value.length <= 128) ||
+          !(catalog.searchParams.get("device") || catalog.searchParams.get("model"))) {
+          throw new TransportError("Catalog claim is invalid", 403);
+        }
+        const response = await fetchImpl(catalog, {
+          redirect: "manual", signal: AbortSignal.timeout(15_000),
+          headers: { Accept: "application/json", "User-Agent": "Wukong-ROM-Studio/1.0" }
+        });
+        if (!response.ok) {
+          await response.body?.cancel();
+          throw new TransportError("ROM catalog is unavailable", 502);
+        }
+        const payload = await boundedBytes(response, MAX_CATALOG_PAGE);
+        return new Response(new TextDecoder().decode(payload), {
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+        });
+      }
+      if (sourceKind(new URL(source)) === "catalog") throw new TransportError("Catalog operation is required", 403);
       if (work.operation === "probe") {
         const original = new URL(source);
         if (sourceKind(original) === "daniel") {

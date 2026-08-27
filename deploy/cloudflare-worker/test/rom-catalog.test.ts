@@ -110,4 +110,30 @@ describe("ROM discovery catalog", () => {
     expect(response.status).toBe(502);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("uses a single-use transport claim when the edge cannot negotiate source TLS", async () => {
+    let claimed = false;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const current = new Request(input, init);
+      if (new URL(current.url).hostname === "roms.danielspringer.at") return new Response(null, { status: 525 });
+      expect(current.url).toBe("https://wukong-rom-studio.vercel.app/api/source-transport");
+      const claim = await current.json() as { token: string; claimUrl: string };
+      const headers = { Authorization: `TransportClaim ${claim.token}` };
+      const response = await SELF.fetch(claim.claimUrl, { method: "POST", headers });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        operation: "catalog", sourceUrl: "https://roms.danielspringer.at/api/ota.php?model=tls-fixture&latest=1",
+        maximumBytes: 2 * 1024 * 1024
+      });
+      expect((await SELF.fetch(claim.claimUrl, { method: "POST", headers })).status).toBe(410);
+      claimed = true;
+      return Response.json({ releases: [{ id: "tls", source_url: "https://cdn.example/rom.zip" }] });
+    }));
+    const result = await SELF.fetch("https://worker.example/v1/rom-catalog?model=tls-fixture", {
+      headers: await tmaHeaders(1678823419)
+    });
+    expect(result.status).toBe(200);
+    expect(claimed).toBe(true);
+    expect(await result.json()).toMatchObject({ releases: [{ id: "tls" }] });
+  });
 });

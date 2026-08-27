@@ -15,6 +15,27 @@ function request(): Request {
 const publicDns = async () => ["8.8.8.8"];
 
 describe("Vercel source transport", () => {
+  it("fetches a bounded catalog only with a redeemed claim and rejects redirects", async () => {
+    for (const redirect of [false, true]) {
+      const handler = createSourceTransportHandler({
+        resolveAddresses: publicDns,
+        fetchImpl: async (input, init) => {
+          const current = new Request(input, init);
+          if (current.url === claimUrl) return Response.json({
+            operation: "catalog", sourceUrl: "https://roms.danielspringer.at/api/ota.php?device=OP+13&latest=1",
+            range: "", maximumBytes: 2 * 1024 * 1024
+          });
+          expect(current.url).toBe("https://roms.danielspringer.at/api/ota.php?device=OP+13&latest=1");
+          expect(init?.redirect).toBe("manual");
+          return redirect ? new Response(null, { status: 302, headers: { Location: "https://other.example" } }) :
+            Response.json({ releases: [{ id: "catalog-fixture" }] });
+        }
+      });
+      const response = await handler(request());
+      expect(response.status).toBe(redirect ? 502 : 200);
+      if (!redirect) expect(await response.json()).toEqual({ releases: [{ id: "catalog-fixture" }] });
+    }
+  });
   it("resolves a Daniel page through its cookie-bound resolver and probes OPlus", async () => {
     const calls: Request[] = [];
     const handler = createSourceTransportHandler({

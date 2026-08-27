@@ -244,7 +244,7 @@ async function sha256Hex(value: string): Promise<string> {
 async function createTransportClaim(
   request: Request,
   env: Env,
-  operation: "probe" | "range",
+  operation: "probe" | "range" | "catalog",
   sourceUrl: string,
   rangeHeader: string,
   maximumBytes: number
@@ -267,10 +267,10 @@ async function createTransportClaim(
   };
 }
 
-async function callSourceTransport(
+export async function callSourceTransport(
   request: Request,
   env: Env,
-  operation: "probe" | "range",
+  operation: "probe" | "range" | "catalog",
   sourceUrl: string,
   rangeHeader: string,
   maximumBytes: number
@@ -288,7 +288,7 @@ async function callSourceTransport(
       method: "POST",
       redirect: "manual",
       headers: {
-        Accept: operation === "probe" ? "application/json" : "application/octet-stream",
+        Accept: operation === "range" ? "application/octet-stream" : "application/json",
         "Content-Type": "application/json"
       },
       body: JSON.stringify(claim)

@@ -1,3 +1,5 @@
+import { callSourceTransport } from "./source-probe";
+
 const DANIEL_API = "https://roms.danielspringer.at/api/ota.php";
 const QUERY_KEYS = ["device", "region", "model", "latest", "since"] as const;
 const MAX_RELEASES = 200;
@@ -80,7 +82,7 @@ function releaseRows(payload: unknown): UpstreamRelease[] {
   return [];
 }
 
-export async function romCatalog(request: Request): Promise<Record<string, unknown>> {
+export async function romCatalog(request: Request, env: Env): Promise<Record<string, unknown>> {
   const input = new URL(request.url);
   const upstream = new URL(DANIEL_API);
   for (const key of QUERY_KEYS) {
@@ -100,7 +102,7 @@ export async function romCatalog(request: Request): Promise<Record<string, unkno
   const cached = await caches.default.match(cacheKey);
   if (cached) return await cached.json() as Record<string, unknown>;
 
-  let response: Response;
+  let response: Response | null = null;
   try {
     response = await fetch(upstream, {
       redirect: "manual",
@@ -111,7 +113,11 @@ export async function romCatalog(request: Request): Promise<Record<string, unkno
       signal: AbortSignal.timeout(8_000)
     });
   } catch {
-    throw new RomCatalogHttpError("ROM catalog source is temporarily unavailable", 503);
+    // The same source can be reachable from Vercel when edge TLS/DNS fails.
+  }
+  if (!response || response.status >= 500) {
+    await response?.body?.cancel();
+    response = await callSourceTransport(request, env, "catalog", upstream.toString(), "", MAX_RESPONSE_BYTES);
   }
   if (!response.ok) {
     throw new RomCatalogHttpError(`ROM catalog source returned HTTP ${response.status}`, 502);

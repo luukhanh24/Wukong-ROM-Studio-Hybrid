@@ -163,7 +163,7 @@ async function routeWithIdentity(
   }
   if (path === "/v1/rom-catalog" && request.method === "GET") {
     try {
-      return json(await romCatalog(request), 200, {
+      return json(await romCatalog(request, env), 200, {
         "Cache-Control": "private, max-age=300"
       });
     } catch (error) {
