@@ -598,8 +598,14 @@ def sanitize_public_value(value: object) -> object:
             flags=re.IGNORECASE,
         )
         sanitized = re.sub(
-            r"\b((?:(?:github|repository|repo)(?:\s+|[:=]\s*)|(?:dispatch|workflow|build)\s+failed\s+for\s+|failed\s+checkout\s+of\s+|(?:cannot|could\s+not)\s+access\s+|repository\s+lookup\s+|(?:checkout|clone|fetch|pull|push)\s+))[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\b",
+            r"\b((?:(?:github|repository|repo)(?:\s+|[:=]\s*)|(?:dispatch|workflow|build|cloud\s+sync|sync)\s+(?:failed|error)\s+(?:for|in)\s+|failed\s+checkout\s+of\s+|(?:cannot|could\s+not)\s+access\s+|repository\s+lookup\s+|(?:checkout|clone|fetch|pull|push)\s+))[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\b",
             r"\1[internal repository]",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(
+            r"\b((?:github|repository)\s+owner\s*[:=]\s*)[A-Za-z0-9_.-]+\b",
+            r"\1[internal account]",
             sanitized,
             flags=re.IGNORECASE,
         )

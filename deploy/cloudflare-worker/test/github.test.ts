@@ -21,7 +21,7 @@ describe("GitHub Actions cancellation", () => {
     const environment = {
       WUKONG_DISABLE_EXTERNAL_DISPATCH: "",
       WUKONG_GITHUB_TOKEN: "github-token-" + "x".repeat(32),
-      WUKONG_GITHUB_REPOSITORY: "luukhanh24/Wukong-ROM-Studio-Hybrid",
+      WUKONG_GITHUB_REPOSITORY: "fixture-owner/fixture-repository",
       WUKONG_GITHUB_WORKFLOW: "wukong-build.yml"
     } as Env;
 
@@ -29,8 +29,8 @@ describe("GitHub Actions cancellation", () => {
       cancelWorkflowRunForJob(environment, "cancelled-before-bootstrap", null)
     ).resolves.toBe(8123);
     expect(calls).toEqual([
-      "GET https://api.github.com/repos/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/workflows/wukong-build.yml/runs?event=workflow_dispatch&per_page=100",
-      "POST https://api.github.com/repos/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/8123/cancel"
+      "GET https://api.github.com/repos/fixture-owner/fixture-repository/actions/workflows/wukong-build.yml/runs?event=workflow_dispatch&per_page=100",
+      "POST https://api.github.com/repos/fixture-owner/fixture-repository/actions/runs/8123/cancel"
     ]);
     vi.unstubAllGlobals();
   });

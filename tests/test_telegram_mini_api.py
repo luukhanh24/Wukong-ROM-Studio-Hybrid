@@ -26,7 +26,7 @@ from wukong.telegram_mini_api import (
 
 TOKEN = "123456789:test-token"
 CALLBACK_SECRET = "github-token-" + "x" * 32
-ORIGIN = "https://luukhanh24.github.io"
+ORIGIN = "https://mini-app.example.com"
 
 
 def signed_init_data(
@@ -540,16 +540,16 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             job_id,
             external_run_id=321,
             error=(
-                "Build failed: https://github.com/luukhanh24/"
-                "Wukong-ROM-Studio-Hybrid/actions/runs/321"
+                "Build failed: https://github.com/private-owner/"
+                "private-repository/actions/runs/321"
             ),
         )
         self.store.append_event(
             job_id,
             "github_run",
             runId=321,
-            repository="luukhanh24/Wukong-ROM-Studio-Hybrid",
-            url="https://github.com/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/321",
+            repository="private-owner/private-repository",
+            url="https://github.com/private-owner/private-repository/actions/runs/321",
         )
         self.store.append_event(
             job_id,
@@ -560,7 +560,8 @@ class TelegramMiniAppAPITests(unittest.TestCase):
             job_id,
             "warning",
             warning=(
-                "Cloud sync failed in luukhanh24/Wukong-ROM-Studio-Hybrid: "
+                "GitHub owner: private-owner; "
+                "Cloud sync failed in private-owner/private-repository: "
                 "rclone copyto /tmp/wukong-job-sync-fixture/manifest.json "
                 "wukong-gdrive:WukongROM/jobs/private-job/manifest.json --config "
                 "/home/runner/work/Wukong-ROM-Studio-Hybrid/"
@@ -649,7 +650,8 @@ class TelegramMiniAppAPITests(unittest.TestCase):
         self.assertEqual(200, events.status_code)
         self.assertNotIn("external_run_id", public_payload)
         self.assertNotIn('"runid"', public_payload)
-        self.assertNotIn("luukhanh24", public_payload)
+        self.assertNotIn("private-owner", public_payload)
+        self.assertIn("[internal account]", public_payload)
         self.assertNotIn("github.com", public_payload)
         self.assertNotIn("private-value", public_payload)
         self.assertNotIn("wukong-gdrive:", public_payload)
@@ -1124,8 +1126,8 @@ class TelegramJobNotifierTests(unittest.TestCase):
             job.job_id,
             status=JobStatus.SUCCEEDED,
             error=(
-                "Internal failure: https://github.com/luukhanh24/"
-                "Wukong-ROM-Studio-Hybrid/actions/runs/123"
+                "Internal failure: https://github.com/private-owner/"
+                "private-repository/actions/runs/123"
             ),
             artifacts=[ArtifactRecord(
                 "Wukong.zip",
@@ -1165,7 +1167,7 @@ class TelegramJobNotifierTests(unittest.TestCase):
         self.assertNotIn("onrender.com", text)
         self.assertIn("[internal build reference]", text)
         self.assertNotIn("github.com", text.casefold())
-        self.assertNotIn("luukhanh24", text.casefold())
+        self.assertNotIn("private-owner", text.casefold())
         payload = post.call_args.kwargs["json"]
         self.assertEqual("HTML", payload["parse_mode"])
         buttons = [

@@ -1646,7 +1646,7 @@ class ControlAdapterContractTests(unittest.TestCase):
             return {}
 
         adapter = GitHubActionsAdapter(
-            owner="luukhanh24",
+            owner="fixture-owner",
             repository="Wukong-ROM-Studio-Hybrid",
             token="secret-token",
             transport=transport,

@@ -5,7 +5,7 @@ PC or a privately managed VPS. ROM builds still run on GitHub Actions. The
 Render service only authenticates Telegram users, probes ROM metadata,
 dispatches jobs, and shows their history.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/luukhanh24/Wukong-ROM-Studio-Hybrid)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/xuankhanh24/Wukong-ROM-Studio-Hybrid)
 
 ## First deployment
 

@@ -1075,7 +1075,7 @@
                             <StackPanel Spacing="10">
                                 <TextBlock Text="GitHub Actions và Google Drive" Style="{StaticResource SectionTitleStyle}" />
                                 <TextBlock Text="Token GitHub và rclone.conf được mã hóa bằng Windows DPAPI và không hiển thị lại." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" />
-                                <TextBox x:Name="HybridRepositoryBox" Header="GitHub repository" Text="luukhanh24/Wukong-ROM-Studio-Hybrid" />
+                                <TextBox x:Name="HybridRepositoryBox" Header="GitHub repository" Text="xuankhanh24/Wukong-ROM-Studio-Hybrid" />
                                 <PasswordBox x:Name="HybridGitHubTokenBox" Header="Fine-grained GitHub token" PlaceholderText="Actions write, Metadata read, Administration read" />
                                 <TextBox x:Name="HybridRcloneConfigBox" Header="Nội dung rclone.conf" AcceptsReturn="True" TextWrapping="NoWrap" MinHeight="120" FontFamily="Consolas" />
                                 <Button Content="Mã hóa cấu hình hybrid và khởi động lại backend" HorizontalAlignment="Right" Click="ConfigureHybridSecretsClick" />

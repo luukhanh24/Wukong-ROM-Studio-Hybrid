@@ -278,7 +278,7 @@ describe("Telegram webhook and pairing", () => {
     expect(webhook.status).toBe(204);
     const botMessage = calls.find((payload) => typeof payload.text === "string");
     expect(String(botMessage?.text)).toContain("Runner  <code>GitHub Actions</code>");
-    expect(String(botMessage?.text)).not.toContain("luukhanh24");
+    expect(String(botMessage?.text)).not.toContain("fixture-owner");
     expect(String(botMessage?.text)).not.toContain("Wukong-ROM-Studio-Hybrid");
 
     const api = await SELF.fetch("https://worker.example/v1/diagnostics", {
@@ -287,7 +287,7 @@ describe("Telegram webhook and pairing", () => {
     expect(api.status).toBe(200);
     const diagnostics = await api.json() as Record<string, unknown>;
     expect(diagnostics.runner).toEqual({ provider: "github-actions" });
-    expect(JSON.stringify(diagnostics)).not.toContain("luukhanh24");
+    expect(JSON.stringify(diagnostics)).not.toContain("fixture-owner");
     expect(JSON.stringify(diagnostics)).not.toContain("Wukong-ROM-Studio-Hybrid");
   });
 

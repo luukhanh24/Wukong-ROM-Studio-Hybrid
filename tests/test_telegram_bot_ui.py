@@ -214,7 +214,7 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual([], self.orchestrator.list(Identity("telegram", "42", "user")))
 
     def test_main_menu_exposes_configured_telegram_mini_app(self) -> None:
-        self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        self.controller.web_app_url = "https://mini-app.example.com/"
 
         response = self.controller.handle_ui(42, "/start")
 
@@ -222,12 +222,12 @@ class TelegramBotUITests(unittest.TestCase):
         app_button = next(button for button in buttons if "Mini App" in button["text"])
         self.assertEqual(
             app_button["web_app"]["url"],
-            "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/",
+            "https://mini-app.example.com/",
         )
         self.assertNotIn("callback_data", app_button)
 
     def test_app_command_uses_inline_web_app_transport_required_for_init_data(self) -> None:
-        self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        self.controller.web_app_url = "https://mini-app.example.com/"
 
         response = self.controller.handle_ui(42, "/app")
 
@@ -237,7 +237,7 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual(self.controller.web_app_url, app_button["web_app"]["url"])
 
     def test_pair_start_confirms_static_mini_app_session(self) -> None:
-        self.controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        self.controller.web_app_url = "https://mini-app.example.com/"
         pairing = self.sessions.begin("WK_build_bot")
 
         response = self.controller.handle_ui(42, f"/start pair_{pairing['pairId']}")
@@ -310,15 +310,15 @@ class TelegramBotUITests(unittest.TestCase):
         identity = Identity("telegram", "42", "user")
         job = self.orchestrator.submit(recipe, identity)
         internal_url = (
-            "https://github.com/luukhanh24/"
-            "Wukong-ROM-Studio-Hybrid/actions/runs/123"
+            "https://github.com/private-owner/"
+            "private-repository/actions/runs/123"
         )
         self.store.update(job.job_id, external_run_id=123, error=f"Failed: {internal_url}")
         self.store.append_event(
             job.job_id,
             "github_run",
             runId=123,
-            repository="luukhanh24/Wukong-ROM-Studio-Hybrid",
+            repository="private-owner/private-repository",
             url=internal_url,
         )
 
@@ -330,7 +330,7 @@ class TelegramBotUITests(unittest.TestCase):
             ]
         ).casefold()
 
-        self.assertNotIn("luukhanh24", output)
+        self.assertNotIn("private-owner", output)
         self.assertNotIn("github.com", output)
         self.assertNotIn("external_run_id", output)
         self.assertNotIn('"runid"', output)
@@ -718,7 +718,7 @@ class TelegramDaemonUITests(unittest.TestCase):
     def test_register_commands_configures_authenticated_mini_app_menu_button(self) -> None:
         controller = Mock()
         controller.command_sets.return_value = {"vi": [], "en": []}
-        controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        controller.web_app_url = "https://mini-app.example.com/"
         success = Mock()
         success.raise_for_status.return_value = None
         http = Mock()
@@ -797,7 +797,7 @@ class TelegramDaemonUITests(unittest.TestCase):
 
     def test_start_personalizes_mini_app_button_and_chat_menu(self) -> None:
         controller = Mock()
-        controller.web_app_url = "https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/"
+        controller.web_app_url = "https://mini-app.example.com/"
         controller.handle_ui.return_value = BotResponse(
             "Open app",
             {"inline_keyboard": [[{

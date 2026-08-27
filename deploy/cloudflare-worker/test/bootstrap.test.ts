@@ -28,7 +28,7 @@ describe("GitHub Actions bootstrap", () => {
     const job = await created.json() as { job_id: string };
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe(
-        "https://api.github.com/repos/luukhanh24/Wukong-ROM-Studio-Hybrid/actions/runs/7123"
+        "https://api.github.com/repos/fixture-owner/fixture-repository/actions/runs/7123"
       );
       expect(new Headers(init?.headers).get("Authorization")).toBe(
         `Bearer ${(env as unknown as Env).WUKONG_GITHUB_TOKEN}`
@@ -38,7 +38,7 @@ describe("GitHub Actions bootstrap", () => {
         event: "workflow_dispatch",
         display_title: `${job.job_id} · Wukong Hybrid`,
         path: ".github/workflows/wukong-build.yml",
-        repository: { full_name: "luukhanh24/Wukong-ROM-Studio-Hybrid" }
+        repository: { full_name: "fixture-owner/fixture-repository" }
       });
     }));
 
@@ -56,7 +56,7 @@ describe("GitHub Actions bootstrap", () => {
     await expect(response.json()).resolves.toMatchObject({
       jobId: job.job_id,
       runId: 7123,
-      repository: "luukhanh24/Wukong-ROM-Studio-Hybrid",
+      repository: "fixture-owner/fixture-repository",
       recipe: {
         source: { uri: "https://downloads.example/private-rom.zip" }
       }
@@ -227,7 +227,7 @@ describe("GitHub Actions bootstrap", () => {
         event: "workflow_dispatch",
         display_title: `${job.job_id} · Wukong Hybrid`,
         path: ".github/workflows/wukong-build.yml",
-        repository: { full_name: "luukhanh24/Wukong-ROM-Studio-Hybrid" }
+        repository: { full_name: "fixture-owner/fixture-repository" }
       });
     }));
 

@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-control-plane.luuxuankhanh98.workers.dev' }}
+  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-control-plane.wukong-rom-studio-api.workers.dev' }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -77,7 +77,12 @@ jobs:
           else
             python -m tools.build_vercel_mini_app
           fi
-          ! grep -R -Ei 'github\.com|github\.io|luukhanh24|DATABASE_URL|github_pat_' .vercel-static
+          legacy_github_owner='luukhan''h24'
+          legacy_cloudflare_handle='luuxuank''hanh98'
+          repository_name="${GITHUB_REPOSITORY#*/}"
+          ! grep -R -Ei \
+            "github\.com|github\.io|${GITHUB_REPOSITORY_OWNER}|${repository_name}|${legacy_github_owner}|${legacy_cloudflare_handle}|DATABASE_URL|github_pat_" \
+            .vercel-static
       - name: Deploy prebuilt bundle to Vercel
         if: steps.deployment-mode.outputs.mode == 'cli'
         id: deploy

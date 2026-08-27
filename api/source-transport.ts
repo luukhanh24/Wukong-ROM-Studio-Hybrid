@@ -4,8 +4,8 @@ const MAX_CLAIM_BODY = 16 * 1024;
 const MAX_CATALOG_PAGE = 2 * 1024 * 1024;
 const MAX_RESOLVER_BODY = 1024 * 1024;
 const PRODUCTION_WORKER_ORIGINS = new Set([
-  "https://wukong-control-plane.luuxuankhanh98.workers.dev",
-  "https://wukong-control-plane-staging.luuxuankhanh98.workers.dev"
+  "https://wukong-control-plane.wukong-rom-studio-api.workers.dev",
+  "https://wukong-control-plane-staging.wukong-rom-studio-api.workers.dev"
 ]);
 
 type Fetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;

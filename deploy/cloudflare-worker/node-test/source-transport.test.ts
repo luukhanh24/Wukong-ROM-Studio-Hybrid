@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createSourceTransportHandler } from "../../../api/source-transport";
 
-const claimUrl = "https://wukong-control-plane-staging.luuxuankhanh98.workers.dev/internal/source-transport/claim";
+const claimUrl = "https://wukong-control-plane-staging.wukong-rom-studio-api.workers.dev/internal/source-transport/claim";
 const token = "a".repeat(43);
 
 function request(): Request {

@@ -10,7 +10,7 @@ public sealed class HybridSecretStoreTests
         using var workspace = new TestWorkspace();
         var store = new HybridSecretStore(workspace.Layout);
         var credentials = new HybridCredentials(
-            "luukhanh24/Wukong-ROM-Studio-Hybrid",
+            "xuankhanh24/Wukong-ROM-Studio-Hybrid",
             "fixture-github-token",
             "[wukong-gdrive]\ntype = drive\ntoken = fixture-secret");
 

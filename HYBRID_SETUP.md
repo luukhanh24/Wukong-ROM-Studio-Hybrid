@@ -45,7 +45,7 @@ has been downloaded and verified from Drive.
 
 ## 2. GitHub repository and secrets
 
-Create public repository `luukhanh24/Wukong-ROM-Studio-Hybrid`. Configure:
+Create public repository `xuankhanh24/Wukong-ROM-Studio-Hybrid`. Configure:
 
 - `RCLONE_CONFIG_B64`: Base64 of the complete rclone config.
 - `WUKONG_GITHUB_TOKEN`: fine-grained token with Actions read/write, Metadata
@@ -92,7 +92,7 @@ store:
 ```text
 WUKONG_TELEGRAM_BOT_TOKEN=...
 WUKONG_TELEGRAM_ADMIN_IDS=123456789,987654321
-WUKONG_TELEGRAM_WEB_APP_URL=https://luukhanh24.github.io/Wukong-ROM-Studio-Hybrid/
+WUKONG_TELEGRAM_WEB_APP_URL=https://wukong-rom-studio.vercel.app/
 WUKONG_TELEGRAM_MINI_APP_API_BIND=127.0.0.1
 WUKONG_TELEGRAM_MINI_APP_API_PORT=8766
 ```

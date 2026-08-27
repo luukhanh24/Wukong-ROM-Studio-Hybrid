@@ -275,4 +275,63 @@ describe("atomic Accepted Job creation", () => {
       "https://drive.google.com/file/d/ticket-fixture/view"
     );
   });
+
+  it("never exposes repository identity or GitHub run links in public jobs and events", async () => {
+    const bindings = env as unknown as Env;
+    const subject = "42005";
+    await seedApprovedUser(subject, 5);
+    const headers = {
+      ...(await tmaHeaders(Number(subject))),
+      "Content-Type": "application/json",
+      "Idempotency-Key": "repository-redaction"
+    };
+    const created = await SELF.fetch("https://worker.example/v1/jobs", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(recipe)
+    });
+    const job = await created.json() as { job_id: string };
+    const privateRepository = bindings.WUKONG_GITHUB_REPOSITORY;
+    await bindings.DB.batch([
+      bindings.DB.prepare(
+        `UPDATE wukong_jobs SET manifest_json = json_set(
+           manifest_json,
+           '$.error', ?,
+           '$.repository', ?,
+           '$.external_run_id', 8123
+         ) WHERE job_id = ?`
+      ).bind(
+        `Build failed: https://github.com/${privateRepository}/actions/runs/8123`,
+        privateRepository,
+        job.job_id
+      ),
+      bindings.DB.prepare(
+        `INSERT INTO wukong_job_events
+         (job_id, sequence, timestamp, event_type, payload_json)
+         VALUES (?, 2, ?, 'warning', ?)`
+      ).bind(
+        job.job_id,
+        new Date().toISOString(),
+        JSON.stringify({
+          repository: privateRepository,
+          githubOwner: privateRepository.split("/", 1)[0],
+          runId: 8123,
+          warning: `GitHub owner: ${privateRepository.split("/", 1)[0]}; Cloud sync failed in ${privateRepository}`
+        })
+      )
+    ]);
+
+    const [jobResponse, eventsResponse] = await Promise.all([
+      SELF.fetch(`https://worker.example/v1/jobs/${job.job_id}`, { headers }),
+      SELF.fetch(`https://worker.example/v1/jobs/${job.job_id}/events`, { headers })
+    ]);
+    const publicPayload = JSON.stringify({
+      job: await jobResponse.json(),
+      events: await eventsResponse.json()
+    });
+    expect(publicPayload).not.toContain(privateRepository);
+    expect(publicPayload).not.toContain("github.com");
+    expect(publicPayload).not.toContain("8123");
+    expect(publicPayload).toContain("[internal");
+  });
 });

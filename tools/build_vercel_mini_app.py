@@ -19,7 +19,7 @@ ASSET_NAMES = (
     "WukongStudio.svg",
 )
 
-PRODUCTION_API_ORIGIN = "https://wukong-control-plane.luuxuankhanh98.workers.dev"
+PRODUCTION_API_ORIGIN = "https://wukong-control-plane.wukong-rom-studio-api.workers.dev"
 
 
 def _api_origin(value: str) -> str:

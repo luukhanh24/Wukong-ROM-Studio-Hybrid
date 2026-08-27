@@ -7,6 +7,19 @@ import { terminalTelegramNotification } from "./telegram-notifications";
 const JOB_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const TERMINAL_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
+const PRIVATE_PUBLIC_KEYS = new Set([
+  "actionsurl",
+  "externalrunid",
+  "githubrunid",
+  "githubowner",
+  "githuburl",
+  "htmlurl",
+  "ownerlogin",
+  "repository",
+  "repositoryowner",
+  "repo",
+  "runid"
+]);
 
 type JsonObject = Record<string, unknown>;
 
@@ -91,6 +104,48 @@ function parseJson(value: unknown): JsonObject {
   }
 }
 
+function escapedPattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sanitizePublicValue(value: unknown, env: Env): unknown {
+  if (typeof value === "string") {
+    let sanitized = value.replace(
+      /https?:\/\/(?:api\.)?github\.com\/\S+/gi,
+      "[internal build reference]"
+    );
+    const repository = env.WUKONG_GITHUB_REPOSITORY.trim();
+    if (repository) {
+      sanitized = sanitized.replace(
+        new RegExp(`\\b${escapedPattern(repository)}\\b`, "gi"),
+        "[internal repository]"
+      );
+      const owner = repository.split("/", 1)[0]?.trim();
+      if (owner) {
+        sanitized = sanitized.replace(
+          new RegExp(`\\b${escapedPattern(owner)}\\b`, "gi"),
+          "[internal account]"
+        );
+      }
+    }
+    return sanitized.replace(
+      /\b((?:(?:github|repository|repo)(?:\s+|[:=]\s*)|(?:dispatch|workflow|build|cloud\s+sync|sync)\s+(?:failed|error)\s+(?:for|in)\s+|failed\s+checkout\s+of\s+|(?:cannot|could\s+not)\s+access\s+|repository\s+lookup\s+|(?:checkout|clone|fetch|pull|push)\s+))[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi,
+      "$1[internal repository]"
+    );
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizePublicValue(item, env));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as JsonObject)
+        .filter(([key]) => !PRIVATE_PUBLIC_KEYS.has(key.replaceAll("_", "").toLowerCase()))
+        .map(([key, item]) => [key, sanitizePublicValue(item, env)])
+    );
+  }
+  return value;
+}
+
 function publicRecipe(recipe: JsonObject): JsonObject {
   const source = (recipe.source && typeof recipe.source === "object"
     ? recipe.source
@@ -145,7 +200,10 @@ export function publicJob(row: JobRow, env: Env): JsonObject {
       ...(url ? { publicUrl: url } : {})
     };
   });
-  return { ...manifest, recipe: publicRecipe(recipe) };
+  return sanitizePublicValue(
+    { ...manifest, recipe: publicRecipe(recipe) },
+    env
+  ) as JsonObject;
 }
 
 export function artifactDownloadUrl(row: JobRow, env: Env): string {
@@ -613,13 +671,13 @@ export async function jobEvents(
      FROM wukong_job_events WHERE job_id = ? AND sequence > ?
      ORDER BY sequence ASC LIMIT 500`
   ).bind(jobId, after).all<Record<string, unknown>>();
-  return result.results.map((row) => ({
+  return result.results.map((row) => sanitizePublicValue({
     sequence: Number(row.sequence),
     jobId,
     timestamp: row.timestamp,
     type: row.event_type,
     ...parseJson(row.payload_json)
-  }));
+  }, env) as JsonObject);
 }
 
 export function isTerminalStatus(status: string): boolean {

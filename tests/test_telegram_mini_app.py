@@ -880,7 +880,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("const unique = new Map()", script)
         self.assertNotIn("githubRunLink", script)
         self.assertNotIn("external_run_id", script)
-        self.assertNotIn("luukhanh24", script)
+        self.assertNotIn("xuankhanh24", script)
         self.assertNotIn("github.com", script)
 
         exporter = (ROOT / "tools" / "export_mini_app_catalog.py").read_text(encoding="utf-8")

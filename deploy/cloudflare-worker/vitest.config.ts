@@ -18,7 +18,7 @@ export default defineConfig(async () => {
             WUKONG_TELEGRAM_ADMIN_IDS: "1678823419",
             WUKONG_TELEGRAM_BOT_USERNAME: "WK_build_bot",
             WUKONG_TELEGRAM_WEB_APP_URL: "https://wukong-rom-studio.vercel.app/",
-            WUKONG_GITHUB_REPOSITORY: "luukhanh24/Wukong-ROM-Studio-Hybrid",
+            WUKONG_GITHUB_REPOSITORY: "fixture-owner/fixture-repository",
             WUKONG_GITHUB_WORKFLOW: "wukong-build.yml",
             WUKONG_GITHUB_REF: "main",
             WUKONG_GOOGLE_DRIVE_FOLDER_ID: "fixture-root-folder",
