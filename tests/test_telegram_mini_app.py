@@ -508,6 +508,8 @@ window.addEventListener('load', () => {{
             "progress": 1 if cls.artifact_fixture else 0.42,
             "runner": "github-hosted", "created_at": "2026-08-25T01:00:00Z",
             "rom_metadata": {
+                "productName": "PKG110",
+                "device": "OP5D2BL1",
                 "version": "PKG110_16.0.10.500(CN01)",
                 "androidVersion": "16",
                 "securityPatch": "2026-08-01",
@@ -1226,6 +1228,9 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         for value in (
+            "<small>Tên thiết bị</small><strong>OnePlus Ace 5</strong>",
+            "<small>Mã sản phẩm</small><strong>PKG110</strong>",
+            "<small>Mã thiết bị</small><strong>OP5D2BL1</strong>",
             "PKG110_16.0.10.500(CN01)",
             "2026-08-01",
             "2026-08-11 09:38:18",
@@ -1234,6 +1239,12 @@ class TelegramMiniAppTests(unittest.TestCase):
             "Dung lượng ROM nguồn",
         ):
             self.assertIn(value, dom)
+        self.assertIn('class="job-facts job-edition-facts"', dom)
+        self.assertRegex(
+            dom,
+            r'class="job-facts job-edition-facts"[^>]*>.*?'
+            r"<small>Lite</small>.*?<small>Plus</small>",
+        )
         self.assertNotIn("<small>Upload gần nhất</small>", dom)
         self.assertNotIn("<h2>stale</h2>", dom)
 

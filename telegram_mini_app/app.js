@@ -193,7 +193,7 @@ Object.assign(translations.vi, {
 });
 
 Object.assign(translations.vi, {
-  detectedProduct: "Product", detectedDevice: "Mã thiết bị", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng ROM nguồn", otaType: "Kiểu OTA", contentType: "Định dạng", lastModified: "Cập nhật máy chủ", deepInspection: "Kiểm tra ZIP",
+  detectedProduct: "Product", productCode: "Mã sản phẩm", deviceName: "Tên thiết bị", detectedDevice: "Mã thiết bị", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng ROM nguồn", otaType: "Kiểu OTA", contentType: "Định dạng", lastModified: "Cập nhật máy chủ", deepInspection: "Kiểm tra ZIP",
   metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", pasteLink: "Dán", clearLink: "Xóa", linkPasted: "Đã dán link ROM và bắt đầu phân tích.", draftPasted: "Đã lấy link ROM bạn gửi cho bot và bắt đầu phân tích.", clipboardEmpty: "Clipboard không có văn bản và bot chưa có link nháp.", clipboardDenied: "Không đọc được clipboard. Hãy cấp quyền hoặc dán thủ công.", clipboardManual: "Telegram chặn clipboard. Hãy gửi link cho bot rồi quay lại bấm Dán, hoặc nhấn giữ ô để dán thủ công.", sourceCleared: "Đã xóa nguồn ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Lần mở này thiếu phiên Telegram. Bấm Kết nối Telegram để phục hồi an toàn.", apiAuthButton: "Kết nối Telegram", pairingHint: "Telegram không gửi phiên cho lần mở này. Kết nối một lần qua bot; nếu được hỏi, bấm START rồi quay lại Mini App.", pairingButton: "Kết nối Telegram", pairingOpening: "Đã mở bot. Hãy bấm START nếu Telegram yêu cầu rồi quay lại đây…", pairingWaiting: "Đang chờ bot xác nhận tài khoản…", pairingReady: "Đã kết nối Telegram. Mini App API sẵn sàng.", pairingFailed: "Không thể kết nối phiên Telegram. Hãy thử lại.", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
@@ -341,7 +341,7 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.en, {
-  detectedProduct: "Product", detectedDevice: "Device code", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Source ROM size", otaType: "OTA type", contentType: "Content type", lastModified: "Server modified", deepInspection: "ZIP inspection",
+  detectedProduct: "Product", productCode: "Product code", deviceName: "Device name", detectedDevice: "Device code", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Source ROM size", otaType: "OTA type", contentType: "Content type", lastModified: "Server modified", deepInspection: "ZIP inspection",
   metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", pasteLink: "Paste", clearLink: "Clear", linkPasted: "ROM link pasted and analysis started.", draftPasted: "ROM link retrieved from the bot and analysis started.", clipboardEmpty: "The clipboard is empty and the bot has no saved link.", clipboardDenied: "Clipboard access failed. Allow access or paste manually.", clipboardManual: "Telegram blocked clipboard access. Send the link to the bot and press Paste again, or long-press the field to paste manually.", sourceCleared: "ROM source cleared.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "This launch is missing a Telegram session. Press Connect Telegram to recover securely.", apiAuthButton: "Connect Telegram", pairingHint: "Telegram did not provide a session. Connect once through the bot; press START if prompted, then return to the Mini App.", pairingButton: "Connect Telegram", pairingOpening: "The bot is open. Press START if prompted, then return here…", pairingWaiting: "Waiting for the bot to confirm your account…", pairingReady: "Telegram connected. The Mini App API is ready.", pairingFailed: "Could not connect the Telegram session. Please try again.", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
@@ -431,6 +431,13 @@ function t(key, values = {}) {
   return value;
 }
 
+function renderSelectedJob() {
+  const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
+  if (!activeJob) return;
+  const activeId = activeJob.job_id || activeJob.jobId;
+  renderActiveJob(activeJob, state.activeEventsJobId === activeId ? state.activeEvents : []);
+}
+
 function applyLanguage() {
   document.documentElement.lang = state.language;
   $$('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
@@ -442,11 +449,7 @@ function applyLanguage() {
   renderPipelineSteps(false);
   renderCatalog();
   renderJobHistory();
-  const activeJob = state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId);
-  if (activeJob) {
-    const activeId = activeJob.job_id || activeJob.jobId;
-    renderActiveJob(activeJob, state.activeEventsJobId === activeId ? state.activeEvents : []);
-  }
+  renderSelectedJob();
   renderSessionDiagnostics();
   renderAccount();
   renderAdminUsers();
@@ -2703,6 +2706,14 @@ function jobMetadata(job) {
   };
 }
 
+function catalogDeviceName(product) {
+  const normalized = String(product || "").trim().toLocaleUpperCase();
+  if (!normalized) return "";
+  return state.catalog?.devices?.find(
+    (item) => String(item?.product || "").trim().toLocaleUpperCase() === normalized
+  )?.name || "";
+}
+
 function jobProgress(job) {
   const value = Math.max(0, Math.min(1, Number(job?.progress || 0)));
   return Math.round(value * 100);
@@ -2946,8 +2957,11 @@ function renderActiveJob(job, events) {
     ? `${upload.fileName || "—"} · ${Math.max(0, Math.min(100, Math.round(Number(upload.percent) || 0)))}% · ${formatBytes(upload.bytes)} / ${formatBytes(upload.totalBytes)} · ${formatBytes(upload.speedBytesPerSecond)}/s${Number.isFinite(Number(upload.etaSeconds)) ? ` · ETA ${Math.max(0, Math.round(Number(upload.etaSeconds)))}s` : ""}`
     : "";
   const facts = document.createElement("div"); facts.className = "job-facts";
+  const product = metadata.productName || job.recipe?.device;
   const factNodes = [
-    jobFact("Product", metadata.productName || job.recipe?.device),
+    jobFact(t("deviceName"), catalogDeviceName(product)),
+    jobFact(t("productCode"), product),
+    jobFact(t("detectedDevice"), metadata.device),
     jobFact(t("androidVersion"), metadata.androidVersion),
     jobFact(t("securityPatch"), metadata.securityPatch),
     jobFact(t("buildDate"), metadata.buildDate),
@@ -2960,8 +2974,11 @@ function renderActiveJob(job, events) {
   if (!terminalJobStatuses.has(job.status)) {
     factNodes.push(jobFact(t(job.status === "uploading" ? "uploadingNow" : "uploadSummary"), uploadDetail));
   }
-  factNodes.push(...completedArtifactFacts(job));
   facts.append(...factNodes);
+  const editionFacts = document.createElement("div");
+  editionFacts.className = "job-facts job-edition-facts";
+  editionFacts.append(...completedArtifactFacts(job));
+  editionFacts.hidden = !editionFacts.childElementCount;
   const actions = document.createElement("div"); actions.className = "job-controls";
   const jobId = job.job_id || job.jobId;
   const logExpanded = state.expandedLogJobId === jobId;
@@ -2976,7 +2993,7 @@ function renderActiveJob(job, events) {
   actions.append(logButton);
   if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
   if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
-  root.replaceChildren(header, progress, context, facts, actions, renderEvents(events, logExpanded), renderArtifacts(job));
+  root.replaceChildren(header, progress, context, facts, editionFacts, actions, renderEvents(events, logExpanded), renderArtifacts(job));
 }
 
 function renderJobHistory() {
@@ -3207,6 +3224,7 @@ async function loadCatalog() {
     renderDebloatSummary();
     renderCatalog();
     updateSourceDetection();
+    renderSelectedJob();
   } catch (error) {
     $("#catalog-status").textContent = t("catalogFailed");
     toast(t("catalogFailed"), true);
