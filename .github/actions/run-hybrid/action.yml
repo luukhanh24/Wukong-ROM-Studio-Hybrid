@@ -87,6 +87,7 @@ runs:
         case "$source_uri" in
           http://*|https://*)
             if python3 wukong_cli.py probe-source "$source_uri" > .wkstudio/source-probe.json; then
+              python3 -m tools.merge_source_probe --recipe .wkstudio/recipe.json --probe .wkstudio/source-probe.json
               python3 - <<'PY'
         import json, os
         probe = json.load(open('.wkstudio/source-probe.json', encoding='utf-8'))

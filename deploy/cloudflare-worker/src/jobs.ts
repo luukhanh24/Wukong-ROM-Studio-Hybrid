@@ -1,4 +1,5 @@
 import type { AuthenticatedRequest } from "./auth";
+import { artifactEdition } from "./artifact-metadata";
 import { cancelWorkflowRunForJob, dispatchBuild } from "./github";
 import { directArtifactUrl } from "./public-links";
 import { terminalTelegramNotification } from "./telegram-notifications";
@@ -122,13 +123,16 @@ export { directArtifactUrl } from "./public-links";
 export function publicJob(row: JobRow, env: Env): JsonObject {
   const manifest = parseJson(row.manifest_json);
   const recipe = parseJson(row.recipe_json);
+  const build = recipe.build && typeof recipe.build === "object"
+    ? recipe.build as JsonObject
+    : {};
   delete manifest.owner;
   delete manifest.external_run_id;
   manifest.status = row.status;
   manifest.stage = row.stage;
   manifest.progress = Number(row.progress ?? 0);
   const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
-  manifest.artifacts = artifacts.map((value) => {
+  manifest.artifacts = artifacts.map((value, index) => {
     const artifact = value && typeof value === "object" ? { ...(value as JsonObject) } : {};
     const url = directArtifactUrl(artifact.public_url ?? artifact.publicUrl, env);
     delete artifact.uri;
@@ -136,6 +140,7 @@ export function publicJob(row: JobRow, env: Env): JsonObject {
     delete artifact.publicUrl;
     return {
       ...artifact,
+      edition: artifactEdition(artifact.name, index + 1, build.preset),
       downloadAvailable: Boolean(url),
       ...(url ? { publicUrl: url } : {})
     };

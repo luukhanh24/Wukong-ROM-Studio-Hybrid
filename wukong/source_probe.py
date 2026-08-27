@@ -6,6 +6,7 @@ import time
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from os import PathLike
 from typing import Any, Callable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, unquote, urlparse
@@ -324,7 +325,7 @@ def _source_size(headers: Any) -> int | None:
         return None
 
 
-def _read_zip_metadata(reader: _HttpRangeReader) -> dict[str, str]:
+def _read_zip_metadata(reader: Any) -> dict[str, str]:
     values: dict[str, str] = {}
     metadata_files = 0
     metadata_text_bytes = 0
@@ -353,6 +354,37 @@ def _read_zip_metadata(reader: _HttpRangeReader) -> dict[str, str]:
                     if len(values) > MAX_METADATA_FIELDS:
                         raise SourceResolutionError("ROM ZIP metadata contains too many fields")
     return values
+
+
+def inspect_local_rom_metadata(path: str | PathLike[str]) -> dict[str, str]:
+    return _rom_metadata_fields(_read_zip_metadata(path))
+
+
+def _rom_metadata_fields(metadata: Mapping[str, str]) -> dict[str, str]:
+    product_name = _first(metadata, "oplus-product-name", "product-name")
+    device = _first(metadata, "pre-device", "product-name", "oplus-product-name")
+    version = _first(
+        metadata,
+        "oplus-version-name",
+        "version-name",
+        "post-build-incremental",
+        "post-build",
+    )
+    values: dict[str, object] = {
+        "productName": product_name,
+        "device": device,
+        "version": version,
+        "androidVersion": _android_version(metadata, version),
+        "securityPatch": _first(metadata, "post-security-patch-level"),
+        "buildDate": _build_date(metadata),
+        "otaType": _first(metadata, "ota-type"),
+        "deepInspected": "true",
+    }
+    return {
+        key: str(value).strip()
+        for key, value in values.items()
+        if value is not None and str(value).strip()
+    }
 
 
 def _first(values: Mapping[str, str], *keys: str) -> str | None:
@@ -501,15 +533,7 @@ def probe_http_source(
         except (OSError, RuntimeError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile, SourceError) as exc:
             warning = f"Remote ZIP metadata is unavailable: {exc}"
 
-    product_name = _first(metadata, "oplus-product-name", "product-name")
-    device = _first(metadata, "pre-device", "product-name", "oplus-product-name")
-    version = _first(
-        metadata,
-        "oplus-version-name",
-        "version-name",
-        "post-build-incremental",
-        "post-build",
-    )
+    rom_metadata = _rom_metadata_fields(metadata)
     return SourceProbeResult(
         original_uri=uri,
         provider=_provider_for(final_url, uri),
@@ -520,13 +544,13 @@ def probe_http_source(
         etag=etag,
         last_modified=last_modified,
         md5=md5,
-        product_name=product_name,
-        device=device,
-        version=version,
-        android_version=_android_version(metadata, version),
-        security_patch=_first(metadata, "post-security-patch-level"),
-        build_date=_build_date(metadata),
-        ota_type=_first(metadata, "ota-type"),
+        product_name=rom_metadata.get("productName"),
+        device=rom_metadata.get("device"),
+        version=rom_metadata.get("version"),
+        android_version=rom_metadata.get("androidVersion"),
+        security_patch=rom_metadata.get("securityPatch"),
+        build_date=rom_metadata.get("buildDate"),
+        ota_type=rom_metadata.get("otaType"),
         deep_inspected=deep_inspected,
         warning=warning,
         signed_url_expires_at=signed_url_expires_at,

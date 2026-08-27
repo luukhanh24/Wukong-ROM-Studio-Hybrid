@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 import traceback
+import zipfile
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -182,6 +183,33 @@ class LocalJobExecutor:
                 sha256=source.sha256,
                 sizeBytes=source.size_bytes,
             )
+            if recipe.task == "build":
+                try:
+                    from .source_probe import inspect_local_rom_metadata
+
+                    local_metadata = inspect_local_rom_metadata(source.path)
+                    if local_metadata:
+                        manifest = self.store.update(
+                            job_id,
+                            rom_metadata={**manifest.rom_metadata, **local_metadata},
+                        )
+                        self.store.append_event(
+                            job_id,
+                            "source_metadata",
+                            fields=sorted(local_metadata),
+                        )
+                except (
+                    OSError,
+                    RuntimeError,
+                    ValueError,
+                    zipfile.BadZipFile,
+                    zipfile.LargeZipFile,
+                ) as exc:
+                    self.store.append_event(
+                        job_id,
+                        "warning",
+                        warning=f"Local ROM metadata inspection was unavailable: {exc}",
+                    )
             if recipe.task == "source_mirror":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)

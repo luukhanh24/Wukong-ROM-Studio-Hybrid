@@ -72,6 +72,12 @@ describe("GitHub Actions callbacks", () => {
         stage: "complete",
         progress: 1,
         runner: "ubuntu-24.04",
+        rom_metadata: {
+          version: "PJD110_16.0.10.500(CN01)",
+          androidVersion: "16",
+          securityPatch: "2026-08-01",
+          buildDate: "2026-08-11 09:38:18"
+        },
         created_at: "2026-08-26T15:00:00.000Z",
         finished_at: "2026-08-26T15:42:05.000Z",
         artifacts: [{
@@ -102,9 +108,16 @@ describe("GitHub Actions callbacks", () => {
       stage: "complete",
       progress: 1,
       artifacts: [{
+        edition: "Plus",
         downloadAvailable: true,
         publicUrl: "https://drive.google.com/file/d/fixture/view"
-      }]
+      }],
+      rom_metadata: {
+        version: "PJD110_16.0.10.500(CN01)",
+        androidVersion: "16",
+        securityPatch: "2026-08-01",
+        buildDate: "2026-08-11 09:38:18"
+      }
     });
     const bindings = env as unknown as Env;
     const locks = await bindings.DB.prepare(
@@ -123,6 +136,10 @@ describe("GitHub Actions callbacks", () => {
     expect(notification.text).toContain("<b>Wukong ROM Studio</b>");
     expect(notification.text).toContain("<b>Build ROM hoàn tất</b>");
     expect(notification.text).toContain("Thiết bị  <code>PJD110</code>");
+    expect(notification.text).toContain("Phiên bản  <code>PJD110_16.0.10.500(CN01)</code>");
+    expect(notification.text).toContain("Android  <code>16</code>");
+    expect(notification.text).toContain("Bản vá  <code>2026-08-01</code>");
+    expect(notification.text).toContain("Ngày build  <code>2026-08-11 09:38:18</code>");
     expect(notification.text).toContain("Preset  <code>custom</code>");
     expect(notification.text).toContain("MOD pack  <code>ColorOS_16.0.10</code>");
     expect(notification.text).toContain("Runner  <code>ubuntu-24.04</code>");

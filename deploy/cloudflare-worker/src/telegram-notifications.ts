@@ -1,4 +1,5 @@
 import type { JobRow } from "./jobs";
+import { artifactEdition } from "./artifact-metadata";
 import { directArtifactUrl } from "./public-links";
 
 type JsonObject = Record<string, unknown>;
@@ -68,13 +69,6 @@ function boundedHtml(lines: string[], limit = 4096): string {
   return output.join("\n");
 }
 
-function artifactEdition(name: string, index: number): string {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("lite")) return "Lite";
-  if (normalized.includes("plus")) return "Plus";
-  return `File ${index}`;
-}
-
 export function terminalTelegramNotification(
   env: Env,
   row: JobRow,
@@ -83,7 +77,10 @@ export function terminalTelegramNotification(
 ): JsonObject {
   const recipe = parseObject(row.recipe_json);
   const source = object(recipe.source);
-  const metadata = object(source.metadata);
+  const metadata = {
+    ...object(source.metadata),
+    ...object(manifest.rom_metadata ?? manifest.romMetadata)
+  };
   const build = object(recipe.build);
   const succeeded = status === "succeeded";
   const title = succeeded ? "Build ROM hoàn tất" : "Build ROM cần kiểm tra";
@@ -127,7 +124,7 @@ export function terminalTelegramNotification(
   artifacts.forEach((value, offset) => {
     const artifact = object(value);
     const name = String(artifact.name ?? "").trim();
-    const edition = artifactEdition(name, offset + 1);
+    const edition = artifactEdition(name, offset + 1, build.preset);
     const size = sizeLabel(artifact.size_bytes ?? artifact.sizeBytes);
     lines.push(
       `${offset + 1}. <b>${text(edition)}</b> · ${size}`,

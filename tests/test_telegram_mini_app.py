@@ -481,13 +481,22 @@ window.addEventListener('load', () => {{
     @classmethod
     def _fixture_job(cls) -> dict[str, object]:
         artifacts = (
-            [{
-                "name": "Wukong_Plus_V6.0_PKG110.zip",
-                "size_bytes": 8422162432,
-                "sha256": "a" * 64,
-                "downloadAvailable": True,
-                "publicUrl": "https://drive.google.com/open?id=fixture-artifact",
-            }]
+            [
+                {
+                    "name": "Wukong_Lite_V6.0_PKG110.zip",
+                    "size_bytes": 7 * 1024**3,
+                    "sha256": "a" * 64,
+                    "downloadAvailable": True,
+                    "publicUrl": "https://drive.google.com/open?id=fixture-artifact",
+                },
+                {
+                    "name": "Wukong_Plus_V6.0_PKG110.zip",
+                    "size_bytes": 8 * 1024**3,
+                    "sha256": "b" * 64,
+                    "downloadAvailable": True,
+                    "publicUrl": "https://drive.google.com/open?id=fixture-artifact-plus",
+                },
+            ]
             if cls.artifact_fixture
             else []
         )
@@ -497,9 +506,15 @@ window.addEventListener('load', () => {{
             "stage": "complete" if cls.artifact_fixture else "debloat",
             "progress": 1 if cls.artifact_fixture else 0.42,
             "runner": "github-hosted", "created_at": "2026-08-25T01:00:00Z",
+            "rom_metadata": {
+                "version": "PKG110_16.0.10.500(CN01)",
+                "androidVersion": "16",
+                "securityPatch": "2026-08-01",
+                "buildDate": "2026-08-11 09:38:18",
+            },
             "recipe": {
-                "device": "PKG110", "source": {"sizeBytes": 8680370027, "metadata": {"productName": "PKG110", "version": "PKG110_16.0.9.400(CN01)", "androidVersion": "16"}},
-                "build": {"preset": "plus", "modVersion": "ColorOS_16.0.9", "modReleaseVersion": "V5.0", "mods": ["Gapps", "WK_Manager"]},
+                "device": "PKG110", "source": {"sizeBytes": 8680370027, "metadata": {"productName": "PKG110", "version": "stale", "androidVersion": "15"}},
+                "build": {"preset": "both", "modVersion": "ColorOS_16.0.10", "modReleaseVersion": "V6.0", "mods": ["Gapps", "WK_Manager"]},
             },
             "artifacts": artifacts,
         }
@@ -1195,6 +1210,26 @@ class TelegramMiniAppTests(unittest.TestCase):
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         self.assertIn('if (!copied) throw new Error("Clipboard copy failed")', script)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_completed_job_uses_terminal_metadata_and_lists_each_artifact_size(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            artifact_fixture=True,
+        )
+
+        for value in (
+            "PKG110_16.0.10.500(CN01)",
+            "2026-08-01",
+            "2026-08-11 09:38:18",
+            "<small>Lite</small><strong>7.00 GiB · Wukong_Lite_V6.0_PKG110.zip</strong>",
+            "<small>Plus</small><strong>8.00 GiB · Wukong_Plus_V6.0_PKG110.zip</strong>",
+            "Dung lượng ROM nguồn",
+        ):
+            self.assertIn(value, dom)
+        self.assertNotIn("<small>Upload gần nhất</small>", dom)
+        self.assertNotIn("<h2>stale</h2>", dom)
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")

@@ -130,6 +130,14 @@ describe("Telegram webhook and pairing", () => {
     ).toEqual([
       { text: "Mở Wukong Mini App", web_app: { url: "https://wukong-rom-studio.vercel.app/" } }
     ]);
+    const menuButtons = (
+      calls[0]?.payload.reply_markup as {
+        inline_keyboard: Array<Array<Record<string, unknown>>>;
+      }
+    ).inline_keyboard.flat();
+    expect(menuButtons).not.toContainEqual(expect.objectContaining({ callback_data: "v1:cloud" }));
+    expect(menuButtons.map((button) => String(button.text))).not.toContain("☁️ Thư viện cloud");
+    expect(menuButtons.map((button) => String(button.text))).not.toContain("☁️ Cloud library");
 
     expect((await webhook({
       update_id: 912347,
