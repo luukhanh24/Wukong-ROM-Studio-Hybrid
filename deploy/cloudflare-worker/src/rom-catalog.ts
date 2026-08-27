@@ -103,7 +103,7 @@ export async function romCatalog(request: Request): Promise<Record<string, unkno
   let response: Response;
   try {
     response = await fetch(upstream, {
-      redirect: "error",
+      redirect: "manual",
       headers: {
         Accept: "application/json",
         "User-Agent": "Wukong-ROM-Studio/1.0"

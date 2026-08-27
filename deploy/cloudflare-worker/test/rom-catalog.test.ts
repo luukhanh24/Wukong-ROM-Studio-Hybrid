@@ -9,7 +9,9 @@ describe("ROM discovery catalog", () => {
 
   it("queries only the Daniel Springer API and returns normalized unresolved releases", async () => {
     let upstreamUrl = "";
-    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      // The deployed edge runtime rejects redirect: "error" although local workerd accepts it.
+      expect(init?.redirect).toBe("manual");
       const request = input instanceof Request ? input : new Request(input);
       upstreamUrl = request.url;
       return Response.json({
@@ -95,5 +97,17 @@ describe("ROM discovery catalog", () => {
     });
     expect(empty.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects upstream redirects without following them", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, {
+      status: 302, headers: { Location: "https://untrusted.example/catalog" }
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await SELF.fetch("https://worker.example/v1/rom-catalog?model=redirect-fixture", {
+      headers: await tmaHeaders(1678823419)
+    });
+    expect(response.status).toBe(502);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
