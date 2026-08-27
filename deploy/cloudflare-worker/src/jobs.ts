@@ -110,7 +110,15 @@ function escapedPattern(value: string): string {
 
 function sanitizePublicValue(value: unknown, env: Env): unknown {
   if (typeof value === "string") {
-    let sanitized = value.replace(
+    let sanitized = value.replace(/https?:\/\/[^\s<>"']+/gi, (raw) => {
+      try {
+        const url = new URL(raw);
+        const signed = [...url.searchParams.keys()].some(key => /^(s|sign|signature|awsaccesskeyid|x-amz-.+)$|token|secret|password|credential|authorization|api[_-]?key/i.test(key));
+        if (signed || url.username || url.password) return `${url.origin}${url.pathname}?[redacted]`;
+      } catch { /* Keep non-URL prose intact. */ }
+      return raw;
+    }).replace(/\b(authorization\s*[:=]\s*)(?:Bearer|Basic)\s+[^\s,;]+/gi, "$1[redacted]")
+      .replace(/\b((?:access[_-]?token|refresh[_-]?token|token|secret|password|authorization|api[_-]?key)\s*[:=]\s*)[^\s,;]+/gi, "$1[redacted]").replace(
       /https?:\/\/(?:api\.)?github\.com\/\S+/gi,
       "[internal build reference]"
     );
@@ -139,7 +147,10 @@ function sanitizePublicValue(value: unknown, env: Env): unknown {
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as JsonObject)
-        .filter(([key]) => !PRIVATE_PUBLIC_KEYS.has(key.replaceAll("_", "").toLowerCase()))
+        .filter(([key]) => {
+          const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+          return !PRIVATE_PUBLIC_KEYS.has(normalized) && !/token|secret|password|credential|authorization|apikey|privatekey|clientid/.test(normalized);
+        })
         .map(([key, item]) => [key, sanitizePublicValue(item, env)])
     );
   }
@@ -161,9 +172,11 @@ function publicRecipe(recipe: JsonObject): JsonObject {
     : {}) as JsonObject;
   return {
     task: recipe.task,
+    schemaVersion: recipe.schemaVersion,
     device: recipe.device,
     source: {
       kind: source.kind,
+      sha256: source.sha256 ?? null,
       sizeBytes: source.sizeBytes ?? null,
       metadata: source.metadata && typeof source.metadata === "object" ? source.metadata : {}
     },
@@ -175,13 +188,14 @@ function publicRecipe(recipe: JsonObject): JsonObject {
 
 export { directArtifactUrl } from "./public-links";
 
-export function publicJob(row: JobRow, env: Env): JsonObject {
+export function publicJob(row: JobRow, env: Env, includeCreator = false): JsonObject {
   const manifest = parseJson(row.manifest_json);
   const recipe = parseJson(row.recipe_json);
   const build = recipe.build && typeof recipe.build === "object"
     ? recipe.build as JsonObject
     : {};
   delete manifest.owner;
+  delete manifest.createdBy;
   delete manifest.external_run_id;
   manifest.status = row.status;
   manifest.stage = row.stage;
@@ -200,10 +214,19 @@ export function publicJob(row: JobRow, env: Env): JsonObject {
       ...(url ? { publicUrl: url } : {})
     };
   });
-  return sanitizePublicValue(
-    { ...manifest, recipe: publicRecipe(recipe) },
+  const result = sanitizePublicValue(
+    { ...manifest, recipe: publicRecipe(recipe), ...(includeCreator && row.owner_channel === "telegram" ? {
+      createdBy: { telegramId: row.owner_subject, displayName: row.owner_display_name || "", username: row.owner_username || "", photoUrl: row.owner_photo_url || "" }
+    } : {}) },
     env
   ) as JsonObject;
+  // Validated download capabilities are intentionally shareable. Redacting their
+  // signature would break the artifact buttons while still reporting availability.
+  const sanitizedArtifacts = result.artifacts as JsonObject[];
+  (manifest.artifacts as JsonObject[]).forEach((artifact, index) => {
+    if (artifact.publicUrl) sanitizedArtifacts[index]!.publicUrl = artifact.publicUrl;
+  });
+  return result;
 }
 
 export function artifactDownloadUrl(row: JobRow, env: Env): string {
@@ -616,28 +639,43 @@ export function acceptedJobCompensationStatements(
   ];
 }
 
+const JOB_WITH_CREATOR = `SELECT j.*, u.display_name AS owner_display_name,
+  u.username AS owner_username, u.photo_url AS owner_photo_url
+  FROM wukong_jobs j LEFT JOIN wukong_telegram_users u
+  ON j.owner_channel = 'telegram' AND u.subject = j.owner_subject`;
+
 export async function listJobs(
   env: Env,
   auth: AuthenticatedRequest
 ): Promise<JsonObject[]> {
   const query = auth.role === "admin"
-    ? env.DB.prepare("SELECT * FROM wukong_jobs ORDER BY created_at DESC LIMIT 100")
+    ? env.DB.prepare(`${JOB_WITH_CREATOR} ORDER BY j.created_at DESC, j.job_id DESC LIMIT 100`)
     : env.DB.prepare(
       `SELECT * FROM wukong_jobs
        WHERE owner_channel = 'telegram' AND owner_subject = ?
        ORDER BY created_at DESC LIMIT 100`
     ).bind(auth.subject);
   const result = await query.all<JobRow>();
-  return result.results.map((row) => publicJob(row, env));
+  return result.results.map((row) => publicJob(row, env, auth.role === "admin"));
 }
 
-export async function listJobsForSubject(env: Env, subject: string): Promise<JsonObject[]> {
+export async function listJobsForSubject(env: Env, subject: string, cursor = "") {
+  let anchor: { created_at: string; job_id: string } | null = null;
+  if (cursor) {
+    if (!JOB_ID.test(cursor)) throw new JobHttpError("Invalid job history cursor", 400);
+    anchor = await env.DB.prepare("SELECT created_at, job_id FROM wukong_jobs WHERE job_id = ? AND owner_subject = ? AND owner_channel = 'telegram'")
+      .bind(cursor, subject).first<{ created_at: string; job_id: string }>();
+    if (!anchor) throw new JobHttpError("Invalid job history cursor", 400);
+  }
   const result = await env.DB.prepare(
-    `SELECT * FROM wukong_jobs
-     WHERE owner_channel = 'telegram' AND owner_subject = ?
-     ORDER BY created_at DESC LIMIT 50`
-  ).bind(subject).all<JobRow>();
-  return result.results.map((row) => publicJob(row, env));
+    `${JOB_WITH_CREATOR}
+     WHERE j.owner_channel = 'telegram' AND j.owner_subject = ?
+     ${anchor ? "AND (j.created_at < ? OR (j.created_at = ? AND j.job_id < ?))" : ""}
+     ORDER BY j.created_at DESC, j.job_id DESC LIMIT 51`
+  ).bind(subject, ...(anchor ? [anchor.created_at, anchor.created_at, anchor.job_id] : [])).all<JobRow>();
+  const rows = result.results.slice(0, 50);
+  const hasMore = result.results.length > 50;
+  return { jobs: rows.map(row => publicJob(row, env, true)), hasMore, nextCursor: hasMore ? rows.at(-1)!.job_id : "" };
 }
 
 export async function inspectJob(
@@ -646,7 +684,7 @@ export async function inspectJob(
   jobId: string
 ): Promise<JobRow> {
   if (!JOB_ID.test(jobId)) throw new JobHttpError("Job not found", 404);
-  const row = await env.DB.prepare("SELECT * FROM wukong_jobs WHERE job_id = ?")
+  const row = await env.DB.prepare(`${JOB_WITH_CREATOR} WHERE j.job_id = ?`)
     .bind(jobId)
     .first<JobRow>();
   if (

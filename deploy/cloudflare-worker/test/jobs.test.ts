@@ -41,6 +41,82 @@ async function seedApprovedUser(subject: string, credits: number): Promise<void>
 }
 
 describe("atomic Accepted Job creation", () => {
+  it("lets admins inspect a user's job and identity while isolating other users", async () => {
+    await seedApprovedUser("42991", 2);
+    await seedApprovedUser("42992", 2);
+    const headers = await tmaHeaders(42991, { first_name: "Job Owner", username: "job_owner" });
+    const created = await SELF.fetch("https://worker.example/v1/jobs", {
+      method: "POST", headers: { ...headers, "Idempotency-Key": "admin-inspect" }, body: JSON.stringify(recipe)
+    });
+    expect(created.status).toBe(201);
+    const job = await created.json() as { job_id: string };
+    const url = `https://worker.example/v1/sync?jobId=${job.job_id}`;
+    const adminHeaders = await tmaHeaders(1678823419);
+    const admin = await (await SELF.fetch(url, { headers: adminHeaders })).json() as any;
+    expect(admin.activeJob).toMatchObject({ job_id: job.job_id, createdBy: { telegramId: "42991", displayName: "Job Owner", username: "job_owner" }, recipe: { build: { modReleaseVersion: "V6.0" } } });
+    expect(admin.jobs.find((j: any) => j.job_id === job.job_id).createdBy.telegramId).toBe("42991");
+    expect(admin.events.length).toBeGreaterThan(0);
+    const own = await (await SELF.fetch(url, { headers })).json() as any;
+    expect(own.activeJob.job_id).toBe(job.job_id);
+    expect(own.activeJob.createdBy).toBeUndefined();
+    const other = await (await SELF.fetch(url, { headers: await tmaHeaders(42992) })).json() as any;
+    expect(other.activeJob).toBeNull();
+    expect(other.events).toEqual([]);
+    expect(other.jobs.some((j: any) => j.job_id === job.job_id)).toBe(false);
+  });
+  it("redacts nested credentials and signed URLs from admin parameters", async () => {
+    await seedApprovedUser("42993", 2);
+    const unsafe = { ...recipe, source: { ...recipe.source, metadata: { resolvedUrl: "https://cdn.allawnfs.com/rom.zip?Signature=private-signature&Expires=123" } },
+      build: { ...recipe.build, nested: { accessToken: "private-token", client_secret: "private-secret", validParameter: 37, note: "Authorization: Bearer hidden-bearer\nAuthorization: Basic hidden-basic" } } };
+    const created = await SELF.fetch("https://worker.example/v1/jobs", { method: "POST", headers: { ...await tmaHeaders(42993), "Idempotency-Key": "redacted-job" }, body: JSON.stringify(unsafe) });
+    const job = await created.json() as { job_id: string };
+    const response = await SELF.fetch(`https://worker.example/v1/jobs/${job.job_id}`, { headers: await tmaHeaders(1678823419) });
+    const text = await response.text();
+    expect(text).not.toContain("private-token");
+    expect(text).not.toContain("private-secret");
+    expect(text).not.toContain("private-signature");
+    expect(text).not.toContain("hidden-bearer");
+    expect(text).not.toContain("hidden-basic");
+    expect(JSON.parse(text).recipe.build.nested.validParameter).toBe(37);
+  });
+  it("keeps validated signed cloud artifact downloads usable", async () => {
+    await seedApprovedUser("42995", 2);
+    const headers = await tmaHeaders(42995);
+    const created = await SELF.fetch("https://worker.example/v1/jobs", { method: "POST", headers: { ...headers, "Idempotency-Key": "signed-artifact" }, body: JSON.stringify(recipe) });
+    const job = await created.json() as { job_id: string };
+    const url = "https://bucket.s3.amazonaws.com/rom.zip?X-Amz-Signature=valid-download&X-Amz-Expires=3600";
+    const githubUrl = `https://github.com/${(env as unknown as Env).WUKONG_GITHUB_REPOSITORY}/releases/download/v1/rom.zip`;
+    await (env as unknown as Env).DB.prepare("UPDATE wukong_jobs SET manifest_json = ? WHERE job_id = ?")
+      .bind(JSON.stringify({ job_id: job.job_id, artifacts: [{ name: "rom.zip", public_url: url }, { name: "github.zip", public_url: githubUrl }] }), job.job_id).run();
+    const result = await (await SELF.fetch(`https://worker.example/v1/jobs/${job.job_id}`, { headers })).json() as any;
+    expect(result.artifacts[0]).toMatchObject({ publicUrl: url, downloadAvailable: true });
+    expect(result.artifacts[1].publicUrl).toBeUndefined();
+    expect(result.artifacts[1].downloadAvailable).toBe(false);
+  });
+  it("pages all of a user's job history and opens jobs outside the latest100", async () => {
+    await seedApprovedUser("42994", 2);
+    const db = (env as unknown as Env).DB;
+    await db.batch(Array.from({ length: 106 }, (_, i) => {
+      const id = `history-page-${String(i).padStart(3, "0")}`;
+      return db.prepare(`INSERT INTO wukong_jobs (job_id,manifest_json,recipe_json,created_at,updated_at,owner_channel,owner_subject,device,status,stage,progress) VALUES (?,?,?,'2026-01-01','2026-01-01','telegram','42994','PKG110','succeeded','complete',1)`)
+        .bind(id, JSON.stringify({ job_id: id }), JSON.stringify(recipe));
+    }));
+    const headers = await tmaHeaders(1678823419);
+    const detail = await (await SELF.fetch("https://worker.example/v1/admin/users/42994", { headers })).json() as any;
+    expect(detail.jobs).toHaveLength(50);
+    expect(detail.jobsHasMore).toBe(true);
+    const page2 = await (await SELF.fetch(`https://worker.example/v1/admin/users/42994/jobs?cursor=${detail.jobsNextCursor}`, { headers })).json() as any;
+    expect(page2.jobs).toHaveLength(50);
+    const page3 = await (await SELF.fetch(`https://worker.example/v1/admin/users/42994/jobs?cursor=${page2.nextCursor}`, { headers })).json() as any;
+    expect(page3.jobs).toHaveLength(6);
+    expect(page3.hasMore).toBe(false);
+    expect(new Set([...detail.jobs, ...page2.jobs, ...page3.jobs].map((j: any) => j.job_id)).size).toBe(106);
+    const lastId = page3.jobs.at(-1).job_id;
+    const sync = await (await SELF.fetch(`https://worker.example/v1/sync?jobId=${lastId}`, { headers })).json() as any;
+    expect(sync.jobs.some((j: any) => j.job_id === lastId)).toBe(false);
+    expect(sync.activeJob.job_id).toBe(lastId);
+    expect((await SELF.fetch("https://worker.example/v1/admin/users/42994/jobs", { headers: await tmaHeaders(42994) })).status).toBe(403);
+  });
   beforeEach(async () => {
     await seedApprovedUser("42001", 5);
   });

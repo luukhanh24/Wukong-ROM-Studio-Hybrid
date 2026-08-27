@@ -106,6 +106,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_theme_dark = False
     click_cache_flow = False
     click_admin_user = False
+    admin_job_scenario = False
     click_admin_action = False
     exercise_dock_header = False
     cache_clear_requests = 0
@@ -366,6 +367,63 @@ window.addEventListener('load', () => {{
     }};
     setTimeout(openAdminProfile, 500);
   }}
+  if ({str(self.admin_job_scenario).lower()}) {{
+    const inspectUserJob = () => {{
+      const button = document.querySelector('[data-open-user-job]');
+      if (!button) {{ setTimeout(inspectUserJob, 50); return; }}
+      const originalFetch = window.fetch.bind(window);
+      let delayNextPoll = true;
+      window.fetch = async (...args) => {{
+        const url = String(args[0]);
+        const response = await originalFetch(...args);
+        if (url.includes('/v1/sync') && !url.includes('archived-job') && delayNextPoll) {{
+          delayNextPoll = false;
+          await new Promise(resolve => setTimeout(resolve, 700));
+        }}
+        return response;
+      }};
+      document.querySelector('#refresh-jobs').click();
+      button.click();
+      setTimeout(() => {{
+        let sameJobCalls = 0;
+        const priorFetch = window.fetch.bind(window);
+        window.fetch = async (...args) => {{
+          const isSync = String(args[0]).includes('/v1/sync');
+          const number = isSync ? ++sameJobCalls : 0;
+          const response = await priorFetch(...args);
+          if (!isSync) return response;
+          const data = await response.json();
+          data.activeJob.stage = number === 1 ? 'old-stage' : 'new-stage';
+          data.activeJob.recipe.build.debloatPaths = Array.from({{length:100}}, (_, i) => `my_stock/app/Test${{i}}`);
+          await new Promise(resolve => setTimeout(resolve, number === 1 ? 450 : 30));
+          return new Response(JSON.stringify(data), {{status:200, headers:{{'Content-Type':'application/json'}}}});
+        }};
+        document.querySelector('#refresh-jobs').click();
+        setTimeout(() => document.querySelector('#refresh-jobs').click(), 40);
+        setTimeout(() => {{
+          document.body.dataset.inspectedJob = document.querySelector('#active-job')?.dataset.jobId || '';
+          document.body.dataset.inspectedEvents = document.querySelector('#active-job .job-events')?.textContent || '';
+          document.body.dataset.inspectedOwner = document.querySelector('#active-job .job-creator')?.textContent || '';
+          document.body.dataset.inspectedView = document.body.dataset.view;
+          const reader = document.querySelector('.job-config');
+          reader.open = true;
+          const pre = reader.querySelector('pre');
+          pre.focus(); pre.scrollTop = 200;
+          const selection = getSelection(); const range = document.createRange();
+          range.setStart(pre.firstChild, 5); range.setEnd(pre.firstChild, 20);
+          selection.removeAllRanges(); selection.addRange(range);
+          const selectedText = selection.toString();
+          document.querySelector('#refresh-jobs').click();
+          setTimeout(() => {{
+            document.body.dataset.parametersPreserved = String(document.querySelector('.job-config pre') === pre && pre.scrollTop === 200 && document.activeElement === pre && selection.toString() === selectedText);
+            reader.open = false;
+            document.body.dataset.inspectedStage = document.querySelector('#active-job .job-progress strong')?.textContent || '';
+          }}, 200);
+        }}, 700);
+      }}, 1100);
+    }};
+    setTimeout(inspectUserJob, 1100);
+  }}
   if ({str(self.click_admin_action).lower()}) {{
     const openAdminAction = () => {{
       const button = document.querySelector('.user-detail-actions button:nth-child(2)');
@@ -486,8 +544,10 @@ window.addEventListener('load', () => {{
             query = parse_qs(urlsplit(self.path).query)
             selected = str((query.get("jobId") or [""])[0])
             after = int(str((query.get("after") or ["0"])[0]) or "0")
-            if selected == "archived-job" and self.jobs_fixture and self.click_other_job:
+            if selected == "archived-job" and self.jobs_fixture and (self.click_other_job or self.admin_job_scenario):
                 active_job = self._fixture_archived_job()
+                if self.admin_job_scenario:
+                    active_job["createdBy"] = {"telegramId": "88", "displayName": "New User", "username": "new_user"}
                 events = [
                     {"sequence": 1, "jobId": "archived-job", "timestamp": "2026-08-24T01:00:00Z", "type": "submitted"},
                     {"sequence": 2, "jobId": "archived-job", "timestamp": "2026-08-24T01:04:00Z", "type": "step", "step": "package", "status": "success"},
@@ -536,7 +596,8 @@ window.addEventListener('load', () => {{
             return
         if path == "/v1/admin/users/88" and self.admin_user:
             user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
-            self._send(json.dumps({"user": user, "events": [{"type": "approved", "createdAt": "2026-08-25T01:00:00Z", "actorTelegramId": "42", "reason": "fixture"}]}).encode(), "application/json")
+            jobs = [{**self._fixture_archived_job(), "createdBy": user}] if self.admin_job_scenario else []
+            self._send(json.dumps({"user": user, "jobs": jobs, "events": [{"type": "approved", "createdAt": "2026-08-25T01:00:00Z", "actorTelegramId": "42", "reason": "fixture"}]}).encode(), "application/json")
             return
         if path == "/v1/jobs/fixture-job" and self.jobs_fixture:
             self._send(json.dumps(self._fixture_job()).encode(), "application/json")
@@ -736,6 +797,7 @@ def _render_mini_app_in_chrome(
     click_theme_dark: bool = False,
     click_cache_flow: bool = False,
     click_admin_user: bool = False,
+    admin_job_scenario: bool = False,
     click_admin_action: bool = False,
     exercise_dock_header: bool = False,
     admin_user: bool = False,
@@ -775,6 +837,7 @@ def _render_mini_app_in_chrome(
             "click_theme_dark": click_theme_dark,
             "click_cache_flow": click_cache_flow,
             "click_admin_user": click_admin_user,
+            "admin_job_scenario": admin_job_scenario,
             "click_admin_action": click_admin_action,
             "exercise_dock_header": exercise_dock_header,
             "cache_clear_requests": 0,
@@ -1752,6 +1815,21 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('class="job-history-card selected"', dom)
         self.assertIn("ColorOS_16.0.8", dom)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_admin_opens_user_job_outside_recent_list_and_ignores_old_poll(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True, admin_user=True, initial_view="system",
+            jobs_fixture=True, click_admin_user=True, admin_job_scenario=True,
+        )
+        self.assertIn('data-inspected-job="archived-job"', dom)
+        self.assertIn('data-inspected-view="jobs"', dom)
+        self.assertIn('data-inspected-stage="new-stage"', dom)
+        self.assertIn('data-parameters-preserved="true"', dom)
+        self.assertRegex(dom, r'data-inspected-owner="[^"]*New User')
+        events = re.search(r'data-inspected-events="([^"]*)"', dom)
+        self.assertIsNotNone(events)
+        self.assertNotIn("42 đường dẫn", events.group(1))
+        self.assertIn('class="job-config"', dom)
 
     def test_mobile_operating_surfaces_do_not_overflow_horizontally(self) -> None:
         for route, flags in (

@@ -13,6 +13,8 @@ export function directArtifactUrl(value: unknown, env: Env): string {
     if (
       blocked.has(parsed.hostname.toLowerCase())
       || parsed.hostname.toLowerCase().endsWith(".workers.dev")
+      || ["github.com", "githubusercontent.com"].some(host =>
+        parsed.hostname.toLowerCase() === host || parsed.hostname.toLowerCase().endsWith(`.${host}`))
     ) {
       return "";
     }

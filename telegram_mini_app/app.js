@@ -463,6 +463,21 @@ const pipelineLabels = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+Object.assign(translations.vi, {
+  openUserJob: "Xem job", jobCreator: "Người tạo job", jobParameters: "Toàn bộ thông số job", loadMoreUserJobs: "Tải thêm job cũ",
+  jobParametersHint: "Chỉ đọc · Cấu hình đã lưu và trạng thái thực tế. Thông tin xác thực và link ROM nguồn ký tạm thời được ẩn.",
+  jobRecipeData: "Cấu hình yêu cầu", jobRuntimeData: "Trạng thái và kết quả", copyJobParameters: "Copy thông số",
+  jobParametersCopied: "Đã sao chép thông số job.", jobUnavailable: "Không mở được job này. Hãy làm mới hoặc chọn job khác.",
+  jobCreatedAt: "Tạo lúc", jobUpdatedAt: "Cập nhật lúc", loadMoreJobEvents: "Tải thêm nhật ký", viewJobUser: "Mở hồ sơ user"
+});
+Object.assign(translations.en, {
+  openUserJob: "View job", jobCreator: "Created by", jobParameters: "All job parameters", loadMoreUserJobs: "Load older jobs",
+  jobParametersHint: "Read-only · Saved configuration and actual state. Credentials and temporary signed source ROM links are hidden.",
+  jobRecipeData: "Requested configuration", jobRuntimeData: "State and results", copyJobParameters: "Copy parameters",
+  jobParametersCopied: "Job parameters copied.", jobUnavailable: "Could not open this job. Refresh or select another job.",
+  jobCreatedAt: "Created", jobUpdatedAt: "Updated", loadMoreJobEvents: "Load more events", viewJobUser: "Open user profile"
+});
+
 const state = {
   language: localStorage.getItem("wukong-language") || "vi",
   theme: localStorage.getItem("wukong-theme") || "system",
@@ -482,6 +497,8 @@ const state = {
   jobsUnchangedPolls: 0,
   jobsSyncSignature: "",
   jobDetailRequestId: 0,
+  expandedConfigJobId: "",
+  jobEventsHasMore: false,
   jobHistoryFilter: "",
   sourceProbeTimer: null,
   sourceProbeUri: "",
@@ -2968,8 +2985,31 @@ async function openAdminUser(telegramId) {
   });
   const jobsTitle = document.createElement("h3"); jobsTitle.textContent = t("jobHistory");
   const jobHistory = document.createElement("div"); jobHistory.className = "user-audit";
-  jobHistory.replaceChildren(...jobs.map((job) => { const article = document.createElement("article"); const name = document.createElement("strong"); name.textContent = `${job.job_id || job.jobId} · ${job.status}`; const detail = document.createElement("small"); detail.textContent = `${formatDate(job.created_at || job.createdAt)} · ${job.stage || "—"}`; article.append(name, detail); return article; }));
-  root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, auditTitle, audit, loadMoreAudit);
+  const historyEntry = (job) => {
+    const article = document.createElement("article"); article.className = "user-job-entry";
+    const copy = document.createElement("div");
+    const name = document.createElement("strong"); name.textContent = jobMetadata(job).version || job.recipe?.device || job.job_id || job.jobId;
+    const detail = document.createElement("small"); detail.textContent = `${statusLabel(job.status)} · ${jobProgress(job)}% · ${job.stage || "—"}\n${formatDate(job.created_at || job.createdAt)} · ${job.job_id || job.jobId}`;
+    copy.append(name, detail);
+    const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
+    open.dataset.openUserJob = job.job_id || job.jobId; open.textContent = t("openUserJob");
+    open.addEventListener("click", () => openJob({ ...job, createdBy: job.createdBy || user }, true));
+    article.append(copy, open); return article;
+  };
+  jobHistory.replaceChildren(...jobs.map(historyEntry));
+  let jobsCursor = String(payload.jobsNextCursor || "");
+  const moreJobs = document.createElement("button"); moreJobs.type = "button"; moreJobs.className = "secondary";
+  moreJobs.textContent = t("loadMoreUserJobs"); moreJobs.hidden = !payload.jobsHasMore;
+  moreJobs.addEventListener("click", async () => {
+    moreJobs.disabled = true;
+    try {
+      const page = await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/jobs?cursor=${encodeURIComponent(jobsCursor)}`);
+      jobHistory.append(...(page.jobs || []).map(historyEntry));
+      jobsCursor = String(page.nextCursor || ""); moreJobs.hidden = !page.hasMore;
+    } catch (error) { toast(error.message, true); }
+    finally { moreJobs.disabled = false; }
+  });
+  root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, moreJobs, auditTitle, audit, loadMoreAudit);
   $("#admin-user-page").hidden = false;
   $("#system").classList.add("admin-user-open");
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
@@ -3378,11 +3418,58 @@ function jobAction(label, action, job, danger = false) {
   return button;
 }
 
+function openJob(job, navigateToJobs = false) {
+  state.activeJobId = job.job_id || job.jobId;
+  localStorage.setItem("wukong-active-job", state.activeJobId);
+  ++state.jobDetailRequestId;
+  state.activeEvents = [];
+  state.activeEventsJobId = "";
+  state.jobEventsHasMore = false;
+  state.jobHistoryFilter = job.status === "succeeded" ? "succeeded" : terminalJobStatuses.has(job.status) ? "failed" : "active";
+  if (!state.jobs.some(item => (item.job_id || item.jobId) === state.activeJobId)) state.jobs.unshift(job);
+  renderActiveJob(job, []); renderJobHistory();
+  if (navigateToJobs) navigate("jobs");
+  else loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true));
+}
+
+function renderJobParameters(job) {
+  const id = job.job_id || job.jobId;
+  const previous = $("#active-job > .job-config");
+  const details = previous?.dataset.jobId === id ? previous : document.createElement("details");
+  details.className = "job-config"; details.dataset.jobId = id;
+  details.open = state.expandedConfigJobId === id;
+  if (!details.children.length) {
+    details.append(document.createElement("summary"), document.createElement("p"), document.createElement("button"));
+    details.addEventListener("toggle", () => { if (details.isConnected) state.expandedConfigJobId = details.open ? id : ""; });
+  }
+  details.querySelector("summary").textContent = t("jobParameters");
+  details.querySelector("p").textContent = t("jobParametersHint");
+  const copy = details.querySelector("button"); copy.type = "button"; copy.className = "secondary"; copy.textContent = t("copyJobParameters");
+  copy.onclick = () => copyText(JSON.stringify(job, null, 2)).then(() => toast(t("jobParametersCopied"))).catch(() => toast(t("clipboardDenied"), true));
+  const { recipe, ...runtime } = job;
+  for (const [key, value] of [["jobRecipeData", recipe || {}], ["jobRuntimeData", runtime]]) {
+    let data = details.querySelector(`[data-parameters="${key}"]`);
+    if (!data) {
+      data = document.createElement("pre"); data.tabIndex = 0; data.dataset.parameters = key;
+      details.append(document.createElement("h4"), data);
+    }
+    data.previousElementSibling.textContent = t(key);
+    const text = JSON.stringify(value, null, 2);
+    if (data.textContent !== text) {
+      const { scrollTop, scrollLeft } = data;
+      data.textContent = text;
+      data.scrollTop = scrollTop; data.scrollLeft = scrollLeft;
+    }
+  }
+  return details;
+}
+
 function renderActiveJob(job, events) {
   const root = $("#active-job");
   if (!root) return;
-  if (!job) { root.hidden = true; root.replaceChildren(); return; }
+  if (!job) { root.hidden = true; root.replaceChildren(); delete root.dataset.jobId; return; }
   root.hidden = false;
+  root.dataset.jobId = job.job_id || job.jobId;
   const metadata = jobMetadata(job);
   const header = document.createElement("header");
   const title = document.createElement("div");
@@ -3392,6 +3479,18 @@ function renderActiveJob(job, events) {
   title.append(kicker, heading);
   const badge = document.createElement("span"); badge.className = `job-status ${job.status}`; badge.textContent = statusLabel(job.status);
   header.append(title, badge);
+  const creator = document.createElement("div"); creator.className = "job-creator";
+  if (state.me?.role === "admin" && job.createdBy) {
+    const user = job.createdBy;
+    const text = document.createElement("div"); text.className = "job-creator-copy";
+    const label = document.createElement("small"); label.textContent = t("jobCreator");
+    const name = document.createElement("strong"); name.textContent = user.displayName || user.username || user.telegramId;
+    const identity = document.createElement("span"); identity.textContent = [user.username ? `@${user.username}` : "", `ID ${user.telegramId}`].filter(Boolean).join(" · ");
+    text.append(label, name, identity);
+    const open = document.createElement("button"); open.type = "button"; open.className = "secondary"; open.textContent = t("viewJobUser");
+    open.addEventListener("click", () => { navigate("system"); openAdminUser(user.telegramId).catch(error => toast(error.message, true)); });
+    creator.append(profileAvatar(user), text, open);
+  } else creator.hidden = true;
   const progress = document.createElement("div"); progress.className = "job-progress";
   const progressCopy = document.createElement("div");
   const stage = document.createElement("strong"); stage.textContent = job.stage || statusLabel(job.status);
@@ -3423,6 +3522,9 @@ function renderActiveJob(job, events) {
   const facts = document.createElement("div"); facts.className = "job-facts";
   const product = metadata.productName || job.recipe?.device;
   const factNodes = [
+    jobFact("Job ID", job.job_id || job.jobId),
+    jobFact(t("jobCreatedAt"), formatDate(job.created_at || job.createdAt)),
+    jobFact(t("jobUpdatedAt"), formatDate(job.updated_at || job.updatedAt)),
     jobFact(t("deviceName"), catalogDeviceName(product)),
     jobFact(t("productCode"), product),
     jobFact(t("detectedDevice"), metadata.device),
@@ -3452,9 +3554,21 @@ function renderActiveJob(job, events) {
     if (!logExpanded) requestAnimationFrame(() => $(".job-events")?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" }));
   });
   actions.append(logButton);
+  if (state.jobEventsHasMore) {
+    const more = document.createElement("button"); more.type = "button"; more.textContent = t("loadMoreJobEvents");
+    more.addEventListener("click", () => { more.disabled = true; loadJobDetail(jobId).catch(error => { more.disabled = false; toast(error.message, true); }); });
+    actions.append(more);
+  }
   if (!terminalJobStatuses.has(job.status)) actions.append(jobAction(t("cancel"), "cancel", job, true));
   if (["failed", "cancelled"].includes(job.status) && job.checkpoint) actions.append(jobAction(t("resume"), "resume", job));
-  root.replaceChildren(header, progress, context, facts, artifacts, actions, renderEvents(events, logExpanded));
+  const config = state.me?.role === "admin" ? renderJobParameters(job) : null;
+  const before = [header, creator, progress, context, facts];
+  const after = [artifacts, actions, renderEvents(events, logExpanded)];
+  if (config?.parentElement === root) {
+    // Keep the parameter reader attached so polling preserves focus and selection.
+    for (const child of [...root.children]) if (child !== config) child.remove();
+    config.before(...before); config.after(...after);
+  } else root.replaceChildren(...before, ...(config ? [config] : []), ...after);
 }
 
 function renderJobHistory() {
@@ -3493,12 +3607,13 @@ function renderJobHistory() {
     const details = document.createElement("p"); details.textContent = `${job.recipe?.device || "—"} · ${build.modVersion || "—"} · ${build.modReleaseVersion || "—"} · ${jobProgress(job)}%`;
     const footer = document.createElement("small"); footer.textContent = `${String(job.job_id || job.jobId).slice(0, 12)} · ${formatDate(job.created_at || job.createdAt)}`;
     card.append(header, details, footer);
+    if (state.me?.role === "admin" && job.createdBy) {
+      const creator = document.createElement("p"); creator.className = "job-history-creator";
+      creator.textContent = `${job.createdBy.displayName || job.createdBy.username || job.createdBy.telegramId} · ID ${job.createdBy.telegramId}`;
+      card.append(creator);
+    }
     card.addEventListener("click", () => {
-      state.activeJobId = job.job_id || job.jobId; localStorage.setItem("wukong-active-job", state.activeJobId);
-      state.activeEvents = [];
-      state.activeEventsJobId = "";
-      renderActiveJob(job, []);
-      loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true)); renderJobHistory();
+      openJob(job);
     });
     return card;
   });
@@ -3531,7 +3646,9 @@ async function loadJobDetail(jobId) {
   const job = payload.activeJob
     || state.jobs.find((item) => (item.job_id || item.jobId) === jobId)
     || null;
+  if (!job || (job.job_id || job.jobId) !== jobId) throw new Error(t("jobUnavailable"));
   const incoming = Array.isArray(payload.events) ? payload.events : [];
+  state.jobEventsHasMore = incoming.length >= 500;
   const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
   const unique = new Map();
   merged.forEach((event) => {
@@ -3543,6 +3660,7 @@ async function loadJobDetail(jobId) {
   state.activeEventsJobId = jobId;
   const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
   if (index >= 0 && job) state.jobs[index] = job;
+  else if (job) state.jobs.unshift(job);
   renderActiveJob(job, state.activeEvents); renderJobHistory();
 }
 
@@ -3567,6 +3685,7 @@ async function loadJobs({ force = false } = {}) {
   state.jobsLoading = true;
   try {
     const requestedId = state.activeJobId;
+    const selectionVersion = ++state.jobDetailRequestId;
     const sameJob = state.activeEventsJobId === requestedId;
     const after = sameJob
       ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
@@ -3575,11 +3694,18 @@ async function loadJobs({ force = false } = {}) {
       ? `?jobId=${encodeURIComponent(requestedId)}&after=${after}`
       : "";
     const payload = await apiRequest(`/v1/sync${query}`);
+    if (selectionVersion !== state.jobDetailRequestId || requestedId !== state.activeJobId) { scheduleJobsPoll(true); return; }
     state.maintenance = payload.maintenance || state.maintenance;
     renderAccount();
     state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    if (requestedId && payload.activeJob && (payload.activeJob.job_id || payload.activeJob.jobId) === requestedId) {
+      const index = state.jobs.findIndex(job => (job.job_id || job.jobId) === requestedId);
+      if (index >= 0) state.jobs[index] = payload.activeJob;
+      else state.jobs.unshift(payload.activeJob);
+    }
     const running = state.jobs.find((job) => !terminalJobStatuses.has(job.status));
     const selectedExists = state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
+    if (requestedId && !selectedExists) { renderActiveJob(null, []); renderJobHistory(); throw new Error(t("jobUnavailable")); }
     if (!selectedExists) state.activeJobId = (running?.job_id || running?.jobId) || state.jobs[0]?.job_id || state.jobs[0]?.jobId || "";
     if (state.activeJobId) localStorage.setItem("wukong-active-job", state.activeJobId);
     else localStorage.removeItem("wukong-active-job");
@@ -3588,7 +3714,9 @@ async function loadJobs({ force = false } = {}) {
       ? payload.activeJob
       : state.jobs.find((job) => (job.job_id || job.jobId) === state.activeJobId) || null;
     const eventsSameJob = state.activeEventsJobId === state.activeJobId;
-    const incoming = Array.isArray(payload.events) ? payload.events : [];
+    const responseId = payload.activeJob?.job_id || payload.activeJob?.jobId;
+    const incoming = responseId === state.activeJobId && Array.isArray(payload.events) ? payload.events : [];
+    state.jobEventsHasMore = incoming.length >= 500;
     const merged = eventsSameJob ? [...state.activeEvents, ...incoming] : incoming;
     const unique = new Map();
     merged.forEach((event) => {

@@ -436,6 +436,23 @@ h2 { letter-spacing: -.015em; }
 .job-facts strong { overflow: hidden; font: 500 10px/1.3 "JetBrains Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
 .job-context { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:14px 0; padding:10px 12px; border-radius:var(--radius-md); background:var(--accent-soft); }
 .job-context strong,.job-context small { display:block; }
+.job-creator { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:16px 0; border-bottom:1px solid var(--line); }
+.job-creator[hidden] { display:none; }
+.job-creator-copy { flex:1; min-width:140px; overflow-wrap:anywhere; }
+.job-creator-copy small,.job-creator-copy strong,.job-creator-copy span { display:block; }
+.job-creator-copy small,.job-creator-copy span { color:var(--muted); font-size:12px; }
+.job-creator-copy strong { margin:3px 0; font-size:15px; }
+.job-creator button,.user-job-entry button,.job-config button { min-height:44px; padding:8px 12px; border:1px solid var(--accent); border-radius:var(--radius-sm); color:var(--accent-strong); background:var(--accent-soft); }
+.job-config { margin:16px 0; padding:14px 0; border-block:1px solid var(--line); }
+.job-config summary { cursor:pointer; font-weight:600; min-height:32px; }
+.job-config > p { color:var(--muted); font-size:13px; line-height:1.5; }
+.job-config h4 { margin:20px 0 8px; font-size:14px; }
+.job-config pre { max-height:440px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; background:var(--surface-soft); color:var(--ink); font:12px/1.6 "JetBrains Mono",monospace; border-radius:var(--radius-sm); }
+.admin-user-page .user-job-entry { display:flex; align-items:center; gap:14px; padding:14px; }
+.user-job-entry > div { flex:1; min-width:0; overflow-wrap:anywhere; }
+.admin-user-page .user-job-entry strong { font-size:14px; }
+.admin-user-page .user-job-entry small { font-size:12px; line-height:1.6; white-space:pre-line; }
+.job-facts strong { white-space:normal; overflow-wrap:anywhere; }
 .job-context strong { font-size:11px; }
 .job-context small { max-width:62ch; margin-top:4px; color:var(--muted); font-size:9px; overflow-wrap:anywhere; }
 .job-release-context { display:grid; justify-items:end; gap:3px; min-width:130px; text-align:right; }

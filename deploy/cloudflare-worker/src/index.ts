@@ -216,7 +216,7 @@ async function routeWithIdentity(
     if (selectedId) {
       try {
         const row = await inspectJob(env, auth, selectedId);
-        activeJob = publicJob(row, env);
+        activeJob = publicJob(row, env, auth.role === "admin");
         const after = /^[0-9]+$/.test(params.get("after") ?? "")
           ? Number(params.get("after"))
           : 0;
@@ -308,6 +308,16 @@ async function routeWithIdentity(
       return json({ error: error instanceof Error ? error.message : "Telegram user is invalid" }, 400);
     }
   }
+  const adminJobs = path.match(/^\/v1\/admin\/users\/([1-9][0-9]*)\/jobs$/);
+  if (adminJobs && request.method === "GET") {
+    if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
+    try {
+      return json(await listJobsForSubject(env, adminJobs[1]!, new URL(request.url).searchParams.get("cursor") || ""));
+    } catch (error) {
+      if (error instanceof JobHttpError) return json({ error: error.message }, error.status);
+      throw error;
+    }
+  }
   const adminDetail = path.match(/^\/v1\/admin\/users\/([1-9][0-9]*)$/);
   if (adminDetail && request.method === "GET") {
     if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
@@ -317,6 +327,7 @@ async function routeWithIdentity(
     const events = await userEvents(env, subject, 101);
     const visibleEvents = events.slice(0, 100);
     const hasMore = events.length > 100;
+    const jobPage = await listJobsForSubject(env, subject);
     return json({
       user,
       events: visibleEvents,
@@ -324,7 +335,9 @@ async function routeWithIdentity(
       eventsNextCursor: hasMore && visibleEvents.length
         ? encodeAuditCursor(visibleEvents[visibleEvents.length - 1]!)
         : "",
-      jobs: await listJobsForSubject(env, subject)
+      jobs: jobPage.jobs,
+      jobsHasMore: jobPage.hasMore,
+      jobsNextCursor: jobPage.nextCursor
     });
   }
   const adminEvents = path.match(/^\/v1\/admin\/users\/([1-9][0-9]*)\/events$/);
@@ -371,7 +384,7 @@ async function routeWithIdentity(
   if (detail && request.method === "GET") {
     try {
       const row = await inspectJob(env, auth, detail[1]!);
-      return json(publicJob(row, env));
+      return json(publicJob(row, env, auth.role === "admin"));
     } catch (error) {
       const status = error instanceof JobHttpError ? error.status : 404;
       return json({ error: error instanceof Error ? error.message : "Job not found" }, status);
