@@ -358,9 +358,6 @@ h2 { letter-spacing: -.015em; }
 .job-facts small, .job-facts strong { display: block; }
 .job-facts small { margin-bottom: 6px; color: var(--muted); font: 500 8px/1 "JetBrains Mono", monospace; text-transform: uppercase; }
 .job-facts strong { overflow: hidden; font: 500 10px/1.3 "JetBrains Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
-.job-edition-facts { grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); }
-.job-edition-facts > div { padding-top: 14px; padding-bottom: 14px; }
-.job-edition-facts strong { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
 .job-context { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:14px 0; padding:10px 12px; border-radius:var(--radius-md); background:var(--accent-soft); }
 .job-context strong,.job-context small { display:block; }
 .job-context strong { font-size:11px; }
@@ -542,7 +539,6 @@ h2 { letter-spacing: -.015em; }
   .active-job, .job-history-sheet { padding: 15px; }
   .active-job > header { align-items: flex-start; }
   .job-facts { grid-template-columns: repeat(2,1fr); }
-  .job-edition-facts { grid-template-columns: 1fr; }
   .job-artifacts .job-artifact-actions { grid-template-columns: 1fr; }
   .catalog-controls, .device-table { grid-template-columns: 1fr; }
   .device-row { border-right: 0; }

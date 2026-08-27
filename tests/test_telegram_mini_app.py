@@ -1234,16 +1234,21 @@ class TelegramMiniAppTests(unittest.TestCase):
             "PKG110_16.0.10.500(CN01)",
             "2026-08-01",
             "2026-08-11 09:38:18",
-            "<small>Lite</small><strong>7.00 GiB · Wukong_Lite_V6.0_PKG110.zip</strong>",
-            "<small>Plus</small><strong>8.00 GiB · Wukong_Plus_V6.0_PKG110.zip</strong>",
+            "<strong>Wukong_Lite_V6.0_PKG110.zip</strong><span>7.00 GiB</span>",
+            "<strong>Wukong_Plus_V6.0_PKG110.zip</strong><span>8.00 GiB</span>",
             "Dung lượng ROM nguồn",
         ):
             self.assertIn(value, dom)
-        self.assertIn('class="job-facts job-edition-facts"', dom)
-        self.assertRegex(
-            dom,
-            r'class="job-facts job-edition-facts"[^>]*>.*?'
-            r"<small>Lite</small>.*?<small>Plus</small>",
+        self.assertNotIn('class="job-facts job-edition-facts"', dom)
+        self.assertNotIn("<small>Lite</small>", dom)
+        self.assertNotIn("<small>Plus</small>", dom)
+        self.assertLess(
+            dom.index('<section class="job-artifacts">'),
+            dom.index('<div class="job-controls">'),
+        )
+        self.assertLess(
+            dom.index('<div class="job-controls">'),
+            dom.index('<section class="job-events">'),
         )
         self.assertNotIn("<small>Upload gần nhất</small>", dom)
         self.assertNotIn("<h2>stale</h2>", dom)
