@@ -408,7 +408,12 @@ class LocalJobExecutor:
                         storage.publish_artifact(
                             output,
                             device=recipe.device,
-                            build=recipe.build.mod_version,
+                            build=(
+                                "Lite" if "_lite_" in output.name.casefold() or output.stem.casefold().endswith("_lite")
+                                else "Plus" if "_plus_" in output.name.casefold() or output.stem.casefold().endswith("_plus")
+                                else recipe.build.preset.title()
+                            ) if recipe.storage.artifact_root else recipe.build.mod_version,
+                            relative_root=recipe.storage.artifact_root,
                             progress_callback=report_upload,
                         )
                         if isinstance(storage, RcloneStorageAdapter)

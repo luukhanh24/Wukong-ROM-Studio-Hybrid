@@ -81,6 +81,14 @@ import {
   failRomSearch,
   recordRomSearchStart
 } from "./activity";
+import {
+  BatchBuildHttpError,
+  batchBuild,
+  createBatchBuild,
+  listBatchBuilds,
+  processBatch,
+  processOpenBatches
+} from "./batch-builds";
 
 const RELEASE_SHA = /^[0-9a-f]{40}$/;
 
@@ -327,6 +335,24 @@ async function routeWithIdentity(
   }
   if (path === "/v1/jobs" && request.method === "GET") {
     return json({ jobs: await listJobs(env, auth) });
+  }
+  if (path === "/v1/admin/batch-builds" && request.method === "POST") {
+    try {
+      const result = await createBatchBuild(env, auth, await request.json(), request.headers.get("Idempotency-Key") ?? "");
+      ctx.waitUntil(processBatch(env, String(result.batch.batchId ?? "")));
+      return json(result.batch, result.created ? 201 : 200);
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : "Batch build could not be created" }, error instanceof BatchBuildHttpError ? error.status : 400);
+    }
+  }
+  if (path === "/v1/admin/batch-builds" && request.method === "GET") {
+    try { return json(await listBatchBuilds(env, auth)); }
+    catch (error) { return json({ error: error instanceof Error ? error.message : "Batch builds are unavailable" }, error instanceof BatchBuildHttpError ? error.status : 400); }
+  }
+  const batchBuildMatch = path.match(/^\/v1\/admin\/batch-builds\/([a-f0-9]{32})$/);
+  if (batchBuildMatch && request.method === "GET") {
+    try { return json(await batchBuild(env, auth, batchBuildMatch[1] ?? "")); }
+    catch (error) { return json({ error: error instanceof Error ? error.message : "Batch build is unavailable" }, error instanceof BatchBuildHttpError ? error.status : 400); }
   }
   if (path === "/v1/admin/users" && request.method === "GET") {
     if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
@@ -732,6 +758,7 @@ const worker: ExportedHandler<Env> = {
   },
   async scheduled(_controller, env, ctx): Promise<void> {
     ctx.waitUntil(maintenance(env));
+    ctx.waitUntil(processOpenBatches(env));
   }
 };
 

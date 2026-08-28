@@ -805,6 +805,22 @@ class SourceAndStorageContractTests(unittest.TestCase):
             self.assertEqual(metadata["sha256"], record.sha256)
             self.assertEqual(metadata["sizeBytes"], 8)
 
+    def test_rclone_batch_publish_uses_release_and_edition_folders(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            artifact = Path(root, "Wukong_PKG110_Lite.zip")
+            artifact.write_bytes(b"artifact")
+            calls: list[list[str]] = []
+
+            def fake_run(args: list[str], **_: object) -> str:
+                calls.append(args)
+                return ""
+
+            RcloneStorageAdapter(remote="wukong-gdrive", root="WukongROM", run_command=fake_run).publish_artifact(
+                artifact, device="PKG110", build="Lite", relative_root="ROM/V5.1"
+            )
+            destinations = [command[3] for command in calls if command[1] == "copyto"]
+            self.assertIn("wukong-gdrive:WukongROM/ROM/V5.1/Lite/Wukong_PKG110_Lite.zip", destinations)
+
     def test_source_mirror_uploads_sha256_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             source = Path(root, "rom.zip")

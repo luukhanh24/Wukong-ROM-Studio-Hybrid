@@ -1304,6 +1304,7 @@ class RcloneStorageAdapter:
         *,
         device: str,
         build: str,
+        relative_root: str | None = None,
         progress_callback: Callable[[Mapping[str, object]], None] | None = None,
     ) -> ArtifactRecord:
         artifact = artifact.resolve()
@@ -1318,7 +1319,11 @@ class RcloneStorageAdapter:
         }
         metadata_path = artifact.with_name(artifact.name + ".metadata.json")
         metadata_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        relative = f"artifacts/{device}/{build}/{artifact.name}"
+        relative = (
+            f"{relative_root.strip('/')}/{build}/{artifact.name}"
+            if relative_root
+            else f"artifacts/{device}/{build}/{artifact.name}"
+        )
         uri = self.copy_file(artifact, relative, progress_callback=progress_callback)
         self.copy_file(metadata_path, relative + ".metadata.json")
         public_url = self.run_command(self._args("link", uri)).strip() or None

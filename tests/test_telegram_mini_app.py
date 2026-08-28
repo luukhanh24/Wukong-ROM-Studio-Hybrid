@@ -1995,5 +1995,21 @@ class TelegramMiniAppTests(unittest.TestCase):
                 self.assertEqual(viewport.group(1), document.group(1))
 
 
+    def test_admin_batch_build_and_persistent_release_surfaces_are_separate_and_wired(self) -> None:
+        html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn('id="catalog-release-admin" hidden', html)
+        self.assertIn('id="save-admin-release"', html)
+        self.assertIn('id="open-batch-build"', html)
+        self.assertIn('id="admin-batch-page" hidden', html)
+        self.assertIn('id="batch-devices"', html)
+        self.assertIn('id="batch-mod-versions"', html)
+        self.assertIn('apiRequest("/v1/mod-release-versions",', script)
+        self.assertIn('apiRequest("/v1/admin/batch-builds",', script)
+        self.assertIn('classList.add("admin-batch-open")', script)
+        self.assertIn('#system.admin-batch-open > :not(.admin-batch-page)', styles)
+
+
 if __name__ == "__main__":
     unittest.main()

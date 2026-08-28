@@ -5,10 +5,25 @@ import unittest
 from pathlib import Path
 
 from tools.materialize_workflow_recipe import recipe_from_workflow_inputs, write_workflow_recipe
-from wukong.models import RecipeValidationError
+from wukong.models import BuildRecipe, RecipeValidationError
 
 
 class WorkflowRecipeTests(unittest.TestCase):
+    def test_batch_artifact_root_is_path_safe_and_round_trips(self) -> None:
+        payload = {
+            "schemaVersion": 1, "task": "build", "device": "PKG110",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "build": {"preset": "both", "modVersion": "ColorOS_16.0.9"},
+            "execution": {"target": "github-auto"},
+            "storage": {"remote": "wukong-gdrive", "publishArtifact": True, "artifactRoot": "ROM/V5.1"},
+        }
+        recipe = BuildRecipe.from_dict(payload)
+        self.assertEqual("ROM/V5.1", recipe.storage.artifact_root)
+        self.assertEqual("ROM/V5.1", recipe.to_dict()["storage"]["artifactRoot"])
+        payload["storage"]["artifactRoot"] = "../private"
+        with self.assertRaises(RecipeValidationError):
+            BuildRecipe.from_dict(payload)
+
     def test_builds_detailed_recipe_from_dispatch_inputs(self) -> None:
         recipe = recipe_from_workflow_inputs({
             "TASK": "build",

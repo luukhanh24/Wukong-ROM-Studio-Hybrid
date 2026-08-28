@@ -128,6 +128,14 @@ export function validateRecipe(value: unknown): JsonObject {
   }
   requiredText(build.modVersion, "MOD version", 128);
   object(recipe.execution, "Execution policy");
+  const storage = recipe.storage === undefined ? {} : object(recipe.storage, "Storage configuration");
+  if (storage.artifactRoot !== undefined) {
+    const root = requiredText(storage.artifactRoot, "Artifact root", 256).replaceAll("\\", "/");
+    if (root.startsWith("/") || /^[A-Za-z]:/.test(root) || root.split("/").some(part => !part || part === ".." || /[\u0000-\u001f]/.test(part))) {
+      throw new JobHttpError("Artifact root must be a safe relative Drive path", 400);
+    }
+    storage.artifactRoot = root;
+  }
   const canonical = JSON.stringify(recipe);
   if (new TextEncoder().encode(canonical).byteLength > 1024 * 1024) {
     throw new JobHttpError("Build recipe is too large", 413);
@@ -222,7 +230,10 @@ function publicRecipe(recipe: JsonObject): JsonObject {
     },
     build,
     execution,
-    storage: { publishArtifact: Boolean(storage.publishArtifact ?? true) }
+    storage: {
+      publishArtifact: Boolean(storage.publishArtifact ?? true),
+      ...(typeof storage.artifactRoot === "string" ? { artifactRoot: storage.artifactRoot } : {})
+    }
   };
 }
 
@@ -342,9 +353,14 @@ export async function createJob(
   env: Env,
   auth: AuthenticatedRequest,
   recipeValue: unknown,
-  rawIdempotencyKey: string
+  rawIdempotencyKey: string,
+  allowBatchStorage = false
 ): Promise<{ job: JsonObject; created: boolean }> {
   const recipe = validateRecipe(recipeValue);
+  const storage = recipe.storage && typeof recipe.storage === "object" ? recipe.storage as JsonObject : {};
+  if (storage.artifactRoot !== undefined && !allowBatchStorage) {
+    throw new JobHttpError("Batch artifact storage is reserved for admin batch builds", 403, "batch_storage_forbidden");
+  }
   const idempotencyKey = rawIdempotencyKey.trim() || crypto.randomUUID().replaceAll("-", "");
   if (!IDEMPOTENCY_KEY.test(idempotencyKey)) {
     throw new JobHttpError("Build idempotency key is invalid", 400);
@@ -759,13 +775,30 @@ export async function jobEvents(
      FROM wukong_job_events WHERE job_id = ? AND sequence > ?
      ORDER BY sequence ASC LIMIT 500`
   ).bind(jobId, after).all<Record<string, unknown>>();
-  return result.results.map((row) => sanitizePublicValue({
-    sequence: Number(row.sequence),
-    jobId,
-    timestamp: row.timestamp,
-    type: row.event_type,
-    ...parseJson(row.payload_json)
-  }, env) as JsonObject);
+  return result.results.map((row) => publicJobEvent(row, env, jobId));
+}
+
+export function publicJobEvent(row: Record<string, unknown>, env: Env, jobId: string): JsonObject {
+  return sanitizePublicValue({
+    sequence: Number(row.sequence), jobId, timestamp: row.timestamp,
+    type: row.event_type, ...parseJson(row.payload_json)
+  }, env) as JsonObject;
+}
+
+export async function latestJobEvents(
+  env: Env,
+  auth: AuthenticatedRequest,
+  jobId: string,
+  limit = 50
+): Promise<JsonObject[]> {
+  await inspectJob(env, auth, jobId);
+  const bounded = Math.max(1, Math.min(100, Math.trunc(limit)));
+  const result = await env.DB.prepare(
+    `SELECT sequence, timestamp, event_type, payload_json
+     FROM wukong_job_events WHERE job_id = ?
+     ORDER BY sequence DESC LIMIT ?`
+  ).bind(jobId, bounded).all<Record<string, unknown>>();
+  return result.results.reverse().map((row) => publicJobEvent(row, env, jobId));
 }
 
 export function isTerminalStatus(status: string): boolean {

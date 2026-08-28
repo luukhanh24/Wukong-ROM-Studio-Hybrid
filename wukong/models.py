@@ -347,6 +347,7 @@ class ExecutionOptions:
 class StorageOptions:
     remote: str = "wukong-gdrive"
     publish_artifact: bool = True
+    artifact_root: str | None = None
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any] | None) -> "StorageOptions":
@@ -354,10 +355,21 @@ class StorageOptions:
         remote = str(data.get("remote") or "wukong-gdrive").strip()
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", remote):
             raise RecipeValidationError("Storage remote name is invalid")
-        return cls(remote=remote, publish_artifact=_boolean(data, "publishArtifact", True))
+        raw_root = data.get("artifactRoot")
+        artifact_root = str(raw_root).strip().replace("\\", "/") if raw_root is not None else None
+        if artifact_root:
+            path = PurePosixPath(artifact_root)
+            if path.is_absolute() or ".." in path.parts or any(not re.fullmatch(r"[^/\\\x00-\x1f]{1,64}", part) for part in path.parts):
+                raise RecipeValidationError("Artifact root must be a safe relative Drive path")
+        elif raw_root is not None:
+            raise RecipeValidationError("Artifact root must not be empty")
+        return cls(remote=remote, publish_artifact=_boolean(data, "publishArtifact", True), artifact_root=artifact_root)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"remote": self.remote, "publishArtifact": self.publish_artifact}
+        result: dict[str, Any] = {"remote": self.remote, "publishArtifact": self.publish_artifact}
+        if self.artifact_root:
+            result["artifactRoot"] = self.artifact_root
+        return result
 
 
 @dataclass(frozen=True)

@@ -198,6 +198,7 @@
       </section>
       <section id="library-technical" role="tabpanel" aria-labelledby="library-technical-tab" hidden>
       <div class="library-technical-summary"><h2 data-i18n="libraryTechnical">Thiết bị & MOD</h2><span class="catalog-total" id="catalog-total">···</span></div>
+      <section class="catalog-release-admin" id="catalog-release-admin" hidden><header><div><small>ADMIN · RELEASE</small><h2>Phiên bản phát hành</h2><p>Đổi nhãn vĩnh viễn cho nền MOD đang chọn. Nhãn mới áp dụng cho mọi job sau.</p></div></header><div><label class="field"><span>Nền MOD</span><select id="admin-release-pack"></select></label><label class="field"><span>Tên phiên bản</span><input id="admin-release-label" maxlength="64" placeholder="V5.1"></label><button class="primary compact" id="save-admin-release" type="button">Lưu vĩnh viễn</button></div></section>
       <div class="catalog-controls"><label class="field"><span data-i18n="searchCatalog">Tìm thiết bị hoặc MOD</span><input id="catalog-search" type="search" placeholder="PKG110 / Gapps / ColorOS…"></label><label class="field"><span data-i18n="catalogPack">Content-pack</span><select id="catalog-version"></select></label></div>
       <section class="catalog-sheet"><header><h2 data-i18n="devicesTitle">Thiết bị</h2><span id="device-count">0</span></header><div class="device-table" id="device-list"></div></section>
       <section class="catalog-sheet"><header><h2 data-i18n="modsTitle">MOD trong pack</h2><span id="catalog-mod-count">0</span></header><div class="catalog-mods" id="catalog-mod-list"></div></section>
@@ -237,6 +238,7 @@
         <button class="maintenance-toggle" id="maintenance-toggle" type="button"><span data-i18n="enableMaintenance">Bật chế độ bảo trì</span><small data-i18n="maintenanceAdminHint">Admin vẫn truy cập đầy đủ; người dùng chỉ thấy màn hình bảo trì.</small></button>
         <div><button data-action="cache"><span data-i18n="inspectCache">Xem stage cache</span><small data-i18n="inspectCacheHint">Dung lượng và lượt tái sử dụng</small></button><button class="danger" data-action="cache_clear"><span data-i18n="clearCache">Xóa cache</span><small data-i18n="adminOnly">Chỉ admin</small></button></div>
       </section>
+      <section class="system-actions admin-batch-launch" id="admin-batch-launch" hidden><header><div><small>ADMIN · AUTOMATION</small><h2>Build ROM đồng loạt</h2><p>Chọn nhiều thiết bị và nền MOD; hệ thống tự tìm ROM nguồn, tạo job và theo dõi từng cấu hình.</p></div><button class="primary" id="open-batch-build" type="button">Mở trang batch build</button></header></section>
       <section class="user-admin" id="user-admin" hidden>
         <header><div><small data-i18n="userLedgerKicker">QUẢN TRỊ TRUY CẬP</small><h2 data-i18n="userLedgerTitle">Người dùng & lượt build</h2><p data-i18n="userLedgerHint">Duyệt tài khoản, cấp lượt và xem lịch sử mà không xóa dấu vết.</p></div><button class="primary compact" id="add-user" type="button" data-i18n="addUser">Thêm Telegram ID</button></header>
         <div class="user-admin-stats"><div><small data-i18n="totalUsers">Tổng người dùng</small><strong id="user-total-count">0</strong></div><div><small data-i18n="approvedUsers">Đã cấp quyền</small><strong id="user-approved-count">0</strong></div><div><small data-i18n="pendingUsers">Chờ cấp quyền</small><strong id="user-pending-count">0</strong></div><div><small data-i18n="revokedUsers">Đã thu hồi</small><strong id="user-revoked-count">0</strong></div></div>
@@ -257,6 +259,12 @@
         <h1 id="admin-job-title" data-i18n="userJobDetail">Chi tiết job của user</h1>
         <p class="jobs-connection" id="admin-job-connection" role="status"></p>
         <section class="active-job" id="admin-job-detail" hidden></section>
+      </section>
+      <section class="admin-batch-page" id="admin-batch-page" hidden aria-labelledby="admin-batch-title">
+        <button class="admin-user-back" id="admin-batch-back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h11"/></svg><span>Quay lại Hệ thống</span></button>
+        <header class="batch-page-head"><small>ADMIN · BATCH PIPELINE</small><h1 id="admin-batch-title">Build nhiều phiên bản</h1><p>Mỗi thiết bị × nền MOD tạo một job. Lite và Plus được đóng gói vào đúng thư mục phiên bản trên Drive.</p></header>
+        <section class="batch-config-card"><h2>Cấu hình bản ROM</h2><label class="field"><span>Phiên bản phát hành</span><input id="batch-release-version" maxlength="64" placeholder="V5.1"></label><fieldset><legend>Thiết bị hỗ trợ</legend><div class="batch-choice-grid" id="batch-devices"></div></fieldset><fieldset><legend>Nền MOD</legend><div class="batch-choice-grid" id="batch-mod-versions"></div></fieldset><fieldset><legend>Bản ROM cần build</legend><div class="batch-choice-grid compact"><label><input id="batch-lite" type="checkbox" checked><span>Lite</span></label><label><input id="batch-plus" type="checkbox" checked><span>Plus</span></label></div></fieldset><div class="batch-summary" id="batch-summary">0 cấu hình</div><button class="primary batch-submit" id="start-batch-build" type="button">Tìm ROM nguồn & bắt đầu build</button></section>
+        <section class="batch-monitor"><header><div><h2>Tiến độ batch</h2><p id="batch-status">Chưa có batch đang mở.</p></div><button id="refresh-batch" type="button">Làm mới</button></header><div id="batch-items" class="batch-items"></div><div id="batch-events" class="batch-events"></div></section>
       </section>
     </section>
   </main>

@@ -559,6 +559,8 @@ const state = {
   adminUserStatusCounts: { approved: 0, pending: 0, revoked: 0 },
   adminUsersOffset: 0,
   adminUsersLoading: false,
+  activeBatchId: localStorage.getItem("wukong-active-batch") || "",
+  batchPollTimer: null,
   adminUsersPollTimer: null,
   adminUserPollTimer: null,
   adminUserEventCursor: { createdAt: "1970-01-01T00:00:00.000Z", eventId: "" },
@@ -898,6 +900,8 @@ function navigate(name, smooth = true) {
     state.adminUsersPollTimer = null;
     clearTimeout(state.adminUserPollTimer);
     state.adminUserPollTimer = null;
+    clearTimeout(state.batchPollTimer);
+    state.batchPollTimer = null;
   }
   document.body.dataset.view = name;
   if ($("#system")?.classList.contains("admin-user-open")) {
@@ -928,7 +932,10 @@ function navigate(name, smooth = true) {
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
   if (name === "profile") renderProfileView();
   if (name === "catalog") loadRomDevices();
-  if (name === "system" && state.me?.role === "admin") loadAdminUsers().catch(() => {});
+  if (name === "system" && state.me?.role === "admin") {
+    loadAdminUsers().catch(() => {});
+    if (!$("#admin-batch-page").hidden) loadLatestBatch().catch(() => {});
+  }
 }
 
 function bindLiquidBottomTabs() {
@@ -2058,6 +2065,139 @@ function renderCatalog() {
   $("#catalog-mod-count").textContent = String(mods.length);
   const totalMods = Object.values(state.catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
   $("#catalog-total").textContent = t("catalogSummary", { devices: state.catalog.devices.length, mods: totalMods });
+  renderAdminReleaseEditor();
+}
+
+function renderAdminReleaseEditor() {
+  const root = $("#catalog-release-admin");
+  if (!root || !state.catalog) return;
+  const admin = state.me?.role === "admin";
+  root.hidden = !admin;
+  if (!admin) return;
+  const pack = $("#admin-release-pack");
+  const selected = pack.value || $("#catalog-version").value || state.catalog.modVersions[0];
+  options(pack, state.catalog.modVersions.map(value => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), selected);
+  $("#admin-release-label").value = state.catalog.modReleaseVersions[pack.value] || pack.value;
+}
+
+async function savePermanentReleaseVersion() {
+  if (state.me?.role !== "admin") return;
+  const pack = $("#admin-release-pack").value;
+  const label = $("#admin-release-label").value.trim();
+  if (!label || label.length > 64 || /[\\/\x00-\x1f]/.test(label)) throw new Error(t("invalidReleaseVersion"));
+  const payload = await apiRequest("/v1/mod-release-versions", {
+    method: "PUT", body: JSON.stringify({ modReleaseVersions: { [pack]: label } })
+  });
+  state.catalog.modReleaseVersions = { ...state.catalog.modReleaseVersions, ...(payload.modReleaseVersions || {}) };
+  await refreshLiveReleaseVersions();
+  renderAdminReleaseEditor();
+  toast(`Đã lưu ${pack} thành ${label} cho mọi job sau.`);
+}
+
+function batchSelections(selector) { return $$(`${selector} input:checked`).map(input => input.value); }
+
+function updateBatchSummary() {
+  const count = batchSelections("#batch-devices").length * batchSelections("#batch-mod-versions").length;
+  const editions = [$("#batch-lite").checked ? "Lite" : "", $("#batch-plus").checked ? "Plus" : ""].filter(Boolean).join(" + ");
+  $("#batch-summary").textContent = `${count} cấu hình${editions ? ` · ${editions}` : ""}`;
+}
+
+function renderBatchChoices() {
+  if (!state.catalog) return;
+  $("#batch-devices").replaceChildren(...state.catalog.devices.map(item => {
+    const label = document.createElement("label"); const input = document.createElement("input"); input.type = "checkbox"; input.value = item.product;
+    const copy = document.createElement("span"); const name = document.createElement("b"); name.textContent = item.name; const code = document.createElement("small"); code.textContent = item.product;
+    copy.append(name, code); label.append(input, copy); return label;
+  }));
+  $("#batch-mod-versions").replaceChildren(...state.catalog.modVersions.map(value => {
+    const label = document.createElement("label"); const input = document.createElement("input"); input.type = "checkbox"; input.value = value;
+    const copy = document.createElement("span"); const name = document.createElement("b"); name.textContent = value; const release = document.createElement("small"); release.textContent = state.catalog.modReleaseVersions[value] || value;
+    copy.append(name, release); label.append(input, copy); return label;
+  }));
+  $("#batch-release-version").value = state.catalog.modReleaseVersions[$("#catalog-version").value] || "V5.0";
+  updateBatchSummary();
+}
+
+function openBatchBuildPage() {
+  if (state.me?.role !== "admin") return;
+  renderBatchChoices();
+  $("#system").classList.add("admin-batch-open"); $("#admin-batch-page").hidden = false;
+  window.scrollTo({ top: 0, behavior: "instant" }); $("#admin-batch-back").focus({ preventScroll: true });
+  loadLatestBatch().catch(() => {});
+}
+
+function closeBatchBuildPage() {
+  clearTimeout(state.batchPollTimer); state.batchPollTimer = null;
+  $("#system").classList.remove("admin-batch-open"); $("#admin-batch-page").hidden = true;
+}
+
+function renderBatch(payload) {
+  $("#batch-status").textContent = `${payload.releaseVersion} · ${payload.status} · ${(payload.items || []).length} cấu hình`;
+  $("#batch-items").replaceChildren(...(payload.items || []).map(item => {
+    const row = document.createElement("article"); const head = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${item.device} · ${item.modVersion}`;
+    const status = document.createElement("span"); status.textContent = `${item.status}${item.stage ? ` · ${item.stage}` : ""} · ${Math.round(Number(item.progress || 0) * 100)}%`; head.append(title, status);
+    const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || "Đang chờ tìm ROM nguồn"; row.append(head, detail);
+    if (Array.isArray(item.jobEvents) && item.jobEvents.length) {
+      const log = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = `Log job · ${item.jobEvents.length} sự kiện`;
+      const lines = document.createElement("div"); lines.className = "batch-job-log";
+      lines.append(...item.jobEvents.slice().reverse().map(event => {
+        const line = document.createElement("p"); const time = document.createElement("time"); time.textContent = formatDate(event.timestamp);
+        const copy = document.createElement("span"); copy.textContent = event.message || event.error || event.warning || `${readableEventType(event.type)}${event.stage ? ` · ${readableEventStage(event.stage)}` : ""}`;
+        line.append(time, copy); return line;
+      }));
+      log.append(summary, lines); row.append(log);
+    }
+    return row;
+  }));
+  $("#batch-events").replaceChildren(...(payload.events || []).slice().reverse().map(item => {
+    const row = document.createElement("article"); const time = document.createElement("time"); time.textContent = formatDate(item.createdAt); const message = document.createElement("span"); message.textContent = item.message || item.eventType; row.append(time, message); return row;
+  }));
+  if (["succeeded", "partial", "failed", "cancelled"].includes(payload.status)) {
+    localStorage.removeItem("wukong-batch-request");
+    localStorage.removeItem("wukong-active-batch");
+    state.activeBatchId = "";
+  }
+}
+
+async function loadBatch() {
+  if (!state.activeBatchId || state.me?.role !== "admin" || $("#admin-batch-page").hidden) return;
+  clearTimeout(state.batchPollTimer);
+  const payload = await apiRequest(`/v1/admin/batch-builds/${encodeURIComponent(state.activeBatchId)}`);
+  renderBatch(payload);
+  if (!["succeeded", "partial", "failed", "cancelled"].includes(payload.status)) state.batchPollTimer = setTimeout(() => loadBatch().catch(() => {}), 10000);
+}
+
+async function loadLatestBatch() {
+  if (state.activeBatchId) return loadBatch();
+  const payload = await apiRequest("/v1/admin/batch-builds");
+  const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
+  if (!latest?.batchId) return;
+  state.activeBatchId = latest.batchId;
+  return loadBatch();
+}
+
+async function startBatchBuild() {
+  const devices = batchSelections("#batch-devices"), modVersions = batchSelections("#batch-mod-versions");
+  const editions = [$("#batch-lite").checked ? "lite" : "", $("#batch-plus").checked ? "plus" : ""].filter(Boolean);
+  if (!devices.length || !modVersions.length || !editions.length) throw new Error("Hãy chọn ít nhất một thiết bị, một nền MOD và một bản Lite/Plus.");
+  const button = $("#start-batch-build"); button.disabled = true;
+  try {
+    const body = JSON.stringify({ devices, modVersions, editions, releaseVersion: $("#batch-release-version").value.trim() });
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem("wukong-batch-request") || "null"); } catch (_) {}
+    if (!pending || pending.body !== body || !pending.key) {
+      pending = { body, key: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` };
+      localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
+    }
+    const payload = await apiRequest("/v1/admin/batch-builds", { method: "POST", headers: { "Idempotency-Key": pending.key }, body });
+    state.activeBatchId = payload.batchId;
+    localStorage.setItem("wukong-active-batch", state.activeBatchId);
+    pending.batchId = payload.batchId;
+    localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
+    $("#batch-status").textContent = `${payload.releaseVersion} · ${payload.status} · ${payload.itemCount} cấu hình`;
+    toast(`Đã tạo ${payload.itemCount} cấu hình batch build.`);
+    loadBatch().catch(error => toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true));
+  } finally { button.disabled = false; }
 }
 
 function filterMods() {
@@ -2452,6 +2592,8 @@ function renderAccount() {
   scheduleGreeting();
   $("#user-admin").hidden = true;
   $("#admin-maintenance").hidden = true;
+  $("#admin-batch-launch").hidden = true;
+  $("#catalog-release-admin").hidden = true;
   if (!profile || profile.role !== "admin") closeAdminUserPage({ restoreFocus: false, scroll: false });
   if (!profile) return;
   const runtimeAllowance = $("#runtime-build-allowance");
@@ -2470,6 +2612,8 @@ function renderAccount() {
   const admin = profile.role === "admin";
   $("#user-admin").hidden = !admin;
   $("#admin-maintenance").hidden = !admin;
+  $("#admin-batch-launch").hidden = !admin;
+  renderAdminReleaseEditor();
   renderMaintenanceAdmin();
   renderAccessGate();
 }
@@ -4319,6 +4463,16 @@ function bindEvents() {
   $("#mod-search").addEventListener("input", filterMods);
   $("#catalog-search").addEventListener("input", renderCatalog);
   $("#catalog-version").addEventListener("change", renderCatalog);
+  $("#admin-release-pack").addEventListener("change", () => { $("#admin-release-label").value = state.catalog.modReleaseVersions[$("#admin-release-pack").value] || $("#admin-release-pack").value; });
+  $("#save-admin-release").addEventListener("click", () => savePermanentReleaseVersion().catch(error => toast(error.message, true)));
+  $("#open-batch-build").addEventListener("click", openBatchBuildPage);
+  $("#admin-batch-back").addEventListener("click", closeBatchBuildPage);
+  $("#start-batch-build").addEventListener("click", () => startBatchBuild().catch(error => toast(error.message, true)));
+  $("#refresh-batch").addEventListener("click", () => loadBatch().catch(error => toast(error.message, true)));
+  $("#batch-devices").addEventListener("change", updateBatchSummary);
+  $("#batch-mod-versions").addEventListener("change", updateBatchSummary);
+  $("#batch-lite").addEventListener("change", updateBatchSummary);
+  $("#batch-plus").addEventListener("change", updateBatchSummary);
   $("#steps").addEventListener("change", updatePipelineCount);
   $("#edit-debloat-paths").addEventListener("click", openDebloatEditor);
   $("#save-debloat-paths").addEventListener("click", saveDebloatPaths);
@@ -4374,11 +4528,14 @@ function bindEvents() {
       clearTimeout(state.adminJobView?.timer);
       clearTimeout(state.jobsPollTimer);
       clearTimeout(state.maintenancePollTimer);
+      clearTimeout(state.batchPollTimer);
+      state.batchPollTimer = null;
       clearInterval(state.greetingTimer);
     }
     else {
       if (state.adminJobView) loadAdminJobDetail();
       else if (state.selectedAdminUserId) refreshAdminUserActivity();
+      if (document.body.dataset.view === "system" && !$("#admin-batch-page").hidden) loadLatestBatch().catch(() => {});
       scheduleGreeting();
       ensureAutomaticTelegramConnection();
       loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
