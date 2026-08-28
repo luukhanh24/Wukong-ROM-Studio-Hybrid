@@ -617,9 +617,26 @@ function toast(message, error = false) {
 }
 
 const themeMedia = window.matchMedia?.("(prefers-color-scheme: dark)");
+let telegramThemeEventsBoundTo = null;
+
+function telegramColorScheme() {
+  const scheme = String(TelegramApp?.colorScheme || "").toLowerCase();
+  return ["light", "dark"].includes(scheme) ? scheme : null;
+}
 
 function resolvedTheme() {
-  return state.theme === "system" ? (themeMedia?.matches ? "dark" : "light") : state.theme;
+  if (state.theme !== "system") return state.theme;
+  return telegramColorScheme() || (themeMedia?.matches ? "dark" : "light");
+}
+
+function handleSystemThemeChange() {
+  if (state.theme === "system") applyTheme("system");
+}
+
+function bindTelegramThemeEvents() {
+  if (!TelegramApp || TelegramApp === telegramThemeEventsBoundTo) return;
+  TelegramApp.onEvent?.("themeChanged", handleSystemThemeChange);
+  telegramThemeEventsBoundTo = TelegramApp;
 }
 
 function applyTheme(theme = state.theme, persist = false) {
@@ -4206,7 +4223,8 @@ function bindEvents() {
   bindLiquidBottomTabs();
   $("#cache-clear-confirm")?.addEventListener("click", () => performCacheClear());
   $$("[data-theme-value]").forEach((button) => button.addEventListener("click", () => applyTheme(button.dataset.themeValue, true)));
-  themeMedia?.addEventListener?.("change", () => { if (state.theme === "system") applyTheme("system"); });
+  themeMedia?.addEventListener?.("change", handleSystemThemeChange);
+  bindTelegramThemeEvents();
   window.addEventListener("scroll", updateMastheadScroll, { passive: true });
   let greetingResizeFrame = 0;
   window.addEventListener("resize", () => {
@@ -4452,6 +4470,7 @@ if (TelegramApp) {
     TelegramApp = (window.Telegram && window.Telegram.WebApp) || null;
     if (!TelegramApp) { renderSessionDiagnostics(); return; }
     activateTelegramApp();
+    bindTelegramThemeEvents();
     applyTheme(state.theme);
     restoreSourceDraft();
     updateTelegramState();

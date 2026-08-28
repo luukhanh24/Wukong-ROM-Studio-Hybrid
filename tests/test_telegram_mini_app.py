@@ -104,6 +104,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_artifact_actions = False
     click_profile = False
     click_theme_dark = False
+    system_theme_change = False
     click_cache_flow = False
     click_admin_user = False
     admin_job_scenario = False
@@ -181,7 +182,8 @@ Object.defineProperty(navigator, 'clipboard', { value: {
 }});
 """ if self.click_artifact_actions else ""
             source = f"""
-window.Telegram = {{ WebApp: {{ {session}platform: 'android', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, setHeaderColor(value) {{ document.body.dataset.telegramHeaderColor = value; }}, setBackgroundColor(value) {{ document.body.dataset.telegramBackgroundColor = value; }}, openTelegramLink() {{}}, openLink(url) {{ document.body.dataset.openedArtifact = url; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}}, impactOccurred() {{}}, selectionChanged() {{ document.body.dataset.hapticSelections = String(Number(document.body.dataset.hapticSelections || 0) + 1); }} }} }} }};
+window.__telegramEvents = {{}};
+window.Telegram = {{ WebApp: {{ {session}platform: 'android', colorScheme: 'light', ready() {{}}, expand() {{}}, isVersionAtLeast() {{ return false; }}, onEvent(name, callback) {{ window.__telegramEvents[name] = callback; }}, offEvent(name, callback) {{ if (window.__telegramEvents[name] === callback) delete window.__telegramEvents[name]; }}, setHeaderColor(value) {{ document.body.dataset.telegramHeaderColor = value; }}, setBackgroundColor(value) {{ document.body.dataset.telegramBackgroundColor = value; }}, openTelegramLink() {{}}, openLink(url) {{ document.body.dataset.openedArtifact = url; }}, readTextFromClipboard(callback) {{ callback({clipboard_value}); }}, HapticFeedback: {{ notificationOccurred() {{}}, impactOccurred() {{}}, selectionChanged() {{ document.body.dataset.hapticSelections = String(Number(document.body.dataset.hapticSelections || 0) + 1); }} }} }} }};
 {exec_fallback}
 window.addEventListener('DOMContentLoaded', () => {{
   if (!{json.dumps(self.library_scenario)}) return;
@@ -259,6 +261,17 @@ window.addEventListener('DOMContentLoaded', () => {{
 {navigator_fallback}
 {artifact_clipboard}
 window.addEventListener('load', () => {{
+  if ({str(self.system_theme_change).lower()}) {{
+    const changeTelegramTheme = () => {{
+      const handler = window.__telegramEvents.themeChanged;
+      if (!handler) {{ setTimeout(changeTelegramTheme, 50); return; }}
+      window.Telegram.WebApp.colorScheme = 'dark';
+      handler();
+      document.body.dataset.systemThemeAfterTelegramChange = document.documentElement.dataset.colorScheme || '';
+      document.body.dataset.selectedThemeMode = document.documentElement.dataset.theme || '';
+    }};
+    setTimeout(changeTelegramTheme, 250);
+  }}
   const fill = () => {{
     const input = document.querySelector('#source-uri');
     const catalogReady = document.querySelector('#device option[value="PKG110"]');
@@ -884,6 +897,7 @@ def _render_mini_app_in_chrome(
     click_artifact_actions: bool = False,
     click_profile: bool = False,
     click_theme_dark: bool = False,
+    system_theme_change: bool = False,
     click_cache_flow: bool = False,
     click_admin_user: bool = False,
     admin_job_scenario: bool = False,
@@ -924,6 +938,7 @@ def _render_mini_app_in_chrome(
             "click_artifact_actions": click_artifact_actions,
             "click_profile": click_profile,
             "click_theme_dark": click_theme_dark,
+            "system_theme_change": system_theme_change,
             "click_cache_flow": click_cache_flow,
             "click_admin_user": click_admin_user,
             "admin_job_scenario": admin_job_scenario,
@@ -1224,7 +1239,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("updateMastheadScroll", script)
         self.assertIn("HapticFeedback?.selectionChanged", script)
         self.assertIn("Chỉ quản trị viên", html)
-        self.assertIn("activateTelegramApp();\n    applyTheme(state.theme);", script)
+        self.assertIn(
+            "activateTelegramApp();\n    bindTelegramThemeEvents();\n    applyTheme(state.theme);",
+            script,
+        )
         self.assertIn("--dock-slot-count:5", styles)
         self.assertIn(".profile-scene-backdrop", styles)
         self.assertIn("backdrop-filter:blur(10px)", styles)
@@ -1420,6 +1438,17 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("2 lần mở", profile.group(0))
         self.assertNotIn("miniAppOpenCount", profile.group(0))
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_system_theme_tracks_telegram_theme_changes_on_mobile(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            system_theme_change=True,
+        )
+
+        self.assertIn('data-selected-theme-mode="system"', dom)
+        self.assertIn('data-system-theme-after-telegram-change="dark"', dom)
+        self.assertRegex(dom, r'<html[^>]*data-theme="system"[^>]*data-color-scheme="dark"')
+        self.assertRegex(dom, r'<body[^>]*data-telegram-header-color="#1d2025"')
 
     def test_cache_clear_requires_dialog_confirmation_and_submits_once(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
