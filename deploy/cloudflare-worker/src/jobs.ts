@@ -3,9 +3,51 @@ import { artifactEdition } from "./artifact-metadata";
 import { cancelWorkflowRunForJob, dispatchBuild } from "./github";
 import { directArtifactUrl } from "./public-links";
 import { terminalTelegramNotification } from "./telegram-notifications";
+import { buildStartedAdminStatements } from "./activity";
+
+type JsonObject = Record<string, unknown>;
 
 const JOB_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+async function queueBuildStartedAdminAlert(
+  env: Env,
+  auth: AuthenticatedRequest,
+  jobId: string,
+  recipe: JsonObject,
+  now: string,
+  previousJobId = ""
+): Promise<void> {
+  const statements = buildStartedAdminStatements(
+    env,
+    auth,
+    jobId,
+    recipe,
+    now,
+    previousJobId
+  );
+  if (!statements.length) return;
+  await env.DB.batch(statements).catch(() => {
+    console.error("Build-start admin notification could not be queued");
+  });
+}
+
+async function repairBuildStartedAdminAlert(
+  env: Env,
+  auth: AuthenticatedRequest,
+  row: JobRow,
+  previousJobId = ""
+): Promise<void> {
+  if (Number(row.dispatch_attempts ?? 0) < 1) return;
+  await queueBuildStartedAdminAlert(
+    env,
+    auth,
+    row.job_id,
+    parseJson(row.recipe_json),
+    String(row.created_at ?? new Date().toISOString()),
+    previousJobId
+  );
+}
 const TERMINAL_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
 const PRIVATE_PUBLIC_KEYS = new Set([
   "actionsurl",
@@ -20,8 +62,6 @@ const PRIVATE_PUBLIC_KEYS = new Set([
   "repo",
   "runid"
 ]);
-
-type JsonObject = Record<string, unknown>;
 
 export interface JobRow extends Record<string, unknown> {
   job_id: string;
@@ -311,6 +351,7 @@ export async function createJob(
   }
   const alreadyAccepted = await existingByIdempotency(env, auth.subject, idempotencyKey);
   if (alreadyAccepted) {
+    await repairBuildStartedAdminAlert(env, auth, alreadyAccepted);
     return { job: publicJob(alreadyAccepted, env), created: false };
   }
   const jobId = crypto.randomUUID().replaceAll("-", "");
@@ -380,6 +421,7 @@ export async function createJob(
   } catch (error) {
     const retry = await existingByIdempotency(env, auth.subject, idempotencyKey);
     if (retry) {
+      await repairBuildStartedAdminAlert(env, auth, retry);
       return { job: publicJob(retry, env), created: false };
     }
     throw mapD1JobError(error);
@@ -395,6 +437,7 @@ export async function createJob(
     throw new JobHttpError(error instanceof Error ? error.message : "Build dispatch failed", 400);
   }
   await recordDispatchAttempt(env, jobId);
+  await queueBuildStartedAdminAlert(env, auth, jobId, recipe, now);
   return { job: publicJob(row, env), created: true };
 }
 
@@ -432,7 +475,10 @@ export async function resumeJob(
     throw new JobHttpError("Build idempotency key is invalid", 400);
   }
   const alreadyAccepted = await existingByIdempotency(env, auth.subject, idempotencyKey);
-  if (alreadyAccepted) return { job: publicJob(alreadyAccepted, env), created: false };
+  if (alreadyAccepted) {
+    await repairBuildStartedAdminAlert(env, auth, alreadyAccepted, previousJobId);
+    return { job: publicJob(alreadyAccepted, env), created: false };
+  }
 
   const jobId = crypto.randomUUID().replaceAll("-", "");
   const now = new Date().toISOString();
@@ -513,7 +559,10 @@ export async function resumeJob(
     ]);
   } catch (error) {
     const retry = await existingByIdempotency(env, auth.subject, idempotencyKey);
-    if (retry) return { job: publicJob(retry, env), created: false };
+    if (retry) {
+      await repairBuildStartedAdminAlert(env, auth, retry, previousJobId);
+      return { job: publicJob(retry, env), created: false };
+    }
     throw mapD1JobError(error);
   }
   const row = await env.DB.prepare("SELECT * FROM wukong_jobs WHERE job_id = ?")
@@ -531,6 +580,7 @@ export async function resumeJob(
     throw new JobHttpError(error instanceof Error ? error.message : "Build dispatch failed", 400);
   }
   await recordDispatchAttempt(env, jobId);
+  await queueBuildStartedAdminAlert(env, auth, jobId, recipe, now, previousJobId);
   return { job: publicJob(row, env), created: true };
 }
 

@@ -60,9 +60,11 @@ import {
   listUsers,
   openSession,
   profile,
+  profileWithActivity,
   revokeUser,
   updateAllowance,
-  userEvents
+  userEvents,
+  userEventsSince
 } from "./state";
 import {
   maintenanceState,
@@ -70,8 +72,15 @@ import {
 } from "./system";
 import {
   RomCatalogHttpError,
-  romCatalog
+  romCatalog,
+  validateRomCatalogRequest
 } from "./rom-catalog";
+import {
+  createRomSearchTrace,
+  completeRomSearch,
+  failRomSearch,
+  recordRomSearchStart
+} from "./activity";
 
 const RELEASE_SHA = /^[0-9a-f]{40}$/;
 
@@ -117,7 +126,8 @@ async function routeWithIdentity(
   request: Request,
   env: Env,
   path: string,
-  auth: AuthenticatedRequest
+  auth: AuthenticatedRequest,
+  ctx: ExecutionContext
 ): Promise<Response> {
   if (path === "/v1/session/open" && request.method === "POST") {
     try {
@@ -170,11 +180,41 @@ async function routeWithIdentity(
     }
   }
   if (["/v1/rom-catalog", "/v1/rom-catalog/devices"].includes(path) && request.method === "GET") {
+    if (path === "/v1/rom-catalog") {
+      try {
+        validateRomCatalogRequest(request);
+      } catch (error) {
+        if (error instanceof RomCatalogHttpError) {
+          return json({ error: error.message, code: "rom_catalog_unavailable" }, error.status);
+        }
+        return json({ error: "ROM catalog request is invalid", code: "rom_catalog_unavailable" }, 400);
+      }
+    }
+    const trace = path === "/v1/rom-catalog"
+      ? await createRomSearchTrace(auth, request).catch(() => null)
+      : null;
+    const startActivity = trace
+      ? recordRomSearchStart(env, auth, trace).catch(() => {
+        console.error("ROM search start activity could not be recorded");
+      })
+      : Promise.resolve();
+    if (trace) ctx.waitUntil(startActivity);
     try {
-      return json(await romCatalog(request, env), 200, {
+      const result = await romCatalog(request, env);
+      if (trace) {
+        ctx.waitUntil(startActivity.then(() => completeRomSearch(env, trace, result)).catch(() => {
+          console.error("ROM search completion activity could not be recorded");
+        }));
+      }
+      return json(result, 200, {
         "Cache-Control": "private, max-age=300"
       });
     } catch (error) {
+      if (trace) {
+        ctx.waitUntil(startActivity.then(() => failRomSearch(env, trace, error)).catch(() => {
+          console.error("ROM search failure activity could not be recorded");
+        }));
+      }
       if (error instanceof RomCatalogHttpError) {
         return json({ error: error.message, code: "rom_catalog_unavailable" }, error.status);
       }
@@ -308,6 +348,30 @@ async function routeWithIdentity(
       return json({ error: error instanceof Error ? error.message : "Telegram user is invalid" }, 400);
     }
   }
+  const adminActivity = path.match(/^\/v1\/admin\/users\/([1-9][0-9]*)\/activity$/);
+  if (adminActivity && request.method === "GET") {
+    if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
+    const search = new URL(request.url).searchParams;
+    const afterCreatedAt = (search.get("afterCreatedAt") ?? "1970-01-01T00:00:00.000Z").trim();
+    const afterEventId = (search.get("afterEventId") ?? "").trim().slice(0, 128);
+    if (!Number.isFinite(Date.parse(afterCreatedAt)) || afterCreatedAt.length > 64) {
+      return json({ error: "Activity cursor is invalid" }, 400);
+    }
+    const user = await profileWithActivity(env, adminActivity[1]!);
+    if (!user) return json({ error: "Telegram user was not found" }, 404);
+    const events = await userEventsSince(
+      env,
+      adminActivity[1]!,
+      new Date(afterCreatedAt).toISOString(),
+      afterEventId,
+      51
+    );
+    return json({
+      user,
+      events: events.slice(0, 50),
+      hasMore: events.length > 50
+    });
+  }
   const adminJobs = path.match(/^\/v1\/admin\/users\/([1-9][0-9]*)\/jobs$/);
   if (adminJobs && request.method === "GET") {
     if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
@@ -322,7 +386,7 @@ async function routeWithIdentity(
   if (adminDetail && request.method === "GET") {
     if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
     const subject = adminDetail[1]!;
-    const user = await profile(env, subject);
+    const user = await profileWithActivity(env, subject);
     if (!user) return json({ error: "Telegram user was not found" }, 404);
     const events = await userEvents(env, subject, 101);
     const visibleEvents = events.slice(0, 100);
@@ -443,7 +507,12 @@ async function routeWithIdentity(
   return json({ error: "Not found" }, 404);
 }
 
-async function privateRoute(request: Request, env: Env, path: string): Promise<Response> {
+async function privateRoute(
+  request: Request,
+  env: Env,
+  path: string,
+  ctx: ExecutionContext
+): Promise<Response> {
   let auth: AuthenticatedRequest;
   try {
     auth = await authenticate(request, env);
@@ -466,7 +535,7 @@ async function privateRoute(request: Request, env: Env, path: string): Promise<R
       code: revoked ? "access_revoked" : "access_pending"
     }, 403);
   }
-  return routeWithIdentity(request, env, path, auth);
+  return routeWithIdentity(request, env, path, auth, ctx);
 }
 
 async function readiness(env: Env): Promise<boolean> {
@@ -480,7 +549,7 @@ async function readiness(env: Env): Promise<boolean> {
 }
 
 const worker: ExportedHandler<Env> = {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (path === "/healthz" && request.method === "GET") {
       const ready = await readiness(env);
@@ -657,7 +726,7 @@ const worker: ExportedHandler<Env> = {
         return withCors(new Response(null, { status: 204 }), request, env);
       }
       await ensureConfiguredAdmins(env);
-      return withCors(await privateRoute(request, env, path), request, env);
+      return withCors(await privateRoute(request, env, path, ctx), request, env);
     }
     return json({ error: "Not found" }, 404);
   },

@@ -110,7 +110,7 @@ function deviceChoices(rows: UpstreamRelease[]) {
       .map(([code, models]) => ({ code, models: [...models].sort() })) }));
 }
 
-export async function romCatalog(request: Request, env: Env): Promise<Record<string, unknown>> {
+function catalogRequest(request: Request): { devicesOnly: boolean; upstream: URL } {
   const input = new URL(request.url);
   const devicesOnly = input.pathname === "/v1/rom-catalog/devices";
   const upstream = new URL(DANIEL_API);
@@ -130,6 +130,15 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
   if (!devicesOnly && !upstream.searchParams.has("device") && !upstream.searchParams.has("model")) {
     throw new RomCatalogHttpError("Enter a device or model filter", 400);
   }
+  return { devicesOnly, upstream };
+}
+
+export function validateRomCatalogRequest(request: Request): void {
+  catalogRequest(request);
+}
+
+export async function romCatalog(request: Request, env: Env): Promise<Record<string, unknown>> {
+  const { devicesOnly, upstream } = catalogRequest(request);
   const cacheKey = new Request(`https://rom-catalog-cache.wukong.invalid/${devicesOnly ? "devices-oplus-v2" : "releases-v2"}?${upstream.searchParams}`);
   const cached = await caches.default.match(cacheKey);
   if (cached) return await cached.json() as Record<string, unknown>;

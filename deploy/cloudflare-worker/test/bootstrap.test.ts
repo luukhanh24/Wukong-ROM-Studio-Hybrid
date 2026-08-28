@@ -214,6 +214,10 @@ describe("GitHub Actions bootstrap", () => {
       })
     });
     const job = await created.json() as { job_id: string };
+    const activityDedupe = `admin-activity:build:${job.job_id}:1678823419`;
+    await bindings.DB.prepare(
+      "DELETE FROM wukong_telegram_notification_outbox WHERE dedupe_key = ?"
+    ).bind(activityDedupe).run();
     vi.stubGlobal("fetch", vi.fn(async () => {
       const finalizedAt = new Date().toISOString();
       await bindings.DB.prepare(
@@ -247,5 +251,9 @@ describe("GitHub Actions bootstrap", () => {
        WHERE job_id = ? AND event_type = 'dispatched'`
     ).bind(job.job_id).first<{ count: number }>();
     expect(Number(dispatchedEvents?.count)).toBe(0);
+    const activityAlert = await bindings.DB.prepare(
+      "SELECT COUNT(*) AS count FROM wukong_telegram_notification_outbox WHERE dedupe_key = ?"
+    ).bind(activityDedupe).first<{ count: number }>();
+    expect(Number(activityAlert?.count)).toBe(0);
   });
 });

@@ -1,3 +1,5 @@
+import { attachCurrentActivities, type ActivityProfileExtension } from "./activity";
+
 export interface TelegramProfile {
   telegramId: string;
   username: string;
@@ -498,7 +500,7 @@ export async function listUsers(
   env: Env,
   search: URLSearchParams
 ): Promise<{
-  users: TelegramProfile[];
+  users: Array<TelegramProfile & ActivityProfileExtension>;
   total: number;
   limit: number;
   offset: number;
@@ -547,12 +549,38 @@ export async function listUsers(
     const key = String(row.access_status) as keyof typeof statusCounts;
     if (key in statusCounts) statusCounts[key] = Number(row.count ?? 0);
   }
+  const profiles = page.results
+    .map(profilePayload)
+    .filter((value): value is TelegramProfile => Boolean(value));
   return {
-    users: page.results.map(profilePayload).filter((value): value is TelegramProfile => Boolean(value)),
+    users: await attachCurrentActivities(env, profiles),
     total: Number(count?.count ?? 0),
     limit,
     offset,
     statusCounts
+  };
+}
+
+export async function profileWithActivity(
+  env: Env,
+  subject: string
+): Promise<(TelegramProfile & ActivityProfileExtension) | null> {
+  const value = await profile(env, subject);
+  if (!value) return null;
+  return (await attachCurrentActivities(env, [value]))[0] ?? null;
+}
+
+function userEventPayload(row: Record<string, unknown>, subject: string): Record<string, unknown> {
+  let details = {};
+  try { details = JSON.parse(String(row.details_json ?? "{}")); } catch { details = {}; }
+  return {
+    eventId: row.event_id,
+    telegramId: subject,
+    type: row.event_type,
+    actorTelegramId: row.actor_subject,
+    reason: row.reason,
+    details,
+    createdAt: row.created_at
   };
 }
 
@@ -574,17 +602,29 @@ export async function userEvents(
      FROM wukong_telegram_user_events WHERE subject = ?${cursorClause}
      ORDER BY created_at DESC, event_id DESC LIMIT ?`
   ).bind(...bindings).all<Record<string, unknown>>();
-  return result.results.map((row) => {
-    let details = {};
-    try { details = JSON.parse(String(row.details_json ?? "{}")); } catch { details = {}; }
-    return {
-      eventId: row.event_id,
-      telegramId: subject,
-      type: row.event_type,
-      actorTelegramId: row.actor_subject,
-      reason: row.reason,
-      details,
-      createdAt: row.created_at
-    };
-  });
+  return result.results.map((row) => userEventPayload(row, subject));
+}
+
+export async function userEventsSince(
+  env: Env,
+  subjectValue: unknown,
+  createdAt: string,
+  eventId: string,
+  limit = 50
+): Promise<Array<Record<string, unknown>>> {
+  const subject = requireTelegramSubject(subjectValue);
+  const result = await env.DB.prepare(
+    `SELECT event_id, event_type, actor_subject, reason, details_json, created_at
+     FROM wukong_telegram_user_events
+     WHERE subject = ?
+       AND (created_at > ? OR (created_at = ? AND event_id > ?))
+     ORDER BY created_at ASC, event_id ASC LIMIT ?`
+  ).bind(
+    subject,
+    createdAt,
+    createdAt,
+    eventId,
+    Math.max(1, Math.min(limit, 51))
+  ).all<Record<string, unknown>>();
+  return result.results.map((row) => userEventPayload(row, subject));
 }

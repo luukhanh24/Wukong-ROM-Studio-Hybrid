@@ -1,4 +1,5 @@
 import type { JobRow } from "./jobs";
+import { buildStartedAdminStatements } from "./activity";
 
 type JsonObject = Record<string, unknown>;
 
@@ -225,31 +226,61 @@ export async function bootstrapActions(
   }
   await verifyRun(env, jobId, runId);
   const now = new Date().toISOString();
-  const sequence = Number(row.next_event_sequence ?? 2);
-  const results = await env.DB.batch([
-    env.DB.prepare(
-      `UPDATE wukong_jobs SET github_run_id = ?, status = 'dispatched',
-       stage = 'github-actions', updated_at = ?, next_event_sequence = MAX(next_event_sequence, ?)
-       WHERE job_id = ? AND status NOT IN ('succeeded', 'failed', 'cancelled')`
-    ).bind(runId, now, sequence + 1, jobId),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO wukong_job_events
-       (job_id, sequence, timestamp, event_type, payload_json)
-       SELECT ?, ?, ?, 'dispatched', ?
-       WHERE EXISTS (
-         SELECT 1 FROM wukong_jobs
-         WHERE job_id = ? AND status = 'dispatched'
-           AND stage = 'github-actions' AND github_run_id = ?
-       )`
-    ).bind(
+  let activityAlerts: D1PreparedStatement[] = [];
+  if (row.owner_channel === "telegram") {
+    const actor = await env.DB.prepare(
+      "SELECT subject, display_name, username FROM wukong_telegram_users WHERE subject = ?"
+    ).bind(row.owner_subject).first<Record<string, unknown>>();
+    if (!actor) {
+      throw new GitHubHttpError("Actions bootstrap user activity is temporarily unavailable", 503);
+    }
+    let manifest: JsonObject = {};
+    try { manifest = JSON.parse(row.manifest_json) as JsonObject; } catch { manifest = {}; }
+    activityAlerts = buildStartedAdminStatements(
+      env,
+      {
+        subject: String(actor.subject ?? row.owner_subject),
+        displayName: String(actor.display_name ?? ""),
+        username: String(actor.username ?? "")
+      },
       jobId,
-      sequence,
-      now,
-      JSON.stringify({ runner: "github-actions" }),
-      jobId,
+      JSON.parse(row.recipe_json) as JsonObject,
+      String(row.created_at ?? now),
+      String(manifest.resumed_from_job_id ?? ""),
       runId
-    )
-  ]);
+    );
+  }
+  const sequence = Number(row.next_event_sequence ?? 2);
+  let results: D1Result<unknown>[];
+  try {
+    results = await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE wukong_jobs SET github_run_id = ?, status = 'dispatched',
+         stage = 'github-actions', updated_at = ?, next_event_sequence = MAX(next_event_sequence, ?)
+         WHERE job_id = ? AND status NOT IN ('succeeded', 'failed', 'cancelled')`
+      ).bind(runId, now, sequence + 1, jobId),
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO wukong_job_events
+         (job_id, sequence, timestamp, event_type, payload_json)
+         SELECT ?, ?, ?, 'dispatched', ?
+         WHERE EXISTS (
+           SELECT 1 FROM wukong_jobs
+           WHERE job_id = ? AND status = 'dispatched'
+             AND stage = 'github-actions' AND github_run_id = ?
+         )`
+      ).bind(
+        jobId,
+        sequence,
+        now,
+        JSON.stringify({ runner: "github-actions" }),
+        jobId,
+        runId
+      ),
+      ...activityAlerts
+    ]);
+  } catch {
+    throw new GitHubHttpError("Actions bootstrap notification repair is temporarily unavailable", 503);
+  }
   if ((results[0]?.meta.changes ?? 0) !== 1) {
     throw new GitHubHttpError("Actions bootstrap job became terminal", 409);
   }

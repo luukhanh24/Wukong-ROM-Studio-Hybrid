@@ -356,6 +356,14 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, {
+  userBuildingRom: "Đang build ROM", userSearchingRom: "Đang tìm ROM nguồn",
+  userRomSearchCompleted: "Đã tìm thấy {count} bản ROM", userRomSearchFailed: "Tìm ROM nguồn thất bại",
+  currentUserActivity: "Hoạt động hiện tại", noCurrentUserActivity: "Hiện không có tác vụ đang hoạt động.",
+  activityDevice: "Thiết bị", activityProduct: "Mã sản phẩm", activityConfiguration: "Cấu hình",
+  activityRelease: "Phiên bản phát hành", activityStage: "Tiến trình",
+  romSearchStartedLog: "Bắt đầu tìm ROM nguồn", romSearchCompletedLog: "Hoàn tất tìm ROM nguồn",
+  romSearchFailedLog: "Tìm ROM nguồn thất bại", romSearchFilters: "Bộ lọc tìm kiếm",
+  romSearchResults: "Kết quả ROM", romSearchDuration: "Thời gian xử lý",
   backToUserJobs: "Lịch sử job của user", userJobDetail: "Chi tiết job của user",
   userJobLoading: "Đang đồng bộ job…", userJobSynced: "Đã đồng bộ · trang tự cập nhật tiến độ",
   maintenanceGateKicker: "BẢO TRÌ HỆ THỐNG",
@@ -373,7 +381,7 @@ Object.assign(translations.vi, {
   romResolvedCopied: "Đã sao chép link tải trực tiếp.", romResolvedLabel: "Link tải đã resolve",
   romResolvedHint: "Link tải tạm thời; nếu hết hạn, bấm Resolve lại. Build vẫn dùng link ROM gốc.",
   romVersionsTruncated: "Chỉ hiển thị các phiên bản mới nhất trong giới hạn dữ liệu.",
-  romAllRegions: "Tất cả khu vực", romLatestOnly: "Bản mới nhất mỗi khu vực",
+  romAllRegions: "Tất cả khu vực", romLatestOnly: "Bản mới nhất mỗi khu vực", romAllVersions: "Toàn bộ phiên bản",
   romCatalogIdle: "Tìm ROM theo thiết bị của bạn",
   romCatalogIdleHint: "Chọn thiết bị OnePlus, OPPO hoặc Realme, sau đó chọn khu vực và phiên bản.",
   romCatalogCount: "{count} bản ROM", romCatalogRetry: "Không tải được kho ROM. Hãy thử tìm lại.",
@@ -403,6 +411,14 @@ Object.assign(translations.vi, {
   romSelected: "Đã đưa link OTA vào Studio và bắt đầu phân tích."
 });
 Object.assign(translations.en, {
+  userBuildingRom: "Building ROM", userSearchingRom: "Searching for source ROM",
+  userRomSearchCompleted: "Found {count} ROM releases", userRomSearchFailed: "Source ROM search failed",
+  currentUserActivity: "Current activity", noCurrentUserActivity: "No task is currently active.",
+  activityDevice: "Device", activityProduct: "Product code", activityConfiguration: "Configuration",
+  activityRelease: "Release version", activityStage: "Progress",
+  romSearchStartedLog: "Started source ROM search", romSearchCompletedLog: "Completed source ROM search",
+  romSearchFailedLog: "Source ROM search failed", romSearchFilters: "Search filters",
+  romSearchResults: "ROM results", romSearchDuration: "Processing time",
   backToUserJobs: "User job history", userJobDetail: "User job details",
   userJobLoading: "Syncing job…", userJobSynced: "Synced · progress updates automatically",
   maintenanceGateKicker: "SYSTEM MAINTENANCE",
@@ -420,7 +436,7 @@ Object.assign(translations.en, {
   romResolvedCopied: "Direct download link copied.", romResolvedLabel: "Resolved download link",
   romResolvedHint: "This temporary link can expire. Resolve again to refresh it; builds still use the original ROM link.",
   romVersionsTruncated: "Only the newest versions within the data limit are shown.",
-  romAllRegions: "All regions", romLatestOnly: "Latest release per region",
+  romAllRegions: "All regions", romLatestOnly: "Latest release per region", romAllVersions: "All versions",
   romCatalogIdle: "Find a ROM for your device",
   romCatalogIdleHint: "Choose a OnePlus, OPPO or Realme device, then select a region and version.",
   romCatalogCount: "{count} releases", romCatalogRetry: "Could not load the ROM library. Search again to retry.",
@@ -543,6 +559,9 @@ const state = {
   adminUserStatusCounts: { approved: 0, pending: 0, revoked: 0 },
   adminUsersOffset: 0,
   adminUsersLoading: false,
+  adminUsersPollTimer: null,
+  adminUserPollTimer: null,
+  adminUserEventCursor: { createdAt: "1970-01-01T00:00:00.000Z", eventId: "" },
   selectedAdminUserId: "",
   adminUserReturnScrollY: 0,
   adminJobView: null,
@@ -857,6 +876,12 @@ function animateLiquidPosition(target) {
 
 function navigate(name, smooth = true) {
   if (!document.getElementById(name)) name = "build";
+  if (name !== "system") {
+    clearTimeout(state.adminUsersPollTimer);
+    state.adminUsersPollTimer = null;
+    clearTimeout(state.adminUserPollTimer);
+    state.adminUserPollTimer = null;
+  }
   document.body.dataset.view = name;
   if ($("#system")?.classList.contains("admin-user-open")) {
     closeAdminUserPage({ restoreFocus: false, scroll: false });
@@ -2716,7 +2741,8 @@ async function searchRomCatalog() {
   const button = $("#search-rom-catalog");
   const params = new URLSearchParams({ latest: "0" });
   const filters = {
-    device: $("#rom-device-filter").value.trim()
+    device: $("#rom-device-filter").value.trim(),
+    region: $("#rom-region-filter").value.trim()
   };
   if (!filters.device) {
     toast(t("romFilterRequired"), true);
@@ -2766,6 +2792,81 @@ function selectLibraryTab(name, focus = false) {
 
 function accessLabel(status) { return t(["pending", "approved", "revoked"].includes(status) ? status : "pending"); }
 
+function currentActivityTitle(activity) {
+  if (activity?.type === "build") return t("userBuildingRom");
+  if (activity?.status === "searching") return t("userSearchingRom");
+  if (activity?.status === "completed") return t("userRomSearchCompleted", { count: Number(activity.resultCount || 0) });
+  return t("userRomSearchFailed");
+}
+
+function currentActivityLines(activity) {
+  if (!activity) return [];
+  if (activity.type === "build") {
+    const device = activity.deviceName || catalogDeviceName(activity.productCode) || activity.productCode;
+    return [
+      [device, activity.productCode].filter(Boolean).join(" · "),
+      [activity.preset, activity.modVersion].filter(Boolean).join(" · "),
+      [activity.releaseVersion, `${Math.round(Number(activity.progress || 0) * 100)}%`, activity.stage].filter(Boolean).join(" · ")
+    ].filter(Boolean);
+  }
+  const firstResult = Array.isArray(activity.results) ? activity.results[0] || {} : {};
+  return [
+    [activity.device || activity.model, activity.region].filter(Boolean).join(" · "),
+    activity.latest ? t("romLatestOnly") : t("romAllVersions"),
+    activity.status === "completed" ? firstResult.version || activity.version || "" : ""
+  ].filter(Boolean);
+}
+
+function renderCurrentActivitySummary(user, compact = false) {
+  const activities = Array.isArray(user.currentActivities) && user.currentActivities.length
+    ? user.currentActivities
+    : user.currentActivity ? [user.currentActivity] : [];
+  const group = document.createElement(compact ? "span" : "section");
+  group.className = "user-current-activities";
+  if (!activities.length) {
+    const section = document.createElement("span");
+    section.className = "user-current-activity idle";
+    const title = document.createElement("strong"); title.textContent = compact ? t("openCount", { count: user.miniAppOpenCount || 0 }) : t("noCurrentUserActivity");
+    const detail = document.createElement("small"); detail.textContent = compact ? `${t("lastAccess")}: ${formatDate(user.lastSeenAt)}` : "";
+    section.append(title, detail);
+    group.append(section);
+    return group;
+  }
+  activities.forEach((activity) => {
+    const section = document.createElement("span");
+  section.className = `user-current-activity ${activity?.type || "idle"} ${activity?.status || ""}`;
+    const title = document.createElement("strong"); title.textContent = currentActivityTitle(activity);
+    const status = document.createElement("i"); status.setAttribute("aria-hidden", "true");
+    const heading = document.createElement("span"); heading.append(status, title);
+    section.append(heading);
+    currentActivityLines(activity).slice(0, 3).forEach((value) => {
+      const line = document.createElement("small"); line.textContent = value; section.append(line);
+    });
+    if (!compact && activity.type === "build" && activity.jobId) {
+      const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
+      open.textContent = t("openUserJob");
+      open.addEventListener("click", () => openAdminJobPage({
+        job_id: activity.jobId,
+        status: activity.status,
+        stage: activity.stage,
+        progress: activity.progress,
+        createdBy: user,
+        recipe: {
+          device: activity.productCode,
+          build: {
+            preset: activity.preset,
+            modVersion: activity.modVersion,
+            modReleaseVersion: activity.releaseVersion
+          }
+        }
+      }));
+      section.append(open);
+    }
+    group.append(section);
+  });
+  return group;
+}
+
 function renderAdminUsers() {
   const body = $("#user-table-body");
   if (!body) return;
@@ -2780,10 +2881,7 @@ function renderAdminUsers() {
     const name = document.createElement("strong"); name.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId);
     const id = document.createElement("small"); id.textContent = `${user.telegramId}${user.username ? ` · @${user.username}` : ""}`;
     identityCopy.append(name, id); identity.append(identityCopy);
-    const activity = document.createElement("span");
-    const opens = document.createElement("strong"); opens.textContent = t("openCount", { count: user.miniAppOpenCount || 0 });
-    const last = document.createElement("small"); last.textContent = `${t("lastAccess")}: ${formatDate(user.lastSeenAt)}`;
-    activity.append(opens, last);
+    const activity = renderCurrentActivitySummary(user, true);
     const quota = document.createElement("span"); quota.className = "user-quota";
     quota.textContent = user.unlimited ? t("unlimited") : `${user.buildCredits || 0} · ${t("jobsCount", { count: user.jobCount || 0 })}`;
     const status = document.createElement("span"); status.className = `access-badge ${user.accessStatus}`; status.textContent = accessLabel(user.accessStatus);
@@ -2824,7 +2922,13 @@ async function loadAdminUsers({ reset = false } = {}) {
       revoked: Number(statusCounts.revoked || 0)
     };
     renderAdminUsers();
-  } finally { state.adminUsersLoading = false; }
+  } finally {
+    state.adminUsersLoading = false;
+    clearTimeout(state.adminUsersPollTimer);
+    if (!document.hidden && state.me?.role === "admin" && document.body.dataset.view === "system") {
+      state.adminUsersPollTimer = setTimeout(() => loadAdminUsers().catch(() => {}), 10000);
+    }
+  }
 }
 
 function detailFact(label, value) {
@@ -2834,15 +2938,105 @@ function detailFact(label, value) {
 
 function adminAuditArticle(event) {
   const article = document.createElement("article");
+  article.dataset.adminEventId = String(event.eventId || `${event.type || "event"}:${event.createdAt || ""}`);
   const name = document.createElement("strong"); name.textContent = event.type;
   const detail = document.createElement("small");
   detail.textContent = `${formatDate(event.createdAt)}${event.actorTelegramId ? ` · ${event.actorTelegramId}` : ""}${event.reason ? ` · ${event.reason}` : ""}`;
   article.append(name, detail);
+  if (String(event.type || "").startsWith("rom_search_")) {
+    article.classList.add("rom-search-audit");
+    const details = event.details || {};
+    name.textContent = t(event.type === "rom_search_started"
+      ? "romSearchStartedLog"
+      : event.type === "rom_search_completed"
+        ? "romSearchCompletedLog"
+        : "romSearchFailedLog");
+    const filters = document.createElement("p");
+    filters.textContent = `${t("romSearchFilters")}: ${[details.device || details.model, details.region, details.latest ? t("romLatestOnly") : t("romAllVersions")].filter(Boolean).join(" · ")}`;
+    article.append(filters);
+    if (Number.isFinite(Number(details.durationMs))) {
+      const duration = document.createElement("small");
+      duration.textContent = `${t("romSearchDuration")}: ${(Number(details.durationMs) / 1000).toFixed(2)}s`;
+      article.append(duration);
+    }
+    const results = Array.isArray(details.results) ? details.results : [];
+    if (event.type === "rom_search_completed") {
+      const resultTitle = document.createElement("b");
+      resultTitle.textContent = `${t("romSearchResults")}: ${Number(details.resultCount || results.length)}`;
+      const list = document.createElement("ul");
+      results.forEach((result) => {
+        const item = document.createElement("li");
+        item.textContent = [result.model, result.version, result.region].filter(Boolean).join(" · ");
+        list.append(item);
+      });
+      article.append(resultTitle, list);
+    }
+    if (details.error) {
+      const error = document.createElement("p"); error.className = "error"; error.textContent = String(details.error); article.append(error);
+    }
+  }
   return article;
 }
 
+function scheduleAdminUserActivityPoll() {
+  clearTimeout(state.adminUserPollTimer);
+  state.adminUserPollTimer = null;
+  if (document.hidden || state.me?.role !== "admin" || !state.selectedAdminUserId || state.adminJobView) return;
+  state.adminUserPollTimer = setTimeout(refreshAdminUserActivity, 10000);
+}
+
+async function refreshAdminUserActivity() {
+  const telegramId = state.selectedAdminUserId;
+  clearTimeout(state.adminUserPollTimer);
+  state.adminUserPollTimer = null;
+  if (!telegramId || document.hidden || state.adminJobView) return;
+  try {
+    const collected = [];
+    let latestUser = null;
+    let nextCursor = { ...state.adminUserEventCursor };
+    for (let page = 0; page < 4; page += 1) {
+      const query = new URLSearchParams({
+        afterCreatedAt: nextCursor.createdAt,
+        afterEventId: nextCursor.eventId
+      });
+      const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}/activity?${query}`);
+      if (state.selectedAdminUserId !== telegramId || state.adminJobView) return;
+      latestUser = payload.user;
+      const events = Array.isArray(payload.events) ? payload.events : [];
+      collected.push(...events);
+      const consumed = events.at(-1);
+      if (consumed?.createdAt) {
+        nextCursor = {
+          createdAt: String(consumed.createdAt),
+          eventId: String(consumed.eventId || "")
+        };
+      }
+      if (!payload.hasMore || !consumed) break;
+    }
+    if (!latestUser) return;
+    const activity = renderCurrentActivitySummary(latestUser);
+    activity.id = "admin-user-current-activity";
+    $("#admin-user-current-activity")?.replaceWith(activity);
+    const audit = $("#admin-user-audit-log");
+    if (audit) {
+      const existing = new Set([...audit.children].map((node) => node.dataset.adminEventId));
+      const incoming = [...collected].reverse()
+        .filter((event) => !existing.has(String(event.eventId || `${event.type || "event"}:${event.createdAt || ""}`)))
+        .map(adminAuditArticle);
+      if (incoming.length) audit.prepend(...incoming);
+    }
+    state.adminUserEventCursor = nextCursor;
+  } catch (_) {
+    // Keep the current snapshot and retry without interrupting the admin.
+  } finally {
+    if (state.selectedAdminUserId === telegramId) scheduleAdminUserActivityPoll();
+  }
+}
+
 function closeAdminUserPage({ restoreFocus = true, scroll = true } = {}) {
-  closeAdminJobPage({ restoreFocus: false, scroll: false });
+  closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
+  clearTimeout(state.adminUserPollTimer);
+  state.adminUserPollTimer = null;
   const system = $("#system");
   const page = $("#admin-user-page");
   if (!system || !page) return;
@@ -2850,6 +3044,7 @@ function closeAdminUserPage({ restoreFocus = true, scroll = true } = {}) {
   system.classList.remove("admin-user-open");
   page.hidden = true;
   state.selectedAdminUserId = "";
+  state.adminUserEventCursor = { createdAt: "1970-01-01T00:00:00.000Z", eventId: "" };
   if (scroll) window.scrollTo({ top: state.adminUserReturnScrollY, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   if (restoreFocus && telegramId) {
     requestAnimationFrame(() => $$(".user-open").find((button) => button.dataset.userId === String(telegramId))?.focus());
@@ -2942,16 +3137,24 @@ async function runAdminUserAction(user, action) {
 }
 
 async function openAdminUser(telegramId) {
+  clearTimeout(state.adminUserPollTimer);
+  state.adminUserPollTimer = null;
   if (!$("#system")?.classList.contains("admin-user-open")) state.adminUserReturnScrollY = window.scrollY;
   const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}`);
   const user = payload.user; const events = Array.isArray(payload.events) ? payload.events : []; const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
   state.selectedAdminUserId = user.telegramId;
+  state.adminUserEventCursor = events[0]?.createdAt
+    ? { createdAt: String(events[0].createdAt), eventId: String(events[0].eventId || "") }
+    : { createdAt: "1970-01-01T00:00:00.000Z", eventId: "" };
   const root = $("#user-detail-content");
   const header = document.createElement("header");
   header.className = "admin-user-hero";
   const titleBox = document.createElement("div"); titleBox.className = "user-detail-title"; titleBox.append(profileAvatar(user));
   const titleCopy = document.createElement("span"); const kicker = document.createElement("small"); kicker.textContent = `TELEGRAM ${user.telegramId}`; const title = document.createElement("h1"); title.id = "admin-user-page-title"; title.textContent = user.displayName || (user.username ? `@${user.username}` : user.telegramId); titleCopy.append(kicker, title); titleBox.append(titleCopy);
   const status = document.createElement("span"); status.className = `access-badge ${user.accessStatus}`; status.textContent = accessLabel(user.accessStatus); header.append(titleBox, status);
+  const activityTitle = document.createElement("h3"); activityTitle.textContent = t("currentUserActivity");
+  const currentActivity = renderCurrentActivitySummary(user);
+  currentActivity.id = "admin-user-current-activity";
   const grid = document.createElement("div"); grid.className = "user-detail-grid";
   grid.append(
     detailFact(t("accessStatus"), accessLabel(user.accessStatus)), detailFact(t("allowance"), user.unlimited ? t("unlimited") : String(user.buildCredits || 0)),
@@ -2968,7 +3171,7 @@ async function openAdminUser(telegramId) {
     : [["approve", t("approveUser")]];
   definitions.forEach(([action, label, className]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (className) button.className = className; button.disabled = Boolean(user.configuredAdmin); button.addEventListener("click", () => runAdminUserAction(user, action).catch((error) => toast(error.message, true))); actions.append(button); });
   const auditTitle = document.createElement("h3"); auditTitle.textContent = t("auditTitle");
-  const audit = document.createElement("div"); audit.className = "user-audit";
+  const audit = document.createElement("div"); audit.id = "admin-user-audit-log"; audit.className = "user-audit";
   audit.replaceChildren(...events.map(adminAuditArticle));
   let auditCursor = String(payload.eventsNextCursor || "");
   const loadMoreAudit = document.createElement("button");
@@ -3016,11 +3219,12 @@ async function openAdminUser(telegramId) {
     } catch (error) { toast(error.message, true); }
     finally { moreJobs.disabled = false; }
   });
-  root.replaceChildren(header, grid, actions, jobsTitle, jobHistory, moreJobs, auditTitle, audit, loadMoreAudit);
+  root.replaceChildren(header, activityTitle, currentActivity, grid, actions, jobsTitle, jobHistory, moreJobs, auditTitle, audit, loadMoreAudit);
   $("#admin-user-page").hidden = false;
   $("#system").classList.add("admin-user-open");
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   requestAnimationFrame(() => $("#admin-user-back").focus());
+  scheduleAdminUserActivityPoll();
 }
 
 function positiveInteger(input, errorKey) {
@@ -3430,7 +3634,9 @@ function jobAction(label, action, job, danger = false) {
 
 function openAdminJobPage(job) {
   if (state.me?.role !== "admin" || !state.selectedAdminUserId) return;
-  closeAdminJobPage({ restoreFocus: false, scroll: false });
+  clearTimeout(state.adminUserPollTimer);
+  state.adminUserPollTimer = null;
+  closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
   clearTimeout(state.jobsPollTimer);
   ++state.jobDetailRequestId;
   const view = {
@@ -3450,7 +3656,7 @@ function openAdminJobPage(job) {
   loadAdminJobDetail();
 }
 
-function closeAdminJobPage({ restoreFocus = true, scroll = true } = {}) {
+function closeAdminJobPage({ restoreFocus = true, scroll = true, refreshUser = true } = {}) {
   const view = state.adminJobView;
   if (!view) return;
   clearTimeout(view.timer);
@@ -3461,6 +3667,9 @@ function closeAdminJobPage({ restoreFocus = true, scroll = true } = {}) {
   if (scroll) window.scrollTo({ top: view.returnScrollY, behavior: "instant" });
   if (restoreFocus) $$("[data-open-user-job]").find(button => button.dataset.openUserJob === view.jobId)?.focus({ preventScroll: true });
   scheduleJobsPoll(true);
+  if (refreshUser && state.selectedAdminUserId && !document.hidden) {
+    refreshAdminUserActivity();
+  }
 }
 
 async function loadAdminJobDetail() {
@@ -4142,6 +4351,8 @@ function bindEvents() {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
+      clearTimeout(state.adminUsersPollTimer);
+      clearTimeout(state.adminUserPollTimer);
       clearTimeout(state.adminJobView?.timer);
       clearTimeout(state.jobsPollTimer);
       clearTimeout(state.maintenancePollTimer);
@@ -4149,6 +4360,7 @@ function bindEvents() {
     }
     else {
       if (state.adminJobView) loadAdminJobDetail();
+      else if (state.selectedAdminUserId) refreshAdminUserActivity();
       scheduleGreeting();
       ensureAutomaticTelegramConnection();
       loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});

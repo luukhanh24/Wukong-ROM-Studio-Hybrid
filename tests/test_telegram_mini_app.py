@@ -623,17 +623,70 @@ window.addEventListener('load', () => {{
             self._send(json.dumps({"count": type(self).cache_clear_requests}).encode(), "application/json")
             return
         if path == "/v1/admin/users" and self.admin_user:
-            user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
+            user = {
+                **self._fixture_user(), "telegramId": "88", "username": "new_user",
+                "displayName": "New User", "role": "user",
+                "currentActivity": {
+                    "type": "build", "status": "running", "stage": "debloat",
+                    "progress": .42, "jobId": "archived-job", "deviceName": "OnePlus Ace 5",
+                    "productCode": "PKG110", "preset": "custom",
+                    "modVersion": "ColorOS_16.0.8", "releaseVersion": "V4.0",
+                    "startedAt": "2026-08-27T01:00:00Z", "updatedAt": "2026-08-27T01:04:00Z",
+                },
+            }
+            user["currentActivities"] = [user["currentActivity"], {
+                "type": "rom_search", "status": "completed", "device": "OP 13",
+                "region": "EU", "latest": False, "resultCount": 2,
+                "results": [{"version": "CPH2653_16.0.10.500(EX01)"}],
+                "startedAt": "2026-08-27T01:02:00Z", "updatedAt": "2026-08-27T01:03:00Z",
+            }]
             self._send(json.dumps({
-                "users": [user],
+                "users": [user, {
+                    **self._fixture_user(), "telegramId": "89", "username": "rom_user",
+                    "displayName": "ROM User", "role": "user",
+                    "currentActivity": {
+                        "type": "rom_search", "status": "searching",
+                        "device": "OP 13", "region": "EU", "latest": True,
+                        "startedAt": "2026-08-27T01:05:00Z", "updatedAt": "2026-08-27T01:05:00Z",
+                    },
+                }],
                 "total": 7,
                 "statusCounts": {"approved": 4, "pending": 1, "revoked": 2},
             }).encode(), "application/json")
             return
         if path == "/v1/admin/users/88" and self.admin_user:
-            user = {**self._fixture_user(), "telegramId": "88", "username": "new_user", "displayName": "New User", "role": "user"}
+            user = {
+                **self._fixture_user(), "telegramId": "88", "username": "new_user",
+                "displayName": "New User", "role": "user",
+                "currentActivity": {
+                    "type": "build", "status": "running", "stage": "debloat",
+                    "progress": .42, "jobId": "archived-job", "deviceName": "OnePlus Ace 5",
+                    "productCode": "PKG110", "preset": "custom",
+                    "modVersion": "ColorOS_16.0.8", "releaseVersion": "V4.0",
+                    "startedAt": "2026-08-27T01:00:00Z", "updatedAt": "2026-08-27T01:04:00Z",
+                },
+            }
+            user["currentActivities"] = [user["currentActivity"], {
+                "type": "rom_search", "status": "completed", "device": "OP 13",
+                "region": "EU", "latest": False, "resultCount": 2,
+                "results": [{"version": "CPH2653_16.0.10.500(EX01)"}],
+                "startedAt": "2026-08-27T01:02:00Z", "updatedAt": "2026-08-27T01:03:00Z",
+            }]
             jobs = [{**self._fixture_archived_job(), "createdBy": user}] if self.admin_job_scenario else []
-            self._send(json.dumps({"user": user, "jobs": jobs, "events": [{"type": "approved", "createdAt": "2026-08-25T01:00:00Z", "actorTelegramId": "42", "reason": "fixture"}]}).encode(), "application/json")
+            self._send(json.dumps({"user": user, "jobs": jobs, "events": [
+                {
+                    "type": "rom_search_completed", "createdAt": "2026-08-27T00:58:00Z",
+                    "details": {
+                        "device": "OP 13", "region": "EU", "latest": True,
+                        "resultCount": 2, "durationMs": 1840,
+                        "results": [
+                            {"model": "CPH2653", "version": "CPH2653_16.0.10.500(EX01)"},
+                            {"model": "CPH2653", "version": "CPH2653_16.0.9.500(EX01)"},
+                        ],
+                    },
+                },
+                {"type": "approved", "createdAt": "2026-08-25T01:00:00Z", "actorTelegramId": "42", "reason": "fixture"},
+            ]}).encode(), "application/json")
             return
         if path == "/v1/jobs/fixture-job" and self.jobs_fixture:
             self._send(json.dumps(self._fixture_job()).encode(), "application/json")
@@ -1872,6 +1925,24 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIsNotNone(events)
         self.assertNotIn("42 đường dẫn", events.group(1))
         self.assertIn('class="job-config"', dom)
+
+    def test_admin_user_cards_and_detail_show_live_build_and_rom_search_activity(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True, admin_user=True, initial_view="system",
+            jobs_fixture=True, click_admin_user=True,
+        )
+        self.assertIn("Đang build ROM", dom)
+        self.assertIn("Đang tìm ROM nguồn", dom)
+        self.assertIn("Đã tìm thấy 2 bản ROM", dom)
+        self.assertIn("OnePlus Ace 5", dom)
+        self.assertIn("PKG110", dom)
+        self.assertIn("custom · ColorOS_16.0.8", dom)
+        self.assertIn("V4.0", dom)
+        self.assertIn("Hoàn tất tìm ROM nguồn", dom)
+        self.assertIn("Kết quả ROM: 2", dom)
+        self.assertIn("CPH2653_16.0.10.500(EX01)", dom)
+        self.assertIn("OP 13 · EU", dom)
+        self.assertGreater(screenshot_size, 10_000)
 
     def test_mobile_operating_surfaces_do_not_overflow_horizontally(self) -> None:
         for route, flags in (
