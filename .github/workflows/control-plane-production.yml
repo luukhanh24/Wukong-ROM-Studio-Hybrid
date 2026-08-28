@@ -1,17 +1,7 @@
-name: Control Plane Production · Render + Vercel
+name: Legacy Render rollback · manual only
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "wukong/**"
-      - "telegram_bot_daemon.py"
-      - "telegram_progress.py"
-      - "deploy/control-plane/**"
-      - "requirements.txt"
-      - "render.yaml"
-      - ".github/workflows/control-plane-production.yml"
 
 permissions:
   contents: read
