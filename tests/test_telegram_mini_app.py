@@ -109,6 +109,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_admin_user = False
     admin_job_scenario = False
     click_admin_action = False
+    exercise_batch_controls = False
     exercise_dock_header = False
     cache_clear_requests = 0
     admin_user = False
@@ -498,6 +499,27 @@ window.addEventListener('load', () => {{
       document.body.dataset.batchLaunchBackground = style.backgroundColor;
     }};
     setTimeout(captureBatchLaunchStyle, 700);
+  }}
+  if ({str(self.exercise_batch_controls).lower()}) {{
+    const exerciseBatchControls = () => {{
+      const open = document.querySelector('#open-batch-build');
+      const selectDevices = document.querySelector('#batch-select-all-devices');
+      const clearDevices = document.querySelector('#batch-clear-devices');
+      const selectMods = document.querySelector('#batch-select-all-mods');
+      const clearMods = document.querySelector('#batch-clear-mods');
+      if (!open || !selectDevices || !clearDevices || !selectMods || !clearMods) {{ setTimeout(exerciseBatchControls, 50); return; }}
+      open.click();
+      selectDevices.click();
+      document.body.dataset.batchDevicesSelected = String(document.querySelectorAll('#batch-devices input:checked').length);
+      clearDevices.click();
+      document.body.dataset.batchDevicesCleared = String(document.querySelectorAll('#batch-devices input:checked').length);
+      selectMods.click();
+      document.body.dataset.batchModsSelected = String(document.querySelectorAll('#batch-mod-versions input:checked').length);
+      clearMods.click();
+      document.body.dataset.batchModsCleared = String(document.querySelectorAll('#batch-mod-versions input:checked').length);
+      document.body.dataset.batchReleaseInputAbsent = String(!document.querySelector('#batch-release-version'));
+    }};
+    setTimeout(exerciseBatchControls, 700);
   }}
   if ({str(self.exercise_dock_header).lower()}) {{
     const exerciseDockHeader = () => {{
@@ -915,6 +937,7 @@ def _render_mini_app_in_chrome(
     click_admin_user: bool = False,
     admin_job_scenario: bool = False,
     click_admin_action: bool = False,
+    exercise_batch_controls: bool = False,
     exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
@@ -956,6 +979,7 @@ def _render_mini_app_in_chrome(
             "click_admin_user": click_admin_user,
             "admin_job_scenario": admin_job_scenario,
             "click_admin_action": click_admin_action,
+            "exercise_batch_controls": exercise_batch_controls,
             "exercise_dock_header": exercise_dock_header,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
@@ -2036,6 +2060,21 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('apiRequest("/v1/admin/batch-builds",', script)
         self.assertIn('classList.add("admin-batch-open")', script)
         self.assertIn('#system.admin-batch-open > :not(.admin-batch-page)', styles)
+
+    def test_admin_batch_can_select_and_clear_every_device_and_mod_without_release_input(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="system",
+            admin_user=True,
+            catalog_mod_versions=("ColorOS_16.0.8", "ColorOS_16.0.9"),
+            exercise_batch_controls=True,
+        )
+
+        self.assertRegex(dom, r'data-batch-devices-selected="[1-9]\d*"')
+        self.assertIn('data-batch-devices-cleared="0"', dom)
+        self.assertIn('data-batch-mods-selected="2"', dom)
+        self.assertIn('data-batch-mods-cleared="0"', dom)
+        self.assertIn('data-batch-release-input-absent="true"', dom)
 
 
 if __name__ == "__main__":

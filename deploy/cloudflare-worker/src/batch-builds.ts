@@ -3,13 +3,15 @@ import catalog from "../../../telegram_mini_app/catalog.json";
 import { createJob, publicJobEvent, JobHttpError } from "./jobs";
 import { profile } from "./state";
 import { romCatalog } from "./rom-catalog";
+import { releaseVersions } from "./catalog";
 
 type JsonObject = Record<string, unknown>;
 type BatchRow = { batch_id: string; owner_subject: string; idempotency_key: string; release_version: string; editions_json: string; status: string; created_at: string; updated_at: string; finished_at: string };
-type ItemRow = { item_id: string; batch_id: string; device: string; mod_version: string; status: string; source_url: string; source_version: string; job_id: string; error: string; created_at: string; updated_at: string };
+type ItemRow = { item_id: string; batch_id: string; device: string; mod_version: string; release_version: string; status: string; source_url: string; source_version: string; job_id: string; error: string; created_at: string; updated_at: string };
 
 const SAFE_LABEL = /^[^/\\\u0000-\u001f]{1,64}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const MAX_BATCH_COMBINATIONS = 200;
 const TERMINAL = new Set(["succeeded", "failed", "cancelled"]);
 
 export class BatchBuildHttpError extends Error {
@@ -53,6 +55,7 @@ function recipeFor(item: ItemRow, batch: BatchRow, editions: string[], source: J
   const data = catalog as unknown as JsonObject;
   const presets = data.presetDefaultsByVersion as Record<string, Record<string, string[]>>;
   const preset = editions.length === 2 ? "both" : (editions[0] ?? "lite");
+  const releaseVersion = item.release_version || batch.release_version;
   return {
     schemaVersion: 1,
     task: "build",
@@ -62,9 +65,9 @@ function recipeFor(item: ItemRow, batch: BatchRow, editions: string[], source: J
       version: String(source.version ?? ""), securityPatch: String(source.securityPatch ?? "")
     } },
     execution: { target: "github-auto" },
-    storage: { remote: "wukong-gdrive", publishArtifact: true, artifactRoot: `ROM/${batch.release_version}` },
+    storage: { remote: "wukong-gdrive", publishArtifact: true, artifactRoot: `ROM/${releaseVersion}` },
     build: {
-      preset, modVersion: item.mod_version, modReleaseVersion: batch.release_version,
+      preset, modVersion: item.mod_version, modReleaseVersion: releaseVersion,
       mods: presets?.[item.mod_version]?.[preset] ?? presets?.[item.mod_version]?.plus ?? [],
       enabledSteps: Array.isArray(data.pipelineSteps) ? (data.pipelineSteps as JsonObject[]).filter(step => step.default).map(step => step.id) : [],
       package: true, notifyTelegram: true
@@ -76,6 +79,18 @@ async function loadBatch(env: Env, batchId: string): Promise<BatchRow> {
   const row = await env.DB.prepare("SELECT * FROM wukong_batch_builds WHERE batch_id = ?").bind(batchId).first<BatchRow>();
   if (!row) throw new BatchBuildHttpError("Batch build was not found", 404);
   return row;
+}
+
+async function existingBatchPayload(env: Env, batch: BatchRow): Promise<JsonObject> {
+  const rows = await env.DB.prepare("SELECT mod_version,release_version FROM wukong_batch_build_items WHERE batch_id=?")
+    .bind(batch.batch_id).all<{mod_version:string;release_version:string}>();
+  return {
+    batchId: batch.batch_id,
+    releaseVersion: batch.release_version || null,
+    releaseVersions: Object.fromEntries(rows.results.map(row => [row.mod_version, row.release_version || batch.release_version])),
+    itemCount: rows.results.length,
+    status: batch.status
+  };
 }
 
 export async function processBatch(env: Env, batchId: string, limit = 3): Promise<void> {
@@ -151,38 +166,46 @@ export async function createBatchBuild(env: Env, auth: AuthenticatedRequest, val
   if (devices.some(value => !knownDevices.has(value))) throw new BatchBuildHttpError("Unknown supported device");
   if (modVersions.some(value => !knownMods.has(value))) throw new BatchBuildHttpError("Unknown MOD base");
   if (editions.some(value => !["lite", "plus"].includes(value))) throw new BatchBuildHttpError("Only Lite and Plus editions are supported");
-  if (devices.length * modVersions.length > 50) throw new BatchBuildHttpError("A batch can contain at most 50 device/MOD combinations");
+  if (devices.length * modVersions.length > MAX_BATCH_COMBINATIONS) {
+    throw new BatchBuildHttpError(`A batch can contain at most ${MAX_BATCH_COMBINATIONS} device/MOD combinations`);
+  }
   const idempotencyKey = rawIdempotencyKey.trim();
   if (!IDEMPOTENCY_KEY.test(idempotencyKey)) throw new BatchBuildHttpError("Batch idempotency key is invalid");
   const existing = await env.DB.prepare("SELECT * FROM wukong_batch_builds WHERE owner_subject=? AND idempotency_key=?")
     .bind(auth.subject, idempotencyKey).first<BatchRow>();
   if (existing) {
-    const count = await env.DB.prepare("SELECT COUNT(*) count FROM wukong_batch_build_items WHERE batch_id=?").bind(existing.batch_id).first<{count:number}>();
-    return { batch: { batchId: existing.batch_id, releaseVersion: existing.release_version, itemCount: Number(count?.count || 0), status: existing.status }, created: false };
+    return { batch: await existingBatchPayload(env, existing), created: false };
   }
-  const labels = data.modReleaseVersions as Record<string, string>;
-  const releaseVersion = String(payload.releaseVersion ?? labels[modVersions[0] ?? ""] ?? "").trim();
-  if (!SAFE_LABEL.test(releaseVersion)) throw new BatchBuildHttpError("Release version is invalid");
+  const labels = await releaseVersions(env);
+  const itemReleaseVersions = Object.fromEntries(modVersions.map(modVersion => [modVersion, String(labels[modVersion] ?? "").trim()]));
+  if (Object.values(itemReleaseVersions).some(label => !SAFE_LABEL.test(label))) throw new BatchBuildHttpError("Release version is invalid");
+  const distinctReleaseVersions = [...new Set(Object.values(itemReleaseVersions))];
+  const releaseVersion = distinctReleaseVersions.length === 1 ? distinctReleaseVersions[0] ?? "" : "";
   const batchId = crypto.randomUUID().replaceAll("-", "");
   const now = new Date().toISOString();
-  const items = devices.flatMap(device => modVersions.map(modVersion => ({ itemId: crypto.randomUUID().replaceAll("-", ""), device, modVersion })));
+  const items = devices.flatMap(device => modVersions.map(modVersion => ({
+    itemId: crypto.randomUUID().replaceAll("-", ""), device, modVersion, releaseVersion: itemReleaseVersions[modVersion] ?? ""
+  })));
+  const itemInserts = Array.from({ length: Math.ceil(items.length / 10) }, (_, index) => items.slice(index * 10, index * 10 + 10))
+    .map(chunk => env.DB.prepare(`INSERT INTO wukong_batch_build_items
+      (item_id,batch_id,device,mod_version,release_version,created_at,updated_at) VALUES
+      ${chunk.map(() => "(?,?,?,?,?,?,?)").join(",")}`)
+      .bind(...chunk.flatMap(item => [item.itemId, batchId, item.device, item.modVersion, item.releaseVersion, now, now])));
   try {
     await env.DB.batch([
       env.DB.prepare("INSERT INTO wukong_batch_builds (batch_id,owner_subject,idempotency_key,release_version,editions_json,status,created_at,updated_at) VALUES (?,?,?,?,?, 'queued',?,?)")
         .bind(batchId, auth.subject, idempotencyKey, releaseVersion, JSON.stringify(editions), now, now),
-      ...items.map(item => env.DB.prepare("INSERT INTO wukong_batch_build_items (item_id,batch_id,device,mod_version,created_at,updated_at) VALUES (?,?,?,?,?,?)")
-        .bind(item.itemId, batchId, item.device, item.modVersion, now, now)),
+      ...itemInserts,
       env.DB.prepare("INSERT INTO wukong_batch_build_events (event_id,batch_id,event_type,message,details_json,created_at) VALUES (?,?,'batch_created',?,?,?)")
-        .bind(crypto.randomUUID(), batchId, `Đã tạo ${items.length} cấu hình build`, JSON.stringify({ devices, modVersions, editions, releaseVersion }), now)
+        .bind(crypto.randomUUID(), batchId, `Đã tạo ${items.length} cấu hình build`, JSON.stringify({ devices, modVersions, editions, releaseVersions: itemReleaseVersions }), now)
     ]);
   } catch (error) {
     const winner = await env.DB.prepare("SELECT * FROM wukong_batch_builds WHERE owner_subject=? AND idempotency_key=?")
       .bind(auth.subject, idempotencyKey).first<BatchRow>();
     if (!winner) throw error;
-    const count = await env.DB.prepare("SELECT COUNT(*) count FROM wukong_batch_build_items WHERE batch_id=?").bind(winner.batch_id).first<{count:number}>();
-    return { batch: { batchId: winner.batch_id, releaseVersion: winner.release_version, itemCount: Number(count?.count || 0), status: winner.status }, created: false };
+    return { batch: await existingBatchPayload(env, winner), created: false };
   }
-  return { batch: { batchId, releaseVersion, itemCount: items.length, status: "queued" }, created: true };
+  return { batch: { batchId, releaseVersion: releaseVersion || null, releaseVersions: itemReleaseVersions, itemCount: items.length, status: "queued" }, created: true };
 }
 
 export async function batchBuild(env: Env, auth: AuthenticatedRequest, batchId: string): Promise<JsonObject> {
@@ -202,13 +225,16 @@ export async function batchBuild(env: Env, auth: AuthenticatedRequest, batchId: 
   });
   const publicItems = items.results.map(row => ({
     itemId: row.item_id, device: row.device, modVersion: row.mod_version, status: row.job_status || row.status,
+    releaseVersion: row.release_version || batch.release_version,
     itemStatus: row.status, sourceVersion: row.source_version, jobId: row.job_id, stage: row.job_stage || "",
     progress: Number(row.job_progress || 0), error: row.error,
     jobEvents: eventsByJob.get(row.job_id) || []
   }));
   const liveStatus = batchStatus(items.results.map(row => row.job_status || row.status));
   return {
-    batchId: batch.batch_id, releaseVersion: batch.release_version, editions: JSON.parse(batch.editions_json), status: liveStatus,
+    batchId: batch.batch_id, releaseVersion: batch.release_version || null,
+    releaseVersions: Object.fromEntries(publicItems.map(item => [item.modVersion, item.releaseVersion])),
+    editions: JSON.parse(batch.editions_json), status: liveStatus,
     createdAt: batch.created_at, updatedAt: batch.updated_at, finishedAt: batch.finished_at,
     items: publicItems,
     events: events.results.map(row => ({ eventId: row.event_id, itemId: row.item_id, eventType: row.event_type, message: row.message, details: JSON.parse(String(row.details_json || "{}")), createdAt: row.created_at }))
@@ -218,7 +244,7 @@ export async function batchBuild(env: Env, auth: AuthenticatedRequest, batchId: 
 export async function listBatchBuilds(env: Env, auth: AuthenticatedRequest): Promise<JsonObject> {
   if (auth.role !== "admin") throw new BatchBuildHttpError("Admin access is required", 403);
   const rows = await env.DB.prepare("SELECT * FROM wukong_batch_builds ORDER BY created_at DESC LIMIT 50").all<BatchRow>();
-  return { batches: rows.results.map(row => ({ batchId: row.batch_id, releaseVersion: row.release_version, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at })) };
+  return { batches: rows.results.map(row => ({ batchId: row.batch_id, releaseVersion: row.release_version || null, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at })) };
 }
 
 export async function processOpenBatches(env: Env): Promise<void> {

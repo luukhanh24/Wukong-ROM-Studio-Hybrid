@@ -2096,10 +2096,17 @@ async function savePermanentReleaseVersion() {
 
 function batchSelections(selector) { return $$(`${selector} input:checked`).map(input => input.value); }
 
+function setBatchSelections(selector, checked) {
+  $$(`${selector} input[type="checkbox"]`).forEach(input => { input.checked = checked; });
+  updateBatchSummary();
+}
+
 function updateBatchSummary() {
-  const count = batchSelections("#batch-devices").length * batchSelections("#batch-mod-versions").length;
+  const modVersions = batchSelections("#batch-mod-versions");
+  const count = batchSelections("#batch-devices").length * modVersions.length;
   const editions = [$("#batch-lite").checked ? "Lite" : "", $("#batch-plus").checked ? "Plus" : ""].filter(Boolean).join(" + ");
-  $("#batch-summary").textContent = `${count} cấu hình${editions ? ` · ${editions}` : ""}`;
+  const releases = [...new Set(modVersions.map(value => state.catalog?.modReleaseVersions?.[value]).filter(Boolean))].join(" + ");
+  $("#batch-summary").textContent = `${count} cấu hình${editions ? ` · ${editions}` : ""}${releases ? ` · ${releases}` : ""}`;
 }
 
 function renderBatchChoices() {
@@ -2114,7 +2121,6 @@ function renderBatchChoices() {
     const copy = document.createElement("span"); const name = document.createElement("b"); name.textContent = value; const release = document.createElement("small"); release.textContent = state.catalog.modReleaseVersions[value] || value;
     copy.append(name, release); label.append(input, copy); return label;
   }));
-  $("#batch-release-version").value = state.catalog.modReleaseVersions[$("#catalog-version").value] || "V5.0";
   updateBatchSummary();
 }
 
@@ -2131,10 +2137,16 @@ function closeBatchBuildPage() {
   $("#system").classList.remove("admin-batch-open"); $("#admin-batch-page").hidden = true;
 }
 
+function batchReleaseSummary(payload) {
+  return payload.releaseVersion
+    || [...new Set(Object.values(payload.releaseVersions || {}).filter(Boolean))].join(" + ")
+    || "Theo nền MOD";
+}
+
 function renderBatch(payload) {
-  $("#batch-status").textContent = `${payload.releaseVersion} · ${payload.status} · ${(payload.items || []).length} cấu hình`;
+  $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${(payload.items || []).length} cấu hình`;
   $("#batch-items").replaceChildren(...(payload.items || []).map(item => {
-    const row = document.createElement("article"); const head = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${item.device} · ${item.modVersion}`;
+    const row = document.createElement("article"); const head = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${item.device} · ${item.modVersion}${item.releaseVersion ? ` · ${item.releaseVersion}` : ""}`;
     const status = document.createElement("span"); status.textContent = `${item.status}${item.stage ? ` · ${item.stage}` : ""} · ${Math.round(Number(item.progress || 0) * 100)}%`; head.append(title, status);
     const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || "Đang chờ tìm ROM nguồn"; row.append(head, detail);
     if (Array.isArray(item.jobEvents) && item.jobEvents.length) {
@@ -2182,7 +2194,7 @@ async function startBatchBuild() {
   if (!devices.length || !modVersions.length || !editions.length) throw new Error("Hãy chọn ít nhất một thiết bị, một nền MOD và một bản Lite/Plus.");
   const button = $("#start-batch-build"); button.disabled = true;
   try {
-    const body = JSON.stringify({ devices, modVersions, editions, releaseVersion: $("#batch-release-version").value.trim() });
+    const body = JSON.stringify({ devices, modVersions, editions });
     let pending = null;
     try { pending = JSON.parse(localStorage.getItem("wukong-batch-request") || "null"); } catch (_) {}
     if (!pending || pending.body !== body || !pending.key) {
@@ -2194,7 +2206,7 @@ async function startBatchBuild() {
     localStorage.setItem("wukong-active-batch", state.activeBatchId);
     pending.batchId = payload.batchId;
     localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
-    $("#batch-status").textContent = `${payload.releaseVersion} · ${payload.status} · ${payload.itemCount} cấu hình`;
+    $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${payload.itemCount} cấu hình`;
     toast(`Đã tạo ${payload.itemCount} cấu hình batch build.`);
     loadBatch().catch(error => toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true));
   } finally { button.disabled = false; }
@@ -4471,6 +4483,10 @@ function bindEvents() {
   $("#refresh-batch").addEventListener("click", () => loadBatch().catch(error => toast(error.message, true)));
   $("#batch-devices").addEventListener("change", updateBatchSummary);
   $("#batch-mod-versions").addEventListener("change", updateBatchSummary);
+  $("#batch-select-all-devices").addEventListener("click", () => setBatchSelections("#batch-devices", true));
+  $("#batch-clear-devices").addEventListener("click", () => setBatchSelections("#batch-devices", false));
+  $("#batch-select-all-mods").addEventListener("click", () => setBatchSelections("#batch-mod-versions", true));
+  $("#batch-clear-mods").addEventListener("click", () => setBatchSelections("#batch-mod-versions", false));
   $("#batch-lite").addEventListener("change", updateBatchSummary);
   $("#batch-plus").addEventListener("change", updateBatchSummary);
   $("#steps").addEventListener("change", updatePipelineCount);

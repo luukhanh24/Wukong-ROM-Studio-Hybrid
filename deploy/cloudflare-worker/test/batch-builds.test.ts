@@ -52,9 +52,13 @@ describe("admin batch ROM builds", () => {
       ] });
     }));
     const headers = await tmaHeaders(1678823419);
+    await SELF.fetch("https://worker.example/v1/mod-release-versions", {
+      method: "PUT", headers,
+      body: JSON.stringify({ modReleaseVersions: { "ColorOS_16.0.9": "V5.1" } })
+    });
     const body = JSON.stringify({
         devices: ["PKG110"], modVersions: ["ColorOS_16.0.9"],
-        editions: ["lite", "plus"], releaseVersion: "V5.1"
+        editions: ["lite", "plus"]
       });
     const created = await SELF.fetch("https://worker.example/v1/admin/batch-builds", {
       method: "POST", headers: { ...headers, "Idempotency-Key": "batch-source-match" }, body
@@ -81,5 +85,55 @@ describe("admin batch ROM builds", () => {
     const withLogs = await (await SELF.fetch(`https://worker.example/v1/admin/batch-builds/${batch.batchId}`, { headers })).json() as any;
     expect(withLogs.items[0].jobEvents).toHaveLength(50);
     expect(withLogs.items[0].jobEvents.at(-1).message).toBe("event-69");
+  });
+
+  it("derives each item release folder from its permanent MOD label", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ releases: [
+      { id: "cos-8", model: "PKG110", version: "PKG110_16.0.8.500(CN01)", source_url: "https://component-ota-cn.allawntech.com/downloadCheck?c=cos8", build_timestamp: 1 },
+      { id: "cos-9", model: "PKG110", version: "PKG110_16.0.9.500(CN01)", source_url: "https://component-ota-cn.allawntech.com/downloadCheck?c=cos9", build_timestamp: 2 }
+    ] })));
+    const headers = await tmaHeaders(1678823419);
+    await SELF.fetch("https://worker.example/v1/mod-release-versions", {
+      method: "PUT", headers,
+      body: JSON.stringify({ modReleaseVersions: { "ColorOS_16.0.8": "V4.2", "ColorOS_16.0.9": "V5.1" } })
+    });
+
+    const created = await SELF.fetch("https://worker.example/v1/admin/batch-builds", {
+      method: "POST", headers: { ...headers, "Idempotency-Key": "batch-derived-release-folders" },
+      body: JSON.stringify({
+        devices: ["PKG110"], modVersions: ["ColorOS_16.0.8", "ColorOS_16.0.9"], editions: ["lite"],
+        releaseVersion: "FORGED-BY-CLIENT"
+      })
+    });
+    expect(created.status).toBe(201);
+    const batch = await created.json() as any;
+    expect(batch.releaseVersions).toEqual({ "ColorOS_16.0.8": "V4.2", "ColorOS_16.0.9": "V5.1" });
+
+    const detail = await (await SELF.fetch(`https://worker.example/v1/admin/batch-builds/${batch.batchId}`, { headers })).json() as any;
+    expect(detail.items.map((item: any) => [item.modVersion, item.releaseVersion]).sort()).toEqual([
+      ["ColorOS_16.0.8", "V4.2"], ["ColorOS_16.0.9", "V5.1"]
+    ]);
+    for (const item of detail.items) {
+      const job = await (await SELF.fetch(`https://worker.example/v1/jobs/${item.jobId}`, { headers })).json() as any;
+      expect(job.recipe.build.modReleaseVersion).toBe(item.releaseVersion);
+      expect(job.recipe.storage.artifactRoot).toBe(`ROM/${item.releaseVersion}`);
+    }
+  });
+
+  it("accepts every supported device and MOD combination selected together", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ releases: [] })));
+    const headers = await tmaHeaders(1678823419);
+    const catalog = await (await SELF.fetch("https://worker.example/v1/catalog", { headers })).json() as any;
+    const devices = catalog.devices.map((device: any) => device.product);
+    const modVersions = catalog.modVersions;
+    expect(devices.length * modVersions.length).toBeGreaterThan(50);
+
+    const response = await SELF.fetch("https://worker.example/v1/admin/batch-builds", {
+      method: "POST", headers: { ...headers, "Idempotency-Key": "batch-select-everything" },
+      body: JSON.stringify({ devices, modVersions, editions: ["lite", "plus"] })
+    });
+    const payload = await response.json() as any;
+    expect(response.status, JSON.stringify(payload)).toBe(201);
+    expect(payload).toMatchObject({ itemCount: devices.length * modVersions.length });
   });
 });
