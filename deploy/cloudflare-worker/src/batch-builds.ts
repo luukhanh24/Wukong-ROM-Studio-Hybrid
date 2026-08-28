@@ -2,16 +2,18 @@ import type { AuthenticatedRequest } from "./auth";
 import catalog from "../../../telegram_mini_app/catalog.json";
 import { createJob, publicJobEvent, JobHttpError } from "./jobs";
 import { profile } from "./state";
-import { romCatalog } from "./rom-catalog";
+import { RomCatalogHttpError, romCatalog } from "./rom-catalog";
 import { releaseVersions } from "./catalog";
+import { SourceProbeHttpError } from "./source-probe";
 
 type JsonObject = Record<string, unknown>;
 type BatchRow = { batch_id: string; owner_subject: string; idempotency_key: string; release_version: string; editions_json: string; status: string; created_at: string; updated_at: string; finished_at: string };
-type ItemRow = { item_id: string; batch_id: string; device: string; mod_version: string; release_version: string; status: string; source_url: string; source_version: string; job_id: string; error: string; created_at: string; updated_at: string };
+type ItemRow = { item_id: string; batch_id: string; device: string; mod_version: string; release_version: string; status: string; source_url: string; source_version: string; job_id: string; error: string; error_code: string; source_attempts: number; source_retry_at: string; created_at: string; updated_at: string };
 
 const SAFE_LABEL = /^[^/\\\u0000-\u001f]{1,64}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const MAX_BATCH_COMBINATIONS = 200;
+const SOURCE_LOOKUP_ERROR_CODE = "source_temporarily_unavailable";
 const TERMINAL = new Set(["succeeded", "failed", "cancelled"]);
 
 export class BatchBuildHttpError extends Error {
@@ -49,6 +51,30 @@ async function findSource(env: Env, device: string, modVersion: string): Promise
     const version = `${row.version ?? ""} ${row.otaVersion ?? ""}`;
     return versionPattern.test(version) && /^https?:\/\//i.test(String(row.sourceUrl ?? ""));
   }) ?? null;
+}
+
+function transientSourceLookupError(error: unknown): error is RomCatalogHttpError | SourceProbeHttpError {
+  return error instanceof RomCatalogHttpError || error instanceof SourceProbeHttpError;
+}
+
+function sourceRetryDelaySeconds(attempt: number): number {
+  return Math.min(30 * 2 ** Math.min(Math.max(attempt - 1, 0), 6), 30 * 60);
+}
+
+function sourceRetryDueSql(alias = ""): string {
+  const column = alias ? `${alias}.source_retry_at` : "source_retry_at";
+  return `(${column}='' OR ${column}<=?)`;
+}
+
+async function scheduleSourceLookupRetry(env: Env, batchId: string, item: ItemRow, error: Error): Promise<void> {
+  const attempt = Number(item.source_attempts ?? 0) + 1;
+  const now = new Date().toISOString();
+  const retryAt = new Date(Date.now() + sourceRetryDelaySeconds(attempt) * 1000).toISOString();
+  await env.DB.prepare("UPDATE wukong_batch_build_items SET status='pending_source',error=?,error_code=?,source_attempts=?,source_retry_at=?,updated_at=? WHERE item_id=? AND status='resolving'")
+    .bind(`Tạm thời chưa truy cập được nguồn ROM; sẽ tự thử lại (lần ${attempt})`, SOURCE_LOOKUP_ERROR_CODE, attempt, retryAt, now, item.item_id).run();
+  await event(env, batchId, "source_retry", `Nguồn ROM tạm thời gián đoạn; sẽ thử lại ${item.device}`, item.item_id, {
+    attempt, retryAt, reason: error.message
+  });
 }
 
 function recipeFor(item: ItemRow, batch: BatchRow, editions: string[], source: JsonObject): JsonObject {
@@ -100,8 +126,8 @@ export async function processBatch(env: Env, batchId: string, limit = 3): Promis
   if (!owner || owner.role !== "admin") throw new BatchBuildHttpError("Batch owner is no longer an admin", 403);
   const auth = { subject: batch.owner_subject, role: "admin", profile: owner } as AuthenticatedRequest;
   const editions = JSON.parse(batch.editions_json) as string[];
-  const pending = await env.DB.prepare("SELECT * FROM wukong_batch_build_items WHERE batch_id = ? AND status = 'pending_source' ORDER BY created_at,item_id LIMIT ?")
-    .bind(batchId, limit).all<ItemRow>();
+  const pending = await env.DB.prepare(`SELECT * FROM wukong_batch_build_items WHERE batch_id = ? AND status = 'pending_source' AND ${sourceRetryDueSql()} ORDER BY created_at,item_id LIMIT ?`)
+    .bind(batchId, new Date().toISOString(), limit).all<ItemRow>();
   for (const item of pending.results) {
     const claimed = await env.DB.prepare("UPDATE wukong_batch_build_items SET status='resolving',error='',updated_at=? WHERE item_id=? AND status='pending_source'")
       .bind(new Date().toISOString(), item.item_id).run();
@@ -127,6 +153,10 @@ export async function processBatch(env: Env, batchId: string, limit = 3): Promis
         await env.DB.prepare("UPDATE wukong_batch_build_items SET status='pending_source',updated_at=? WHERE item_id=? AND status='resolving'")
           .bind(new Date().toISOString(), item.item_id).run();
         break;
+      }
+      if (transientSourceLookupError(error)) {
+        await scheduleSourceLookupRetry(env, batchId, item, error);
+        continue;
       }
       const message = error instanceof Error ? error.message : "Batch item failed";
       await env.DB.prepare("UPDATE wukong_batch_build_items SET status='failed',error=?,updated_at=? WHERE item_id=?")
@@ -252,10 +282,12 @@ export async function processOpenBatches(env: Env): Promise<void> {
     SET status='pending_source', error='Previous source lookup timed out and will be retried', updated_at=?
     WHERE status='resolving' AND unixepoch(updated_at) < unixepoch('now','-10 minutes')`)
     .bind(new Date().toISOString()).run();
+  const eligibleAt = new Date().toISOString();
   const rows = await env.DB.prepare(`SELECT b.batch_id FROM wukong_batch_builds b
     WHERE b.status IN ('queued','running') AND EXISTS (
       SELECT 1 FROM wukong_batch_build_items i WHERE i.batch_id=b.batch_id AND i.status='pending_source'
-    ) ORDER BY b.created_at LIMIT 1`).all<{batch_id:string}>();
+        AND ${sourceRetryDueSql("i")}
+    ) ORDER BY b.created_at LIMIT 1`).bind(eligibleAt).all<{batch_id:string}>();
   for (const row of rows.results) await processBatch(env, row.batch_id).catch(error => console.error("Batch processing failed", error));
   const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE wukong_batch_builds AS b SET

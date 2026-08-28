@@ -1,9 +1,13 @@
 import { env, SELF } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tmaHeaders } from "./helpers";
+import { processBatch } from "../src/batch-builds";
 
 describe("admin batch ROM builds", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it("rejects normal users", async () => {
     const response = await SELF.fetch("https://worker.example/v1/admin/batch-builds", {
@@ -135,5 +139,59 @@ describe("admin batch ROM builds", () => {
     const payload = await response.json() as any;
     expect(response.status, JSON.stringify(payload)).toBe(201);
     expect(payload).toMatchObject({ itemCount: devices.length * modVersions.length });
+  });
+
+  it("keeps a batch item retryable when the ROM catalog transport is temporarily unavailable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-29T00:00:00.000Z"));
+    let catalogAvailable = false;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("https://roms.danielspringer.at/api/ota.php")) {
+        if (catalogAvailable) return Response.json({ releases: [{
+          id: "recovered-source", model: "PJD110", version: "PJD110_16.0.10.501(CN01)",
+          source_url: "https://component-ota-cn.allawntech.com/downloadCheck?c=recovered", build_timestamp: 2
+        }] });
+        throw new TypeError("temporary edge connection failure");
+      }
+      if (url === "https://wukong-rom-studio.vercel.app/api/source-transport") {
+        return Response.json({ error: "ROM catalog is temporarily unavailable" }, { status: 502 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    }));
+    const headers = await tmaHeaders(1678823419);
+    const created = await SELF.fetch("https://worker.example/v1/admin/batch-builds", {
+      method: "POST", headers: { ...headers, "Idempotency-Key": "batch-retry-catalog-outage" },
+      body: JSON.stringify({ devices: ["PJD110"], modVersions: ["ColorOS_16.0.10"], editions: ["lite"] })
+    });
+    expect(created.status).toBe(201);
+    const batch = await created.json() as any;
+
+    const detail = await (await SELF.fetch(`https://worker.example/v1/admin/batch-builds/${batch.batchId}`, { headers })).json() as any;
+    expect(detail.status).toBe("running");
+    expect(detail.items[0]).toMatchObject({
+      device: "PJD110",
+      modVersion: "ColorOS_16.0.10",
+      itemStatus: "pending_source"
+    });
+    expect(detail.events.map((entry: any) => entry.eventType)).toContain("source_retry");
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      vi.advanceTimersByTime(31 * 60 * 1000);
+      await processBatch(env as unknown as Env, batch.batchId);
+    }
+    const stillRetrying = await (await SELF.fetch(`https://worker.example/v1/admin/batch-builds/${batch.batchId}`, {
+      headers: await tmaHeaders(1678823419)
+    })).json() as any;
+    expect(stillRetrying.items[0]).toMatchObject({ itemStatus: "pending_source" });
+
+    catalogAvailable = true;
+    vi.advanceTimersByTime(31 * 60 * 1000);
+    await processBatch(env as unknown as Env, batch.batchId);
+    const recovered = await (await SELF.fetch(`https://worker.example/v1/admin/batch-builds/${batch.batchId}`, {
+      headers: await tmaHeaders(1678823419)
+    })).json() as any;
+    expect(recovered.items[0]).toMatchObject({ itemStatus: "job_created", sourceVersion: "PJD110_16.0.10.501(CN01)" });
+    expect(recovered.items[0].jobId).toBeTruthy();
   });
 });
