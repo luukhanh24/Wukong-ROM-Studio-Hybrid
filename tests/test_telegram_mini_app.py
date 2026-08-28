@@ -482,9 +482,22 @@ window.addEventListener('load', () => {{
         const dialog = document.querySelector('#admin-action-dialog');
         document.body.dataset.adminActionDialogOpen = String(dialog?.open === true);
         document.body.dataset.adminActionValueVisible = String(document.querySelector('#admin-action-value-field')?.hidden === false);
+        const confirmStyle = getComputedStyle(document.querySelector('#admin-action-confirm'));
+        document.body.dataset.adminActionConfirmColor = confirmStyle.color;
+        document.body.dataset.adminActionConfirmBackground = confirmStyle.backgroundColor;
       }}, 100);
     }};
     setTimeout(openAdminAction, 1200);
+  }}
+  if ({str(self.admin_user).lower()}) {{
+    const captureBatchLaunchStyle = () => {{
+      const button = document.querySelector('#open-batch-build');
+      if (!button || button.hidden) {{ setTimeout(captureBatchLaunchStyle, 50); return; }}
+      const style = getComputedStyle(button);
+      document.body.dataset.batchLaunchColor = style.color;
+      document.body.dataset.batchLaunchBackground = style.backgroundColor;
+    }};
+    setTimeout(captureBatchLaunchStyle, 700);
   }}
   if ({str(self.exercise_dock_header).lower()}) {{
     const exerciseDockHeader = () => {{
@@ -1379,6 +1392,20 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-admin-action-value-visible="true"', dom)
         self.assertRegex(dom, r'id="admin-action-dialog"[^>]* open')
         self.assertIn("Trừ lượt", dom)
+
+    def test_light_mode_admin_primary_actions_keep_readable_contrast(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="system",
+            admin_user=True,
+            click_admin_user=True,
+            click_admin_action=True,
+        )
+
+        self.assertIn('data-batch-launch-color="rgb(255, 255, 255)"', dom)
+        self.assertIn('data-batch-launch-background="rgb(49, 95, 158)"', dom)
+        self.assertIn('data-admin-action-confirm-color="rgb(255, 255, 255)"', dom)
+        self.assertIn('data-admin-action-confirm-background="rgb(49, 95, 158)"', dom)
 
     def test_mobile_surface_is_distilled_and_maintenance_is_admin_only(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
