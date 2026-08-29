@@ -83,6 +83,23 @@ STAGE_LABELS = {
 }
 
 
+def _explicit_release_label(payload: object) -> object:
+    """Return a release label only when the caller supplied one explicitly.
+
+    ``BuildOptions.from_dict`` fills a default label for compatibility, so the
+    resulting recipe alone cannot distinguish an omitted label from a user
+    selection.  Keeping that distinction at the boundary lets the bot apply
+    the persistent catalog label for wizard submissions while preserving a
+    per-job label sent by the Mini App or JSON API.
+    """
+    if not isinstance(payload, Mapping):
+        return None
+    build = payload.get("build")
+    if not isinstance(build, Mapping) or "modReleaseVersion" not in build:
+        return None
+    return build.get("modReleaseVersion")
+
+
 class ExpiredCallbackError(ValueError):
     pass
 
@@ -561,7 +578,10 @@ class TelegramBotController:
                 payload = request.get("recipe")
                 if not isinstance(payload, dict):
                     raise ValueError("Mini App build recipe is missing")
-                recipe = self._with_mod_release_version(BuildRecipe.from_dict(payload))
+                recipe = self._with_mod_release_version(
+                    BuildRecipe.from_dict(payload),
+                    explicit_label=_explicit_release_label(payload),
+                )
                 job = self.orchestrator.submit(recipe, identity)
                 if self.runtime:
                     self.runtime.start(job)
@@ -864,7 +884,11 @@ class TelegramBotController:
                     ).text
                 if not argument:
                     return "Cú pháp: /submit <recipe JSON>"
-                recipe = self._with_mod_release_version(BuildRecipe.from_dict(json.loads(argument)))
+                payload = json.loads(argument)
+                recipe = self._with_mod_release_version(
+                    BuildRecipe.from_dict(payload),
+                    explicit_label=_explicit_release_label(payload),
+                )
                 job = self.orchestrator.submit(recipe, identity)
                 if self.runtime:
                     self.runtime.start(job)
@@ -1118,7 +1142,17 @@ class TelegramBotController:
             }
         return self._with_mod_release_version(BuildRecipe.from_dict(payload))
 
-    def _with_mod_release_version(self, recipe: BuildRecipe) -> BuildRecipe:
+    def _with_mod_release_version(
+        self,
+        recipe: BuildRecipe,
+        *,
+        explicit_label: object = None,
+    ) -> BuildRecipe:
+        if explicit_label is not None and str(explicit_label).strip():
+            return replace(
+                recipe,
+                build=replace(recipe.build, mod_release_version=str(explicit_label).strip()),
+            )
         catalog = self.catalog_provider()
         versions = catalog.get("modReleaseVersions", {}) if isinstance(catalog, Mapping) else {}
         label = (

@@ -85,6 +85,7 @@ def apply_resolved_mods(recipe: BuildRecipe, resolved: dict[str, object]) -> Bui
         preset=recipe.build.preset,
         mods=mods,
         mod_version=recipe.build.mod_version,
+        mod_release_version=recipe.build.mod_release_version,
         enabled_steps=recipe.build.enabled_steps,
         debloat_paths=recipe.build.debloat_paths,
         package=recipe.build.package,

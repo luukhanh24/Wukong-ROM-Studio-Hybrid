@@ -71,6 +71,27 @@ class RecipeContentValidationTests(unittest.TestCase):
             rewritten = BuildRecipe.from_dict(json.loads(recipe_path.read_text(encoding="utf-8")))
             self.assertEqual(("Camera_mod",), rewritten.build.mods)
 
+    def test_drop_missing_preserves_per_job_release_label(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            content = Path(root, "content")
+            (content / "MOD" / "ColorOS_16.0.9" / "Camera_mod" / "system").mkdir(parents=True)
+            recipe = BuildRecipe.from_dict({
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://example.com/rom.zip"},
+                "build": {
+                    "modVersion": "ColorOS_16.0.9",
+                    "modReleaseVersion": "KhanhDZ",
+                    "mods": ["Camera_mod", "Missing_mod"],
+                    "preset": "custom",
+                },
+            })
+            resolved = resolve_recipe_mods(recipe, content, drop_missing=True)
+            updated = apply_resolved_mods(recipe, resolved)
+
+        self.assertEqual(("Camera_mod",), updated.build.mods)
+        self.assertEqual("KhanhDZ", updated.build.mod_release_version)
+
     def test_drop_missing_substitutes_lite_defaults_when_selection_empty(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             content = Path(root, "content")

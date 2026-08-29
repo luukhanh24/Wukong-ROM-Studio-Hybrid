@@ -459,6 +459,28 @@ class TelegramBotUITests(unittest.TestCase):
         self.assertEqual("Stable 4", recipe.build.mod_release_version)
         self.assertEqual(("Fix_Metis", "WK_Installer"), recipe.build.mods)
 
+    def test_explicit_release_label_from_mini_app_wins_over_catalog_default(self) -> None:
+        payload = {
+            "version": 1,
+            "action": "submit_recipe",
+            "recipe": {
+                "schemaVersion": 1,
+                "task": "build",
+                "device": "PKG110",
+                "source": {"kind": "https", "uri": "https://example.com/rom.zip"},
+                "build": {
+                    "preset": "plus",
+                    "modVersion": "ColorOS_16.0.8",
+                    "modReleaseVersion": "KhanhDZ",
+                    "mods": ["Gapps"],
+                },
+            },
+        }
+        response = self.controller.handle_web_app_data(42, json.dumps(payload))
+        self.assertIn("đã được tạo", response.text.casefold())
+        job = self.orchestrator.list(Identity("telegram", "42", "user"))[0]
+        self.assertEqual("KhanhDZ", self.store.recipe(job.job_id).build.mod_release_version)
+
     def test_telegram_wizard_exposes_only_always_available_cloud_runner(self) -> None:
         self.controller.handle_callback(42, "v1:new")
         picker = self.controller.handle_callback(42, "v1:task:build")
