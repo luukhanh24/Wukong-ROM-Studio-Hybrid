@@ -274,6 +274,9 @@ def _telegram_progress_snapshot(
     state: dict[str, Any],
 ) -> dict[str, Any]:
     spec_payload = dict(job.get("spec") or {})
+    edition_labels = spec_payload.get("editionLabels")
+    if not isinstance(edition_labels, dict):
+        edition_labels = {}
     locale = "en" if spec_payload.get("locale") == "en" else "vi"
     labels = TELEGRAM_STEP_LABELS_EN if locale == "en" else TELEGRAM_STEP_LABELS_VI
     timeline = []
@@ -289,10 +292,11 @@ def _telegram_progress_snapshot(
             except (TypeError, ValueError):
                 pass
         label = labels.get(step, step)
+        phase_label = preset_edition_label(phase, edition_labels) if phase else None
         timeline.append(
             {
                 "id": step,
-                "label": f"{phase} · {label}" if phase else label,
+                "label": f"{phase_label} · {label}" if phase_label else label,
                 "status": status,
             }
         )
@@ -314,7 +318,7 @@ def _telegram_progress_snapshot(
     elif current_step:
         current_label = labels.get(current_step, current_step)
         if current_phase:
-            current_label = f"{current_phase} · {current_label}"
+            current_label = f"{preset_edition_label(current_phase, edition_labels)} · {current_label}"
     else:
         current_label = "Starting worker" if locale == "en" else "Đang khởi động worker"
     started_at = job.get("startedAt")
@@ -1079,6 +1083,7 @@ def create_job(spec_payload: dict[str, Any]) -> dict[str, Any]:
         "modName": spec.modName,
         "modNames": spec.selected_mod_names(),
         "modVersion": spec.modVersion,
+        "editionLabels": dict(spec.editionLabels),
         "debloatPaths": spec.debloatPaths,
         "preset": spec.preset,
         "enabledSteps": spec.enabledSteps,

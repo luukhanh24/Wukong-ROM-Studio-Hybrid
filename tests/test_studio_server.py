@@ -760,6 +760,7 @@ class StudioServerTests(unittest.TestCase):
                 {
                     "romPath": str(self.root / "fixture.zip"),
                     "preset": "both",
+                    "editionLabels": {"lite": "Essential", "plus": "Complete"},
                     "notifyTelegram": True,
                 }
             )
@@ -803,8 +804,9 @@ class StudioServerTests(unittest.TestCase):
         labels = [step["label"] for step in snapshot["steps"]]
         self.assertGreater(snapshot["percent"], 50)
         self.assertLess(snapshot["percent"], 100)
-        self.assertTrue(any(label.startswith("Lite ·") for label in labels))
-        self.assertTrue(any(label.startswith("Plus ·") for label in labels))
+        self.assertTrue(any(label.startswith("Essential ·") for label in labels))
+        self.assertTrue(any(label.startswith("Complete ·") for label in labels))
+        self.assertTrue(snapshot["currentLabel"].startswith("Complete ·"))
         self.assertEqual(snapshot["deviceName"], "OnePlus Ace 5")
 
     def test_job_persists_selected_mods_and_custom_debloat_paths(self):
