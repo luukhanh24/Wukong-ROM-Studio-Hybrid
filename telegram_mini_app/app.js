@@ -3377,7 +3377,9 @@ async function openAdminUser(telegramId) {
     const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
     open.dataset.openUserJob = job.job_id || job.jobId; open.textContent = t("openUserJob");
     open.addEventListener("click", () => openAdminJobPage({ ...job, createdBy: job.createdBy || user }));
-    article.append(copy, open); return article;
+    const modBadge = jobModBadge(job);
+    article.append(copy, ...(modBadge ? [modBadge] : []), open);
+    return article;
   };
   jobHistory.replaceChildren(...jobs.map(historyEntry));
   let jobsCursor = String(payload.jobsNextCursor || "");
@@ -3612,6 +3614,16 @@ function jobMetadata(job) {
     ...(job?.recipe?.source?.metadata || {}),
     ...(job?.rom_metadata || job?.romMetadata || {})
   };
+}
+
+function jobModBadge(job) {
+  const build = job?.recipe?.build || {};
+  const label = [build.modVersion, build.modReleaseVersion].filter(Boolean).join(" · ");
+  if (!label) return null;
+  const badge = document.createElement("span");
+  badge.className = "job-mod-badge";
+  badge.textContent = label;
+  return badge;
 }
 
 function catalogDeviceName(product) {
@@ -4085,6 +4097,8 @@ function renderJobHistory() {
     const details = document.createElement("p"); details.textContent = `${job.recipe?.device || "—"} · ${build.modVersion || "—"} · ${build.modReleaseVersion || "—"} · ${jobProgress(job)}%`;
     const footer = document.createElement("small"); footer.textContent = `${String(job.job_id || job.jobId).slice(0, 12)} · ${formatDate(job.created_at || job.createdAt)}`;
     card.append(header, details, footer);
+    const modBadge = jobModBadge(job);
+    if (modBadge) card.append(modBadge);
     if (state.me?.role === "admin" && job.createdBy) {
       const creator = document.createElement("p"); creator.className = "job-history-creator";
       creator.textContent = `${job.createdBy.displayName || job.createdBy.username || job.createdBy.telegramId} · ID ${job.createdBy.telegramId}`;

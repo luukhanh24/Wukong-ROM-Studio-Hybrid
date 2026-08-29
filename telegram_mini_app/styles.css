@@ -518,6 +518,8 @@ h2 { letter-spacing: -.015em; }
 .job-history-card strong { font-size: 12px; overflow-wrap: anywhere; }
 .job-history-card p { margin: 7px 0 5px; color: var(--muted); font: 500 10px/1.4 "JetBrains Mono", monospace; }
 .job-history-card > small { color: var(--muted); font: 500 8px/1.3 "JetBrains Mono", monospace; }
+.job-mod-badge { display: block; width: fit-content; margin-top: 6px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line)); border-radius: var(--radius-sm); color: var(--accent-strong); background: color-mix(in srgb, var(--surface-raised) 76%, transparent); font: 700 9px/1.2 "JetBrains Mono", monospace; overflow-wrap: anywhere; }
+.user-job-entry .job-mod-badge { flex-shrink: 0; align-self: center; margin-top: 0; }
 .job-empty { padding: 28px 12px 10px; text-align: center; }
 .job-empty strong { display: block; font-size: 15px; }
 .job-empty p { max-width: 46ch; margin: 8px auto 14px; color: var(--muted); font-size: 11px; }
