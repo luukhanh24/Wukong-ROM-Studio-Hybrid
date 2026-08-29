@@ -78,3 +78,4 @@ rclone*.conf
 /.vercel/
 /deploy/cloudflare-worker/node_modules/
 /deploy/cloudflare-worker/.wrangler/
+.wrangler/
