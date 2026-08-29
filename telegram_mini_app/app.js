@@ -490,12 +490,20 @@ Object.assign(translations.vi, {
   jobParametersCopied: "Đã sao chép thông số job.", jobUnavailable: "Không mở được job này. Hãy làm mới hoặc chọn job khác.",
   jobCreatedAt: "Tạo lúc", jobUpdatedAt: "Cập nhật lúc", loadMoreJobEvents: "Tải thêm nhật ký", viewJobUser: "Mở hồ sơ user"
 });
+Object.assign(translations.vi, {
+  customModVersion: "Phiên bản MOD tùy chỉnh", customModVersionHint: "Giá trị dùng cho content-pack MOD của job; phải khớp phiên bản đã có trong thư viện. Không đổi số phiên bản nền MOD bên dưới.", customModVersionPlaceholder: "Ví dụ: ColorOS_16.0.10", saveCustomModVersion: "Áp dụng cho job", invalidModVersion: "Phiên bản MOD dài 1–128 ký tự, bắt đầu bằng chữ/số và chỉ dùng chữ, số, ., _ hoặc -.", customModVersionUnavailable: "Phiên bản MOD này chưa có content-pack trong thư viện.", customModVersionSaved: "Đã áp dụng phiên bản MOD tùy chỉnh cho job hiện tại.",
+  customReleaseVersion: "Số phiên bản nền MOD", customReleaseVersionHint: "Chỉ đổi số phiên bản nền MOD; không đổi Phiên bản MOD tùy chỉnh. Áp dụng cho job hiện tại.", customReleaseVersionPlaceholder: "Ví dụ: V5.1 Custom"
+});
 Object.assign(translations.en, {
   openUserJob: "View job", jobCreator: "Created by", jobParameters: "All job parameters", loadMoreUserJobs: "Load older jobs",
   jobParametersHint: "Read-only · Saved configuration and actual state. Credentials and temporary signed source ROM links are hidden.",
   jobRecipeData: "Requested configuration", jobRuntimeData: "State and results", copyJobParameters: "Copy parameters",
   jobParametersCopied: "Job parameters copied.", jobUnavailable: "Could not open this job. Refresh or select another job.",
   jobCreatedAt: "Created", jobUpdatedAt: "Updated", loadMoreJobEvents: "Load more events", viewJobUser: "Open user profile"
+});
+Object.assign(translations.en, {
+  customModVersion: "Custom MOD version", customModVersionHint: "Value used for this job's MOD content-pack; it must match a version in the library. It does not change the MOD base number below.", customModVersionPlaceholder: "Example: ColorOS_16.0.10", saveCustomModVersion: "Apply to job", invalidModVersion: "The MOD version must be 1–128 characters, start with a letter/number, and contain only letters, numbers, ., _ or -.", customModVersionUnavailable: "This MOD version has no content-pack in the library.", customModVersionSaved: "Custom MOD version applied to the current job.",
+  customReleaseVersion: "MOD base version number", customReleaseVersionHint: "Only the MOD base number changes here; the Custom MOD version stays separate. Applies to this job.", customReleaseVersionPlaceholder: "Example: V5.1 Custom"
 });
 
 const state = {
@@ -530,6 +538,7 @@ const state = {
   pairingPollAttempt: 0,
   pairingInFlight: false,
   docketInView: true,
+  customModVersionOverrides: {},
   releaseVersionOverrides: {},
   debloatPaths: [],
   debloatPathsCustomized: false,
@@ -1957,7 +1966,7 @@ function selectedMods() {
 }
 
 function defaultMods() {
-  const version = $("#mod-version").value;
+  const version = selectedModVersion();
   const preset = $("#preset").value;
   return state.catalog?.presetDefaultsByVersion?.[version]?.[preset] || [];
 }
@@ -1997,7 +2006,8 @@ function renderMods(reset = true) {
   const list = $("#mod-list");
   if (!list || !state.catalog) return;
   const current = new Set(reset ? defaultMods() : selectedMods());
-  const names = state.catalog.modsByVersion[$("#mod-version").value] || [];
+  const names = state.catalog.modsByVersion[selectedModVersion()] || [];
+  renderCustomModVersion();
   renderReleaseVersion();
   list.replaceChildren();
   if (!names.length) {
@@ -3429,13 +3439,40 @@ function sourceSpec() {
 }
 
 function selectedReleaseVersion() {
-  const version = $("#mod-version")?.value || "";
+  const version = selectedBaseModVersion();
   return String(
     state.releaseVersionOverrides[version]
     || state.catalog?.modReleaseVersions?.[version]
     || version
     || "—"
   );
+}
+
+function selectedBaseModVersion() {
+  return $("#mod-version")?.value || "";
+}
+
+function selectedModVersion() {
+  const base = selectedBaseModVersion();
+  if ($("#preset")?.value !== "custom") return base;
+  return String(state.customModVersionOverrides[base] || base || "").trim();
+}
+
+function renderCustomModVersion() {
+  const custom = $("#preset")?.value === "custom";
+  const base = selectedBaseModVersion();
+  const root = $("#custom-mod-version-editor");
+  const input = $("#custom-mod-version-input");
+  if (!root || !input) return;
+  root.hidden = !custom;
+  if (!custom) {
+    input.value = base;
+    input.placeholder = "";
+    return;
+  }
+  input.value = state.customModVersionOverrides[base] || base;
+  input.placeholder = t("customModVersionPlaceholder");
+  input.setAttribute("aria-label", t("customModVersion"));
 }
 
 function renderReleaseVersion() {
@@ -3462,8 +3499,21 @@ function renderReleaseVersion() {
   $(".release-version-editor")?.classList.toggle("custom-release-active", custom);
 }
 
+function saveCustomModVersion() {
+  if ($("#preset")?.value !== "custom") return;
+  const base = selectedBaseModVersion();
+  const value = $("#custom-mod-version-input").value.trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(value)) throw new Error(t("invalidModVersion"));
+  if (!state.catalog?.modVersions?.includes(value) || !state.catalog?.modsByVersion?.[value]) throw new Error(t("customModVersionUnavailable"));
+  if (value === base) delete state.customModVersionOverrides[base];
+  else state.customModVersionOverrides[base] = value;
+  renderMods(false);
+  updateSummary();
+  toast(t("customModVersionSaved"));
+}
+
 async function saveReleaseVersion() {
-  const version = $("#mod-version").value;
+  const version = selectedBaseModVersion();
   const label = $("#mod-release-version-input").value.trim();
   if (!label || label.length > 64 || /[\\/\x00-\x1f]/.test(label)) throw new Error(t("invalidReleaseVersion"));
   const defaultLabel = String(state.catalog?.modReleaseVersions?.[version] || version);
@@ -3528,11 +3578,13 @@ function resetJobDraft() {
   }
   const size = $("#source-size");
   if (size) size.value = "";
+  state.customModVersionOverrides = {};
   state.releaseVersionOverrides = {};
   state.debloatPaths = [...(state.catalog?.defaultDebloatPaths || [])];
   state.debloatPathsCustomized = false;
   closeDebloatEditor();
   renderDebloatSummary();
+  renderCustomModVersion();
   renderReleaseVersion();
   try { localStorage.removeItem("wukong-recipe-draft"); } catch (_) {}
 }
@@ -3545,7 +3597,7 @@ function buildRecipe() {
     storage: { remote: "wukong-gdrive", publishArtifact: $("#publish").checked }
   };
   recipe.build = {
-      preset: $("#preset").value, modVersion: $("#mod-version").value, mods: selectedMods(),
+      preset: $("#preset").value, modVersion: selectedModVersion(), mods: selectedMods(),
       modReleaseVersion: selectedReleaseVersion(),
       enabledSteps: $$("#steps input:checked").map((input) => input.value),
       package: $("#package").checked, notifyTelegram: $("#notify").checked
@@ -4560,6 +4612,9 @@ function bindEvents() {
   $("#select-all").addEventListener("click", () => setMods("all"));
   $("#clear-mods").addEventListener("click", () => setMods("none"));
   $("#mod-version").addEventListener("change", () => renderMods());
+  $("#save-custom-mod-version").addEventListener("click", () => {
+    try { saveCustomModVersion(); } catch (error) { toast(error.message, true); }
+  });
   $("#save-mod-release-version").addEventListener("click", () => saveReleaseVersion().catch((error) => toast(error.message, true)));
   $("#preset").addEventListener("change", () => renderMods());
   $("#execution").addEventListener("change", updateSummary);

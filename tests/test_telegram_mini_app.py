@@ -111,6 +111,8 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     click_admin_action = False
     exercise_batch_controls = False
     exercise_custom_release = False
+    exercise_custom_recipe = False
+    submitted_recipe = None
     exercise_dock_header = False
     cache_clear_requests = 0
     admin_user = False
@@ -525,19 +527,60 @@ window.addEventListener('load', () => {{
   if ({str(self.exercise_custom_release).lower()}) {{
     const exerciseCustomRelease = () => {{
       const preset = document.querySelector('#preset');
+      const modInput = document.querySelector('#custom-mod-version-input');
       const input = document.querySelector('#mod-release-version-input');
       const save = document.querySelector('#save-mod-release-version');
       const title = document.querySelector('#release-version-title');
-      if (!preset || !input || !save || !title) {{ setTimeout(exerciseCustomRelease, 50); return; }}
+      const modTitle = document.querySelector('#custom-mod-version-title');
+      if (!preset || !modInput || !input || !save || !title || !modTitle) {{ setTimeout(exerciseCustomRelease, 50); return; }}
       preset.value = 'custom';
       preset.dispatchEvent(new Event('change', {{ bubbles: true }}));
+      document.body.dataset.customModEditorHidden = String(document.querySelector('#custom-mod-version-editor')?.hidden === true);
+      document.body.dataset.customModTitle = modTitle.textContent;
       document.body.dataset.customReleaseEditable = String(!input.disabled && !input.readOnly);
       document.body.dataset.customReleaseTitle = title.textContent;
+      modInput.value = 'ColorOS_16.0.10';
+      modInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
       input.value = 'KhanhDZ Custom';
       save.click();
+      document.querySelector('#save-custom-mod-version').click();
+      document.body.dataset.customModValue = modInput.value;
+      document.body.dataset.customReleaseRecipe = input.value;
       document.body.dataset.customReleaseValue = input.value;
     }};
     setTimeout(exerciseCustomRelease, 700);
+  }}
+  if ({str(self.exercise_custom_recipe).lower()}) {{
+    const exerciseCustomRecipe = () => {{
+      const form = document.querySelector('#recipe-form');
+      const submit = document.querySelector('#submit-recipe');
+      const source = document.querySelector('#source-uri');
+      const device = document.querySelector('#device');
+      const modInput = document.querySelector('#custom-mod-version-input');
+      const releaseInput = document.querySelector('#mod-release-version-input');
+      const saveMod = document.querySelector('#save-custom-mod-version');
+      const saveRelease = document.querySelector('#save-mod-release-version');
+      if (!form || !submit || !source || !device || !modInput || !releaseInput || !saveMod || !saveRelease || document.body.classList.contains('access-checking')) {{ setTimeout(exerciseCustomRecipe, 50); return; }}
+      document.querySelector('#preset').value = 'custom';
+      document.querySelector('#preset').dispatchEvent(new Event('change', {{ bubbles: true }}));
+      modInput.value = 'ColorOS_16.0.10';
+      saveMod.click();
+      releaseInput.value = 'KhanhDZ Custom';
+      saveRelease.click();
+      source.value = {json.dumps(OPLUS_TEST_URI)};
+      source.dispatchEvent(new Event('input', {{ bubbles: true }}));
+      device.value = 'PKG110';
+      submit.disabled = false;
+      form.requestSubmit();
+      const readRecipe = () => fetch('/test/submitted-recipe').then(response => response.json()).then(payload => {{
+        const build = payload.recipe?.build || {{}};
+        if (!build.modVersion) {{ setTimeout(readRecipe, 50); return; }}
+        document.body.dataset.customModRecipe = build.modVersion;
+        document.body.dataset.customReleaseRecipe = build.modReleaseVersion || '';
+      }}).catch(() => setTimeout(readRecipe, 50));
+      setTimeout(readRecipe, 100);
+    }};
+    setTimeout(exerciseCustomRecipe, 700);
   }}
   if ({str(self.exercise_dock_header).lower()}) {{
     const exerciseDockHeader = () => {{
@@ -638,6 +681,9 @@ window.addEventListener('load', () => {{
             if self.jobs_fixture and self.click_other_job:
                 jobs.append(self._fixture_archived_job())
             self._send(json.dumps({"jobs": jobs}).encode(), "application/json")
+            return
+        if path == "/test/submitted-recipe":
+            self._send(json.dumps({"recipe": type(self).submitted_recipe}).encode(), "application/json")
             return
         if path == "/v1/sync":
             jobs = [self._fixture_job()] if self.jobs_fixture else []
@@ -865,6 +911,11 @@ window.addEventListener('load', () => {{
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
         path = urlsplit(self.path).path
+        if path == "/v1/jobs" and self.api_enabled:
+            length = int(self.headers.get("Content-Length", "0"))
+            type(self).submitted_recipe = json.loads(self.rfile.read(length) or b"{}")
+            self._send(json.dumps({"job_id": "submitted-custom-job", "status": "queued", "stage": "queued", "progress": 0}).encode(), "application/json", 201)
+            return
         if path == "/v1/sources/resolve":
             self._send(json.dumps({"resolvedUrl": "https://cdn.allawnfs.com/rom.zip?Signature=fixture", "signedUrlExpiresAt": 9999999999}).encode(), "application/json")
             return
@@ -957,6 +1008,7 @@ def _render_mini_app_in_chrome(
     click_admin_action: bool = False,
     exercise_batch_controls: bool = False,
     exercise_custom_release: bool = False,
+    exercise_custom_recipe: bool = False,
     exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
@@ -1000,6 +1052,7 @@ def _render_mini_app_in_chrome(
             "click_admin_action": click_admin_action,
             "exercise_batch_controls": exercise_batch_controls,
             "exercise_custom_release": exercise_custom_release,
+            "exercise_custom_recipe": exercise_custom_recipe,
             "exercise_dock_header": exercise_dock_header,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
@@ -1566,6 +1619,9 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("artifact_publish", script)
         self.assertIn('id="mod-release-version"', html)
         self.assertIn('id="mod-release-version-input" maxlength="64"', html)
+        self.assertIn('id="custom-mod-version-editor"', html)
+        self.assertIn('id="custom-mod-version-input" maxlength="128"', html)
+        self.assertIn('modVersion: selectedModVersion()', script)
         self.assertIn("build.modReleaseVersion", script)
         self.assertIn("event-group", script)
         self.assertIn("viewFullLog", script)
@@ -1996,12 +2052,27 @@ class TelegramMiniAppTests(unittest.TestCase):
         dom, screenshot_size = _render_mini_app_in_chrome(
             api_enabled=True,
             exercise_custom_release=True,
+            catalog_mod_versions=("ColorOS_16.0.9", "ColorOS_16.0.10"),
         )
 
         self.assertIn('data-custom-release-editable="true"', dom)
-        self.assertIn('data-custom-release-title="Tên phiên bản Custom"', dom)
+        self.assertIn('data-custom-mod-editor-hidden="false"', dom)
+        self.assertIn('data-custom-mod-title="Phiên bản MOD tùy chỉnh"', dom)
+        self.assertIn('data-custom-release-title="Số phiên bản nền MOD"', dom)
+        self.assertIn('data-custom-mod-value="ColorOS_16.0.10"', dom)
+        self.assertIn('data-custom-release-recipe="KhanhDZ Custom"', dom)
         self.assertIn('data-custom-release-value="KhanhDZ Custom"', dom)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_custom_mod_and_base_release_versions_are_submitted_separately(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            exercise_custom_recipe=True,
+            catalog_mod_versions=("ColorOS_16.0.9", "ColorOS_16.0.10"),
+        )
+
+        self.assertIn('data-custom-mod-recipe="ColorOS_16.0.10"', dom)
+        self.assertIn('data-custom-release-recipe="KhanhDZ Custom"', dom)
 
     def test_selected_archived_job_log_is_not_replaced_by_running_job_poll(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(

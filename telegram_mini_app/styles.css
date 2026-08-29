@@ -299,6 +299,12 @@ h2 { letter-spacing: -.015em; }
 .release-version-editor button { min-height:38px; padding:7px 10px; border:1px solid var(--accent); border-radius:var(--radius-sm); color:#fff; background:var(--accent); font-size:11px; font-weight:700; }
 .release-version-editor.custom-release-active { border-color:color-mix(in srgb,var(--accent) 42%,var(--line)); background:color-mix(in srgb,var(--accent-soft) 62%,var(--surface-soft)); }
 .release-version-editor.custom-release-active strong { color:var(--accent-strong); }
+.custom-mod-version-editor { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-top:13px; padding:12px; border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line)); border-radius:var(--radius-md); background:color-mix(in srgb,var(--accent-soft) 38%,var(--surface-soft)); }
+.custom-mod-version-editor strong,.custom-mod-version-editor small { display:block; }
+.custom-mod-version-editor strong { color:var(--accent-strong); font-size:12px; }
+.custom-mod-version-editor small { max-width:52ch; margin-top:3px; color:var(--muted); font-size:10px; line-height:1.45; }
+.custom-mod-version-editor input { min-width:0; flex:1; min-height:38px; padding:7px 9px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface-raised); }
+.custom-mod-version-editor button { min-height:38px; padding:7px 10px; border:1px solid var(--accent); border-radius:var(--radius-sm); color:#fff; background:var(--accent); font-size:11px; font-weight:700; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
 
 .advanced { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
@@ -685,7 +691,7 @@ h2 { letter-spacing: -.015em; }
   .dispatch-fab svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
   .dispatch-fab:active { transform:scale(.96) translateY(0); }
   .dispatch-fab.visible { opacity:1; pointer-events:auto; transform:scale(1) translateY(0); }
-  .release-version-editor { align-items:stretch; flex-direction:column; }
+  .release-version-editor, .custom-mod-version-editor { align-items:stretch; flex-direction:column; }
   .debloat-control > header, .debloat-summary { align-items: stretch; flex-direction: column; }
   .debloat-summary small { text-align: left; }
   .job-history-tabs button { flex-direction: column; gap: 4px; }
@@ -753,6 +759,7 @@ h2 { letter-spacing: -.015em; }
 :root[data-color-scheme="dark"] .bottom-nav .liquid-lens { border-color:rgba(255,255,255,.2); background:rgba(67,96,132,.25); box-shadow:inset 0 1px 1px rgba(255,255,255,.22),inset 0 -5px 14px rgba(0,0,0,.18),0 8px 22px rgba(0,0,0,.2); }
 :root[data-color-scheme="dark"] .bottom-nav button.active { color:inherit; }
 :root[data-color-scheme="dark"] .primary { color:#fff; }
+:root[data-color-scheme="dark"] .custom-mod-version-editor button { color:#111923; background:#a2bbd8; border-color:#a2bbd8; }
 :root[data-color-scheme="dark"] .task-tabs input:checked + span { color:#fff; background:var(--accent); }
 :root[data-color-scheme="dark"] .readiness-checklist .complete i,
 :root[data-color-scheme="dark"] .dispatch-docket .readiness-checklist .complete i { box-shadow:inset 0 0 0 3px var(--surface-raised); }
