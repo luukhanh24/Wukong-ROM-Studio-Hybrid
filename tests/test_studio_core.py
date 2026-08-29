@@ -576,6 +576,45 @@ class StudioCoreTests(unittest.TestCase):
                 )
                 self.assertEqual(studio_core.studio_version_name(spec), "V9.2")
 
+    def test_per_job_release_label_overrides_runtime_for_filename_and_branding(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = root / "runtime"
+            unpack = root / "rom-unpack"
+            manifest = unpack / "my_manifest_unpacked" / "my_manifest"
+            product = unpack / "my_product_unpacked" / "my_product"
+            runtime.mkdir()
+            manifest.mkdir(parents=True)
+            product.mkdir(parents=True)
+            (runtime / "settings.json").write_text(
+                json.dumps({"studioVersions": {"ColorOS_16.0.7": "V9.2"}}),
+                encoding="utf-8",
+            )
+            for partition in (manifest, product):
+                (partition / "build.prop").write_text(
+                    "ro.build.version.oplusrom.display=16.0.7\n",
+                    encoding="utf-8",
+                )
+            spec = studio_core.BuildSpec.from_dict({
+                "romPath": "fixture.zip",
+                "preset": "plus",
+                "modVersion": "ColorOS_16.0.7",
+                "modReleaseVersion": "KhanhDZ",
+            })
+            with mock.patch.object(studio_core, "RUNTIME_DIR", runtime):
+                self.assertEqual(studio_core.studio_version_name(spec), "KhanhDZ")
+                self.assertEqual(
+                    studio_core.output_zip_name("fixture", spec),
+                    "Wukong_Plus_KhanhDZ_fixture_China_Stable.zip",
+                )
+                result = studio_core.patch_build_branding(
+                    unpack, "Plus", studio_core.studio_version_name(spec)
+                )
+            self.assertEqual(result["manifestDisplayVersion"], 1)
+            self.assertEqual(result["productDisplayVersion"], 1)
+            self.assertIn("| Plus | KhanhDZ", (manifest / "build.prop").read_text(encoding="utf-8"))
+            self.assertIn("| Plus | KhanhDZ", (product / "build.prop").read_text(encoding="utf-8"))
+
     def test_runtime_studio_version_override_reaches_zip_info_and_build_prop(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

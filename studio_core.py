@@ -278,6 +278,7 @@ class BuildSpec:
     modName: str | None = None
     modNames: list[str] = field(default_factory=list)
     modVersion: str = DEFAULT_MOD_VERSION
+    modReleaseVersion: str | None = None
     debloatPaths: list[str] | None = None
     preset: str = "lite"
     enabledSteps: list[str] = field(default_factory=list)
@@ -322,11 +323,16 @@ class BuildSpec:
         raw_debloat_paths = payload.get("debloatPaths")
         if raw_debloat_paths is not None and not isinstance(raw_debloat_paths, list):
             raw_debloat_paths = []
+        raw_mod_release_version = str(payload.get("modReleaseVersion") or "").strip()
         return cls(
             romPath=str(payload.get("romPath", "")).strip(),
             modName=(str(payload["modName"]).strip() if payload.get("modName") else None),
             modNames=[str(name).strip() for name in raw_mod_names if str(name).strip()],
             modVersion=mod_version,
+            modReleaseVersion=(
+                normalize_studio_version(raw_mod_release_version, fallback="")
+                or None
+            ),
             debloatPaths=(
                 [str(path).strip() for path in raw_debloat_paths if str(path).strip()]
                 if raw_debloat_paths is not None
@@ -445,6 +451,9 @@ def studio_version_settings() -> dict[str, str]:
 
 
 def studio_version_name(spec: "BuildSpec") -> str:
+    per_job = normalize_studio_version(spec.modReleaseVersion, fallback="")
+    if per_job:
+        return per_job
     return studio_version_settings().get(
         normalize_mod_version(spec.modVersion),
         default_studio_version(spec.modVersion),
@@ -4100,6 +4109,7 @@ def _spec_payload(spec: BuildSpec) -> dict[str, Any]:
         "modName": spec.modName,
         "modNames": spec.selected_mod_names(),
         "modVersion": spec.modVersion,
+        "modReleaseVersion": spec.modReleaseVersion,
         "debloatPaths": spec.debloatPaths,
         "preset": spec.preset,
         "enabledSteps": spec.enabledSteps,
@@ -4115,6 +4125,7 @@ def build_spec_fingerprint(spec: BuildSpec) -> str:
     payload = {
         "modNames": spec.selected_mod_names(),
         "modVersion": spec.modVersion,
+        "modReleaseVersion": spec.modReleaseVersion,
         "debloatPaths": spec.debloatPaths,
         "preset": "lite" if spec.preset == "standard" else spec.preset,
         "enabledSteps": spec.enabledSteps,

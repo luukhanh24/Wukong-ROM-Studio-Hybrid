@@ -48,6 +48,22 @@ from wukong.security import validate_recipe_access
 
 
 class BuildRecipeContractTests(unittest.TestCase):
+    def test_per_job_release_label_survives_legacy_executor_conversion(self) -> None:
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "CPH2725",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "build": {
+                "preset": "plus",
+                "modVersion": "ColorOS_16.0.8",
+                "modReleaseVersion": "KhanhDZ",
+                "mods": ["Gapps"],
+            },
+        })
+        self.assertEqual(recipe.build.mod_release_version, "KhanhDZ")
+        self.assertEqual(recipe.to_legacy_spec()["modReleaseVersion"], "KhanhDZ")
+
     def test_recipe_round_trip_is_canonical_and_secret_free(self) -> None:
         payload = {
             "schemaVersion": 1,

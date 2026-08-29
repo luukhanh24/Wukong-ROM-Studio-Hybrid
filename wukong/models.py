@@ -455,6 +455,8 @@ class BuildRecipe:
             "notifyTelegram": self.build.notify_telegram,
             "romSha256": self.source.sha256,
         }
+        if self.build.mod_release_version:
+            result["modReleaseVersion"] = self.build.mod_release_version
         if self.build.debloat_paths is not None:
             result["debloatPaths"] = list(self.build.debloat_paths)
         return result
