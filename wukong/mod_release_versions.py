@@ -72,7 +72,7 @@ class ModReleaseVersionStore:
             for version, value in values.items():
                 label = str(value).strip()
                 if not SAFE_RELEASE_LABEL.fullmatch(label):
-                    raise ValueError("Release label must be 1–64 filename-safe characters")
+                    raise ValueError("Release label must be 1–64 printable filename-safe characters")
                 current[str(version)] = label
             self.path.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.path.with_name(f".{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
