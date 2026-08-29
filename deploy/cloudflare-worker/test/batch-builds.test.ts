@@ -194,4 +194,35 @@ describe("admin batch ROM builds", () => {
     expect(recovered.items[0]).toMatchObject({ itemStatus: "job_created", sourceVersion: "PJD110_16.0.10.501(CN01)" });
     expect(recovered.items[0].jobId).toBeTruthy();
   });
+
+  it("uses the public Worker origin when a scheduled batch lookup falls back to source transport", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith("https://roms.danielspringer.at/api/ota.php")) {
+        return Response.json({ error: "edge unavailable" }, { status: 503 });
+      }
+      if (url === "https://wukong-rom-studio.vercel.app/api/source-transport") {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { claimUrl?: string };
+        if (body.claimUrl !== "https://wukong-control-plane.wukong-rom-studio-api.workers.dev/internal/source-transport/claim") {
+          return Response.json({ error: "Transport claim origin is not allowed" }, { status: 403 });
+        }
+        return Response.json({ releases: [{
+          id: "transport-source", model: "PLK110", version: "PLK110_16.0.10.501(CN01)",
+          source_url: "https://component-ota-cn.allawntech.com/downloadCheck?id=fixture"
+        }] });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    }));
+
+    const headers = await tmaHeaders(1678823419);
+    const created = await SELF.fetch("https://worker.example/v1/admin/batch-builds", {
+      method: "POST", headers: { ...headers, "Idempotency-Key": "batch-public-transport-origin" },
+      body: JSON.stringify({ devices: ["PLK110"], modVersions: ["ColorOS_16.0.10"], editions: ["lite"] })
+    });
+    const batch = await created.json() as any;
+    expect(created.status, JSON.stringify(batch)).toBe(201);
+
+    const detail = await (await SELF.fetch(`https://worker.example/v1/admin/batch-builds/${batch.batchId}`, { headers })).json() as any;
+    expect(detail.items[0]).toMatchObject({ itemStatus: "job_created", sourceVersion: "PLK110_16.0.10.501(CN01)" });
+  });
 });

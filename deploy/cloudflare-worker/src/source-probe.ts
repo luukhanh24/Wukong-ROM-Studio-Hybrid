@@ -242,7 +242,6 @@ async function sha256Hex(value: string): Promise<string> {
 }
 
 async function createTransportClaim(
-  request: Request,
   env: Env,
   operation: "probe" | "range" | "catalog",
   sourceUrl: string,
@@ -262,13 +261,12 @@ async function createTransportClaim(
     maximumBytes, now, now + TRANSPORT_CLAIM_SECONDS
   ).run();
   return {
-    claimUrl: new URL("/internal/source-transport/claim", request.url).toString(),
+    claimUrl: new URL("/internal/source-transport/claim", validatedUrl(env.WUKONG_PUBLIC_API_URL)).toString(),
     token
   };
 }
 
 export async function callSourceTransport(
-  request: Request,
   env: Env,
   operation: "probe" | "range" | "catalog",
   sourceUrl: string,
@@ -280,7 +278,7 @@ export async function callSourceTransport(
     throw new SourceProbeHttpError("ROM source transport is unavailable", 503);
   }
   const claim = await createTransportClaim(
-    request, env, operation, sourceUrl, rangeHeader, maximumBytes
+    env, operation, sourceUrl, rangeHeader, maximumBytes
   );
   let response: Response;
   try {
@@ -414,11 +412,11 @@ export async function createProbeSession(
   if (usesVercelTransport(originalUrl)) {
     let transportResponse: Response;
     try {
-      transportResponse = await callSourceTransport(request, env, "probe", uri, "bytes=0-0", 1);
+      transportResponse = await callSourceTransport(env, "probe", uri, "bytes=0-0", 1);
     } catch (error) {
       if (!(error instanceof SourceProbeHttpError) || error.status < 500) throw error;
       // Re-resolve from the original URL and mint a new claim: claims are single-use.
-      transportResponse = await callSourceTransport(request, env, "probe", uri, "bytes=0-0", 1);
+      transportResponse = await callSourceTransport(env, "probe", uri, "bytes=0-0", 1);
     }
     const metadata = await transportProbeMetadata(transportResponse);
     resolvedUrl = validatedUrl(metadata.resolvedUrl);
@@ -600,7 +598,7 @@ export async function proxyProbeRange(
   const result = String(session.transport_mode) === "vercel"
     ? {
         response: await callSourceTransport(
-          request, env, "range", String(session.resolved_url), rangeHeader, range.length
+          env, "range", String(session.resolved_url), rangeHeader, range.length
         ),
         url: validatedUrl(String(session.resolved_url))
       }

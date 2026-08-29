@@ -158,7 +158,7 @@ export async function romCatalog(request: Request, env: Env): Promise<Record<str
   }
   if (!response || response.status >= 500) {
     await response?.body?.cancel();
-    response = await callSourceTransport(request, env, "catalog", upstream.toString(), "", MAX_RESPONSE_BYTES);
+    response = await callSourceTransport(env, "catalog", upstream.toString(), "", MAX_RESPONSE_BYTES);
   }
   if (!response.ok) {
     throw new RomCatalogHttpError(`ROM catalog source returned HTTP ${response.status}`, 502);

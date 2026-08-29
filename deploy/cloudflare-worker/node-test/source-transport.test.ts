@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createSourceTransportHandler } from "../../../api/source-transport";
 
@@ -15,6 +16,33 @@ function request(): Request {
 const publicDns = async () => ["8.8.8.8"];
 
 describe("Vercel source transport", () => {
+  it("accepts every public Worker origin configured for deployment", async () => {
+    const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8")) as {
+      vars: { WUKONG_PUBLIC_API_URL: string };
+      env: Record<string, { vars: { WUKONG_PUBLIC_API_URL: string } }>;
+    };
+    const publicUrls = new Set([
+      config.vars.WUKONG_PUBLIC_API_URL,
+      ...Object.values(config.env).map((environment) => environment.vars.WUKONG_PUBLIC_API_URL)
+    ]);
+    for (const publicUrl of publicUrls) {
+      const configuredClaimUrl = new URL("/internal/source-transport/claim", publicUrl).toString();
+      const handler = createSourceTransportHandler({
+        resolveAddresses: publicDns,
+        fetchImpl: async (input) => String(input) === configuredClaimUrl ? Response.json({
+          operation: "catalog", sourceUrl: "https://roms.danielspringer.at/api/ota.php?latest=1",
+          range: "", maximumBytes: 2 * 1024 * 1024
+        }) : Response.json({ releases: [] })
+      });
+      const response = await handler(new Request("https://wukong-rom-studio.vercel.app/api/source-transport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ claimUrl: configuredClaimUrl, token })
+      }));
+      expect(response.status, configuredClaimUrl).toBe(200);
+    }
+  });
+
   it("allows only the bounded latest snapshot for device discovery without a model filter", async () => {
     for (const query of ["latest=1", "latest=0", "latest=1&help=1"]) {
       const handler = createSourceTransportHandler({
