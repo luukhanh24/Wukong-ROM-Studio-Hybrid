@@ -539,12 +539,13 @@ window.addEventListener('load', () => {{
       document.body.dataset.customModTitle = modTitle.textContent;
       document.body.dataset.customReleaseEditable = String(!input.disabled && !input.readOnly);
       document.body.dataset.customReleaseTitle = title.textContent;
+      input.value = 'KhanhDZ Custom';
       modInput.value = 'ColorOS_16.0.10';
       modInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-      input.value = 'KhanhDZ Custom';
-      save.click();
       document.querySelector('#save-custom-mod-version').click();
       document.body.dataset.customModValue = modInput.value;
+      document.body.dataset.releaseDraftAfterModSave = input.value;
+      save.click();
       document.body.dataset.customReleaseRecipe = input.value;
       document.body.dataset.customReleaseValue = input.value;
     }};
@@ -2060,6 +2061,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-custom-mod-title="Phiên bản MOD tùy chỉnh"', dom)
         self.assertIn('data-custom-release-title="Số phiên bản nền MOD"', dom)
         self.assertIn('data-custom-mod-value="ColorOS_16.0.10"', dom)
+        self.assertIn('data-release-draft-after-mod-save="KhanhDZ Custom"', dom)
         self.assertIn('data-custom-release-recipe="KhanhDZ Custom"', dom)
         self.assertIn('data-custom-release-value="KhanhDZ Custom"', dom)
         self.assertGreater(screenshot_size, 10_000)

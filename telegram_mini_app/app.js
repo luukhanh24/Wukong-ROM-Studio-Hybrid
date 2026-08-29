@@ -3503,11 +3503,14 @@ function saveCustomModVersion() {
   if ($("#preset")?.value !== "custom") return;
   const base = selectedBaseModVersion();
   const value = $("#custom-mod-version-input").value.trim();
+  const releaseInput = $("#mod-release-version-input");
+  const releaseDraft = releaseInput?.value;
   if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(value)) throw new Error(t("invalidModVersion"));
   if (!state.catalog?.modVersions?.includes(value) || !state.catalog?.modsByVersion?.[value]) throw new Error(t("customModVersionUnavailable"));
   if (value === base) delete state.customModVersionOverrides[base];
   else state.customModVersionOverrides[base] = value;
   renderMods(false);
+  if (releaseInput && releaseDraft !== undefined) releaseInput.value = releaseDraft;
   updateSummary();
   toast(t("customModVersionSaved"));
 }
