@@ -60,6 +60,11 @@ describe("admin batch ROM builds", () => {
       method: "PUT", headers,
       body: JSON.stringify({ modReleaseVersions: { "ColorOS_16.0.9": "V5.1" } })
     });
+    const labels = await SELF.fetch("https://worker.example/v1/preset-labels", {
+      method: "PUT", headers,
+      body: JSON.stringify({ presetLabels: { lite: "Essential", plus: "Complete", custom: "Studio" } })
+    });
+    expect(labels.status).toBe(200);
     const body = JSON.stringify({
         devices: ["PKG110"], modVersions: ["ColorOS_16.0.9"],
         editions: ["lite", "plus"]
@@ -80,7 +85,10 @@ describe("admin batch ROM builds", () => {
     expect(detail.events.map((event: any) => event.eventType)).toEqual(expect.arrayContaining(["batch_created", "source_found", "job_created"]));
 
     const job = await (await SELF.fetch(`https://worker.example/v1/jobs/${detail.items[0].jobId}`, { headers })).json() as any;
-    expect(job.recipe.build).toMatchObject({ preset: "both", modVersion: "ColorOS_16.0.9", modReleaseVersion: "V5.1" });
+    expect(job.recipe.build).toMatchObject({
+      preset: "both", modVersion: "ColorOS_16.0.9", modReleaseVersion: "V5.1",
+      editionLabels: { lite: "Essential", plus: "Complete", custom: "Studio" }
+    });
     expect(job.recipe.storage).toMatchObject({ publishArtifact: true, artifactRoot: "ROM/V5.1" });
     const db = (env as unknown as Env).DB;
     await db.batch(Array.from({ length: 60 }, (_, index) => db.prepare(

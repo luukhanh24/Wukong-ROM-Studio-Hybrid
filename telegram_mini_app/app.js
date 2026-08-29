@@ -187,7 +187,7 @@ Object.assign(translations.vi, {
 
 Object.assign(translations.vi, {
   buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
-  releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", customReleaseVersion: "Tên phiên bản Custom", customReleaseVersionHint: "Đặt tên riêng cho bản Custom; chỉ áp dụng cho job hiện tại.", customReleaseVersionPlaceholder: "Ví dụ: KhanhDZ Custom", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự và không được có / hoặc \\.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
+  releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự và không được có / hoặc \\.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
   probeDeferred: "Máy chủ đang bận phân tích ROM. Hãy thử lại sau ít phút.",
   probeDeferredKicker: "ĐANG CHỜ MÁY CHỦ"
 });
@@ -335,7 +335,7 @@ Object.assign(translations.en, {
 
 Object.assign(translations.en, {
   buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
-  releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", customReleaseVersion: "Custom version name", customReleaseVersionHint: "Set a name for this Custom build; it applies only to the current job.", customReleaseVersionPlaceholder: "Example: KhanhDZ Custom", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
+  releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
   probeDeferred: "The server is busy analyzing ROMs. Try again in a moment.",
   probeDeferredKicker: "WAITING FOR SERVER"
 });
@@ -491,8 +491,10 @@ Object.assign(translations.vi, {
   jobCreatedAt: "Tạo lúc", jobUpdatedAt: "Cập nhật lúc", loadMoreJobEvents: "Tải thêm nhật ký", viewJobUser: "Mở hồ sơ user"
 });
 Object.assign(translations.vi, {
-  customModVersion: "Phiên bản MOD tùy chỉnh", customModVersionHint: "Giá trị dùng cho content-pack MOD của job; phải khớp phiên bản đã có trong thư viện. Không đổi số phiên bản nền MOD bên dưới.", customModVersionPlaceholder: "Ví dụ: ColorOS_16.0.10", saveCustomModVersion: "Áp dụng cho job", invalidModVersion: "Phiên bản MOD dài 1–128 ký tự, bắt đầu bằng chữ/số và chỉ dùng chữ, số, ., _ hoặc -.", customModVersionUnavailable: "Phiên bản MOD này chưa có content-pack trong thư viện.", customModVersionSaved: "Đã áp dụng phiên bản MOD tùy chỉnh cho job hiện tại.",
-  customReleaseVersion: "Số phiên bản nền MOD", customReleaseVersionHint: "Chỉ đổi số phiên bản nền MOD; không đổi Phiên bản MOD tùy chỉnh. Áp dụng cho job hiện tại.", customReleaseVersionPlaceholder: "Ví dụ: V5.1 Custom"
+  presetLabelsTitle: "Tên bản build", presetLabelsHint: "Đổi tên hiển thị và tên file cho Lite, Plus hoặc Custom. Mã preset nội bộ vẫn giữ nguyên.",
+  presetLabelLite: "Tên Lite", presetLabelPlus: "Tên Plus", presetLabelCustom: "Tên Custom", savePresetLabels: "Lưu vĩnh viễn",
+  invalidPresetLabel: "Tên bản build dài 1–64 ký tự, không chứa ký tự đặc biệt của tên file và không kết thúc bằng dấu chấm hoặc khoảng trắng.", presetLabelsSaved: "Đã lưu tên bản build cho các job sau.",
+  releaseVersionPlaceholder: "Ví dụ: V5.1"
 });
 Object.assign(translations.en, {
   openUserJob: "View job", jobCreator: "Created by", jobParameters: "All job parameters", loadMoreUserJobs: "Load older jobs",
@@ -502,8 +504,10 @@ Object.assign(translations.en, {
   jobCreatedAt: "Created", jobUpdatedAt: "Updated", loadMoreJobEvents: "Load more events", viewJobUser: "Open user profile"
 });
 Object.assign(translations.en, {
-  customModVersion: "Custom MOD version", customModVersionHint: "Value used for this job's MOD content-pack; it must match a version in the library. It does not change the MOD base number below.", customModVersionPlaceholder: "Example: ColorOS_16.0.10", saveCustomModVersion: "Apply to job", invalidModVersion: "The MOD version must be 1–128 characters, start with a letter/number, and contain only letters, numbers, ., _ or -.", customModVersionUnavailable: "This MOD version has no content-pack in the library.", customModVersionSaved: "Custom MOD version applied to the current job.",
-  customReleaseVersion: "MOD base version number", customReleaseVersionHint: "Only the MOD base number changes here; the Custom MOD version stays separate. Applies to this job.", customReleaseVersionPlaceholder: "Example: V5.1 Custom"
+  presetLabelsTitle: "Build names", presetLabelsHint: "Rename the display name and filename for Lite, Plus or Custom. Internal preset keys stay unchanged.",
+  presetLabelLite: "Lite name", presetLabelPlus: "Plus name", presetLabelCustom: "Custom name", savePresetLabels: "Save permanently",
+  invalidPresetLabel: "The build name must be 1–64 characters, contain no filename-reserved characters, and not end with a dot or space.", presetLabelsSaved: "Build names saved for future jobs.",
+  releaseVersionPlaceholder: "Example: V5.1"
 });
 
 const state = {
@@ -538,7 +542,7 @@ const state = {
   pairingPollAttempt: 0,
   pairingInFlight: false,
   docketInView: true,
-  customModVersionOverrides: {},
+  presetLabels: { lite: "Lite", plus: "Plus", custom: "Custom" },
   releaseVersionOverrides: {},
   debloatPaths: [],
   debloatPathsCustomized: false,
@@ -2007,7 +2011,6 @@ function renderMods(reset = true) {
   if (!list || !state.catalog) return;
   const current = new Set(reset ? defaultMods() : selectedMods());
   const names = state.catalog.modsByVersion[selectedModVersion()] || [];
-  renderCustomModVersion();
   renderReleaseVersion();
   list.replaceChildren();
   if (!names.length) {
@@ -2077,6 +2080,7 @@ function renderCatalog() {
   const totalMods = Object.values(state.catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
   $("#catalog-total").textContent = t("catalogSummary", { devices: state.catalog.devices.length, mods: totalMods });
   renderAdminReleaseEditor();
+  renderAdminPresetLabels();
 }
 
 function renderAdminReleaseEditor() {
@@ -2115,7 +2119,7 @@ function setBatchSelections(selector, checked) {
 function updateBatchSummary() {
   const modVersions = batchSelections("#batch-mod-versions");
   const count = batchSelections("#batch-devices").length * modVersions.length;
-  const editions = [$("#batch-lite").checked ? "Lite" : "", $("#batch-plus").checked ? "Plus" : ""].filter(Boolean).join(" + ");
+  const editions = [$("#batch-lite").checked ? presetLabel("lite") : "", $("#batch-plus").checked ? presetLabel("plus") : ""].filter(Boolean).join(" + ");
   const releases = [...new Set(modVersions.map(value => state.catalog?.modReleaseVersions?.[value]).filter(Boolean))].join(" + ");
   $("#batch-summary").textContent = `${count} cấu hình${editions ? ` · ${editions}` : ""}${releases ? ` · ${releases}` : ""}`;
 }
@@ -2132,6 +2136,10 @@ function renderBatchChoices() {
     const copy = document.createElement("span"); const name = document.createElement("b"); name.textContent = value; const release = document.createElement("small"); release.textContent = state.catalog.modReleaseVersions[value] || value;
     copy.append(name, release); label.append(input, copy); return label;
   }));
+  const liteLabel = $("#batch-lite")?.closest("label")?.querySelector("span");
+  const plusLabel = $("#batch-plus")?.closest("label")?.querySelector("span");
+  if (liteLabel) liteLabel.textContent = presetLabel("lite");
+  if (plusLabel) plusLabel.textContent = presetLabel("plus");
   updateBatchSummary();
 }
 
@@ -2202,7 +2210,7 @@ async function loadLatestBatch() {
 async function startBatchBuild() {
   const devices = batchSelections("#batch-devices"), modVersions = batchSelections("#batch-mod-versions");
   const editions = [$("#batch-lite").checked ? "lite" : "", $("#batch-plus").checked ? "plus" : ""].filter(Boolean);
-  if (!devices.length || !modVersions.length || !editions.length) throw new Error("Hãy chọn ít nhất một thiết bị, một nền MOD và một bản Lite/Plus.");
+  if (!devices.length || !modVersions.length || !editions.length) throw new Error(`Hãy chọn ít nhất một thiết bị, một nền MOD và một bản ${presetLabel("lite")}/${presetLabel("plus")}.`);
   const button = $("#start-batch-build"); button.disabled = true;
   try {
     const body = JSON.stringify({ devices, modVersions, editions });
@@ -2305,7 +2313,7 @@ function updateSummary() {
   const runner = runnerLabel($("#execution")?.value || "github-auto");
   const release = selectedReleaseVersion();
   $("#route-label").textContent = runner;
-  const summary = `${device} · ${release} / ${preset === "custom" ? t("custom") : preset.toUpperCase()} / ${runner}`;
+  const summary = `${device} · ${release} / ${presetLabel(preset)} / ${runner}`;
   $("#launch-summary").textContent = summary;
   if ($("#mobile-launch-summary")) $("#mobile-launch-summary").textContent = summary;
   $("#mod-count").textContent = `${selectedMods().length} ${t("selected")}`;
@@ -2617,6 +2625,7 @@ function renderAccount() {
   $("#admin-maintenance").hidden = true;
   $("#admin-batch-launch").hidden = true;
   $("#catalog-release-admin").hidden = true;
+  $("#catalog-preset-admin").hidden = true;
   if (!profile || profile.role !== "admin") closeAdminUserPage({ restoreFocus: false, scroll: false });
   if (!profile) return;
   const runtimeAllowance = $("#runtime-build-allowance");
@@ -2637,6 +2646,7 @@ function renderAccount() {
   $("#admin-maintenance").hidden = !admin;
   $("#admin-batch-launch").hidden = !admin;
   renderAdminReleaseEditor();
+  renderAdminPresetLabels();
   renderMaintenanceAdmin();
   renderAccessGate();
 }
@@ -2989,7 +2999,7 @@ function currentActivityLines(activity) {
     const device = activity.deviceName || catalogDeviceName(activity.productCode) || activity.productCode;
     return [
       [device, activity.productCode].filter(Boolean).join(" · "),
-      [activity.preset, activity.modVersion].filter(Boolean).join(" · "),
+      [activity.preset ? presetLabel(activity.preset, activity.editionLabels) : "", activity.modVersion].filter(Boolean).join(" · "),
       [activity.releaseVersion, `${Math.round(Number(activity.progress || 0) * 100)}%`, activity.stage].filter(Boolean).join(" · ")
     ].filter(Boolean);
   }
@@ -3040,7 +3050,8 @@ function renderCurrentActivitySummary(user, compact = false) {
           build: {
             preset: activity.preset,
             modVersion: activity.modVersion,
-            modReleaseVersion: activity.releaseVersion
+            modReleaseVersion: activity.releaseVersion,
+            editionLabels: activity.editionLabels || {}
           }
         }
       }));
@@ -3453,66 +3464,85 @@ function selectedBaseModVersion() {
 }
 
 function selectedModVersion() {
-  const base = selectedBaseModVersion();
-  if ($("#preset")?.value !== "custom") return base;
-  return String(state.customModVersionOverrides[base] || base || "").trim();
+  return selectedBaseModVersion();
 }
 
-function renderCustomModVersion() {
-  const custom = $("#preset")?.value === "custom";
-  const base = selectedBaseModVersion();
-  const root = $("#custom-mod-version-editor");
-  const input = $("#custom-mod-version-input");
-  if (!root || !input) return;
-  root.hidden = !custom;
-  if (!custom) {
-    input.value = base;
-    input.placeholder = "";
-    return;
+function presetLabel(key, labels = state.presetLabels) {
+  let normalized = String(key || "").toLowerCase();
+  if (normalized === "resume") normalized = "plus";
+  if (normalized === "standard") normalized = "lite";
+  const map = labels && typeof labels === "object" ? labels : {};
+  if (normalized === "both") return `${map.lite || "Lite"} + ${map.plus || "Plus"}`;
+  return map[normalized] || ({ lite: "Lite", plus: "Plus", custom: "Custom" }[normalized] || normalized);
+}
+
+function presetEntries() {
+  return [
+    { value: "lite", label: presetLabel("lite") },
+    { value: "plus", label: presetLabel("plus") },
+    { value: "both", label: presetLabel("both") },
+    { value: "custom", label: presetLabel("custom") }
+  ];
+}
+
+function renderPresetLabels() {
+  const selected = $("#preset")?.value || "plus";
+  const defaultSelected = $("#default-preset")?.value || state.defaultPreset;
+  const entries = presetEntries();
+  if ($("#preset")) options($("#preset"), entries, selected);
+  if ($("#default-preset")) options($("#default-preset"), entries, defaultSelected);
+  renderAdminPresetLabels();
+}
+
+function renderAdminPresetLabels() {
+  const root = $("#catalog-preset-admin");
+  if (!root) return;
+  const admin = state.me?.role === "admin";
+  root.hidden = !admin;
+  if (!admin) return;
+  for (const key of ["lite", "plus", "custom"]) {
+    const input = $(`#admin-preset-label-${key}`);
+    if (input && document.activeElement !== input) input.value = state.presetLabels[key] || presetLabel(key);
   }
-  input.value = state.customModVersionOverrides[base] || base;
-  input.placeholder = t("customModVersionPlaceholder");
-  input.setAttribute("aria-label", t("customModVersion"));
+}
+
+function isSafePresetLabel(value) {
+  return Boolean(value)
+    && value.length <= 64
+    && !/[\\/\x00-\x1f<>:\"|?*]/.test(value)
+    && !/[ .]$/.test(value)
+    && !/^\.+$/.test(value);
+}
+
+async function savePermanentPresetLabels() {
+  if (state.me?.role !== "admin") return;
+  const values = {};
+  for (const key of ["lite", "plus", "custom"]) {
+    const value = $(`#admin-preset-label-${key}`).value.trim();
+    if (!isSafePresetLabel(value)) throw new Error(t("invalidPresetLabel"));
+    values[key] = value;
+  }
+  const payload = await apiRequest("/v1/preset-labels", { method: "PUT", body: JSON.stringify({ presetLabels: values }) });
+  state.presetLabels = { ...state.presetLabels, ...(payload.presetLabels || {}) };
+  renderPresetLabels();
+  renderBatchChoices();
+  toast(t("presetLabelsSaved"));
 }
 
 function renderReleaseVersion() {
-  const custom = $("#preset")?.value === "custom";
   const label = selectedReleaseVersion();
   const display = $("#mod-release-version");
   const title = $("#release-version-title");
   const hint = $("#release-version-hint");
   const input = $("#mod-release-version-input");
   if (display) display.textContent = label;
-  if (title) {
-    title.dataset.i18n = custom ? "customReleaseVersion" : "releaseVersion";
-    title.textContent = t(title.dataset.i18n);
-  }
-  if (hint) {
-    hint.dataset.i18n = custom ? "customReleaseVersionHint" : "releaseVersionHint";
-    hint.textContent = t(hint.dataset.i18n);
-  }
+  if (title) title.textContent = t("releaseVersion");
+  if (hint) hint.textContent = t("releaseVersionHint");
   if (input) {
     input.value = label === "—" ? "" : label;
-    input.placeholder = custom ? t("customReleaseVersionPlaceholder") : "";
-    input.setAttribute("aria-label", t(custom ? "customReleaseVersion" : "releaseVersion"));
+    input.placeholder = t("releaseVersionPlaceholder");
+    input.setAttribute("aria-label", t("releaseVersion"));
   }
-  $(".release-version-editor")?.classList.toggle("custom-release-active", custom);
-}
-
-function saveCustomModVersion() {
-  if ($("#preset")?.value !== "custom") return;
-  const base = selectedBaseModVersion();
-  const value = $("#custom-mod-version-input").value.trim();
-  const releaseInput = $("#mod-release-version-input");
-  const releaseDraft = releaseInput?.value;
-  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(value)) throw new Error(t("invalidModVersion"));
-  if (!state.catalog?.modVersions?.includes(value) || !state.catalog?.modsByVersion?.[value]) throw new Error(t("customModVersionUnavailable"));
-  if (value === base) delete state.customModVersionOverrides[base];
-  else state.customModVersionOverrides[base] = value;
-  renderMods(false);
-  if (releaseInput && releaseDraft !== undefined) releaseInput.value = releaseDraft;
-  updateSummary();
-  toast(t("customModVersionSaved"));
 }
 
 async function saveReleaseVersion() {
@@ -3581,13 +3611,11 @@ function resetJobDraft() {
   }
   const size = $("#source-size");
   if (size) size.value = "";
-  state.customModVersionOverrides = {};
   state.releaseVersionOverrides = {};
   state.debloatPaths = [...(state.catalog?.defaultDebloatPaths || [])];
   state.debloatPathsCustomized = false;
   closeDebloatEditor();
   renderDebloatSummary();
-  renderCustomModVersion();
   renderReleaseVersion();
   try { localStorage.removeItem("wukong-recipe-draft"); } catch (_) {}
 }
@@ -3600,7 +3628,7 @@ function buildRecipe() {
     storage: { remote: "wukong-gdrive", publishArtifact: $("#publish").checked }
   };
   recipe.build = {
-      preset: $("#preset").value, modVersion: selectedModVersion(), mods: selectedMods(),
+      preset: $("#preset").value, modVersion: selectedModVersion(), mods: selectedMods(), editionLabels: { ...state.presetLabels },
       modReleaseVersion: selectedReleaseVersion(),
       enabledSteps: $$("#steps input:checked").map((input) => input.value),
       package: $("#package").checked, notifyTelegram: $("#notify").checked
@@ -3706,8 +3734,7 @@ function jobDeviceLabel(job) {
 function jobEditionBadge(job) {
   const preset = String(job?.recipe?.build?.preset || "").trim().toLowerCase();
   if (!preset) return null;
-  const labels = { lite: "Lite", plus: "Plus", both: "Lite + Plus", custom: t("custom") };
-  const label = labels[preset];
+  const label = presetLabel(preset, job?.recipe?.build?.editionLabels || job?.recipe?.build?.edition_labels || state.presetLabels);
   if (!label) return null;
   const badge = document.createElement("span");
   badge.className = "job-edition-badge";
@@ -4132,7 +4159,7 @@ function renderActiveJob(job, events, inspection = null) {
     jobFact(t("buildDate"), metadata.buildDate),
     jobFact(t("runner"), job.runner),
     jobFact(t("elapsed"), formatElapsed(job)),
-    jobFact(t("modConfiguration"), `${build.preset || "—"} / ${build.modVersion || "—"}`),
+    jobFact(t("modConfiguration"), `${build.preset ? presetLabel(build.preset, build.editionLabels || build.edition_labels) : "—"} / ${build.modVersion || "—"}`),
     jobFact(t("releaseVersion"), build.modReleaseVersion),
     jobFact(t("sourceSizeDetected"), formatBytes(job.recipe?.source?.sizeBytes))
   ];
@@ -4431,12 +4458,14 @@ async function loadCatalog() {
     if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.devices) || !Array.isArray(catalog.modVersions)) throw new Error("Invalid catalog");
     state.catalog = catalog;
     state.catalog.modReleaseVersions ||= {};
+    state.presetLabels = { lite: "Lite", plus: "Plus", custom: "Custom", ...(catalog.presetLabels || {}) };
     state.debloatPaths = Array.isArray(catalog.defaultDebloatPaths) ? [...catalog.defaultDebloatPaths] : [];
     state.debloatPathsCustomized = false;
     options($("#device"), [{ value: "", label: t("chooseDevice") }, ...catalog.devices.map((item) => ({ value: item.product, label: `${item.product} — ${item.name}` }))]);
     options($("#mod-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
     options($("#catalog-version"), catalog.modVersions.map((value) => ({ value, label: `${value} · ${state.catalog.modReleaseVersions[value] || value}` })), catalog.modVersions.includes("ColorOS_16.0.9") ? "ColorOS_16.0.9" : catalog.modVersions.at(-1));
-    if (privateApiAvailable()) await refreshLiveReleaseVersions();
+    renderPresetLabels();
+    if (privateApiAvailable()) await Promise.all([refreshLiveReleaseVersions(), refreshLivePresetLabels()]);
     const count = Object.values(catalog.modsByVersion).reduce((total, names) => total + names.length, 0);
     $("#catalog-status").textContent = t("catalogReady", { mods: count, versions: catalog.modVersions.length });
     $("#catalog-status").closest("div").querySelector("i").classList.add("ok");
@@ -4471,6 +4500,18 @@ async function refreshLiveReleaseVersions() {
     );
     renderReleaseVersion();
     renderCatalog();
+  } catch (_) { /* static labels remain usable while the authenticated API reconnects */ }
+}
+
+async function refreshLivePresetLabels() {
+  if (!state.catalog || !privateApiAvailable()) return;
+  try {
+    const live = await apiRequest("/v1/preset-labels");
+    state.presetLabels = { ...state.presetLabels, ...(live.presetLabels || {}) };
+    renderPresetLabels();
+    renderBatchChoices();
+    updateBatchSummary();
+    updateSummary();
   } catch (_) { /* static labels remain usable while the authenticated API reconnects */ }
 }
 
@@ -4615,9 +4656,6 @@ function bindEvents() {
   $("#select-all").addEventListener("click", () => setMods("all"));
   $("#clear-mods").addEventListener("click", () => setMods("none"));
   $("#mod-version").addEventListener("change", () => renderMods());
-  $("#save-custom-mod-version").addEventListener("click", () => {
-    try { saveCustomModVersion(); } catch (error) { toast(error.message, true); }
-  });
   $("#save-mod-release-version").addEventListener("click", () => saveReleaseVersion().catch((error) => toast(error.message, true)));
   $("#preset").addEventListener("change", () => renderMods());
   $("#execution").addEventListener("change", updateSummary);
@@ -4631,6 +4669,7 @@ function bindEvents() {
   $("#catalog-version").addEventListener("change", renderCatalog);
   $("#admin-release-pack").addEventListener("change", () => { $("#admin-release-label").value = state.catalog.modReleaseVersions[$("#admin-release-pack").value] || $("#admin-release-pack").value; });
   $("#save-admin-release").addEventListener("click", () => savePermanentReleaseVersion().catch(error => toast(error.message, true)));
+  $("#save-admin-preset-labels").addEventListener("click", () => savePermanentPresetLabels().catch(error => toast(error.message, true)));
   $("#open-batch-build").addEventListener("click", openBatchBuildPage);
   $("#admin-batch-back").addEventListener("click", closeBatchBuildPage);
   $("#start-batch-build").addEventListener("click", () => startBatchBuild().catch(error => toast(error.message, true)));

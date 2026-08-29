@@ -250,6 +250,7 @@ class BuildOptions:
     mods: tuple[str, ...] = ()
     mod_version: str = "ColorOS_16.0.7"
     mod_release_version: str | None = None
+    edition_labels: dict[str, str] = field(default_factory=dict)
     enabled_steps: tuple[str, ...] = ()
     debloat_paths: tuple[str, ...] | None = None
     package: bool = True
@@ -284,6 +285,19 @@ class BuildOptions:
         ).strip()
         if not SAFE_RELEASE_LABEL.fullmatch(mod_release_version):
             raise RecipeValidationError("MOD release version must be 1–64 printable path-safe characters")
+        raw_edition_labels = data.get("editionLabels")
+        edition_labels: dict[str, str] = {}
+        if raw_edition_labels is not None:
+            if not isinstance(raw_edition_labels, Mapping):
+                raise RecipeValidationError("editionLabels must be an object")
+            for key, raw_label in raw_edition_labels.items():
+                name = str(key).strip().casefold()
+                if name not in {"lite", "plus", "both", "custom"}:
+                    raise RecipeValidationError(f"Unsupported edition label key: {name}")
+                label = str(raw_label or "").strip()
+                if not SAFE_RELEASE_LABEL.fullmatch(label):
+                    raise RecipeValidationError("Edition label must be 1–64 filename-safe characters")
+                edition_labels[name] = label
         raw_debloat = data.get("debloatPaths")
         debloat = None
         if raw_debloat is not None:
@@ -295,6 +309,7 @@ class BuildOptions:
             mods=mods,
             mod_version=mod_version,
             mod_release_version=mod_release_version,
+            edition_labels=edition_labels,
             enabled_steps=steps,
             debloat_paths=debloat,
             package=_boolean(data, "package", True),
@@ -310,6 +325,8 @@ class BuildOptions:
         }
         if self.mod_release_version:
             result["modReleaseVersion"] = self.mod_release_version
+        if self.edition_labels:
+            result["editionLabels"] = dict(self.edition_labels)
         if self.enabled_steps:
             result["enabledSteps"] = list(self.enabled_steps)
         if self.debloat_paths is not None:
@@ -317,6 +334,27 @@ class BuildOptions:
         if self.notify_telegram:
             result["notifyTelegram"] = True
         return result
+
+
+def preset_edition_label(
+    preset: str | None,
+    labels: Mapping[str, str] | None = None,
+) -> str:
+    """Resolve a user-facing edition label without changing the preset key."""
+
+    normalized = str(preset or "").strip().casefold()
+    if normalized == "resume":
+        normalized = "plus"
+    elif normalized == "standard":
+        normalized = "lite"
+    configured = labels or {}
+    if normalized == "both":
+        return f"{configured.get('lite') or 'Lite'} + {configured.get('plus') or 'Plus'}"
+    return str(configured.get(normalized) or {
+        "lite": "Lite",
+        "plus": "Plus",
+        "custom": "Custom",
+    }.get(normalized, normalized))
 
 
 @dataclass(frozen=True)
@@ -457,6 +495,8 @@ class BuildRecipe:
         }
         if self.build.mod_release_version:
             result["modReleaseVersion"] = self.build.mod_release_version
+        if self.build.edition_labels:
+            result["editionLabels"] = dict(self.build.edition_labels)
         if self.build.debloat_paths is not None:
             result["debloatPaths"] = list(self.build.debloat_paths)
         return result

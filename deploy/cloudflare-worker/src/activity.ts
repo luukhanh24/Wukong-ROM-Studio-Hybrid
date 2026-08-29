@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "./auth";
 import type { TelegramProfile } from "./state";
 import { catalogPayload } from "./catalog";
+import { presetEditionLabel } from "./artifact-metadata";
 
 type JsonObject = Record<string, unknown>;
 type ActivityActor = AuthenticatedRequest | {
@@ -127,7 +128,7 @@ export function buildStartedAdminStatements(
     `Job  <code>${html(jobId, "—", 64)}</code>`,
     `Tên thiết bị  <code>${html(friendlyDeviceName(recipe.device, metadata.device ?? metadata.deviceName))}</code>`,
     `Mã sản phẩm  <code>${html(recipe.device)}</code>`,
-    `Cấu hình  <code>${html(build.preset)}</code>`,
+    `Bản build  <code>${html(presetEditionLabel(build.preset, build.editionLabels ?? build.edition_labels))}</code>`,
     `MOD pack  <code>${html(build.modVersion ?? build.mod_version)}</code>`,
     `Phát hành  <code>${html(build.modReleaseVersion ?? build.mod_release_version)}</code>`,
     `Phiên bản ROM  <code>${html(metadata.version)}</code>`,
@@ -327,6 +328,7 @@ function buildActivity(row: Record<string, unknown>): CurrentUserActivity {
     productCode: String(recipe.device ?? ""),
     romVersion: String(metadata.version ?? ""),
     preset: String(build.preset ?? ""),
+    editionLabels: object(build.editionLabels ?? build.edition_labels),
     modVersion: String(build.modVersion ?? build.mod_version ?? ""),
     releaseVersion: String(build.modReleaseVersion ?? build.mod_release_version ?? ""),
     startedAt: String(row.created_at ?? ""),

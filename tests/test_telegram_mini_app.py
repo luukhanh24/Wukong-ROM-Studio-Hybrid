@@ -113,6 +113,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     exercise_custom_release = False
     exercise_custom_recipe = False
     submitted_recipe = None
+    preset_labels = {"lite": "Lite", "plus": "Plus", "custom": "Custom"}
     exercise_dock_header = False
     cache_clear_requests = 0
     admin_user = False
@@ -525,31 +526,27 @@ window.addEventListener('load', () => {{
     setTimeout(exerciseBatchControls, 700);
   }}
   if ({str(self.exercise_custom_release).lower()}) {{
-    const exerciseCustomRelease = () => {{
-      const preset = document.querySelector('#preset');
-      const modInput = document.querySelector('#custom-mod-version-input');
-      const input = document.querySelector('#mod-release-version-input');
-      const save = document.querySelector('#save-mod-release-version');
-      const title = document.querySelector('#release-version-title');
-      const modTitle = document.querySelector('#custom-mod-version-title');
-      if (!preset || !modInput || !input || !save || !title || !modTitle) {{ setTimeout(exerciseCustomRelease, 50); return; }}
-      preset.value = 'custom';
-      preset.dispatchEvent(new Event('change', {{ bubbles: true }}));
-      document.body.dataset.customModEditorHidden = String(document.querySelector('#custom-mod-version-editor')?.hidden === true);
-      document.body.dataset.customModTitle = modTitle.textContent;
-      document.body.dataset.customReleaseEditable = String(!input.disabled && !input.readOnly);
-      document.body.dataset.customReleaseTitle = title.textContent;
-      input.value = 'KhanhDZ Custom';
-      modInput.value = 'ColorOS_16.0.10';
-      modInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-      document.querySelector('#save-custom-mod-version').click();
-      document.body.dataset.customModValue = modInput.value;
-      document.body.dataset.releaseDraftAfterModSave = input.value;
+    const exercisePresetLabels = () => {{
+      const nav = document.querySelector('[data-nav="catalog"]');
+      const tab = document.querySelector('#library-technical-tab');
+      const lite = document.querySelector('#admin-preset-label-lite');
+      const plus = document.querySelector('#admin-preset-label-plus');
+      const custom = document.querySelector('#admin-preset-label-custom');
+      const save = document.querySelector('#save-admin-preset-labels');
+      if (!nav || !tab || !lite || !plus || !custom || !save) {{ setTimeout(exercisePresetLabels, 50); return; }}
+      nav.click();
+      tab.click();
+      if (save.closest('[hidden]')) {{ setTimeout(exercisePresetLabels, 50); return; }}
+      lite.value = 'Essential'; plus.value = 'Complete'; custom.value = 'Studio';
       save.click();
-      document.body.dataset.customReleaseRecipe = input.value;
-      document.body.dataset.customReleaseValue = input.value;
+      setTimeout(() => {{
+        document.body.dataset.presetLabelsEditorVisible = String(!save.closest('[hidden]'));
+        document.body.dataset.presetLabelsSaved = String(document.querySelector('#preset option[value="lite"]')?.textContent === 'Essential');
+        document.body.dataset.presetLabelCustom = document.querySelector('#preset option[value="custom"]')?.textContent || '';
+        document.body.dataset.releaseTitleAfterPresetRename = document.querySelector('#release-version-title')?.textContent || '';
+      }}, 250);
     }};
-    setTimeout(exerciseCustomRelease, 700);
+    setTimeout(exercisePresetLabels, 700);
   }}
   if ({str(self.exercise_custom_recipe).lower()}) {{
     const exerciseCustomRecipe = () => {{
@@ -557,15 +554,11 @@ window.addEventListener('load', () => {{
       const submit = document.querySelector('#submit-recipe');
       const source = document.querySelector('#source-uri');
       const device = document.querySelector('#device');
-      const modInput = document.querySelector('#custom-mod-version-input');
       const releaseInput = document.querySelector('#mod-release-version-input');
-      const saveMod = document.querySelector('#save-custom-mod-version');
       const saveRelease = document.querySelector('#save-mod-release-version');
-      if (!form || !submit || !source || !device || !modInput || !releaseInput || !saveMod || !saveRelease || document.body.classList.contains('access-checking')) {{ setTimeout(exerciseCustomRecipe, 50); return; }}
+      if (!form || !submit || !source || !device || !releaseInput || !saveRelease || document.body.classList.contains('access-checking')) {{ setTimeout(exerciseCustomRecipe, 50); return; }}
       document.querySelector('#preset').value = 'custom';
       document.querySelector('#preset').dispatchEvent(new Event('change', {{ bubbles: true }}));
-      modInput.value = 'ColorOS_16.0.10';
-      saveMod.click();
       releaseInput.value = 'KhanhDZ Custom';
       saveRelease.click();
       source.value = {json.dumps(OPLUS_TEST_URI)};
@@ -577,6 +570,7 @@ window.addEventListener('load', () => {{
         const build = payload.recipe?.build || {{}};
         if (!build.modVersion) {{ setTimeout(readRecipe, 50); return; }}
         document.body.dataset.customModRecipe = build.modVersion;
+        document.body.dataset.customPresetLabelRecipe = JSON.stringify(build.editionLabels || {{}});
         document.body.dataset.customReleaseRecipe = build.modReleaseVersion || '';
       }}).catch(() => setTimeout(readRecipe, 50));
       setTimeout(readRecipe, 100);
@@ -661,6 +655,7 @@ window.addEventListener('load', () => {{
             }
             catalog = {
                 "schemaVersion": 1,
+                "presetLabels": dict(type(self).preset_labels),
                 "devices": [{"product": "PKG110", "name": "OnePlus Ace 5"}],
                 "modVersions": mod_versions,
                 "modReleaseVersions": {
@@ -721,6 +716,9 @@ window.addEventListener('load', () => {{
             return
         if path == "/v1/me":
             self._send(json.dumps({"user": self._fixture_user(), "maintenance": {"enabled": self.maintenance_enabled, "message": "Đang nâng cấp Studio."}}).encode(), "application/json")
+            return
+        if path == "/v1/preset-labels" and self.api_enabled:
+            self._send(json.dumps({"presetLabels": dict(type(self).preset_labels), "editable": self.admin_user}).encode(), "application/json")
             return
         if path == "/v1/rom-catalog":
             self._send(json.dumps({"releases": [{"id": "rom-fixture", "device": "OnePlus 13", "model": "CPH2653", "region": "EU", "version": "CPH2653_16.0.10.501(EX01)", "securityPatch": "2026-08-01", "sizeBytes": 8304912951, "sourceUrl": OPLUS_TEST_URI}, {"id": "rom-old", "device": "OnePlus 13", "region": "EU", "version": "CPH2653_16.0.9.500(EX01)", "sourceUrl": "https://cdn.example/old.zip"}]}).encode(), "application/json")
@@ -975,6 +973,16 @@ window.addEventListener('load', () => {{
             return
         self._send(b'{"error":"not found"}', "application/json", 404)
 
+    def do_PUT(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
+        path = urlsplit(self.path).path
+        if path == "/v1/preset-labels" and self.api_enabled and self.admin_user:
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            type(self).preset_labels = dict(payload.get("presetLabels") or {})
+            self._send(json.dumps({"presetLabels": dict(type(self).preset_labels)}).encode(), "application/json")
+            return
+        self._send(b'{"error":"not found"}', "application/json", 404)
+
 
 def _render_mini_app_in_chrome(
     *,
@@ -1054,6 +1062,7 @@ def _render_mini_app_in_chrome(
             "exercise_batch_controls": exercise_batch_controls,
             "exercise_custom_release": exercise_custom_release,
             "exercise_custom_recipe": exercise_custom_recipe,
+            "preset_labels": {"lite": "Lite", "plus": "Plus", "custom": "Custom"},
             "exercise_dock_header": exercise_dock_header,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
@@ -1620,8 +1629,13 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("artifact_publish", script)
         self.assertIn('id="mod-release-version"', html)
         self.assertIn('id="mod-release-version-input" maxlength="64"', html)
-        self.assertIn('id="custom-mod-version-editor"', html)
-        self.assertIn('id="custom-mod-version-input" maxlength="128"', html)
+        self.assertNotIn('id="custom-mod-version-editor"', html)
+        self.assertNotIn('id="custom-mod-version-input"', html)
+        self.assertIn('id="catalog-preset-admin"', html)
+        self.assertIn('id="admin-preset-label-lite" maxlength="64"', html)
+        self.assertIn('id="admin-preset-label-plus" maxlength="64"', html)
+        self.assertIn('id="admin-preset-label-custom" maxlength="64"', html)
+        self.assertIn('apiRequest("/v1/preset-labels"', script)
         self.assertIn('modVersion: selectedModVersion()', script)
         self.assertIn("build.modReleaseVersion", script)
         self.assertIn("event-group", script)
@@ -1782,7 +1796,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "14/14 thông số",
         ):
             self.assertIn(value, dom)
-        self.assertIn('<strong id="launch-summary">PKG110 · V5.0 / PLUS / GitHub Auto</strong>', dom)
+        self.assertIn('<strong id="launch-summary">PKG110 · V5.0 / Plus / GitHub Auto</strong>', dom)
         self.assertIn('<li id="check-device" class="complete">', dom)
         self.assertIn('<li id="check-source" class="complete">', dom)
         self.assertIn('<li id="check-api" class="complete">', dom)
@@ -2049,21 +2063,19 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('data-preset-after-mod="custom"', dom)
 
-    def test_custom_preset_allows_editing_its_release_label(self) -> None:
+    def test_admin_can_rename_preset_labels_permanently(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
             api_enabled=True,
+            admin_user=True,
+            initial_view="catalog",
             exercise_custom_release=True,
-            catalog_mod_versions=("ColorOS_16.0.9", "ColorOS_16.0.10"),
         )
 
-        self.assertIn('data-custom-release-editable="true"', dom)
-        self.assertIn('data-custom-mod-editor-hidden="false"', dom)
-        self.assertIn('data-custom-mod-title="Phiên bản MOD tùy chỉnh"', dom)
-        self.assertIn('data-custom-release-title="Số phiên bản nền MOD"', dom)
-        self.assertIn('data-custom-mod-value="ColorOS_16.0.10"', dom)
-        self.assertIn('data-release-draft-after-mod-save="KhanhDZ Custom"', dom)
-        self.assertIn('data-custom-release-recipe="KhanhDZ Custom"', dom)
-        self.assertIn('data-custom-release-value="KhanhDZ Custom"', dom)
+        self.assertIn('data-preset-labels-editor-visible="true"', dom)
+        self.assertIn('data-preset-labels-saved="true"', dom)
+        self.assertIn('data-preset-label-custom="Studio"', dom)
+        self.assertIn('data-release-title-after-preset-rename="Phiên bản phát hành"', dom)
+        self.assertNotIn('id="custom-mod-version-editor"', dom)
         self.assertGreater(screenshot_size, 10_000)
 
     def test_custom_mod_and_base_release_versions_are_submitted_separately(self) -> None:
@@ -2073,8 +2085,9 @@ class TelegramMiniAppTests(unittest.TestCase):
             catalog_mod_versions=("ColorOS_16.0.9", "ColorOS_16.0.10"),
         )
 
-        self.assertIn('data-custom-mod-recipe="ColorOS_16.0.10"', dom)
+        self.assertIn('data-custom-mod-recipe="ColorOS_16.0.9"', dom)
         self.assertIn('data-custom-release-recipe="KhanhDZ Custom"', dom)
+        self.assertIn('data-custom-preset-label-recipe=', dom)
 
     def test_selected_archived_job_log_is_not_replaced_by_running_job_poll(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
@@ -2120,7 +2133,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("Đã tìm thấy 2 bản ROM", dom)
         self.assertIn("OnePlus Ace 5", dom)
         self.assertIn("PKG110", dom)
-        self.assertIn("custom · ColorOS_16.0.8", dom)
+        self.assertIn("Custom · ColorOS_16.0.8", dom)
         self.assertIn("V4.0", dom)
         self.assertIn("Hoàn tất tìm ROM nguồn", dom)
         self.assertIn("Kết quả ROM: 2", dom)

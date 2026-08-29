@@ -29,7 +29,9 @@ import {
 } from "./github";
 import {
   catalogPayload,
+  presetLabels,
   releaseVersions,
+  savePresetLabels,
   saveReleaseVersions
 } from "./catalog";
 import { cloudLibrary } from "./drive";
@@ -335,6 +337,20 @@ async function routeWithIdentity(
   }
   if (path === "/v1/jobs" && request.method === "GET") {
     return json({ jobs: await listJobs(env, auth) });
+  }
+  if (path === "/v1/preset-labels" && request.method === "GET") {
+    return json({ presetLabels: await presetLabels(env), editable: auth.role === "admin" });
+  }
+  if (path === "/v1/preset-labels" && request.method === "PUT") {
+    if (auth.role !== "admin") {
+      return json({ error: "Admin access is required to edit preset labels" }, 403);
+    }
+    const payload = await request.json().catch(() => ({})) as Record<string, unknown>;
+    try {
+      return json({ presetLabels: await savePresetLabels(env, payload.presetLabels) });
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : "Preset label is invalid" }, 400);
+    }
   }
   if (path === "/v1/admin/batch-builds" && request.method === "POST") {
     try {

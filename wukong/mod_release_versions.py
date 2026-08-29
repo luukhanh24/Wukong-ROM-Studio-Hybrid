@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 
-SAFE_RELEASE_LABEL = re.compile(r"^[^/\\\x00-\x1f]{1,64}$")
+# Labels are copied into ZIP names and Drive folder names. Keep the grammar
+# portable across Windows and POSIX so an admin cannot save a value that later
+# fails during packaging (or becomes a path component).
+SAFE_RELEASE_LABEL = re.compile(
+    r"^(?=.{1,64}$)(?!.*[ .]$)(?!\.+$)[^/\\\x00-\x1f<>:\"|?*]+$"
+)
 DEFAULT_MOD_RELEASE_VERSION = "V3.4"
 DEFAULT_MOD_RELEASE_VERSIONS = {
     "ColorOS_15.0.1": "V3.4",
@@ -67,7 +72,7 @@ class ModReleaseVersionStore:
             for version, value in values.items():
                 label = str(value).strip()
                 if not SAFE_RELEASE_LABEL.fullmatch(label):
-                    raise ValueError("Release label must be 1–64 printable characters without / or \\")
+                    raise ValueError("Release label must be 1–64 filename-safe characters")
                 current[str(version)] = label
             self.path.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.path.with_name(f".{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")

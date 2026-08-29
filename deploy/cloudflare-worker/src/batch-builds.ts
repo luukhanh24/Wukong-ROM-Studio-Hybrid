@@ -3,14 +3,14 @@ import catalog from "../../../telegram_mini_app/catalog.json";
 import { createJob, publicJobEvent, JobHttpError } from "./jobs";
 import { profile } from "./state";
 import { RomCatalogHttpError, romCatalog } from "./rom-catalog";
-import { releaseVersions } from "./catalog";
+import { presetLabels, releaseVersions } from "./catalog";
 import { SourceProbeHttpError } from "./source-probe";
 
 type JsonObject = Record<string, unknown>;
 type BatchRow = { batch_id: string; owner_subject: string; idempotency_key: string; release_version: string; editions_json: string; status: string; created_at: string; updated_at: string; finished_at: string };
 type ItemRow = { item_id: string; batch_id: string; device: string; mod_version: string; release_version: string; status: string; source_url: string; source_version: string; job_id: string; error: string; error_code: string; source_attempts: number; source_retry_at: string; created_at: string; updated_at: string };
 
-const SAFE_LABEL = /^[^/\\\u0000-\u001f]{1,64}$/;
+const SAFE_LABEL = /^(?=.{1,64}$)(?!.*[ .]$)(?!\.+$)[^/\\\u0000-\u001f<>:\"|?*]+$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const MAX_BATCH_COMBINATIONS = 200;
 const SOURCE_LOOKUP_ERROR_CODE = "source_temporarily_unavailable";
@@ -77,7 +77,7 @@ async function scheduleSourceLookupRetry(env: Env, batchId: string, item: ItemRo
   });
 }
 
-function recipeFor(item: ItemRow, batch: BatchRow, editions: string[], source: JsonObject): JsonObject {
+function recipeFor(item: ItemRow, batch: BatchRow, editions: string[], source: JsonObject, labels: Record<string, string>): JsonObject {
   const data = catalog as unknown as JsonObject;
   const presets = data.presetDefaultsByVersion as Record<string, Record<string, string[]>>;
   const preset = editions.length === 2 ? "both" : (editions[0] ?? "lite");
@@ -94,6 +94,7 @@ function recipeFor(item: ItemRow, batch: BatchRow, editions: string[], source: J
     storage: { remote: "wukong-gdrive", publishArtifact: true, artifactRoot: `ROM/${releaseVersion}` },
     build: {
       preset, modVersion: item.mod_version, modReleaseVersion: releaseVersion,
+      editionLabels: labels,
       mods: presets?.[item.mod_version]?.[preset] ?? presets?.[item.mod_version]?.plus ?? [],
       enabledSteps: Array.isArray(data.pipelineSteps) ? (data.pipelineSteps as JsonObject[]).filter(step => step.default).map(step => step.id) : [],
       package: true, notifyTelegram: true
@@ -126,6 +127,7 @@ export async function processBatch(env: Env, batchId: string, limit = 3): Promis
   if (!owner || owner.role !== "admin") throw new BatchBuildHttpError("Batch owner is no longer an admin", 403);
   const auth = { subject: batch.owner_subject, role: "admin", profile: owner } as AuthenticatedRequest;
   const editions = JSON.parse(batch.editions_json) as string[];
+  const labels = await presetLabels(env);
   const pending = await env.DB.prepare(`SELECT * FROM wukong_batch_build_items WHERE batch_id = ? AND status = 'pending_source' AND ${sourceRetryDueSql()} ORDER BY created_at,item_id LIMIT ?`)
     .bind(batchId, new Date().toISOString(), limit).all<ItemRow>();
   for (const item of pending.results) {
@@ -142,7 +144,7 @@ export async function processBatch(env: Env, batchId: string, limit = 3): Promis
         continue;
       }
       await event(env, batchId, "source_found", `Đã tìm thấy ${source.version ?? "ROM nguồn"}`, item.item_id, { version: source.version, region: source.region });
-      const result = await createJob(env, auth, recipeFor(item, batch, editions, source), `batch:${batchId}:${item.item_id}`, true);
+      const result = await createJob(env, auth, recipeFor(item, batch, editions, source, labels), `batch:${batchId}:${item.item_id}`, true);
       const jobId = String(result.job.job_id ?? result.job.jobId ?? "");
       const now = new Date().toISOString();
       await env.DB.prepare("UPDATE wukong_batch_build_items SET status='job_created',source_url=?,source_version=?,job_id=?,error='',updated_at=? WHERE item_id=?")

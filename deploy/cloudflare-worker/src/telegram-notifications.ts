@@ -1,5 +1,5 @@
 import type { JobRow } from "./jobs";
-import { artifactEdition } from "./artifact-metadata";
+import { artifactEdition, presetEditionLabel } from "./artifact-metadata";
 import { directArtifactUrl } from "./public-links";
 
 type JsonObject = Record<string, unknown>;
@@ -82,6 +82,7 @@ export function terminalTelegramNotification(
     ...object(manifest.rom_metadata ?? manifest.romMetadata)
   };
   const build = object(recipe.build);
+  const editionLabel = presetEditionLabel(build.preset, build.editionLabels ?? build.edition_labels);
   const succeeded = status === "succeeded";
   const title = succeeded ? "Build ROM hoàn tất" : "Build ROM cần kiểm tra";
   const statusLabel = succeeded
@@ -103,7 +104,7 @@ export function terminalTelegramNotification(
     `Ngày build  <code>${text(metadata.buildDate ?? metadata.build_date)}</code>`,
     "",
     "<b>Cấu hình</b>",
-    `Preset  <code>${text(build.preset)}</code>`,
+    `Bản build  <code>${text(editionLabel)}</code>`,
     `MOD pack  <code>${text(build.modVersion ?? build.mod_version)}</code>`,
     `Phát hành  <code>${text(build.modReleaseVersion ?? build.mod_release_version)}</code>`,
     `Runner  <code>${text(manifest.runner ?? row.runner)}</code>`
@@ -124,7 +125,7 @@ export function terminalTelegramNotification(
   artifacts.forEach((value, offset) => {
     const artifact = object(value);
     const name = String(artifact.name ?? "").trim();
-    const edition = artifactEdition(name, offset + 1, build.preset);
+    const edition = artifactEdition(name, offset + 1, build.preset, build.editionLabels ?? build.edition_labels);
     const size = sizeLabel(artifact.size_bytes ?? artifact.sizeBytes);
     lines.push(
       `${offset + 1}. <b>${text(edition)}</b> · ${size}`,

@@ -11,7 +11,7 @@ from .actions_ui import GitHubActionsUI
 from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
 from .cloud_sync import CloudJobSync
 from .content_packs import ContentPackManager, validate_content_index
-from .models import ArtifactRecord, BuildRecipe, JobManifest, JobStatus
+from .models import ArtifactRecord, BuildRecipe, JobManifest, JobStatus, preset_edition_label
 from .orchestrator import JobStore, OrchestrationError
 from .pipeline import CHECKPOINT_PIPELINE_STEPS
 from studio_paths import CONTENT_ROOT, SCRIPT_ROOT, WORKSPACE_ROOT
@@ -33,6 +33,39 @@ CLOUD_PROGRESS_RETRY_SECONDS = 30.0
 CLOUD_PROGRESS_INTERVAL_SECONDS = 90.0
 CLOUD_PROGRESS_DELTA_PERCENT = 10.0
 CLOUD_PUSH_WARNING_INTERVAL_SECONDS = 600.0
+
+
+def artifact_upload_edition(
+    recipe: BuildRecipe,
+    output: Path,
+    output_index: int,
+    output_count: int,
+) -> str:
+    """Return the stable Drive folder label for one packaged edition.
+
+    The preset key remains an internal build contract, while the configured
+    edition label is the user-facing filename/Drive folder name. Both builds
+    are emitted in Lite-then-Plus order, so the output index selects its label.
+    """
+
+    defaults = {"lite": "Lite", "plus": "Plus", "custom": "Custom"}
+    labels = recipe.build.edition_labels
+    preset = recipe.build.preset.casefold()
+    if preset in {"resume", "standard"}:
+        preset = "plus" if preset == "resume" else "lite"
+    if preset == "both":
+        preset = "lite" if output_index == 0 else "plus"
+    if preset in defaults:
+        return preset_edition_label(preset, labels).strip()
+    name = output.name.casefold()
+    for key, fallback in defaults.items():
+        label = str(labels.get(key) or fallback).strip()
+        marker = f"_{label.casefold()}_"
+        if marker in name or name.endswith(f"_{label.casefold()}.zip"):
+            return label
+    if output_count > 1:
+        return preset_edition_label("plus", labels).strip()
+    return recipe.build.mod_version
 
 
 def checkpoint_stages_for_environment() -> set[str]:
@@ -408,11 +441,8 @@ class LocalJobExecutor:
                         storage.publish_artifact(
                             output,
                             device=recipe.device,
-                            build=(
-                                "Lite" if "_lite_" in output.name.casefold() or output.stem.casefold().endswith("_lite")
-                                else "Plus" if "_plus_" in output.name.casefold() or output.stem.casefold().endswith("_plus")
-                                else recipe.build.preset.title()
-                            ) if recipe.storage.artifact_root else recipe.build.mod_version,
+                            build=artifact_upload_edition(recipe, output, output_index, len(outputs))
+                            if recipe.storage.artifact_root else recipe.build.mod_version,
                             relative_root=recipe.storage.artifact_root,
                             progress_callback=report_upload,
                         )

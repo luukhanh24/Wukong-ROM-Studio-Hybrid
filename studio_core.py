@@ -95,7 +95,9 @@ MOD_VERSION_STUDIO_VERSIONS = DEFAULT_MOD_RELEASE_VERSIONS
 # A release label is presentation metadata, not a directory or a semantic
 # version. Keep it readable while refusing values that could escape into an
 # output path or corrupt a log/manifest.
-STUDIO_VERSION_RE = re.compile(r"^[^/\\\x00-\x1f]{1,64}$")
+STUDIO_VERSION_RE = re.compile(
+    r"^(?=.{1,64}$)(?!.*[ .]$)(?!\.+$)[^/\\\x00-\x1f<>:\"|?*]+$"
+)
 MOD_VERSION_ALIASES = {
     "ColorOS_700": "ColorOS_16.0.7",
     "ColorOS_800": "ColorOS_16.0.8",
@@ -279,6 +281,7 @@ class BuildSpec:
     modNames: list[str] = field(default_factory=list)
     modVersion: str = DEFAULT_MOD_VERSION
     modReleaseVersion: str | None = None
+    editionLabels: dict[str, str] = field(default_factory=dict)
     debloatPaths: list[str] | None = None
     preset: str = "lite"
     enabledSteps: list[str] = field(default_factory=list)
@@ -324,6 +327,19 @@ class BuildSpec:
         if raw_debloat_paths is not None and not isinstance(raw_debloat_paths, list):
             raw_debloat_paths = []
         raw_mod_release_version = str(payload.get("modReleaseVersion") or "").strip()
+        raw_edition_labels = payload.get("editionLabels")
+        edition_labels: dict[str, str] = {}
+        if raw_edition_labels is not None:
+            if not isinstance(raw_edition_labels, dict):
+                raise StudioError("editionLabels must be an object")
+            for raw_key, raw_label in raw_edition_labels.items():
+                key = str(raw_key).strip().casefold()
+                label = str(raw_label or "").strip()
+                if key not in {"lite", "plus", "both", "custom"}:
+                    raise StudioError(f"Unsupported edition label key: {key}")
+                if not STUDIO_VERSION_RE.fullmatch(label):
+                    raise StudioError("Edition label must be 1–64 filename-safe characters")
+                edition_labels[key] = label
         return cls(
             romPath=str(payload.get("romPath", "")).strip(),
             modName=(str(payload["modName"]).strip() if payload.get("modName") else None),
@@ -333,6 +349,7 @@ class BuildSpec:
                 normalize_studio_version(raw_mod_release_version, fallback="")
                 or None
             ),
+            editionLabels=edition_labels,
             debloatPaths=(
                 [str(path).strip() for path in raw_debloat_paths if str(path).strip()]
                 if raw_debloat_paths is not None
@@ -407,11 +424,12 @@ def build_edition_name(spec: "BuildSpec") -> str:
     preset = "lite" if spec.preset == "standard" else spec.preset
     if preset == "resume" and spec.resumePreset:
         preset = spec.resumePreset
-    if preset == "custom":
-        return "Custom"
-    if preset in {"resume", "plus", "both"}:
-        return "Plus"
-    return "Lite"
+    label_key = "plus" if preset == "resume" else preset
+    labels = getattr(spec, "editionLabels", {}) or {}
+    if label_key == "both":
+        return f"{labels.get('lite') or 'Lite'} + {labels.get('plus') or 'Plus'}"
+    default = "Custom" if label_key == "custom" else "Plus" if label_key == "plus" else "Lite"
+    return labels.get(label_key, default)
 
 
 def default_studio_version(mod_version: str | None) -> str:
@@ -4110,6 +4128,7 @@ def _spec_payload(spec: BuildSpec) -> dict[str, Any]:
         "modNames": spec.selected_mod_names(),
         "modVersion": spec.modVersion,
         "modReleaseVersion": spec.modReleaseVersion,
+        "editionLabels": dict(spec.editionLabels),
         "debloatPaths": spec.debloatPaths,
         "preset": spec.preset,
         "enabledSteps": spec.enabledSteps,
@@ -4126,6 +4145,7 @@ def build_spec_fingerprint(spec: BuildSpec) -> str:
         "modNames": spec.selected_mod_names(),
         "modVersion": spec.modVersion,
         "modReleaseVersion": spec.modReleaseVersion,
+        "editionLabels": dict(spec.editionLabels),
         "debloatPaths": spec.debloatPaths,
         "preset": "lite" if spec.preset == "standard" else spec.preset,
         "enabledSteps": spec.enabledSteps,

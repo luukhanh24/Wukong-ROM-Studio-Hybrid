@@ -86,7 +86,7 @@ from studio_paths import (
     platform_tool_path,
 )
 from werkzeug.serving import make_server
-from wukong.models import BuildRecipe, Identity, JobStatus, RecipeValidationError
+from wukong.models import BuildRecipe, Identity, JobStatus, RecipeValidationError, preset_edition_label
 from wukong.orchestrator import FileJobStore, HybridOrchestrator, OrchestrationError
 from wukong.routing import RunnerInventory, RunnerUnavailableError
 from wukong.github import GitHubActionsAdapter
@@ -325,7 +325,7 @@ def _telegram_progress_snapshot(
         except ValueError:
             pass
     spec = BuildSpec.from_dict(spec_payload)
-    edition = "Lite + Plus" if spec.preset == "both" else build_edition_name(spec)
+    edition = preset_edition_label(spec.preset, spec.editionLabels)
     return {
         "jobId": job["id"],
         "status": status,

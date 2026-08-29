@@ -39,6 +39,7 @@ from wukong.content_packs import (
     upload_content_packs,
 )
 from wukong.github import GitHubActionsAdapter, GitHubApiError
+from wukong.executor import artifact_upload_edition
 from wukong.models import BuildRecipe, Identity, JobStatus, RecipeValidationError
 from wukong.orchestrator import HybridOrchestrator, InMemoryJobStore, OrchestrationError
 from wukong.routing import RunnerInventory, RunnerRouter, RunnerUnavailableError
@@ -63,6 +64,21 @@ class BuildRecipeContractTests(unittest.TestCase):
         })
         self.assertEqual(recipe.build.mod_release_version, "KhanhDZ")
         self.assertEqual(recipe.to_legacy_spec()["modReleaseVersion"], "KhanhDZ")
+
+    def test_permanent_preset_labels_survive_legacy_executor_conversion(self) -> None:
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "CPH2725",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "build": {
+                "preset": "plus",
+                "modVersion": "ColorOS_16.0.8",
+                "editionLabels": {"lite": "Essential", "plus": "Complete", "custom": "Studio"},
+            },
+        })
+        self.assertEqual(recipe.build.edition_labels["plus"], "Complete")
+        self.assertEqual(recipe.to_legacy_spec()["editionLabels"]["custom"], "Studio")
 
     def test_recipe_round_trip_is_canonical_and_secret_free(self) -> None:
         payload = {
@@ -897,6 +913,29 @@ class SourceAndStorageContractTests(unittest.TestCase):
             )
             destinations = [command[3] for command in calls if command[1] == "copyto"]
             self.assertIn("wukong-gdrive:WukongROM/ROM/V5.1/Lite/Wukong_PKG110_Lite.zip", destinations)
+
+    def test_renamed_preset_uses_renamed_drive_folder(self) -> None:
+        recipe = BuildRecipe.from_dict({
+            "schemaVersion": 1,
+            "task": "build",
+            "device": "PKG110",
+            "source": {"kind": "https", "uri": "https://downloads.example/rom.zip"},
+            "build": {
+                "preset": "plus",
+                "modVersion": "ColorOS_16.0.9",
+                "editionLabels": {"plus": "Complete"},
+            },
+            "storage": {"artifactRoot": "ROM/V5.0"},
+        })
+        self.assertEqual(
+            artifact_upload_edition(
+                recipe,
+                Path("Wukong_Complete_V5.0_PKG110.zip"),
+                0,
+                1,
+            ),
+            "Complete",
+        )
 
     def test_source_mirror_uploads_sha256_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as root:

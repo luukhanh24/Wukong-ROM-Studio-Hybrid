@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
-from .models import BuildRecipe, JobManifest
+from .models import BuildRecipe, JobManifest, preset_edition_label
 
 
 STAGE_TITLES: Mapping[str, str] = {
@@ -148,7 +148,7 @@ class GitHubActionsUI:
                 [
                     f"| Nền MOD / MOD pack | `{recipe.build.mod_version}` |",
                     f"| Nhãn phát hành / Release label | `{recipe.build.mod_release_version or '—'}` |",
-                    f"| Preset | `{recipe.build.preset}` |",
+                    f"| Preset | `{preset_edition_label(recipe.build.preset, recipe.build.edition_labels)}` |",
                     f"| MOD đã chọn / Selected | {len(mods)} |",
                     f"| Danh sách MOD / MOD list | {mod_list} |",
                     f"| Bước build / Build steps | {step_list} |",

@@ -4,6 +4,7 @@ import { cancelWorkflowRunForJob, dispatchBuild } from "./github";
 import { directArtifactUrl } from "./public-links";
 import { terminalTelegramNotification } from "./telegram-notifications";
 import { buildStartedAdminStatements } from "./activity";
+import { PRESET_LABEL } from "./catalog";
 
 type JsonObject = Record<string, unknown>;
 
@@ -127,6 +128,24 @@ export function validateRecipe(value: unknown): JsonObject {
     throw new JobHttpError("Build preset is invalid", 400);
   }
   requiredText(build.modVersion, "MOD version", 128);
+  if (build.editionLabels !== undefined || build.edition_labels !== undefined) {
+    const rawLabels = build.editionLabels ?? build.edition_labels;
+    const labels = object(rawLabels, "Edition labels");
+    const normalizedLabels: JsonObject = {};
+    for (const [rawKey, rawValue] of Object.entries(labels)) {
+      const key = rawKey.trim().toLowerCase();
+      if (!["lite", "plus", "both", "custom"].includes(key)) {
+        throw new JobHttpError("Edition label key is invalid", 400);
+      }
+      const label = typeof rawValue === "string" ? rawValue.trim() : "";
+      if (!PRESET_LABEL.test(label)) {
+        throw new JobHttpError("Edition label is not filename-safe", 400);
+      }
+      normalizedLabels[key] = label;
+    }
+    build.editionLabels = normalizedLabels;
+    delete build.edition_labels;
+  }
   object(recipe.execution, "Execution policy");
   const storage = recipe.storage === undefined ? {} : object(recipe.storage, "Storage configuration");
   if (storage.artifactRoot !== undefined) {
@@ -260,7 +279,7 @@ export function publicJob(row: JobRow, env: Env, includeCreator = false): JsonOb
     delete artifact.publicUrl;
     return {
       ...artifact,
-      edition: artifactEdition(artifact.name, index + 1, build.preset),
+      edition: artifactEdition(artifact.name, index + 1, build.preset, build.editionLabels ?? build.edition_labels),
       downloadAvailable: Boolean(url),
       ...(url ? { publicUrl: url } : {})
     };

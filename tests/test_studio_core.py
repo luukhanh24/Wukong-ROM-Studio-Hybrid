@@ -561,6 +561,73 @@ class StudioCoreTests(unittest.TestCase):
             "Wukong_Custom_V3.4_fixture_China_Stable.zip",
         )
 
+    def test_preset_label_is_used_for_filename_and_branding(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            unpack = root / "rom-unpack"
+            manifest = unpack / "my_manifest_unpacked" / "my_manifest"
+            product = unpack / "my_product_unpacked" / "my_product"
+            manifest.mkdir(parents=True)
+            product.mkdir(parents=True)
+            for partition in (manifest, product):
+                (partition / "build.prop").write_text(
+                    "ro.build.version.oplusrom.display=16.0.7\n",
+                    encoding="utf-8",
+                )
+
+            spec = studio_core.BuildSpec.from_dict({
+                "romPath": "fixture.zip",
+                "preset": "plus",
+                "modVersion": "ColorOS_16.0.7",
+                "modReleaseVersion": "KhanhDZ",
+                "editionLabels": {"plus": "Complete"},
+            })
+
+            self.assertEqual(studio_core.build_edition_name(spec), "Complete")
+            self.assertEqual(
+                studio_core.output_zip_name("fixture", spec),
+                "Wukong_Complete_KhanhDZ_fixture_China_Stable.zip",
+            )
+            result = studio_core.patch_build_branding(
+                unpack,
+                studio_core.build_edition_name(spec),
+                studio_core.studio_version_name(spec),
+            )
+
+            self.assertEqual(result["manifestDisplayVersion"], 1)
+            self.assertEqual(result["productDisplayVersion"], 1)
+            self.assertIn("| Complete | KhanhDZ", (manifest / "build.prop").read_text(encoding="utf-8"))
+            self.assertIn("| Complete | KhanhDZ", (product / "build.prop").read_text(encoding="utf-8"))
+
+            resumed = studio_core.BuildSpec.from_dict({
+                "romPath": "fixture.zip",
+                "preset": "resume",
+                "modVersion": "ColorOS_16.0.7",
+                "editionLabels": {"plus": "Complete"},
+            })
+            self.assertEqual(studio_core.build_edition_name(resumed), "Complete")
+
+    def test_both_preset_composes_renamed_lite_and_plus_labels(self):
+        spec = studio_core.BuildSpec.from_dict({
+            "romPath": "fixture.zip",
+            "preset": "both",
+            "modVersion": "ColorOS_16.0.7",
+            "editionLabels": {"lite": "Essential", "plus": "Complete"},
+        })
+        self.assertEqual(studio_core.build_edition_name(spec), "Essential + Complete")
+        self.assertEqual(
+            studio_core.output_zip_name("fixture", studio_core.replace(spec, preset="lite")),
+            "Wukong_Essential_V3.4_fixture_China_Stable.zip",
+        )
+
+    def test_preset_labels_reject_windows_filename_characters(self):
+        with self.assertRaises(studio_core.StudioError):
+            studio_core.BuildSpec.from_dict({
+                "romPath": "fixture.zip",
+                "preset": "plus",
+                "editionLabels": {"plus": "Build:Pro"},
+            })
+
     def test_studio_version_name_reads_runtime_override(self):
         with tempfile.TemporaryDirectory() as temp:
             runtime = Path(temp)

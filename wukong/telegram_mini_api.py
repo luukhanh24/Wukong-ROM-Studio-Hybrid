@@ -21,7 +21,7 @@ from urllib.parse import parse_qsl, urlsplit
 from flask import Flask, Response, jsonify, redirect, request
 from werkzeug.serving import BaseWSGIServer, make_server
 
-from .models import BuildRecipe, Identity, JobManifest, JobStatus, RecipeValidationError, SourceSpec
+from .models import BuildRecipe, Identity, JobManifest, JobStatus, RecipeValidationError, SourceSpec, preset_edition_label
 from .orchestrator import HybridOrchestrator, OrchestrationError
 from .routing import RunnerUnavailableError
 from .runtime import HybridRuntime
@@ -1680,7 +1680,7 @@ class TelegramJobNotifier:
             f"Ngày build  <code>{escape(metadata.get('buildDate'))}</code>",
             "",
             "<b>Cấu hình</b>",
-            f"Preset  <code>{escape(recipe.build.preset)}</code>",
+            f"Bản build  <code>{escape(preset_edition_label(recipe.build.preset, recipe.build.edition_labels))}</code>",
             f"MOD pack  <code>{escape(recipe.build.mod_version)}</code>",
             f"Phát hành  <code>{escape(recipe.build.mod_release_version)}</code>",
             f"Runner  <code>{escape(manifest.runner)}</code>",
@@ -1701,13 +1701,19 @@ class TelegramJobNotifier:
             lines.extend(["", "<b>Artifact</b>"])
             for index, artifact in enumerate(manifest.artifacts[:8], start=1):
                 cloud_url = public_artifact_url(artifact.public_url)
-                edition = (
-                    "Lite"
-                    if "lite" in artifact.name.casefold()
-                    else "Plus"
-                    if "plus" in artifact.name.casefold()
-                    else f"File {index}"
-                )
+                labels = recipe.build.edition_labels
+                preset = recipe.build.preset.casefold()
+                if preset in {"resume", "standard"}:
+                    preset = "plus" if preset == "resume" else "lite"
+                if preset == "both":
+                    preset = "lite" if index == 1 else "plus"
+                edition = preset_edition_label(preset, labels)
+                artifact_name = artifact.name.casefold()
+                if not labels:
+                    for key in ("lite", "plus", "custom"):
+                        if f"_{key}_" in artifact_name or artifact_name.endswith(f"_{key}.zip"):
+                            edition = preset_edition_label(key, labels)
+                            break
                 lines.extend(
                     [
                         f"{index}. <b>{escape(edition)}</b> · {self._size(artifact.size_bytes)}",

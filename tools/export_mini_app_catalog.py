@@ -79,6 +79,7 @@ def export_catalog(
             mods_by_version[version] = sorted(set(mods) | shared_mods, key=str.casefold)
     payload: dict[str, object] = {
         "schemaVersion": 1,
+        "presetLabels": {"lite": "Lite", "plus": "Plus", "custom": "Custom"},
         "devices": devices,
         "defaultDebloatPaths": default_debloat_paths,
         "modVersions": sorted(mods_by_version, key=str.casefold),

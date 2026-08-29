@@ -115,7 +115,7 @@ describe("admin user activity telemetry", () => {
     const alert = JSON.parse(rows.results[0]!.payload_json) as { text: string };
     expect(alert.text).toContain("Build User");
     expect(alert.text).toContain("<code>PKG110</code>");
-    expect(alert.text).toContain("<code>custom</code>");
+    expect(alert.text).toContain("<code>Custom</code>");
     expect(alert.text).toContain("<code>V6.0</code>");
     expect(alert.text).not.toContain("private-rom.zip");
     expect(alert.text).not.toContain("Signature");
