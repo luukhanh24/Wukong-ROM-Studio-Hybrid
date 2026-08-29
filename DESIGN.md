@@ -258,7 +258,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 ### Chips and Selectors
 
 - **MOD selectors:** Groups are categorized. Standard selection uses cobalt, camera uses coral, and interface/core uses aqua. Every selected item gains a matching border, pale surface, and visible check mark.
-- **Release-version editor:** The MOD-pack identity and its fixed default release label remain visibly paired. Editing uses one compact field and an explicit per-job apply action; the override resets after dispatch and never changes the pack default.
+- **Release-version editor:** The MOD-pack identity and its fixed default release label remain visibly paired. Editing uses one compact field and an explicit per-job apply action; for a custom build the edition name (e.g. "Limited") can also be renamed per job the same way; the override resets after dispatch and never changes the pack default.
 - **Pipeline choices:** Small square marks pair fill and inset contrast, so selection does not depend on hue alone.
 
 ### Cards / Containers

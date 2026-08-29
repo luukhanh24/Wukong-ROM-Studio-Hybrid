@@ -620,6 +620,19 @@ class StudioCoreTests(unittest.TestCase):
             "Wukong_Essential_V3.4_fixture_China_Stable.zip",
         )
 
+    def test_custom_job_label_drives_branding_and_output_filename(self):
+        spec = studio_core.BuildSpec.from_dict({
+            "romPath": "fixture.zip",
+            "preset": "custom",
+            "modVersion": "ColorOS_16.0.7",
+            "editionLabels": {"custom": "Limited"},
+        })
+        self.assertEqual(studio_core.build_edition_name(spec), "Limited")
+        self.assertEqual(
+            studio_core.output_zip_name("fixture", spec),
+            "Wukong_Limited_V3.4_fixture_China_Stable.zip",
+        )
+
     def test_preset_labels_reject_windows_filename_characters(self):
         with self.assertRaises(studio_core.StudioError):
             studio_core.BuildSpec.from_dict({

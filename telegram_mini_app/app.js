@@ -494,6 +494,8 @@ Object.assign(translations.vi, {
   presetLabelsTitle: "Tên bản build", presetLabelsHint: "Đổi tên hiển thị và tên file cho Lite, Plus hoặc Custom. Mã preset nội bộ vẫn giữ nguyên.",
   presetLabelLite: "Tên Lite", presetLabelPlus: "Tên Plus", presetLabelCustom: "Tên Custom", savePresetLabels: "Lưu vĩnh viễn",
   invalidPresetLabel: "Tên bản build dài 1–64 ký tự, không chứa ký tự đặc biệt của tên file và không kết thúc bằng dấu chấm hoặc khoảng trắng.", presetLabelsSaved: "Đã lưu tên bản build cho các job sau.",
+  customPresetJobTitle: "Tên bản Custom", customPresetJobHint: "Đổi Custom thành tên riêng như Limited; chỉ áp dụng cho job hiện tại.",
+  applyCustomPresetJob: "Áp dụng cho job", customPresetJobSaved: "Đã áp dụng tên bản Custom cho job hiện tại.",
   releaseVersionPlaceholder: "Ví dụ: V5.1"
 });
 Object.assign(translations.en, {
@@ -507,6 +509,8 @@ Object.assign(translations.en, {
   presetLabelsTitle: "Build names", presetLabelsHint: "Rename the display name and filename for Lite, Plus or Custom. Internal preset keys stay unchanged.",
   presetLabelLite: "Lite name", presetLabelPlus: "Plus name", presetLabelCustom: "Custom name", savePresetLabels: "Save permanently",
   invalidPresetLabel: "The build name must be 1–64 characters, contain no filename-reserved characters, and not end with a dot or space.", presetLabelsSaved: "Build names saved for future jobs.",
+  customPresetJobTitle: "Custom build name", customPresetJobHint: "Rename Custom to a job-specific name such as Limited; this applies only to the current job.",
+  applyCustomPresetJob: "Apply to job", customPresetJobSaved: "Custom build name applied to the current job.",
   releaseVersionPlaceholder: "Example: V5.1"
 });
 
@@ -543,6 +547,7 @@ const state = {
   pairingInFlight: false,
   docketInView: true,
   presetLabels: { lite: "Lite", plus: "Plus", custom: "Custom" },
+  customPresetLabelOverride: "",
   releaseVersionOverrides: {},
   debloatPaths: [],
   debloatPathsCustomized: false,
@@ -2012,6 +2017,7 @@ function renderMods(reset = true) {
   const current = new Set(reset ? defaultMods() : selectedMods());
   const names = state.catalog.modsByVersion[selectedModVersion()] || [];
   renderReleaseVersion();
+  renderCustomPresetLabelEditor();
   list.replaceChildren();
   if (!names.length) {
     const empty = document.createElement("div"); empty.className = "mod-empty"; empty.textContent = t("noMods"); list.append(empty);
@@ -2273,6 +2279,7 @@ function setMods(mode) {
   const defaults = new Set(defaultMods());
   $$("#mod-list input").forEach((input) => { input.checked = mode === "all" || (mode === "defaults" && defaults.has(input.value)); });
   if (mode !== "defaults") $("#preset").value = "custom";
+  renderCustomPresetLabelEditor();
   updateSummary();
 }
 
@@ -3467,11 +3474,17 @@ function selectedModVersion() {
   return selectedBaseModVersion();
 }
 
-function presetLabel(key, labels = state.presetLabels) {
+function currentEditionLabels() {
+  const labels = { ...state.presetLabels };
+  if (state.customPresetLabelOverride) labels.custom = state.customPresetLabelOverride;
+  return labels;
+}
+
+function presetLabel(key, labels = undefined) {
   let normalized = String(key || "").toLowerCase();
   if (normalized === "resume") normalized = "plus";
   if (normalized === "standard") normalized = "lite";
-  const map = labels && typeof labels === "object" ? labels : {};
+  const map = labels && typeof labels === "object" ? labels : currentEditionLabels();
   if (normalized === "both") return `${map.lite || "Lite"} + ${map.plus || "Plus"}`;
   return map[normalized] || ({ lite: "Lite", plus: "Plus", custom: "Custom" }[normalized] || normalized);
 }
@@ -3492,6 +3505,28 @@ function renderPresetLabels() {
   if ($("#preset")) options($("#preset"), entries, selected);
   if ($("#default-preset")) options($("#default-preset"), entries, defaultSelected);
   renderAdminPresetLabels();
+  renderCustomPresetLabelEditor();
+}
+
+function renderCustomPresetLabelEditor() {
+  const editor = $("#custom-preset-label-editor");
+  const input = $("#custom-preset-label-input");
+  if (!editor || !input) return;
+  const visible = $("#preset")?.value === "custom";
+  editor.hidden = !visible;
+  if (visible && document.activeElement !== input) {
+    input.value = state.customPresetLabelOverride || state.presetLabels.custom || "Custom";
+  }
+}
+
+function applyCustomPresetLabelForJob() {
+  if ($("#preset")?.value !== "custom") return;
+  const label = $("#custom-preset-label-input").value.trim();
+  if (!isSafePresetLabel(label)) throw new Error(t("invalidPresetLabel"));
+  state.customPresetLabelOverride = label;
+  renderPresetLabels();
+  updateSummary();
+  toast(t("customPresetJobSaved"));
 }
 
 function renderAdminPresetLabels() {
@@ -3611,12 +3646,14 @@ function resetJobDraft() {
   }
   const size = $("#source-size");
   if (size) size.value = "";
+  state.customPresetLabelOverride = "";
   state.releaseVersionOverrides = {};
   state.debloatPaths = [...(state.catalog?.defaultDebloatPaths || [])];
   state.debloatPathsCustomized = false;
   closeDebloatEditor();
   renderDebloatSummary();
   renderReleaseVersion();
+  renderPresetLabels();
   try { localStorage.removeItem("wukong-recipe-draft"); } catch (_) {}
 }
 
@@ -3628,7 +3665,7 @@ function buildRecipe() {
     storage: { remote: "wukong-gdrive", publishArtifact: $("#publish").checked }
   };
   recipe.build = {
-      preset: $("#preset").value, modVersion: selectedModVersion(), mods: selectedMods(), editionLabels: { ...state.presetLabels },
+      preset: $("#preset").value, modVersion: selectedModVersion(), mods: selectedMods(), editionLabels: currentEditionLabels(),
       modReleaseVersion: selectedReleaseVersion(),
       enabledSteps: $$("#steps input:checked").map((input) => input.value),
       package: $("#package").checked, notifyTelegram: $("#notify").checked
@@ -4657,11 +4694,18 @@ function bindEvents() {
   $("#clear-mods").addEventListener("click", () => setMods("none"));
   $("#mod-version").addEventListener("change", () => renderMods());
   $("#save-mod-release-version").addEventListener("click", () => saveReleaseVersion().catch((error) => toast(error.message, true)));
+  $("#apply-custom-preset-label").addEventListener("click", () => {
+    try { applyCustomPresetLabelForJob(); }
+    catch (error) { toast(error.message, true); }
+  });
   $("#preset").addEventListener("change", () => renderMods());
   $("#execution").addEventListener("change", updateSummary);
   $("#device").addEventListener("change", updateSummary);
   $("#mod-list").addEventListener("change", (event) => {
-    if (event.target.matches('input[type="checkbox"]')) $("#preset").value = "custom";
+    if (event.target.matches('input[type="checkbox"]')) {
+      $("#preset").value = "custom";
+      renderCustomPresetLabelEditor();
+    }
     updateSummary();
   });
   $("#mod-search").addEventListener("input", filterMods);

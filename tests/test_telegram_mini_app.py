@@ -556,9 +556,15 @@ window.addEventListener('load', () => {{
       const device = document.querySelector('#device');
       const releaseInput = document.querySelector('#mod-release-version-input');
       const saveRelease = document.querySelector('#save-mod-release-version');
-      if (!form || !submit || !source || !device || !releaseInput || !saveRelease || document.body.classList.contains('access-checking')) {{ setTimeout(exerciseCustomRecipe, 50); return; }}
+      const customLabelEditor = document.querySelector('#custom-preset-label-editor');
+      const customLabelInput = document.querySelector('#custom-preset-label-input');
+      const applyCustomLabel = document.querySelector('#apply-custom-preset-label');
+      if (!form || !submit || !source || !device || !releaseInput || !saveRelease || !customLabelEditor || !customLabelInput || !applyCustomLabel || document.body.classList.contains('access-checking')) {{ setTimeout(exerciseCustomRecipe, 50); return; }}
       document.querySelector('#preset').value = 'custom';
       document.querySelector('#preset').dispatchEvent(new Event('change', {{ bubbles: true }}));
+      document.body.dataset.customLabelEditorVisible = String(!customLabelEditor.hidden);
+      customLabelInput.value = 'Limited';
+      applyCustomLabel.click();
       releaseInput.value = 'KhanhDZ Custom';
       saveRelease.click();
       source.value = {json.dumps(OPLUS_TEST_URI)};
@@ -1283,6 +1289,8 @@ class TelegramMiniAppTests(unittest.TestCase):
             "mod-search",
             "telegram-auth-state",
             "mod-release-version-input",
+            "custom-preset-label-input",
+            "apply-custom-preset-label",
         ):
             self.assertIn(f'id="{control}"', html)
         self.assertIn('data-action="cache"', html)
@@ -2087,7 +2095,8 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn('data-custom-mod-recipe="ColorOS_16.0.9"', dom)
         self.assertIn('data-custom-release-recipe="KhanhDZ Custom"', dom)
-        self.assertIn('data-custom-preset-label-recipe=', dom)
+        self.assertIn('data-custom-label-editor-visible="true"', dom)
+        self.assertIn('&quot;custom&quot;:&quot;Limited&quot;', dom)
 
     def test_selected_archived_job_log_is_not_replaced_by_running_job_poll(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
