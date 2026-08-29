@@ -2,7 +2,7 @@ import catalog from "../../../telegram_mini_app/catalog.json";
 
 type JsonObject = Record<string, unknown>;
 
-const MOD_RELEASE_VERSION = /^[^/\\\u0000-\u001f]{1,64}$/;
+const MOD_RELEASE_VERSION = /^(?=.{1,64}$)(?!.*[ .]$)(?!\.+$)[^/\\\u0000-\u001f<>:\"|?*]+$/;
 const PRESET_LABEL_KEYS = ["lite", "plus", "custom"] as const;
 export const PRESET_LABEL = /^(?=.{1,64}$)(?!.*[ .]$)(?!\.+$)[^/\\\u0000-\u001f<>:\"|?*]+$/;
 const DEFAULT_PRESET_LABELS: Record<string, string> = {
@@ -104,7 +104,7 @@ export async function saveReleaseVersions(
     const label = String(labelValue ?? "").trim();
     if (!known.has(pack)) throw new Error("Unknown MOD pack in release versions");
     if (!MOD_RELEASE_VERSION.test(label)) {
-      throw new Error("Release version must be 1–64 printable characters without / or \\");
+      throw new Error("Release version must be 1–64 filename-safe characters");
     }
     normalized[pack] = label;
   }

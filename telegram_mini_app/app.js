@@ -187,7 +187,7 @@ Object.assign(translations.vi, {
 
 Object.assign(translations.vi, {
   buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
-  releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự và không được có / hoặc \\.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
+  releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự, an toàn cho tên file và không kết thúc bằng dấu chấm hoặc khoảng trắng.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
   probeDeferred: "Máy chủ đang bận phân tích ROM. Hãy thử lại sau ít phút.",
   probeDeferredKicker: "ĐANG CHỜ MÁY CHỦ"
 });
@@ -335,7 +335,7 @@ Object.assign(translations.en, {
 
 Object.assign(translations.en, {
   buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
-  releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
+  releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "Use 1–64 filename-safe characters; do not end with a period or space.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
   probeDeferred: "The server is busy analyzing ROMs. Try again in a moment.",
   probeDeferredKicker: "WAITING FOR SERVER"
 });
@@ -2099,7 +2099,7 @@ async function savePermanentReleaseVersion() {
   if (state.me?.role !== "admin") return;
   const pack = $("#admin-release-pack").value;
   const label = $("#admin-release-label").value.trim();
-  if (!label || label.length > 64 || /[\\/\x00-\x1f]/.test(label)) throw new Error(t("invalidReleaseVersion"));
+  if (!isSafePresetLabel(label)) throw new Error(t("invalidReleaseVersion"));
   const payload = await apiRequest("/v1/mod-release-versions", {
     method: "PUT", body: JSON.stringify({ modReleaseVersions: { [pack]: label } })
   });
@@ -3548,7 +3548,7 @@ function renderReleaseVersion() {
 async function saveReleaseVersion() {
   const version = selectedBaseModVersion();
   const label = $("#mod-release-version-input").value.trim();
-  if (!label || label.length > 64 || /[\\/\x00-\x1f]/.test(label)) throw new Error(t("invalidReleaseVersion"));
+  if (!isSafePresetLabel(label)) throw new Error(t("invalidReleaseVersion"));
   const defaultLabel = String(state.catalog?.modReleaseVersions?.[version] || version);
   if (label === defaultLabel) delete state.releaseVersionOverrides[version];
   else state.releaseVersionOverrides[version] = label;

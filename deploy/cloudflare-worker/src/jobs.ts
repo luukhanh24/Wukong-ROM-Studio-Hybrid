@@ -128,6 +128,14 @@ export function validateRecipe(value: unknown): JsonObject {
     throw new JobHttpError("Build preset is invalid", 400);
   }
   requiredText(build.modVersion, "MOD version", 128);
+  if (build.modReleaseVersion !== undefined || build.mod_release_version !== undefined) {
+    const release = requiredText(build.modReleaseVersion ?? build.mod_release_version, "MOD release version", 64).trim();
+    if (!PRESET_LABEL.test(release)) {
+      throw new JobHttpError("MOD release version is not filename-safe", 400);
+    }
+    build.modReleaseVersion = release;
+    delete build.mod_release_version;
+  }
   if (build.editionLabels !== undefined || build.edition_labels !== undefined) {
     const rawLabels = build.editionLabels ?? build.edition_labels;
     const labels = object(rawLabels, "Edition labels");
