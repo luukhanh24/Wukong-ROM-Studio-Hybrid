@@ -264,6 +264,12 @@ EXCLUDED_FIRMWARE = CORE_SOURCE_IMAGES | {
     "vendor_boot.img",
 }
 
+# Static firmware partitions that belong in firmware-update/, not super.img.
+STATIC_FIRMWARE_PARTITIONS = {
+    "dsp",
+    "vm-bootsys",
+}
+
 STEP_DEFINITIONS = list(PIPELINE_STEP_DEFINITIONS)
 STEP_ORDER = [step[0] for step in STEP_DEFINITIONS]
 STEP_LABELS = {step[0]: step[1] for step in STEP_DEFINITIONS}
@@ -3747,6 +3753,7 @@ def _stage_super(context: BuildContext) -> dict[str, Any]:
     expected_partitions = {
         f"{image.stem}_a"
         for image in context.rom_repack.glob("*.img")
+        if image.stem not in STATIC_FIRMWARE_PARTITIONS
     }
     missing_inputs = sorted(expected_partitions.difference(details["partitions"]))
     if missing_inputs:
