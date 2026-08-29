@@ -1079,6 +1079,10 @@ h2 { letter-spacing: -.015em; }
   .admin-user-page .user-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .admin-user-page .user-detail-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
   .admin-user-page .user-detail-actions button:last-child:nth-child(odd) { grid-column:1 / -1; }
+  .admin-user-page .user-job-entry { flex-wrap:wrap; gap:8px 14px; }
+  .user-job-entry > div { flex:1 1 100%; min-width:0; }
+  .user-job-entry .job-edition-badge, .user-job-entry .job-mod-badge { align-self:center; }
+  .user-job-entry > button { flex:1 1 auto; min-width:0; }
 }
 @media (max-width:390px) {
   .masthead { column-gap:10px; }
