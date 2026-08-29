@@ -200,7 +200,7 @@ Object.assign(translations.vi, {
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.",
   probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.", probeSignedPreviewOnly: "Link còn hiệu lực để phân tích nhưng không đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.",
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", checklistSourceRefreshRequired: "Cần link gốc để build cloud", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
-  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây",
+  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây", jobHistoryToday: "Hôm nay", jobHistoryYesterday: "Hôm qua",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible}/{total} sự kiện gần nhất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
   retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API.",
@@ -348,7 +348,7 @@ Object.assign(translations.en, {
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.",
   probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated when the runner starts.", probeSignedPreviewOnly: "The link is still valid for analysis but does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so the runner can create a fresh link when downloading starts.",
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", checklistSourceRefreshRequired: "Original link required for cloud build", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
-  jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs",
+  jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs", jobHistoryToday: "Today", jobHistoryYesterday: "Yesterday",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "Latest {visible}/{total} events", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
   retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API.",
@@ -520,6 +520,7 @@ const state = {
   expandedConfigJobId: "",
   jobEventsHasMore: false,
   jobHistoryFilter: "",
+  jobHistoryLimit: 12,
   sourceProbeTimer: null,
   sourceProbeUri: "",
   sourceInputUri: "",
@@ -3371,14 +3372,22 @@ async function openAdminUser(telegramId) {
   const historyEntry = (job) => {
     const article = document.createElement("article"); article.className = "user-job-entry";
     const copy = document.createElement("div");
-    const name = document.createElement("strong"); name.textContent = jobMetadata(job).version || job.recipe?.device || job.job_id || job.jobId;
+    const deviceLabel = jobDeviceLabel(job);
+    const name = document.createElement("strong"); name.textContent = jobMetadata(job).version || deviceLabel || job.recipe?.device || job.job_id || job.jobId;
+    const detailParts = [deviceLabel, job.recipe?.build?.modVersion, job.recipe?.build?.modReleaseVersion].filter(Boolean);
+    if (detailParts.length) {
+      const deviceLine = document.createElement("small"); deviceLine.className = "user-job-device";
+      deviceLine.textContent = detailParts.join(" · ");
+      copy.append(deviceLine);
+    }
     const detail = document.createElement("small"); detail.textContent = `${statusLabel(job.status)} · ${jobProgress(job)}% · ${job.stage || "—"}\n${formatDate(job.created_at || job.createdAt)} · ${job.job_id || job.jobId}`;
     copy.append(name, detail);
     const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
     open.dataset.openUserJob = job.job_id || job.jobId; open.textContent = t("openUserJob");
     open.addEventListener("click", () => openAdminJobPage({ ...job, createdBy: job.createdBy || user }));
+    const editionBadge = jobEditionBadge(job);
     const modBadge = jobModBadge(job);
-    article.append(copy, ...(modBadge ? [modBadge] : []), open);
+    article.append(copy, ...(editionBadge ? [editionBadge] : []), ...(modBadge ? [modBadge] : []), open);
     return article;
   };
   jobHistory.replaceChildren(...jobs.map(historyEntry));
@@ -3616,14 +3625,36 @@ function jobMetadata(job) {
   };
 }
 
-function jobModBadge(job) {
-  const build = job?.recipe?.build || {};
-  const label = [build.modVersion, build.modReleaseVersion].filter(Boolean).join(" · ");
+function jobDeviceLabel(job) {
+  const product = String(job?.recipe?.device || "").trim();
+  if (!product) return "";
+  const name = catalogDeviceName(product);
+  return name && name !== product ? `${name} (${product})` : name || product;
+}
+
+function jobEditionBadge(job) {
+  const preset = String(job?.recipe?.build?.preset || "").trim().toLowerCase();
+  if (!preset) return null;
+  const labels = { lite: "Lite", plus: "Plus", both: "Lite + Plus", custom: t("custom") };
+  const label = labels[preset];
   if (!label) return null;
   const badge = document.createElement("span");
-  badge.className = "job-mod-badge";
+  badge.className = "job-edition-badge";
   badge.textContent = label;
   return badge;
+}
+
+function jobHistoryDayLabel(job) {
+  const value = job?.created_at || job?.createdAt;
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const startOfDay = (input) => { const day = new Date(input); day.setHours(0, 0, 0, 0); return day.getTime(); };
+  const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+  if (days === 0) return t("jobHistoryToday");
+  if (days === 1) return t("jobHistoryYesterday");
+  const options = { day: "numeric", month: "short" };
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+  return new Intl.DateTimeFormat(state.language === "vi" ? "vi-VN" : "en-US", options).format(date);
 }
 
 function catalogDeviceName(product) {
@@ -3637,6 +3668,18 @@ function catalogDeviceName(product) {
 function jobProgress(job) {
   const value = Math.max(0, Math.min(1, Number(job?.progress || 0)));
   return Math.round(value * 100);
+}
+
+function jobModBadge(job) {
+  const build = job?.recipe?.build || {};
+  const parts = [build.modVersion, build.modReleaseVersion, build.mods?.length ? `${build.mods.length} MOD` : ""]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+  if (!parts.length) return null;
+  const badge = document.createElement("span");
+  badge.className = "job-mod-badge";
+  badge.textContent = parts.join(" · ");
+  return badge;
 }
 
 function formatDate(value) {
@@ -4085,8 +4128,22 @@ function renderJobHistory() {
   $("#job-history-count").textContent = String(jobs.length);
   $("#job-empty").hidden = jobs.length > 0;
   history.hidden = jobs.length === 0;
-  const cards = visibleJobs.map((job) => {
+  const shownJobs = visibleJobs.slice(0, state.jobHistoryLimit);
+  const fragments = [];
+  let lastDay = "";
+  for (const job of shownJobs) {
     const metadata = jobMetadata(job);
+    const deviceLabel = jobDeviceLabel(job);
+    const dayLabel = jobHistoryDayLabel(job);
+    if (dayLabel && dayLabel !== lastDay) {
+      const divider = document.createElement("div");
+      divider.className = "job-history-divider";
+      divider.setAttribute("role", "separator");
+      divider.innerHTML = `<span></span><small></small><span></span>`;
+      divider.querySelector("small").textContent = dayLabel;
+      fragments.push(divider);
+      lastDay = dayLabel;
+    }
     const card = document.createElement("button"); card.type = "button"; card.className = "job-history-card";
     if ((job.job_id || job.jobId) === state.activeJobId) card.classList.add("selected");
     const header = document.createElement("div");
@@ -4094,11 +4151,16 @@ function renderJobHistory() {
     const status = document.createElement("span"); status.className = `job-status ${job.status}`; status.textContent = statusLabel(job.status);
     header.append(title, status);
     const build = job.recipe?.build || {};
-    const details = document.createElement("p"); details.textContent = `${job.recipe?.device || "—"} · ${build.modVersion || "—"} · ${build.modReleaseVersion || "—"} · ${jobProgress(job)}%`;
+    const details = document.createElement("p");
+    const detailParts = [deviceLabel || job.recipe?.device || "—", build.modVersion || "—", build.modReleaseVersion || "—", `${jobProgress(job)}%`];
+    details.textContent = detailParts.join(" · ");
     const footer = document.createElement("small"); footer.textContent = `${String(job.job_id || job.jobId).slice(0, 12)} · ${formatDate(job.created_at || job.createdAt)}`;
     card.append(header, details, footer);
+    const badges = document.createElement("div"); badges.className = "job-card-badges";
+    const editionBadge = jobEditionBadge(job);
     const modBadge = jobModBadge(job);
-    if (modBadge) card.append(modBadge);
+    if (editionBadge || modBadge) badges.append(...(editionBadge ? [editionBadge] : []), ...(modBadge ? [modBadge] : []));
+    if (badges.children.length) card.append(badges);
     if (state.me?.role === "admin" && job.createdBy) {
       const creator = document.createElement("p"); creator.className = "job-history-creator";
       creator.textContent = `${job.createdBy.displayName || job.createdBy.username || job.createdBy.telegramId} · ID ${job.createdBy.telegramId}`;
@@ -4107,14 +4169,18 @@ function renderJobHistory() {
     card.addEventListener("click", () => {
       openJob(job);
     });
-    return card;
-  });
-  if (!cards.length && jobs.length) {
+    fragments.push(card);
+  }
+  if (!fragments.length && jobs.length) {
     const empty = document.createElement("p");
     empty.className = "job-filter-empty";
     empty.textContent = t("noJobsInTab");
     history.replaceChildren(empty);
-  } else history.replaceChildren(...cards);
+  } else history.replaceChildren(...fragments);
+  const more = $("#job-history-more");
+  if (more) {
+    more.hidden = visibleJobs.length <= state.jobHistoryLimit;
+  }
 }
 
 function setJobsConnection(key, error = false) {
@@ -4522,8 +4588,13 @@ function bindEvents() {
   $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
   $$("[data-job-filter]").forEach((button) => button.addEventListener("click", () => {
     state.jobHistoryFilter = button.dataset.jobFilter;
+    state.jobHistoryLimit = 12;
     renderJobHistory();
   }));
+  $("#job-history-more")?.addEventListener("click", () => {
+    state.jobHistoryLimit += 24;
+    renderJobHistory();
+  });
   let userSearchTimer;
   $("#user-search").addEventListener("input", () => { clearTimeout(userSearchTimer); userSearchTimer = setTimeout(() => loadAdminUsers({ reset: true }).catch(() => {}), 250); });
   $("#user-status").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));
