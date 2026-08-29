@@ -1699,33 +1699,18 @@ def run_super_repack(version_dir, rom_repack_dir, device_db, product_name=None):
     
     output_super = os.path.join(build_dir, "super.img")
 
-    # 3. Move static firmware partitions out of rom-repack so they are never
-    #    packed into super.img. They belong in firmware-update/ of the final ZIP.
-    firmware_update_dir = os.path.join(version_dir, "firmware-update")
-    os.makedirs(firmware_update_dir, exist_ok=True)
-    moved_firmware = []
+    # 3. Filter out static firmware partitions — they must never enter super.img.
+    #    These partitions (e.g. dsp, vm-bootsys) are handled by firmware-update/
+    #    and flash_tool, not by the dynamic super partition.
+    partition_files = []
     for f in os.listdir(rom_repack_dir):
-        if not f.endswith('.img'):
+        if not f.endswith(".img"):
             continue
         stem = f[:-4]
         if stem in STATIC_FIRMWARE_PARTITIONS:
-            src = os.path.join(rom_repack_dir, f)
-            dst = os.path.join(firmware_update_dir, f)
-            if os.path.exists(src):
-                moved_firmware.append(f)
-                if os.path.exists(dst):
-                    os.remove(dst)
-                shutil.move(src, dst)
-                print("  [>] Moved static firmware out of super: " + f + " -> firmware-update/")
-    if moved_firmware:
-        print("[*] Static firmware moved to firmware-update: " + ", ".join(moved_firmware))
-
-    # 4. Collect remaining .img files in rom_repack_dir for super packing
-    partition_files = [
-        os.path.join(rom_repack_dir, f) 
-        for f in os.listdir(rom_repack_dir) 
-        if f.endswith('.img')
-    ]
+            print("  [x] Excluded from super: " + f)
+            continue
+        partition_files.append(os.path.join(rom_repack_dir, f))
 
     if not partition_files:
         print("[!] Error: No .img files found in rom-repack.")
@@ -1733,7 +1718,7 @@ def run_super_repack(version_dir, rom_repack_dir, device_db, product_name=None):
 
     super_tool_script = os.path.join(SCRIPT_DIR, "super_tool.py")
     
-    # 4. Chạy super_tool.py
+    # 4. Chay super_tool.py
     cmd = [
         sys.executable, super_tool_script,
         output_super,
@@ -1912,14 +1897,6 @@ def run_final_repack(version_dir, version_name, source_rom_dir, device_db, build
         if f not in exclude_firmware and os.path.isfile(os.path.join(source_rom_dir, f)):
             shutil.move(os.path.join(source_rom_dir, f), os.path.join(firmware_update_dir, f))
 
-    # Static firmware (e.g. dsp, vm-bootsys) must never live in super.img; if the
-    # repack step already moved them into firmware-update, keep them there.
-    for f in os.listdir(firmware_update_dir):
-        if not f.endswith(".img"):
-            continue
-        stem = f[:-4]
-        if stem in STATIC_FIRMWARE_PARTITIONS:
-            print(f"  [OK] Static firmware preserved in firmware-update: {f}")
 
     # 5. Move images
     print("[*] Moving core images to /images (Saving space)...")
