@@ -451,7 +451,7 @@ h2 { letter-spacing: -.015em; }
 .job-config h4 { margin:20px 0 8px; font-size:14px; }
 .job-config pre { max-height:440px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; background:var(--surface-soft); color:var(--ink); font:12px/1.6 "JetBrains Mono",monospace; border-radius:var(--radius-sm); }
 .admin-user-page .user-job-entry { display:flex; align-items:center; gap:14px; padding:14px; }
-.user-job-entry > div { flex:1; min-width:0; overflow-wrap:anywhere; }
+.user-job-entry > div { flex:1 1 0; min-width:120px; overflow-wrap:break-word; word-break:normal; }
 .admin-user-page .user-job-entry strong { font-size:14px; }
 .admin-user-page .user-job-entry small { font-size:12px; line-height:1.6; white-space:pre-line; }
 .admin-user-page .user-job-entry small.user-job-device { margin-bottom:6px; font:600 10px/1.4 "JetBrains Mono",monospace; }
