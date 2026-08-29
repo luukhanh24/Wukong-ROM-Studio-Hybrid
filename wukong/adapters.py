@@ -336,9 +336,19 @@ class HttpSourceAdapter:
                 self._checkpoint_path(temporary).unlink(missing_ok=True)
                 status = getattr(response, "status", response.getcode())
                 append = offset > 0 and status == 206
+                before = temporary.stat().st_size if append and temporary.is_file() else 0
                 with temporary.open("ab" if append else "wb") as handle:
                     handle.write(prefix)
                     shutil.copyfileobj(response, handle, CHUNK_SIZE)
+                written = temporary.stat().st_size - before
+                self._validate_sequential_response(
+                    response,
+                    status=status,
+                    requested_offset=offset,
+                    appended=append,
+                    written=written,
+                    materialized_size=temporary.stat().st_size,
+                )
 
         if parallel_source is not None:
             try:
@@ -548,6 +558,55 @@ class HttpSourceAdapter:
                 raise SourceError(f"Sequential ROM fallback returned HTTP {status}")
             with temporary.open("wb") as handle:
                 shutil.copyfileobj(response, handle, CHUNK_SIZE)
+            size = temporary.stat().st_size
+            self._validate_sequential_response(
+                response,
+                status=status,
+                requested_offset=0,
+                appended=False,
+                written=size,
+                materialized_size=size,
+            )
+
+    def _validate_sequential_response(
+        self,
+        response: Any,
+        *,
+        status: int,
+        requested_offset: int,
+        appended: bool,
+        written: int,
+        materialized_size: int,
+    ) -> None:
+        raw_length = response.headers.get("Content-Length")
+        if raw_length not in {None, ""}:
+            try:
+                declared_length = int(raw_length)
+            except (TypeError, ValueError) as exc:
+                raise RangeProtocolError(
+                    f"Invalid ROM Content-Length header: {raw_length!r}"
+                ) from exc
+            if declared_length < 0 or written != declared_length:
+                raise SourceError(
+                    f"ROM response ended early: expected {declared_length} bytes, got {written}"
+                )
+        raw_content_range = response.headers.get("Content-Range")
+        if raw_content_range in {None, ""}:
+            if status == 206:
+                raise RangeProtocolError("ROM partial response omitted Content-Range")
+            return
+        start, end, total = self._parse_content_range(
+            str(raw_content_range)
+        )
+        expected_start = requested_offset if appended else 0
+        if start != expected_start or written != end - start + 1:
+            raise RangeProtocolError("ROM partial response does not match the requested bytes")
+        if materialized_size != total:
+            raise SourceError(
+                f"ROM partial response is incomplete: expected {total} bytes, got {materialized_size}"
+            )
+        if status != 206:
+            raise RangeProtocolError("ROM server returned Content-Range without HTTP 206")
 
     @staticmethod
     def _parse_content_range(value: str) -> tuple[int, int, int]:

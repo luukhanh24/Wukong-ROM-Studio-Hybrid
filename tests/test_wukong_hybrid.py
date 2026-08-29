@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import URLError
 from urllib.request import HTTPCookieProcessor, Request
 
 from wukong.adapters import (
@@ -306,6 +307,10 @@ class SourceAndStorageContractTests(unittest.TestCase):
                 headers={"Content-Length": str(len(self.payload))},
             )
 
+    class _UnavailableRangeOpener:
+        def open(self, request: Request, *, timeout: int) -> io.BytesIO:
+            raise URLError("temporary range probe failure")
+
     class _ProbeThenIgnoreRangeOpener:
         def __init__(self, payload: bytes, *, url: str, requests: list[Request]) -> None:
             self.payload = payload
@@ -456,6 +461,62 @@ class SourceAndStorageContractTests(unittest.TestCase):
 
             self.assertEqual(result.path.read_bytes(), payload)
             self.assertEqual([request.get_header("Range") for request in requests], ["bytes=0-0"])
+
+    def _assert_truncated_response_is_retried(
+        self,
+        *,
+        first_status: int = 200,
+        first_headers: dict[str, str],
+    ) -> None:
+        resolver_url = "https://93.184.216.34/downloadCheck"
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04" + bytes(range(64))
+        initial = self._SequenceOpener([
+            self._HttpResponse(
+                payload[:17],
+                url=download_url,
+                content_type="application/zip",
+                status=first_status,
+                headers=first_headers,
+            ),
+            self._HttpResponse(
+                payload,
+                url=download_url,
+                content_type="application/zip",
+                headers={"Content-Length": str(len(payload))},
+            ),
+        ])
+
+        with tempfile.TemporaryDirectory() as root:
+            target = Path(root, "rom.zip")
+            result = HttpSourceAdapter(
+                attempts=2,
+                opener=initial,
+                opener_factory=self._UnavailableRangeOpener,
+                parallel_threshold_bytes=1,
+            ).materialize(resolver_url, target)
+
+            self.assertEqual(result.path.read_bytes(), payload)
+            self.assertEqual(len(initial.requests), 2)
+
+    def test_http_source_retries_when_a_full_response_ends_before_content_length(self) -> None:
+        payload_size = len(b"PK\x03\x04" + bytes(range(64)))
+        self._assert_truncated_response_is_retried(first_headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(payload_size),
+            "ETag": '"truncated-etag"',
+        })
+
+    def test_http_source_retries_when_http_200_content_range_declares_truncation(self) -> None:
+        self._assert_truncated_response_is_retried(
+            first_headers={"Content-Range": "bytes 0-16/68"}
+        )
+
+    def test_http_source_retries_when_http_206_omits_content_range(self) -> None:
+        self._assert_truncated_response_is_retried(
+            first_status=206,
+            first_headers={"Content-Length": "17"},
+        )
 
     def test_http_source_falls_back_when_worker_stops_honoring_ranges(self) -> None:
         resolver_url = "https://93.184.216.34/downloadCheck"
