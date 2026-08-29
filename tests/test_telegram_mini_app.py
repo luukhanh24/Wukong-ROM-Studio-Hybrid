@@ -110,6 +110,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     admin_job_scenario = False
     click_admin_action = False
     exercise_batch_controls = False
+    exercise_custom_release = False
     exercise_dock_header = False
     cache_clear_requests = 0
     admin_user = False
@@ -520,6 +521,23 @@ window.addEventListener('load', () => {{
       document.body.dataset.batchReleaseInputAbsent = String(!document.querySelector('#batch-release-version'));
     }};
     setTimeout(exerciseBatchControls, 700);
+  }}
+  if ({str(self.exercise_custom_release).lower()}) {{
+    const exerciseCustomRelease = () => {{
+      const preset = document.querySelector('#preset');
+      const input = document.querySelector('#mod-release-version-input');
+      const save = document.querySelector('#save-mod-release-version');
+      const title = document.querySelector('#release-version-title');
+      if (!preset || !input || !save || !title) {{ setTimeout(exerciseCustomRelease, 50); return; }}
+      preset.value = 'custom';
+      preset.dispatchEvent(new Event('change', {{ bubbles: true }}));
+      document.body.dataset.customReleaseEditable = String(!input.disabled && !input.readOnly);
+      document.body.dataset.customReleaseTitle = title.textContent;
+      input.value = 'KhanhDZ Custom';
+      save.click();
+      document.body.dataset.customReleaseValue = input.value;
+    }};
+    setTimeout(exerciseCustomRelease, 700);
   }}
   if ({str(self.exercise_dock_header).lower()}) {{
     const exerciseDockHeader = () => {{
@@ -938,6 +956,7 @@ def _render_mini_app_in_chrome(
     admin_job_scenario: bool = False,
     click_admin_action: bool = False,
     exercise_batch_controls: bool = False,
+    exercise_custom_release: bool = False,
     exercise_dock_header: bool = False,
     admin_user: bool = False,
     pending_user: bool = False,
@@ -980,6 +999,7 @@ def _render_mini_app_in_chrome(
             "admin_job_scenario": admin_job_scenario,
             "click_admin_action": click_admin_action,
             "exercise_batch_controls": exercise_batch_controls,
+            "exercise_custom_release": exercise_custom_release,
             "exercise_dock_header": exercise_dock_header,
             "cache_clear_requests": 0,
             "admin_user": admin_user,
@@ -1971,6 +1991,17 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
 
         self.assertIn('data-preset-after-mod="custom"', dom)
+
+    def test_custom_preset_allows_editing_its_release_label(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            exercise_custom_release=True,
+        )
+
+        self.assertIn('data-custom-release-editable="true"', dom)
+        self.assertIn('data-custom-release-title="Tên phiên bản Custom"', dom)
+        self.assertIn('data-custom-release-value="KhanhDZ Custom"', dom)
+        self.assertGreater(screenshot_size, 10_000)
 
     def test_selected_archived_job_log_is_not_replaced_by_running_job_poll(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(

@@ -187,7 +187,7 @@ Object.assign(translations.vi, {
 
 Object.assign(translations.vi, {
   buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
-  releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự và không được có / hoặc \\.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
+  releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", customReleaseVersion: "Tên phiên bản Custom", customReleaseVersionHint: "Đặt tên riêng cho bản Custom; chỉ áp dụng cho job hiện tại.", customReleaseVersionPlaceholder: "Ví dụ: KhanhDZ Custom", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự và không được có / hoặc \\.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
   probeDeferred: "Máy chủ đang bận phân tích ROM. Hãy thử lại sau ít phút.",
   probeDeferredKicker: "ĐANG CHỜ MÁY CHỦ"
 });
@@ -335,7 +335,7 @@ Object.assign(translations.en, {
 
 Object.assign(translations.en, {
   buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
-  releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
+  releaseVersion: "Release version", releaseVersionHint: "This label follows the MOD pack into every job.", customReleaseVersion: "Custom version name", customReleaseVersionHint: "Set a name for this Custom build; it applies only to the current job.", customReleaseVersionPlaceholder: "Example: KhanhDZ Custom", saveReleaseVersion: "Save label", invalidReleaseVersion: "The label must be 1–64 characters and cannot contain / or \\.", releaseVersionSaved: "Release label saved.", jobContext: "Job context", uploadingNow: "Uploading now", uploadSummary: "Latest upload", noModsSelected: "No optional MODs",
   probeDeferred: "The server is busy analyzing ROMs. Try again in a moment.",
   probeDeferredKicker: "WAITING FOR SERVER"
 });
@@ -3439,11 +3439,27 @@ function selectedReleaseVersion() {
 }
 
 function renderReleaseVersion() {
+  const custom = $("#preset")?.value === "custom";
   const label = selectedReleaseVersion();
   const display = $("#mod-release-version");
+  const title = $("#release-version-title");
+  const hint = $("#release-version-hint");
   const input = $("#mod-release-version-input");
   if (display) display.textContent = label;
-  if (input) input.value = label === "—" ? "" : label;
+  if (title) {
+    title.dataset.i18n = custom ? "customReleaseVersion" : "releaseVersion";
+    title.textContent = t(title.dataset.i18n);
+  }
+  if (hint) {
+    hint.dataset.i18n = custom ? "customReleaseVersionHint" : "releaseVersionHint";
+    hint.textContent = t(hint.dataset.i18n);
+  }
+  if (input) {
+    input.value = label === "—" ? "" : label;
+    input.placeholder = custom ? t("customReleaseVersionPlaceholder") : "";
+    input.setAttribute("aria-label", t(custom ? "customReleaseVersion" : "releaseVersion"));
+  }
+  $(".release-version-editor")?.classList.toggle("custom-release-active", custom);
 }
 
 async function saveReleaseVersion() {

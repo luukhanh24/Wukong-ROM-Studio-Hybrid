@@ -297,6 +297,8 @@ h2 { letter-spacing: -.015em; }
 .release-version-controls { display:flex; gap:7px; min-width:min(100%,300px); }
 .release-version-editor input { min-width:0; flex:1; min-height:38px; padding:7px 9px; border:1px solid var(--line-strong); border-radius:var(--radius-sm); background:var(--surface-raised); }
 .release-version-editor button { min-height:38px; padding:7px 10px; border:1px solid var(--accent); border-radius:var(--radius-sm); color:#fff; background:var(--accent); font-size:11px; font-weight:700; }
+.release-version-editor.custom-release-active { border-color:color-mix(in srgb,var(--accent) 42%,var(--line)); background:color-mix(in srgb,var(--accent-soft) 62%,var(--surface-soft)); }
+.release-version-editor.custom-release-active strong { color:var(--accent-strong); }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
 
 .advanced { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
