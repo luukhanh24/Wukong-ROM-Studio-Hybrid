@@ -200,7 +200,7 @@ Object.assign(translations.vi, {
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.",
   probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.", probeSignedPreviewOnly: "Link còn hiệu lực để phân tích nhưng không đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.",
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", checklistSourceRefreshRequired: "Cần link gốc để build cloud", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
-  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây", jobHistoryToday: "Hôm nay", jobHistoryYesterday: "Hôm qua", loadMoreHistoryJobs: "Tải thêm job",
+  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây", jobHistoryToday: "Hôm nay", jobHistoryYesterday: "Hôm qua", jobSearch: "Tìm lịch sử job", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "Từ ngày", jobDateTo: "Đến ngày", allJobs: "Tất cả", clearJobFilters: "Xóa bộ lọc", jobPageSummary: "{from}–{to} / {total} job", jobPrevious: "Trước", jobNext: "Sau", jobPage: "Trang {page}", jobFilterEmpty: "Không có job phù hợp với bộ lọc.", jobHistoryLoading: "Đang tải lịch sử…",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible}/{total} sự kiện gần nhất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
   retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API.",
@@ -348,7 +348,7 @@ Object.assign(translations.en, {
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.",
   probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated when the runner starts.", probeSignedPreviewOnly: "The link is still valid for analysis but does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so the runner can create a fresh link when downloading starts.",
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", checklistSourceRefreshRequired: "Original link required for cloud build", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
-  jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs", jobHistoryToday: "Today", jobHistoryYesterday: "Yesterday", loadMoreHistoryJobs: "Load more jobs",
+  jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs", jobHistoryToday: "Today", jobHistoryYesterday: "Yesterday", jobSearch: "Search job history", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "From date", jobDateTo: "To date", allJobs: "All", clearJobFilters: "Clear filters", jobPageSummary: "{from}–{to} / {total} jobs", jobPrevious: "Previous", jobNext: "Next", jobPage: "Page {page}", jobFilterEmpty: "No jobs match these filters.", jobHistoryLoading: "Loading history…",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "Latest {visible}/{total} events", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
   retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API.",
@@ -514,6 +514,15 @@ Object.assign(translations.en, {
   releaseVersionPlaceholder: "Example: V5.1"
 });
 
+Object.assign(translations.vi, {
+  jobSearchPlaceholder: "Job ID / thiết bị / phiên bản / user",
+  jobModPlaceholder: "ColorOS_16.0.10"
+});
+Object.assign(translations.en, {
+  jobSearchPlaceholder: "Job ID / device / version / user",
+  jobModPlaceholder: "ColorOS_16.0.10"
+});
+
 const state = {
   language: localStorage.getItem("wukong-language") || "vi",
   theme: localStorage.getItem("wukong-theme") || "system",
@@ -535,8 +544,14 @@ const state = {
   jobDetailRequestId: 0,
   expandedConfigJobId: "",
   jobEventsHasMore: false,
-  jobHistoryFilter: "",
-  jobHistoryLimit: 12,
+  jobHistoryFilter: "active",
+  jobHistoryPage: 1,
+  jobHistoryPageSize: 20,
+  jobHistoryTotal: 0,
+  jobHistoryTotalPages: 1,
+  jobHistoryStatusCounts: { active: 0, succeeded: 0, failed: 0 },
+  jobHistoryRequestId: 0,
+  jobHistoryLoading: false,
   sourceProbeTimer: null,
   sourceProbeUri: "",
   sourceInputUri: "",
@@ -605,6 +620,7 @@ function renderSelectedJob() {
 
 function applyLanguage() {
   document.documentElement.lang = state.language;
+  $$('[data-i18n-placeholder]').forEach((node) => { node.placeholder = t(node.dataset.i18nPlaceholder); });
   $$('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
   $$("[data-i18n-aria]").forEach((node) => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
   $("#language").textContent = state.language === "vi" ? "VI / EN" : "EN / VI";
@@ -3343,7 +3359,8 @@ async function openAdminUser(telegramId) {
   state.adminUserPollTimer = null;
   if (!$("#system")?.classList.contains("admin-user-open")) state.adminUserReturnScrollY = window.scrollY;
   const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}`);
-  const user = payload.user; const events = Array.isArray(payload.events) ? payload.events : []; const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+  const user = payload.user; const events = Array.isArray(payload.events) ? payload.events : [];
+  const initialJobsPage = await apiRequest("/v1/admin/users/" + encodeURIComponent(telegramId) + "/jobs?page=1");
   state.selectedAdminUserId = user.telegramId;
   state.adminUserEventCursor = events[0]?.createdAt
     ? { createdAt: String(events[0].createdAt), eventId: String(events[0].eventId || "") }
@@ -3396,7 +3413,42 @@ async function openAdminUser(telegramId) {
     }
   });
   const jobsTitle = document.createElement("h3"); jobsTitle.textContent = t("jobHistory");
+  const jobTabs = document.createElement("div"); jobTabs.className = "job-history-tabs admin-job-history-tabs"; jobTabs.setAttribute("role", "tablist"); jobTabs.setAttribute("aria-label", t("jobHistory"));
+  const adminJobState = {
+    filter: Number(initialJobsPage?.statusCounts?.active || 0) > 0
+      ? "active"
+      : Number(initialJobsPage?.statusCounts?.succeeded || 0) > 0 ? "succeeded" : "failed",
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 1,
+    requestId: 0
+  };
+  const jobTabButtons = {};
+  for (const [key, labelKey] of [["active", "jobTabActive"], ["succeeded", "jobTabSucceeded"], ["failed", "jobTabFailed"]]) {
+    const button = document.createElement("button"); button.type = "button"; button.setAttribute("role", "tab");
+    const label = document.createElement("span"); label.textContent = t(labelKey);
+    const count = document.createElement("b"); count.textContent = "0"; button.append(label, count);
+    button.addEventListener("click", () => { adminJobState.filter = key; adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); });
+    jobTabs.append(button); jobTabButtons[key] = { button, count };
+  }
+  const jobFilters = document.createElement("form"); jobFilters.className = "job-history-filters admin-job-history-filters";
+  const adminJobSearch = document.createElement("input"); adminJobSearch.type = "search"; adminJobSearch.maxLength = 128; adminJobSearch.autocomplete = "off"; adminJobSearch.dataset.i18nPlaceholder = "jobSearchPlaceholder"; adminJobSearch.placeholder = t("jobSearchPlaceholder");
+  const adminJobPreset = document.createElement("select");
+  [["", "allJobs"], ["lite", "lite"], ["plus", "plus"], ["both", "both"], ["custom", "custom"]].forEach(([value, label]) => { const option = document.createElement("option"); option.value = value; option.textContent = label === "allJobs" ? t(label) : label === "both" ? "Lite + Plus" : label[0].toUpperCase() + label.slice(1); adminJobPreset.append(option); });
+  const adminJobMod = document.createElement("input"); adminJobMod.type = "search"; adminJobMod.maxLength = 128; adminJobMod.dataset.i18nPlaceholder = "jobModPlaceholder"; adminJobMod.placeholder = t("jobModPlaceholder");
+  const adminJobFrom = document.createElement("input"); adminJobFrom.type = "date";
+  const adminJobTo = document.createElement("input"); adminJobTo.type = "date";
+  const adminJobDatalist = document.createElement("datalist");
+  if (state.catalog?.modVersions) adminJobDatalist.append(...state.catalog.modVersions.map((value) => { const option = document.createElement("option"); option.value = value; return option; }));
+  adminJobDatalist.id = "admin-job-mod-options"; adminJobMod.setAttribute("list", adminJobDatalist.id);
+  const adminJobField = (labelKey, control, wide = false) => { const label = document.createElement("label"); label.className = wide ? "field job-history-search" : "field"; const text = document.createElement("span"); text.dataset.i18n = labelKey; text.textContent = t(labelKey); label.append(text, control); return label; };
+  jobFilters.append(adminJobField("jobSearch", adminJobSearch, true), adminJobField("jobPresetFilter", adminJobPreset), adminJobField("jobModFilter", adminJobMod), adminJobField("jobDateFrom", adminJobFrom), adminJobField("jobDateTo", adminJobTo));
+  const clearAdminJobFilters = document.createElement("button"); clearAdminJobFilters.type = "reset"; clearAdminJobFilters.className = "secondary compact"; clearAdminJobFilters.textContent = t("clearJobFilters"); jobFilters.append(clearAdminJobFilters, adminJobDatalist);
   const jobHistory = document.createElement("div"); jobHistory.className = "user-audit";
+  const jobPagination = document.createElement("div"); jobPagination.className = "job-history-pagination admin-job-history-pagination";
+  const jobPageSummary = document.createElement("span"); const jobPageButtons = document.createElement("nav"); jobPageButtons.className = "job-page-buttons"; jobPageButtons.setAttribute("aria-label", t("jobHistory"));
+  jobPagination.append(jobPageSummary, jobPageButtons);
   const historyEntry = (job) => {
     const article = document.createElement("article"); article.className = "user-job-entry";
     const copy = document.createElement("div");
@@ -3418,24 +3470,50 @@ async function openAdminUser(telegramId) {
     article.append(copy, ...(editionBadge ? [editionBadge] : []), ...(modBadge ? [modBadge] : []), open);
     return article;
   };
-  jobHistory.replaceChildren(...jobs.map(historyEntry));
-  let jobsCursor = String(payload.jobsNextCursor || "");
-  const moreJobs = document.createElement("button"); moreJobs.type = "button"; moreJobs.className = "secondary";
-  moreJobs.textContent = t("loadMoreUserJobs"); moreJobs.hidden = !payload.jobsHasMore;
-  moreJobs.addEventListener("click", async () => {
-    moreJobs.disabled = true;
-    try {
-      const page = await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/jobs?cursor=${encodeURIComponent(jobsCursor)}`);
-      jobHistory.append(...(page.jobs || []).map(historyEntry));
-      jobsCursor = String(page.nextCursor || ""); moreJobs.hidden = !page.hasMore;
-    } catch (error) { toast(error.message, true); }
-    finally { moreJobs.disabled = false; }
-  });
-  root.replaceChildren(header, activityTitle, currentActivity, grid, actions, jobsTitle, jobHistory, moreJobs, auditTitle, audit, loadMoreAudit);
+  const renderAdminJobs = (page) => {
+    adminJobState.page = Number(page.page || adminJobState.page);
+    adminJobState.pageSize = Number(page.pageSize || 20);
+    adminJobState.total = Number(page.total || 0);
+    adminJobState.totalPages = Number(page.totalPages || 1);
+    for (const key of ["active", "succeeded", "failed"]) {
+      jobTabButtons[key].count.textContent = String(page.statusCounts?.[key] || 0);
+      const selected = key === adminJobState.filter;
+      jobTabButtons[key].button.classList.toggle("active", selected);
+      jobTabButtons[key].button.setAttribute("aria-selected", String(selected));
+    }
+    jobHistory.replaceChildren(...(page.jobs || []).map(historyEntry));
+    if (!page.jobs?.length) { const empty = document.createElement("p"); empty.className = "job-filter-empty"; empty.textContent = t("jobFilterEmpty"); jobHistory.append(empty); }
+    const first = adminJobState.total ? (adminJobState.page - 1) * adminJobState.pageSize + 1 : 0;
+    const last = adminJobState.total ? Math.min(adminJobState.page * adminJobState.pageSize, adminJobState.total) : 0;
+    jobPageSummary.textContent = t("jobPageSummary", { from: first, to: last, total: adminJobState.total });
+    jobPagination.hidden = adminJobState.total === 0;
+    renderPageButtons(jobPageButtons, adminJobState.page, adminJobState.totalPages, (pageNumber) => { adminJobState.page = pageNumber; loadAdminJobs().catch((error) => toast(error.message, true)); });
+  };
+  const loadAdminJobs = async () => {
+    const requestId = ++adminJobState.requestId;
+    const params = new URLSearchParams({ page: String(adminJobState.page), status: adminJobState.filter });
+    appendJobHistoryFilters(params, {
+      search: adminJobSearch,
+      preset: adminJobPreset,
+      mod: adminJobMod,
+      from: adminJobFrom,
+      to: adminJobTo
+    });
+    jobPagination.hidden = false; jobPageSummary.textContent = t("jobHistoryLoading");
+    const page = await apiRequest("/v1/admin/users/" + encodeURIComponent(user.telegramId) + "/jobs?" + params.toString());
+    if (requestId !== adminJobState.requestId) return;
+    renderAdminJobs(page);
+  };
+  let adminJobSearchTimer;
+  adminJobSearch.addEventListener("input", () => { clearTimeout(adminJobSearchTimer); adminJobSearchTimer = setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }, 300); });
+  [adminJobPreset, adminJobMod, adminJobFrom, adminJobTo].forEach((control) => control.addEventListener("change", () => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }));
+  jobFilters.addEventListener("reset", () => setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }, 0));
+  root.replaceChildren(header, activityTitle, currentActivity, grid, actions, jobsTitle, jobTabs, jobFilters, jobHistory, jobPagination, auditTitle, audit, loadMoreAudit);
   $("#admin-user-page").hidden = false;
   $("#system").classList.add("admin-user-open");
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   requestAnimationFrame(() => $("#admin-user-back").focus());
+  loadAdminJobs().catch((error) => toast(error.message, true));
   scheduleAdminUserActivityPoll();
 }
 
@@ -4084,9 +4162,9 @@ function openJob(job) {
   state.activeEventsJobId = "";
   state.jobEventsHasMore = false;
   state.jobHistoryFilter = job.status === "succeeded" ? "succeeded" : terminalJobStatuses.has(job.status) ? "failed" : "active";
-  if (!state.jobs.some(item => (item.job_id || item.jobId) === state.activeJobId)) state.jobs.unshift(job);
+  state.jobHistoryPage = 1;
   renderActiveJob(job, []); renderJobHistory();
-  loadJobDetail(state.activeJobId).catch((error) => toast(error.message, true));
+  loadJobs({ force: true }).catch((error) => toast(error.message, true));
 }
 
 function renderJobParameters(job, root, reader) {
@@ -4239,16 +4317,136 @@ function renderActiveJob(job, events, inspection = null) {
   }
 }
 
+function historyDateBoundary(value, end = false) {
+  if (!value) return "";
+  const date = new Date(`${value}T00:00:00`);
+  if (end) date.setDate(date.getDate() + 1);
+  return date.toISOString();
+}
+
+function appendJobHistoryFilters(params, { search, preset, mod, from, to } = {}) {
+  const valueOf = (control) => typeof control === "string" ? control : control?.value || "";
+  const searchValue = valueOf(search).trim();
+  const presetValue = valueOf(preset);
+  const modValue = valueOf(mod).trim();
+  const fromValue = historyDateBoundary(valueOf(from));
+  const toValue = historyDateBoundary(valueOf(to), true);
+  if (searchValue) params.set("q", searchValue);
+  if (presetValue) params.set("preset", presetValue);
+  if (modValue) params.set("modVersion", modValue);
+  if (fromValue) params.set("createdFrom", fromValue);
+  if (toValue) params.set("createdTo", toValue);
+}
+
+function jobHistoryParams({ includePage = true, jobId = "", after = "" } = {}) {
+  const params = new URLSearchParams();
+  if (includePage) params.set("page", String(state.jobHistoryPage));
+  if (state.jobHistoryFilter) params.set("status", state.jobHistoryFilter);
+  appendJobHistoryFilters(params, {
+    search: $("#job-history-search"),
+    preset: $("#job-history-preset"),
+    mod: $("#job-history-mod"),
+    from: $("#job-history-from"),
+    to: $("#job-history-to")
+  });
+  if (jobId) params.set("jobId", jobId);
+  if (after) params.set("after", after);
+  return params;
+}
+
+function historyHasFilters() {
+  return Boolean(
+    $("#job-history-search")?.value.trim()
+    || $("#job-history-preset")?.value
+    || $("#job-history-mod")?.value.trim()
+    || $("#job-history-from")?.value
+    || $("#job-history-to")?.value
+  );
+}
+
+function renderPageButtons(root, page, totalPages, onPage) {
+  root.replaceChildren();
+  if (totalPages <= 1) return;
+  const addButton = (label, target, disabled = false, current = false) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = current ? "active" : "";
+    button.textContent = label;
+    button.disabled = disabled;
+    if (current) button.setAttribute("aria-current", "page");
+    if (!current && !disabled) button.addEventListener("click", () => onPage(target));
+    if (current) button.setAttribute("aria-label", t("jobPage", { page: target }));
+    root.append(button);
+  };
+  addButton(t("jobPrevious"), page - 1, page <= 1);
+  const numbers = [];
+  if (totalPages <= 10) {
+    for (let value = 1; value <= totalPages; value += 1) numbers.push(value);
+  } else {
+    const start = Math.max(2, Math.min(page - 3, totalPages - 7));
+    numbers.push(1);
+    if (start > 2) numbers.push("…");
+    for (let value = start; value < start + 6; value += 1) numbers.push(value);
+    if (start + 6 < totalPages) numbers.push("…");
+    numbers.push(totalPages);
+  }
+  numbers.forEach((value) => {
+    if (value === "…") {
+      const ellipsis = document.createElement("span");
+      ellipsis.className = "job-page-ellipsis";
+      ellipsis.textContent = value;
+      root.append(ellipsis);
+    } else addButton(String(value), value, false, value === page);
+  });
+  addButton(t("jobNext"), page + 1, page >= totalPages);
+}
+
+function renderJobHistoryPagination() {
+  const pagination = $("#job-history-pagination");
+  if (!pagination) return;
+  const total = state.jobHistoryTotal;
+  const totalPages = state.jobHistoryTotalPages;
+  pagination.hidden = total === 0 && !historyHasFilters();
+  const first = total ? (state.jobHistoryPage - 1) * state.jobHistoryPageSize + 1 : 0;
+  const last = total ? Math.min(state.jobHistoryPage * state.jobHistoryPageSize, total) : 0;
+  $("#job-history-page-summary").textContent = t("jobPageSummary", { from: first, to: last, total });
+  renderPageButtons($("#job-page-buttons"), state.jobHistoryPage, totalPages, (page) => {
+    state.jobHistoryPage = page;
+    loadJobs({ force: true }).catch((error) => toast(error.message, true));
+  });
+}
+
+function applyJobHistoryPayload(payload) {
+  const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+  if (payload.page) {
+    state.jobHistoryPage = Number(payload.page);
+    state.jobHistoryPageSize = Number(payload.pageSize || state.jobHistoryPageSize);
+    state.jobHistoryTotal = Number(payload.total || 0);
+    state.jobHistoryTotalPages = Number(payload.totalPages || 1);
+    state.jobHistoryStatusCounts = payload.statusCounts || state.jobHistoryStatusCounts;
+    return;
+  }
+  state.jobHistoryPage = 1;
+  state.jobHistoryPageSize = 20;
+  state.jobHistoryTotal = jobs.length;
+  state.jobHistoryTotalPages = 1;
+  state.jobHistoryStatusCounts = {
+    active: jobs.filter((job) => !terminalJobStatuses.has(job.status)).length,
+    succeeded: jobs.filter((job) => job.status === "succeeded").length,
+    failed: jobs.filter((job) => ["failed", "cancelled"].includes(job.status)).length
+  };
+}
+
 function renderJobHistory() {
   const history = $("#job-history");
   const jobs = state.jobs;
-  const grouped = {
-    active: jobs.filter((job) => !terminalJobStatuses.has(job.status)),
-    succeeded: jobs.filter((job) => job.status === "succeeded"),
-    failed: jobs.filter((job) => ["failed", "cancelled"].includes(job.status))
-  };
-  if (!["active", "succeeded", "failed"].includes(state.jobHistoryFilter)) {
-    state.jobHistoryFilter = ["active", "succeeded", "failed"].find((key) => grouped[key].length) || "active";
+  const modOptions = $("#job-mod-options");
+  if (modOptions && state.catalog?.modVersions) {
+    modOptions.replaceChildren(...state.catalog.modVersions.map((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      return option;
+    }));
   }
   $$("[data-job-filter]").forEach((button) => {
     const selected = button.dataset.jobFilter === state.jobHistoryFilter;
@@ -4257,13 +4455,25 @@ function renderJobHistory() {
   });
   for (const key of ["active", "succeeded", "failed"]) {
     const count = $(`#job-count-${key}`);
-    if (count) count.textContent = String(grouped[key].length);
+    if (count) count.textContent = String(state.jobHistoryStatusCounts[key] || 0);
   }
-  const visibleJobs = grouped[state.jobHistoryFilter] || [];
-  $("#job-history-count").textContent = String(jobs.length);
-  $("#job-empty").hidden = jobs.length > 0;
-  history.hidden = jobs.length === 0;
-  const shownJobs = visibleJobs.slice(0, state.jobHistoryLimit);
+  if (state.jobHistoryLoading) {
+    history.hidden = false;
+    $("#job-empty").hidden = true;
+    const loading = document.createElement("p");
+    loading.className = "job-filter-empty";
+    loading.setAttribute("role", "status");
+    loading.textContent = t("jobHistoryLoading");
+    history.replaceChildren(loading);
+    $("#job-history-pagination").hidden = true;
+    return;
+  }
+  $("#job-history-count").textContent = String(state.jobHistoryTotal);
+  const statusTotal = Object.values(state.jobHistoryStatusCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+  const noJobs = state.jobHistoryTotal === 0 && !historyHasFilters() && statusTotal === 0;
+  $("#job-empty").hidden = !noJobs;
+  history.hidden = noJobs;
+  const shownJobs = jobs;
   const fragments = [];
   let lastDay = "";
   for (const job of shownJobs) {
@@ -4306,16 +4516,13 @@ function renderJobHistory() {
     });
     fragments.push(card);
   }
-  if (!fragments.length && jobs.length) {
+  if (!fragments.length && !noJobs) {
     const empty = document.createElement("p");
     empty.className = "job-filter-empty";
-    empty.textContent = t("noJobsInTab");
+    empty.textContent = t("jobFilterEmpty");
     history.replaceChildren(empty);
   } else history.replaceChildren(...fragments);
-  const more = $("#job-history-more");
-  if (more) {
-    more.hidden = visibleJobs.length <= state.jobHistoryLimit;
-  }
+  renderJobHistoryPagination();
 }
 
 function setJobsConnection(key, error = false) {
@@ -4331,11 +4538,11 @@ async function loadJobDetail(jobId) {
   const after = sameJob
     ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
     : 0;
-  const payload = await apiRequest(
-    `/v1/sync?jobId=${encodeURIComponent(jobId)}&after=${after}`
-  );
+  const params = jobHistoryParams({ jobId, after });
+  const payload = await apiRequest(`/v1/sync?${params.toString()}`);
   if (requestId !== state.jobDetailRequestId || state.activeJobId !== jobId) return;
   state.jobs = Array.isArray(payload.jobs) ? payload.jobs : state.jobs;
+  applyJobHistoryPayload(payload);
   const job = payload.activeJob
     || state.jobs.find((item) => (item.job_id || item.jobId) === jobId)
     || null;
@@ -4353,7 +4560,6 @@ async function loadJobDetail(jobId) {
   state.activeEventsJobId = jobId;
   const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
   if (index >= 0 && job) state.jobs[index] = job;
-  else if (job) state.jobs.unshift(job);
   renderActiveJob(job, state.activeEvents); renderJobHistory();
 }
 
@@ -4377,6 +4583,10 @@ async function loadJobs({ force = false } = {}) {
   if (state.jobsLoading && !force) return;
   if (!privateApiAvailable()) { setJobsConnection(state.me ? "quotaRequiredHint" : miniApiUnavailableMessageKey(), true); return; }
   state.jobsLoading = true;
+  state.jobHistoryLoading = true;
+  $("#job-history")?.setAttribute("aria-busy", "true");
+  renderJobHistory();
+  const historyRequestId = ++state.jobHistoryRequestId;
   try {
     const requestedId = state.activeJobId;
     const selectionVersion = ++state.jobDetailRequestId;
@@ -4384,21 +4594,29 @@ async function loadJobs({ force = false } = {}) {
     const after = sameJob
       ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
       : 0;
-    const query = requestedId
-      ? `?jobId=${encodeURIComponent(requestedId)}&after=${after}`
-      : "";
-    const payload = await apiRequest(`/v1/sync${query}`);
-    if (selectionVersion !== state.jobDetailRequestId || requestedId !== state.activeJobId) { scheduleJobsPoll(true); return; }
+    const params = jobHistoryParams({ jobId: requestedId, after });
+    const payload = await apiRequest(`/v1/sync?${params.toString()}`);
+    if (historyRequestId !== state.jobHistoryRequestId || selectionVersion !== state.jobDetailRequestId || requestedId !== state.activeJobId) return;
     state.maintenance = payload.maintenance || state.maintenance;
     renderAccount();
     state.jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
-    if (requestedId && payload.activeJob && (payload.activeJob.job_id || payload.activeJob.jobId) === requestedId) {
-      const index = state.jobs.findIndex(job => (job.job_id || job.jobId) === requestedId);
-      if (index >= 0) state.jobs[index] = payload.activeJob;
-      else state.jobs.unshift(payload.activeJob);
+    applyJobHistoryPayload(payload);
+    state.jobHistoryLoading = false;
+    if (!requestedId && state.jobHistoryFilter === "active" && state.jobHistoryTotal === 0) {
+      const fallbackFilter = state.jobHistoryStatusCounts.succeeded > 0 ? "succeeded" : state.jobHistoryStatusCounts.failed > 0 ? "failed" : "";
+      if (fallbackFilter) {
+        state.jobHistoryFilter = fallbackFilter;
+        state.jobHistoryPage = 1;
+        return loadJobs({ force: true });
+      }
     }
-    const running = state.jobs.find((job) => !terminalJobStatuses.has(job.status));
-    const selectedExists = state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
+    const selectedFromServer = payload.activeJob
+      && (payload.activeJob.job_id || payload.activeJob.jobId) === state.activeJobId;
+    const running = (payload.activeJob && !terminalJobStatuses.has(payload.activeJob.status))
+      ? payload.activeJob
+      : state.jobs.find((job) => !terminalJobStatuses.has(job.status));
+    const selectedExists = Boolean(selectedFromServer)
+      || state.jobs.some((job) => (job.job_id || job.jobId) === state.activeJobId);
     if (requestedId && !selectedExists) { renderActiveJob(null, []); renderJobHistory(); throw new Error(t("jobUnavailable")); }
     if (!selectedExists) state.activeJobId = (running?.job_id || running?.jobId) || state.jobs[0]?.job_id || state.jobs[0]?.jobId || "";
     if (state.activeJobId) localStorage.setItem("wukong-active-job", state.activeJobId);
@@ -4443,7 +4661,12 @@ async function loadJobs({ force = false } = {}) {
   } catch (error) {
     setJobsConnection("jobsOffline", true); scheduleJobsPoll(true, false); throw error;
   } finally {
-    state.jobsLoading = false;
+    if (historyRequestId === state.jobHistoryRequestId) {
+      state.jobsLoading = false;
+      state.jobHistoryLoading = false;
+      $("#job-history")?.setAttribute("aria-busy", "false");
+      renderJobHistory();
+    }
   }
 }
 
@@ -4745,13 +4968,22 @@ function bindEvents() {
   $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
   $$("[data-job-filter]").forEach((button) => button.addEventListener("click", () => {
     state.jobHistoryFilter = button.dataset.jobFilter;
-    state.jobHistoryLimit = 12;
-    renderJobHistory();
+    state.jobHistoryPage = 1;
+    loadJobs({ force: true }).catch((error) => toast(error.message, true));
   }));
-  $("#job-history-more")?.addEventListener("click", () => {
-    state.jobHistoryLimit += 24;
-    renderJobHistory();
+  const reloadJobHistory = () => {
+    state.jobHistoryPage = 1;
+    loadJobs({ force: true }).catch((error) => toast(error.message, true));
+  };
+  let jobHistorySearchTimer;
+  $("#job-history-search")?.addEventListener("input", () => {
+    clearTimeout(jobHistorySearchTimer);
+    jobHistorySearchTimer = setTimeout(reloadJobHistory, 300);
   });
+  for (const id of ["job-history-preset", "job-history-mod", "job-history-from", "job-history-to"]) {
+    $("#" + id)?.addEventListener("change", reloadJobHistory);
+  }
+  $("#job-history-filters")?.addEventListener("reset", () => setTimeout(reloadJobHistory, 0));
   let userSearchTimer;
   $("#user-search").addEventListener("input", () => { clearTimeout(userSearchTimer); userSearchTimer = setTimeout(() => loadAdminUsers({ reset: true }).catch(() => {}), 250); });
   $("#user-status").addEventListener("change", () => loadAdminUsers({ reset: true }).catch(() => {}));

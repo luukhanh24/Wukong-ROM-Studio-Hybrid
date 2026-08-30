@@ -16,6 +16,7 @@ import {
   createJob,
   inspectJob,
   jobEvents,
+  listJobHistory,
   listJobs,
   listJobsForSubject,
   publicJob,
@@ -255,10 +256,20 @@ async function routeWithIdentity(
   }
   if (path === "/v1/sync" && request.method === "GET") {
     const params = new URL(request.url).searchParams;
-    const jobs = await listJobs(env, auth);
+    let history = null;
+    try {
+      history = params.has("page") ? await listJobHistory(env, auth, params) : null;
+    } catch (error) {
+      if (error instanceof JobHttpError) {
+        return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
+      }
+      throw error;
+    }
+    const jobs = history?.jobs ?? await listJobs(env, auth);
+    const selectionJobs = history ? await listJobs(env, auth) : jobs;
     const selectedId = params.get("jobId") || String(
-      jobs.find((job) => !["succeeded", "failed", "cancelled"].includes(String(job.status)))?.job_id
-      ?? jobs[0]?.job_id
+      selectionJobs.find((job) => !["succeeded", "failed", "cancelled"].includes(String(job.status)))?.job_id
+      ?? selectionJobs[0]?.job_id
       ?? ""
     );
     let activeJob: Record<string, unknown> | null = null;
@@ -279,6 +290,13 @@ async function routeWithIdentity(
       user: await profile(env, auth.subject),
       maintenance: await maintenanceState(env),
       jobs,
+      ...(history ? {
+        page: history.page,
+        pageSize: history.pageSize,
+        total: history.total,
+        totalPages: history.totalPages,
+        statusCounts: history.statusCounts
+      } : {}),
       activeJob,
       events,
       serverTime: new Date().toISOString()
@@ -336,7 +354,17 @@ async function routeWithIdentity(
     }
   }
   if (path === "/v1/jobs" && request.method === "GET") {
-    return json({ jobs: await listJobs(env, auth) });
+    const params = new URL(request.url).searchParams;
+    try {
+      return json(params.has("page")
+        ? await listJobHistory(env, auth, params)
+        : { jobs: await listJobs(env, auth) });
+    } catch (error) {
+      if (error instanceof JobHttpError) {
+        return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
+      }
+      throw error;
+    }
   }
   if (path === "/v1/preset-labels" && request.method === "GET") {
     return json({ presetLabels: await presetLabels(env), editable: auth.role === "admin" });
@@ -418,7 +446,10 @@ async function routeWithIdentity(
   if (adminJobs && request.method === "GET") {
     if (auth.role !== "admin") return json({ error: "Admin access is required" }, 403);
     try {
-      return json(await listJobsForSubject(env, adminJobs[1]!, new URL(request.url).searchParams.get("cursor") || ""));
+      const params = new URL(request.url).searchParams;
+      return json(params.has("page")
+        ? await listJobHistory(env, auth, params, adminJobs[1]!)
+        : await listJobsForSubject(env, adminJobs[1]!, params.get("cursor") || ""));
     } catch (error) {
       if (error instanceof JobHttpError) return json({ error: error.message }, error.status);
       throw error;

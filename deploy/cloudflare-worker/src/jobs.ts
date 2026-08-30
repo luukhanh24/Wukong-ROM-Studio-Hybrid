@@ -10,6 +10,9 @@ type JsonObject = Record<string, unknown>;
 
 const JOB_ID = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const JOB_HISTORY_PAGE_SIZE = 20;
+const JOB_HISTORY_STATUSES = new Set(["active", "succeeded", "failed"]);
+const JOB_PRESETS = new Set(["lite", "plus", "both", "custom"]);
 
 async function queueBuildStartedAdminAlert(
   env: Env,
@@ -736,6 +739,164 @@ const JOB_WITH_CREATOR = `SELECT j.*, u.display_name AS owner_display_name,
   u.username AS owner_username, u.photo_url AS owner_photo_url
   FROM wukong_jobs j LEFT JOIN wukong_telegram_users u
   ON j.owner_channel = 'telegram' AND u.subject = j.owner_subject`;
+
+interface JobHistoryFilters {
+  page: number;
+  q: string;
+  status: string;
+  preset: string;
+  modVersion: string;
+  createdFrom: string;
+  createdTo: string;
+}
+
+export interface JobHistoryPage {
+  jobs: JsonObject[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  statusCounts: {
+    active: number;
+    succeeded: number;
+    failed: number;
+  };
+}
+
+function escapedLike(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+function historyFilters(params: URLSearchParams): JobHistoryFilters {
+  const rawPage = params.get("page") ?? "1";
+  if (!/^\d+$/.test(rawPage) || Number(rawPage) < 1 || !Number.isSafeInteger(Number(rawPage))) {
+    throw new JobHttpError("Job history page is invalid", 400);
+  }
+  const q = (params.get("q") ?? "").trim();
+  const modVersion = (params.get("modVersion") ?? "").trim();
+  if (q.length > 128) throw new JobHttpError("Job history search is too long", 400);
+  if (modVersion.length > 128) throw new JobHttpError("MOD version filter is too long", 400);
+  const status = (params.get("status") ?? "").trim().toLowerCase();
+  if (status && !JOB_HISTORY_STATUSES.has(status)) throw new JobHttpError("Job history status is invalid", 400);
+  const preset = (params.get("preset") ?? "").trim().toLowerCase();
+  if (preset && !JOB_PRESETS.has(preset)) throw new JobHttpError("Job history preset is invalid", 400);
+  const createdFrom = (params.get("createdFrom") ?? "").trim();
+  const createdTo = (params.get("createdTo") ?? "").trim();
+  for (const value of [createdFrom, createdTo]) {
+    if (value && (value.length > 64 || !Number.isFinite(Date.parse(value)))) {
+      throw new JobHttpError("Job history date filter is invalid", 400);
+    }
+  }
+  if (createdFrom && createdTo && Date.parse(createdFrom) >= Date.parse(createdTo)) {
+    throw new JobHttpError("Job history date range is invalid", 400);
+  }
+  return {
+    page: Number(rawPage),
+    q,
+    status,
+    preset,
+    modVersion,
+    createdFrom,
+    createdTo
+  };
+}
+
+function historyClauses(
+  auth: AuthenticatedRequest,
+  filters: JobHistoryFilters,
+  subject = "",
+  includeStatus = true
+): { sql: string; bindings: string[] } {
+  const clauses = ["j.owner_channel = 'telegram'"];
+  const bindings: string[] = [];
+  if (subject || auth.role !== "admin") {
+    clauses.push("j.owner_subject = ?");
+    bindings.push(subject || auth.subject);
+  }
+  if (filters.q) {
+    const needle = `%${escapedLike(filters.q.toLowerCase())}%`;
+    clauses.push(`(
+      LOWER(j.job_id) LIKE ? ESCAPE '\\' OR
+      LOWER(j.device) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(json_extract(j.recipe_json, '$.device'), '')) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(json_extract(j.recipe_json, '$.build.modVersion'), '')) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(json_extract(j.recipe_json, '$.build.modReleaseVersion'), '')) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(json_extract(j.recipe_json, '$.source.metadata.version'), '')) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(json_extract(j.manifest_json, '$.rom_metadata.version'), '')) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(u.display_name, '')) LIKE ? ESCAPE '\\' OR
+      LOWER(COALESCE(u.username, '')) LIKE ? ESCAPE '\\' OR
+      LOWER(j.owner_subject) LIKE ? ESCAPE '\\'
+    )`);
+    bindings.push(...Array.from({ length: 10 }, () => needle));
+  }
+  if (filters.preset) {
+    clauses.push("LOWER(COALESCE(json_extract(j.recipe_json, '$.build.preset'), '')) = ?");
+    bindings.push(filters.preset);
+  }
+  if (filters.modVersion) {
+    clauses.push("LOWER(COALESCE(json_extract(j.recipe_json, '$.build.modVersion'), '')) = ?");
+    bindings.push(filters.modVersion.toLowerCase());
+  }
+  if (filters.createdFrom) {
+    clauses.push("j.created_at >= ?");
+    bindings.push(new Date(filters.createdFrom).toISOString());
+  }
+  if (filters.createdTo) {
+    clauses.push("j.created_at < ?");
+    bindings.push(new Date(filters.createdTo).toISOString());
+  }
+  if (includeStatus && filters.status) {
+    if (filters.status === "active") clauses.push("j.status NOT IN ('succeeded', 'failed', 'cancelled')");
+    if (filters.status === "succeeded") clauses.push("j.status = 'succeeded'");
+    if (filters.status === "failed") clauses.push("j.status IN ('failed', 'cancelled')");
+  }
+  return { sql: `WHERE ${clauses.join(" AND ")}`, bindings };
+}
+
+export async function listJobHistory(
+  env: Env,
+  auth: AuthenticatedRequest,
+  params: URLSearchParams,
+  subject = ""
+): Promise<JobHistoryPage> {
+  const filters = historyFilters(params);
+  const common = historyClauses(auth, filters, subject, false);
+  const filtered = historyClauses(auth, filters, subject, true);
+  const statusCounts = await env.DB.prepare(
+    `SELECT
+       COALESCE(SUM(CASE WHEN j.status NOT IN ('succeeded', 'failed', 'cancelled') THEN 1 ELSE 0 END), 0) AS active,
+       COALESCE(SUM(CASE WHEN j.status = 'succeeded' THEN 1 ELSE 0 END), 0) AS succeeded,
+       COALESCE(SUM(CASE WHEN j.status IN ('failed', 'cancelled') THEN 1 ELSE 0 END), 0) AS failed
+     FROM wukong_jobs j LEFT JOIN wukong_telegram_users u
+       ON j.owner_channel = 'telegram' AND u.subject = j.owner_subject
+     ${common.sql}`
+  ).bind(...common.bindings).first<{ active: number; succeeded: number; failed: number }>();
+  const totalResult = await env.DB.prepare(
+    `SELECT COUNT(*) AS total
+     FROM wukong_jobs j LEFT JOIN wukong_telegram_users u
+       ON j.owner_channel = 'telegram' AND u.subject = j.owner_subject
+     ${filtered.sql}`
+  ).bind(...filtered.bindings).first<{ total: number }>();
+  const total = Number(totalResult?.total ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / JOB_HISTORY_PAGE_SIZE));
+  const page = Math.min(filters.page, totalPages);
+  const result = await env.DB.prepare(
+    `${JOB_WITH_CREATOR} ${filtered.sql}
+     ORDER BY j.created_at DESC, j.job_id DESC LIMIT ? OFFSET ?`
+  ).bind(...filtered.bindings, JOB_HISTORY_PAGE_SIZE, (page - 1) * JOB_HISTORY_PAGE_SIZE).all<JobRow>();
+  return {
+    jobs: result.results.map((row) => publicJob(row, env, auth.role === "admin" || Boolean(subject))),
+    page,
+    pageSize: JOB_HISTORY_PAGE_SIZE,
+    total,
+    totalPages,
+    statusCounts: {
+      active: Number(statusCounts?.active ?? 0),
+      succeeded: Number(statusCounts?.succeeded ?? 0),
+      failed: Number(statusCounts?.failed ?? 0)
+    }
+  };
+}
 
 export async function listJobs(
   env: Env,

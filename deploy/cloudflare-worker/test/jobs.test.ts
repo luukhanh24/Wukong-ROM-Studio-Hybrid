@@ -117,6 +117,90 @@ describe("atomic Accepted Job creation", () => {
     expect(sync.activeJob.job_id).toBe(lastId);
     expect((await SELF.fetch("https://worker.example/v1/admin/users/42994/jobs", { headers: await tmaHeaders(42994) })).status).toBe(403);
   });
+  it("filters and numerically pages the complete job history", async () => {
+    await seedApprovedUser("42996", 2);
+    const db = (env as unknown as Env).DB;
+    await db.batch(Array.from({ length: 205 }, (_, i) => {
+      const id = `numeric-history-${String(i).padStart(3, "0")}`;
+      const createdAt = new Date(Date.UTC(2026, 0, 1) + i * 60_000).toISOString();
+      const succeeded = i % 3 !== 0;
+      const filtered = i < 25;
+      const rowRecipe = {
+        ...recipe,
+        device: filtered ? "FILTER110" : "PKG110",
+        build: {
+          ...recipe.build,
+          preset: filtered ? "plus" : i % 2 ? "lite" : "custom",
+          modVersion: filtered ? "ColorOS_Filter" : "ColorOS_16.0.10"
+        }
+      };
+      const manifest = {
+        job_id: id,
+        rom_metadata: { version: filtered ? "Filter ROM" : "Regular ROM" }
+      };
+      return db.prepare(
+        `INSERT INTO wukong_jobs
+         (job_id,manifest_json,recipe_json,created_at,updated_at,owner_channel,owner_subject,device,status,stage,progress)
+         VALUES (?,?,?,? ,?,'telegram','42996',?,?, 'complete',1)`
+      ).bind(
+        id,
+        JSON.stringify(manifest),
+        JSON.stringify(rowRecipe),
+        createdAt,
+        createdAt,
+        rowRecipe.device,
+        succeeded ? "succeeded" : "failed"
+      );
+    }));
+    const headers = await tmaHeaders(42996);
+    const page1 = await (await SELF.fetch("https://worker.example/v1/jobs?page=1", { headers })).json() as any;
+    const page10 = await (await SELF.fetch("https://worker.example/v1/jobs?page=10", { headers })).json() as any;
+    const lastPage = await (await SELF.fetch("https://worker.example/v1/jobs?page=999", { headers })).json() as any;
+    expect(page1).toMatchObject({ page: 1, pageSize: 20, total: 205, totalPages: 11 });
+    expect(page1.jobs).toHaveLength(20);
+    expect(page10.jobs).toHaveLength(20);
+    expect(page1.jobs[0].job_id).toBe("numeric-history-204");
+    expect(page1.jobs.at(-1).job_id).toBe("numeric-history-185");
+    expect(page10.jobs[0].job_id).toBe("numeric-history-024");
+    expect(lastPage).toMatchObject({ page: 11, totalPages: 11 });
+    expect(lastPage.jobs).toHaveLength(5);
+    expect(lastPage.jobs.at(-1).job_id).toBe("numeric-history-000");
+    const pages = await Promise.all(Array.from({ length: 11 }, (_, index) =>
+      SELF.fetch(`https://worker.example/v1/jobs?page=${index + 1}`, { headers }).then((response) => response.json())
+    )) as any[];
+    const allIds = pages.flatMap((page) => page.jobs.map((job: any) => job.job_id));
+    expect(allIds).toHaveLength(205);
+    expect(new Set(allIds).size).toBe(205);
+    expect(page1.statusCounts).toEqual({ active: 0, succeeded: 136, failed: 69 });
+
+    const filtered = await (await SELF.fetch(
+      "https://worker.example/v1/jobs?page=1&q=filter&status=succeeded&preset=plus&modVersion=ColorOS_Filter&createdFrom=2026-01-01T00:00:00.000Z&createdTo=2026-01-01T00:30:00.000Z",
+      { headers }
+    )).json() as any;
+    expect(filtered).toMatchObject({ page: 1, total: 16, totalPages: 1 });
+    expect(filtered.jobs.every((job: any) => job.recipe.device === "FILTER110")).toBe(true);
+    expect((await SELF.fetch("https://worker.example/v1/jobs?page=bad", { headers })).status).toBe(400);
+    expect((await SELF.fetch("https://worker.example/v1/sync?page=bad", { headers })).status).toBe(400);
+  });
+  it("pages an admin user's history while preserving the cursor contract and validation", async () => {
+    await seedApprovedUser("42997", 2);
+    const db = (env as unknown as Env).DB;
+    await db.prepare(
+      `INSERT INTO wukong_jobs
+       (job_id,manifest_json,recipe_json,created_at,updated_at,owner_channel,owner_subject,device,status,stage,progress)
+       VALUES ('admin-page-job', ?, ?, '2026-02-01T00:00:00.000Z', '2026-02-01T00:00:00.000Z', 'telegram', '42997', 'PKG110', 'succeeded', 'complete', 1)`
+    ).bind(JSON.stringify({ job_id: "admin-page-job" }), JSON.stringify(recipe)).run();
+    const adminHeaders = await tmaHeaders(1678823419);
+    const page = await (await SELF.fetch(
+      "https://worker.example/v1/admin/users/42997/jobs?page=1&status=succeeded&modVersion=ColorOS_16.0.10",
+      { headers: adminHeaders }
+    )).json() as any;
+    expect(page).toMatchObject({ page: 1, pageSize: 20, total: 1, totalPages: 1 });
+    expect(page.jobs[0]).toMatchObject({ job_id: "admin-page-job", createdBy: { telegramId: "42997" } });
+    expect((await SELF.fetch("https://worker.example/v1/admin/users/42997/jobs?page=bad", { headers: adminHeaders })).status).toBe(400);
+    expect((await SELF.fetch("https://worker.example/v1/admin/users/42997/jobs?page=1&status=unknown", { headers: adminHeaders })).status).toBe(400);
+    expect((await SELF.fetch("https://worker.example/v1/admin/users/42997/jobs?page=1", { headers: await tmaHeaders(42997) })).status).toBe(403);
+  });
   beforeEach(async () => {
     await seedApprovedUser("42001", 5);
   });

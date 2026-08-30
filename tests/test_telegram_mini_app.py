@@ -321,9 +321,9 @@ window.addEventListener('load', () => {{
     const selectArchivedJob = () => {{
       const tab = document.querySelector('[data-job-filter="succeeded"]');
       if (!tab) {{ setTimeout(selectArchivedJob, 50); return; }}
-      tab.click();
+      if (tab.getAttribute('aria-selected') !== 'true') tab.click();
       const card = document.querySelector('.job-history-card');
-      if (!card) {{ setTimeout(selectArchivedJob, 50); return; }}
+      if (!card || !card.textContent.includes('ARCHIVED_16.0.8.300(CN01)')) {{ setTimeout(selectArchivedJob, 50); return; }}
       card.click();
     }};
     setTimeout(selectArchivedJob, 300);
@@ -691,9 +691,17 @@ window.addEventListener('load', () => {{
             jobs = [self._fixture_job()] if self.jobs_fixture else []
             if self.jobs_fixture and self.click_other_job:
                 jobs.append(self._fixture_archived_job())
+            all_jobs = list(jobs)
             query = parse_qs(urlsplit(self.path).query)
             selected = str((query.get("jobId") or [""])[0])
             after = int(str((query.get("after") or ["0"])[0]) or "0")
+            status_filter = str((query.get("status") or [""])[0])
+            if status_filter == "active":
+                jobs = [job for job in jobs if job.get("status") not in {"succeeded", "failed", "cancelled"}]
+            elif status_filter == "succeeded":
+                jobs = [job for job in jobs if job.get("status") == "succeeded"]
+            elif status_filter == "failed":
+                jobs = [job for job in jobs if job.get("status") in {"failed", "cancelled"}]
             if selected == "archived-job" and self.jobs_fixture and (self.click_other_job or self.admin_job_scenario):
                 active_job = self._fixture_archived_job()
                 if self.admin_job_scenario:
@@ -716,6 +724,15 @@ window.addEventListener('load', () => {{
             self._send(json.dumps({
                 "user": self._fixture_user(),
                 "jobs": jobs,
+                "page": 1,
+                "pageSize": 20,
+                "total": len(jobs),
+                "totalPages": 1,
+                "statusCounts": {
+                    "active": sum(job.get("status") not in {"succeeded", "failed", "cancelled"} for job in all_jobs),
+                    "succeeded": sum(job.get("status") == "succeeded" for job in all_jobs),
+                    "failed": sum(job.get("status") in {"failed", "cancelled"} for job in all_jobs),
+                },
                 "activeJob": active_job,
                 "events": [event for event in events if int(event["sequence"]) > after],
             }).encode(), "application/json")
@@ -769,6 +786,27 @@ window.addEventListener('load', () => {{
                 }],
                 "total": 7,
                 "statusCounts": {"approved": 4, "pending": 1, "revoked": 2},
+            }).encode(), "application/json")
+            return
+        if path == "/v1/admin/users/88/jobs" and self.admin_user:
+            jobs = [{**self._fixture_archived_job(), "createdBy": {
+                "telegramId": "88", "displayName": "New User", "username": "new_user"
+            }}] if self.admin_job_scenario else []
+            status_filter = str((parse_qs(urlsplit(self.path).query).get("status") or [""])[0])
+            if status_filter == "active": jobs = [job for job in jobs if job["status"] not in {"succeeded", "failed", "cancelled"}]
+            elif status_filter == "succeeded": jobs = [job for job in jobs if job["status"] == "succeeded"]
+            elif status_filter == "failed": jobs = [job for job in jobs if job["status"] in {"failed", "cancelled"}]
+            self._send(json.dumps({
+                "jobs": jobs,
+                "page": 1,
+                "pageSize": 20,
+                "total": len(jobs),
+                "totalPages": max(1, (len(jobs) + 19) // 20),
+                "statusCounts": {
+                    "active": 0,
+                    "succeeded": 1 if self.admin_job_scenario else 0,
+                    "failed": 0,
+                },
             }).encode(), "application/json")
             return
         if path == "/v1/admin/users/88" and self.admin_user:
@@ -1225,6 +1263,14 @@ class TelegramMiniAppTests(unittest.TestCase):
             "job-history",
             "job-history-count",
             "job-history-tabs",
+            "job-history-filters",
+            "job-history-search",
+            "job-history-preset",
+            "job-history-mod",
+            "job-history-from",
+            "job-history-to",
+            "job-history-pagination",
+            "job-page-buttons",
             "debloat-editor",
             "save-debloat-paths",
             "cancel-debloat-paths",
@@ -1261,7 +1307,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("event-group", script)
         self.assertIn("activeEventsJobId", script)
         self.assertIn("jobDetailRequestId", script)
-        self.assertIn("/v1/sync?jobId=${encodeURIComponent(jobId)}&after=${after}", script)
+        self.assertIn("function jobHistoryParams", script)
+        self.assertIn("/v1/sync?${params.toString()}", script)
+        self.assertIn("function renderPageButtons", script)
+        self.assertIn("setTimeout(reloadJobHistory, 300)", script)
         self.assertIn("const unique = new Map()", script)
         self.assertNotIn("githubRunLink", script)
         self.assertNotIn("external_run_id", script)
