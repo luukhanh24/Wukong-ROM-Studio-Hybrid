@@ -42,9 +42,13 @@ describe("Telegram webhook and pairing", () => {
     });
     expect((await webhook()).status).toBe(204);
     expect((await webhook()).status).toBe(204);
-    expect(sent).toHaveLength(1);
-    expect(String(sent[0]?.text)).toContain("Chờ quản trị viên cấp quyền");
-    expect(String(sent[0]?.text)).not.toContain("1678823419");
+    expect(sent).toHaveLength(2);
+    const userMessage = sent.find((payload) => payload.chat_id === "99001");
+    const adminMessage = sent.find((payload) => payload.chat_id === "1678823419");
+    expect(String(userMessage?.text)).toContain("Chờ quản trị viên cấp quyền");
+    expect(String(userMessage?.text)).not.toContain("1678823419");
+    expect(String(adminMessage?.text)).toContain("YÊU CẦU CẤP QUYỀN MỚI");
+    expect(String(adminMessage?.text)).toContain("<code>/approve 99001</code>");
 
     const status = await SELF.fetch("https://worker.example/v1/session/pair/status", {
       method: "POST",

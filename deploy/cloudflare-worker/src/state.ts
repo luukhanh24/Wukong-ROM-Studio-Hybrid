@@ -132,6 +132,25 @@ function notificationStatement(
   );
 }
 
+function html(value: unknown): string {
+  return text(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+function accessRequestMessage(subject: string, displayName: string, username: string): string {
+  const name = html(displayName || username || `Telegram User ${subject}`);
+  const handle = username ? `@${html(username)}` : "—";
+  return [
+    "<b>🔐 YÊU CẦU CẤP QUYỀN MỚI</b>",
+    "<i>Wukong ROM Studio</i>",
+    "",
+    `<b>${name}</b>`,
+    `<i>Username</i>  ${handle}`,
+    `<i>Telegram ID</i>  <code>${subject}</code>`,
+    "",
+    `<i>Hành động</i>  Gửi <code>/approve ${subject}</code> để cấp 1 lượt build.`
+  ].join("\n");
+}
+
 export function configuredAdmins(env: Env): string[] {
   return env.WUKONG_TELEGRAM_ADMIN_IDS
     .split(",")
@@ -236,11 +255,21 @@ export async function observeUser(
     )
   ]);
   if (!existing) {
-    await env.DB.prepare(
-      `INSERT INTO wukong_telegram_user_events
-       (event_id, subject, event_type, created_at)
-       VALUES (?, ?, 'first_seen', ?)`
-    ).bind(crypto.randomUUID(), subject, now).run();
+    const message = accessRequestMessage(subject, displayName, username);
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO wukong_telegram_user_events
+         (event_id, subject, event_type, created_at)
+         VALUES (?, ?, 'first_seen', ?)`
+      ).bind(crypto.randomUUID(), subject, now),
+      ...configuredAdmins(env).map((adminSubject) => notificationStatement(
+        env,
+        adminSubject,
+        `access-request:${subject}:${adminSubject}`,
+        message,
+        now
+      ))
+    ]);
   }
   return (await profile(env, subject))!;
 }

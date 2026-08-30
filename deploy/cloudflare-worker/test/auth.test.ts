@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test";
+import { env, SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { tmaHeaders } from "./helpers";
 
@@ -28,6 +28,17 @@ describe("Telegram Mini App authentication", () => {
         unlimited: false
       }
     });
+
+    const bindings = env as unknown as Env;
+    const notification = await bindings.DB.prepare(
+      "SELECT payload_json FROM wukong_telegram_notification_outbox WHERE dedupe_key = ?"
+    ).bind("access-request:77001:1678823419").first<{ payload_json: string }>();
+    const payload = JSON.parse(String(notification?.payload_json ?? "{}")) as { text: string };
+    expect(payload.text).toContain("<b>🔐 YÊU CẦU CẤP QUYỀN MỚI</b>");
+    expect(payload.text).toContain("<b>Fixture Pending</b>");
+    expect(payload.text).toContain("<i>Username</i>  @pending_user");
+    expect(payload.text).toContain("<i>Telegram ID</i>  <code>77001</code>");
+    expect(payload.text).toContain("<code>/approve 77001</code>");
 
     const denied = await SELF.fetch("https://worker.example/v1/jobs", { headers });
     expect(denied.status).toBe(403);
