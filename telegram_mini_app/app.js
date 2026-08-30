@@ -3471,6 +3471,17 @@ async function openAdminUser(telegramId) {
     return article;
   };
   const renderAdminJobs = (page) => {
+    if (!page.page) {
+      page = legacyJobHistoryPage(Array.isArray(page.jobs) ? page.jobs : [], {
+        filter: adminJobState.filter,
+        page: adminJobState.page,
+        search: adminJobSearch,
+        preset: adminJobPreset,
+        mod: adminJobMod,
+        from: adminJobFrom,
+        to: adminJobTo
+      });
+    }
     adminJobState.page = Number(page.page || adminJobState.page);
     adminJobState.pageSize = Number(page.pageSize || 20);
     adminJobState.total = Number(page.total || 0);
@@ -4364,6 +4375,56 @@ function historyHasFilters() {
   );
 }
 
+function legacyJobHistoryPage(jobs, { filter, page, search, preset, mod, from, to }) {
+  const valueOf = (control) => typeof control === "string" ? control : control?.value || "";
+  const query = valueOf(search).trim().toLocaleLowerCase();
+  const presetValue = valueOf(preset).trim().toLocaleLowerCase();
+  const modValue = valueOf(mod).trim().toLocaleLowerCase();
+  const createdFrom = historyDateBoundary(valueOf(from));
+  const createdTo = historyDateBoundary(valueOf(to), true);
+  const matchingFilters = jobs.filter((job) => {
+    const build = job.recipe?.build || {};
+    const metadata = jobMetadata(job);
+    const creator = job.createdBy || {};
+    const searchable = [
+      job.job_id || job.jobId,
+      jobDeviceLabel(job),
+      job.recipe?.device,
+      build.modVersion,
+      build.modReleaseVersion,
+      metadata.version,
+      creator.displayName,
+      creator.username,
+      creator.telegramId
+    ].filter(Boolean).join(" ").toLocaleLowerCase();
+    const createdAt = new Date(job.created_at || job.createdAt || 0).getTime();
+    return (!query || searchable.includes(query))
+      && (!presetValue || String(build.preset || "").toLocaleLowerCase() === presetValue)
+      && (!modValue || String(build.modVersion || "").toLocaleLowerCase() === modValue)
+      && (!createdFrom || createdAt >= Date.parse(createdFrom))
+      && (!createdTo || createdAt < Date.parse(createdTo));
+  });
+  const statusCounts = {
+    active: matchingFilters.filter((job) => !terminalJobStatuses.has(job.status)).length,
+    succeeded: matchingFilters.filter((job) => job.status === "succeeded").length,
+    failed: matchingFilters.filter((job) => ["failed", "cancelled"].includes(job.status)).length
+  };
+  const matchingStatus = matchingFilters.filter((job) => filter === "active"
+    ? !terminalJobStatuses.has(job.status)
+    : filter === "succeeded" ? job.status === "succeeded" : ["failed", "cancelled"].includes(job.status));
+  const pageSize = 20;
+  const totalPages = Math.max(1, Math.ceil(matchingStatus.length / pageSize));
+  const safePage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  return {
+    jobs: matchingStatus.slice((safePage - 1) * pageSize, safePage * pageSize),
+    page: safePage,
+    pageSize,
+    total: matchingStatus.length,
+    totalPages,
+    statusCounts
+  };
+}
+
 function renderPageButtons(root, page, totalPages, onPage) {
   root.replaceChildren();
   if (totalPages <= 1) return;
@@ -4426,15 +4487,21 @@ function applyJobHistoryPayload(payload) {
     state.jobHistoryStatusCounts = payload.statusCounts || state.jobHistoryStatusCounts;
     return;
   }
-  state.jobHistoryPage = 1;
-  state.jobHistoryPageSize = 20;
-  state.jobHistoryTotal = jobs.length;
-  state.jobHistoryTotalPages = 1;
-  state.jobHistoryStatusCounts = {
-    active: jobs.filter((job) => !terminalJobStatuses.has(job.status)).length,
-    succeeded: jobs.filter((job) => job.status === "succeeded").length,
-    failed: jobs.filter((job) => ["failed", "cancelled"].includes(job.status)).length
-  };
+  const page = legacyJobHistoryPage(jobs, {
+    filter: state.jobHistoryFilter,
+    page: state.jobHistoryPage,
+    search: $("#job-history-search"),
+    preset: $("#job-history-preset"),
+    mod: $("#job-history-mod"),
+    from: $("#job-history-from"),
+    to: $("#job-history-to")
+  });
+  state.jobs = page.jobs;
+  state.jobHistoryPage = page.page;
+  state.jobHistoryPageSize = page.pageSize;
+  state.jobHistoryTotal = page.total;
+  state.jobHistoryTotalPages = page.totalPages;
+  state.jobHistoryStatusCounts = page.statusCounts;
 }
 
 function renderJobHistory() {

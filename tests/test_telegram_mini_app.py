@@ -97,6 +97,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     catalog_mod_versions = ("ColorOS_16.0.9",)
     catalog_mods_by_version = None
     jobs_fixture = False
+    legacy_sync_contract = False
     click_job_log = False
     click_mod_toggle = False
     click_other_job = False
@@ -691,16 +692,21 @@ window.addEventListener('load', () => {{
             jobs = [self._fixture_job()] if self.jobs_fixture else []
             if self.jobs_fixture and self.click_other_job:
                 jobs.append(self._fixture_archived_job())
+            if self.jobs_fixture and self.legacy_sync_contract:
+                for index in range(25):
+                    archived = self._fixture_archived_job()
+                    archived["job_id"] = f"archived-job-{index:02d}"
+                    jobs.append(archived)
             all_jobs = list(jobs)
             query = parse_qs(urlsplit(self.path).query)
             selected = str((query.get("jobId") or [""])[0])
             after = int(str((query.get("after") or ["0"])[0]) or "0")
             status_filter = str((query.get("status") or [""])[0])
-            if status_filter == "active":
+            if status_filter == "active" and not self.legacy_sync_contract:
                 jobs = [job for job in jobs if job.get("status") not in {"succeeded", "failed", "cancelled"}]
-            elif status_filter == "succeeded":
+            elif status_filter == "succeeded" and not self.legacy_sync_contract:
                 jobs = [job for job in jobs if job.get("status") == "succeeded"]
-            elif status_filter == "failed":
+            elif status_filter == "failed" and not self.legacy_sync_contract:
                 jobs = [job for job in jobs if job.get("status") in {"failed", "cancelled"}]
             if selected == "archived-job" and self.jobs_fixture and (self.click_other_job or self.admin_job_scenario):
                 active_job = self._fixture_archived_job()
@@ -721,21 +727,25 @@ window.addEventListener('load', () => {{
             else:
                 active_job = None
                 events = []
-            self._send(json.dumps({
+            payload = {
                 "user": self._fixture_user(),
                 "jobs": jobs,
-                "page": 1,
-                "pageSize": 20,
-                "total": len(jobs),
-                "totalPages": 1,
-                "statusCounts": {
-                    "active": sum(job.get("status") not in {"succeeded", "failed", "cancelled"} for job in all_jobs),
-                    "succeeded": sum(job.get("status") == "succeeded" for job in all_jobs),
-                    "failed": sum(job.get("status") in {"failed", "cancelled"} for job in all_jobs),
-                },
                 "activeJob": active_job,
                 "events": [event for event in events if int(event["sequence"]) > after],
-            }).encode(), "application/json")
+            }
+            if not self.legacy_sync_contract:
+                payload.update({
+                    "page": 1,
+                    "pageSize": 20,
+                    "total": len(jobs),
+                    "totalPages": 1,
+                    "statusCounts": {
+                        "active": sum(job.get("status") not in {"succeeded", "failed", "cancelled"} for job in all_jobs),
+                        "succeeded": sum(job.get("status") == "succeeded" for job in all_jobs),
+                        "failed": sum(job.get("status") in {"failed", "cancelled"} for job in all_jobs),
+                    },
+                })
+            self._send(json.dumps(payload).encode(), "application/json")
             return
         if path == "/v1/me":
             self._send(json.dumps({"user": self._fixture_user(), "maintenance": {"enabled": self.maintenance_enabled, "message": "Đang nâng cấp Studio."}}).encode(), "application/json")
@@ -1047,6 +1057,7 @@ def _render_mini_app_in_chrome(
     catalog_mods_by_version: dict[str, list[str]] | None = None,
     initial_view: str = "",
     jobs_fixture: bool = False,
+    legacy_sync_contract: bool = False,
     click_job_log: bool = False,
     click_mod_toggle: bool = False,
     click_other_job: bool = False,
@@ -1091,6 +1102,7 @@ def _render_mini_app_in_chrome(
             "catalog_mod_versions": catalog_mod_versions,
             "catalog_mods_by_version": catalog_mods_by_version,
             "jobs_fixture": jobs_fixture,
+            "legacy_sync_contract": legacy_sync_contract,
             "click_job_log": click_job_log,
             "click_mod_toggle": click_mod_toggle,
             "click_other_job": click_other_job,
@@ -2111,6 +2123,17 @@ class TelegramMiniAppTests(unittest.TestCase):
             r'(?s)data-job-filter="active"[^>]*>.*?<b id="job-count-active">1</b>',
         )
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_legacy_sync_response_does_not_render_every_status_in_active_tab(self) -> None:
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            legacy_sync_contract=True,
+        )
+
+        self.assertEqual(1, dom.count('class="job-history-card selected"'))
+        self.assertNotIn("ARCHIVED_16.0.8.300(CN01)", dom)
 
     def test_manual_mod_selection_switches_the_recipe_to_custom(self) -> None:
         dom, _ = _render_mini_app_in_chrome(
