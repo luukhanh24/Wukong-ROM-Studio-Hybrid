@@ -68,6 +68,8 @@ EVENT_LABELS = {
         "resumed": "đã tiếp tục",
         "warning": "cảnh báo",
         "artifact": "artifact sẵn sàng",
+        "mirror_upload_failed": "DC Cloud mirror thất bại",
+        "mirror_available": "DC Cloud mirror sẵn sàng",
     },
     "en": {},
 }
@@ -77,6 +79,7 @@ STAGE_LABELS = {
         "download": "tải ROM",
         "build": "build ROM",
         "upload": "tải artifact lên cloud",
+        "mirror_upload": "tải mirror DC Cloud",
         "complete": "hoàn tất",
     },
     "en": {},
@@ -1327,6 +1330,7 @@ class TelegramBotController:
                 if self._artifact_download_url(job, artifact)
                 else ""
             )
+            + self._artifact_mirror_line(artifact)
             for artifact in job.artifacts
         ) or "Job chưa có artifact."
 
@@ -1337,6 +1341,20 @@ class TelegramBotController:
         if not self.artifact_download_url_provider:
             return ""
         return public_artifact_url(self.artifact_download_url_provider(job))
+
+    @staticmethod
+    def _artifact_mirror_line(artifact: object) -> str:
+        for mirror in getattr(artifact, "mirrors", []) or []:
+            if getattr(mirror, "provider", "").casefold() != "dccloud":
+                continue
+            browse_url = public_artifact_url(getattr(mirror, "browse_url", ""))
+            status = getattr(mirror, "status", "pending")
+            if browse_url and status == "available":
+                return f"\nDC Cloud mirror: {browse_url}"
+            if status == "failed":
+                return "\nDC Cloud mirror: chưa sẵn sàng (Google Drive vẫn khả dụng)"
+            return "\nDC Cloud mirror: đang upload…"
+        return ""
 
     def _devices(self) -> list[tuple[str, str]]:
         payload = self.catalog_provider()

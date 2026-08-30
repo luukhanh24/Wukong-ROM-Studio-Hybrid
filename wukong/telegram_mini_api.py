@@ -409,6 +409,27 @@ def public_job_payload(
                 artifact["downloadAvailable"] = bool(cloud_url)
                 if cloud_url:
                     artifact["publicUrl"] = cloud_url
+                raw_mirrors = artifact.get("mirrors")
+                if isinstance(raw_mirrors, list):
+                    public_mirrors = []
+                    for mirror in raw_mirrors:
+                        if not isinstance(mirror, Mapping):
+                            continue
+                        provider = str(mirror.get("provider") or "").strip().casefold()
+                        status = str(mirror.get("status") or "pending").strip().casefold()
+                        if not provider or status not in {"pending", "available", "failed"}:
+                            continue
+                        browse_url = public_artifact_url(
+                            mirror.get("browse_url") or mirror.get("browseUrl")
+                        )
+                        public_mirrors.append(
+                            {
+                                "provider": provider,
+                                "status": status,
+                                "browseUrl": browse_url,
+                            }
+                        )
+                    artifact["mirrors"] = public_mirrors
     if recipe:
         payload["recipe"] = {
             "task": recipe.task,
@@ -1721,6 +1742,17 @@ class TelegramJobNotifier:
                         f"SHA-256  <code>{escape(artifact.sha256)}</code>",
                     ]
                 )
+                for mirror in artifact.mirrors:
+                    if getattr(mirror, "provider", "").casefold() != "dccloud":
+                        continue
+                    mirror_url = public_artifact_url(getattr(mirror, "browse_url", ""))
+                    if getattr(mirror, "status", "") == "available" and mirror_url:
+                        lines.append("DC Cloud mirror  <i>sẵn sàng</i>")
+                        keyboard.append([{"text": "DC Cloud mirror", "url": mirror_url}])
+                    elif getattr(mirror, "status", "") == "failed":
+                        lines.append("DC Cloud mirror  <i>chưa sẵn sàng</i>")
+                    else:
+                        lines.append("DC Cloud mirror  <i>đang upload</i>")
                 if cloud_url:
                     keyboard.append(
                         [

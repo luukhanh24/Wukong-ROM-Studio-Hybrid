@@ -9,6 +9,7 @@ from typing import Any, Callable, Mapping
 
 from .actions_ui import GitHubActionsUI
 from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
+from .artifact_mirror import ArtifactMirrorPublisher, DCloudMirrorConfig, attach_mirror
 from .cloud_sync import CloudJobSync
 from .content_packs import ContentPackManager, validate_content_index
 from .models import ArtifactRecord, BuildRecipe, JobManifest, JobStatus, preset_edition_label
@@ -170,6 +171,7 @@ class LocalJobExecutor:
         content_root: Path | None = None,
         content_index: Path | None = None,
         actions_ui: GitHubActionsUI | None = None,
+        mirror_publisher: ArtifactMirrorPublisher | None = None,
     ) -> None:
         self.store = store
         self.workspace_root = workspace_root.resolve()
@@ -184,6 +186,10 @@ class LocalJobExecutor:
             content_index or SCRIPT_ROOT / "content-packs" / "index.json"
         ).resolve()
         self.actions_ui = actions_ui or GitHubActionsUI()
+        self.mirror_publisher = mirror_publisher or ArtifactMirrorPublisher(
+            DCloudMirrorConfig.from_env(config_path=rclone_config),
+            storage_factory=self.storage_factory,
+        )
         self._cloud_push_warning_at: dict[str, float] = {}
 
     def execute(self, job_id: str) -> JobManifest:
@@ -254,6 +260,14 @@ class LocalJobExecutor:
                 self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
                 record = storage.publish_artifact(source.path, device=recipe.device, build="published")
+                record = self._mirror_artifact(
+                    job_id,
+                    record,
+                    source.path,
+                    recipe.device,
+                    "published",
+                    None,
+                )
                 return self._succeed(job_id, [record])
 
             self._ensure_content_packs(recipe)
@@ -453,7 +467,17 @@ class LocalJobExecutor:
                             build=recipe.build.mod_version,
                         )
                     )
-                    records.append(record)
+                    records.append(
+                        self._mirror_artifact(
+                            job_id,
+                            record,
+                            output,
+                            recipe.device,
+                            artifact_upload_edition(recipe, output, output_index, len(outputs))
+                            if recipe.storage.artifact_root else recipe.build.mod_version,
+                            recipe.storage.artifact_root,
+                        )
+                    )
                     self.store.append_event(
                         job_id,
                         "upload_progress",
@@ -494,6 +518,57 @@ class LocalJobExecutor:
             )
             self.actions_ui.write_summary(failed, recipe)
             return failed
+
+    def _mirror_artifact(
+        self,
+        job_id: str,
+        record: ArtifactRecord,
+        artifact: Path,
+        device: str,
+        build: str,
+        relative_root: str | None,
+    ) -> ArtifactRecord:
+        # The secondary store is intentionally limited to distributable ROM
+        # ZIPs; sources, checkpoints and arbitrary publish-task files stay on
+        # the existing Drive path only.
+        if artifact.suffix.casefold() != ".zip" or not self.mirror_publisher.config.enabled:
+            return record
+
+        def report_mirror(values: Mapping[str, object]) -> None:
+            self.store.append_event(
+                job_id,
+                "upload_progress",
+                provider="dccloud",
+                stage="mirror_upload",
+                fileName=artifact.name,
+                **dict(values),
+            )
+
+        mirror = self.mirror_publisher.publish(
+            artifact,
+            job_id=job_id,
+            device=device,
+            build=build,
+            relative_root=relative_root,
+            progress_callback=report_mirror,
+        )
+        if mirror.status == "failed":
+            self.store.append_event(
+                job_id,
+                "mirror_upload_failed",
+                provider="dccloud",
+                warning="DC Cloud mirror upload failed; Google Drive artifact remains available.",
+                errorCode=mirror.error_code or "upload_failed",
+            )
+        elif mirror.status == "available":
+            self.store.append_event(
+                job_id,
+                "mirror_available",
+                provider="dccloud",
+                fileName=artifact.name,
+                browseUrl=mirror.browse_url,
+            )
+        return attach_mirror(record, mirror)
 
     def _push_cancelled_terminal(self, job_id: str, recipe: BuildRecipe) -> None:
         if os.environ.get("GITHUB_ACTIONS", "").casefold() != "true":

@@ -171,16 +171,25 @@ class GitHubActionsUI:
         if manifest.artifacts:
             lines.extend(
                 [
-                    "| File | Kích thước / Size | SHA-256 | Link |",
-                    "|---|---:|---|---|",
+                    "| File | Kích thước / Size | SHA-256 | Google Drive | DC Cloud mirror |",
+                    "|---|---:|---|---|---|",
                 ]
             )
             for artifact in manifest.artifacts:
                 link = artifact.public_url or artifact.uri
                 safe_link = link if str(link).startswith(("https://", "http://")) else "private"
                 linked = f"[Mở / Open]({safe_link})" if safe_link != "private" else "Private"
+                mirror_links = []
+                for mirror in artifact.mirrors:
+                    if mirror.provider.casefold() != "dccloud":
+                        continue
+                    browse = mirror.browse_url if mirror.status == "available" else None
+                    if browse and str(browse).startswith(("https://", "http://")):
+                        mirror_links.append(f"[Mở / Open]({browse})")
+                    else:
+                        mirror_links.append(mirror.status)
                 lines.append(
-                    f"| `{artifact.name}` | {artifact.size_bytes:,} B | `{artifact.sha256}` | {linked} |"
+                    f"| `{artifact.name}` | {artifact.size_bytes:,} B | `{artifact.sha256}` | {linked} | {', '.join(mirror_links) or '—'} |"
                 )
         else:
             lines.append("Chưa có artifact / No artifact was produced.")

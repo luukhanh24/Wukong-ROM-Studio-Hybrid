@@ -1,0 +1,50 @@
+name: Wukong DC Cloud mirror repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "Completed Wukong job id"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    env:
+      WUKONG_DCCLOUD_MIRROR_ENABLED: ${{ vars.WUKONG_DCCLOUD_MIRROR_ENABLED || 'false' }}
+      WUKONG_DCCLOUD_REMOTE: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
+      WUKONG_DCCLOUD_ROOT: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
+      WUKONG_DCCLOUD_SHARE_URL: ${{ vars.WUKONG_DCCLOUD_SHARE_URL || '' }}
+      WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install rclone and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rclone
+          python -m pip install -r requirements.txt
+      - name: Restore private Drive/WebDAV config
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$RCLONE_CONFIG_B64"
+          mkdir -p .wkstudio/secrets
+          umask 077
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > .wkstudio/secrets/rclone.conf
+      - name: Preflight DC Cloud
+        run: python3 -m tools.dccloud_preflight --config .wkstudio/secrets/rclone.conf --write-test
+      - name: Repair mirror
+        env:
+          GITHUB_ACTIONS: "true"
+        run: python3 -m tools.mirror_repair "${{ inputs.job_id }}" --config .wkstudio/secrets/rclone.conf

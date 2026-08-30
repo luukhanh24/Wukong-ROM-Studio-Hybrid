@@ -594,7 +594,16 @@ class HybridRuntime:
             manifest.checkpoint,
             manifest.finished_at,
             manifest.error,
-            tuple((item.name, item.uri, item.sha256, item.public_url) for item in manifest.artifacts),
+            tuple(
+                (
+                    item.name,
+                    item.uri,
+                    item.sha256,
+                    item.public_url,
+                    tuple((mirror.provider, mirror.status, mirror.uri, mirror.browse_url) for mirror in item.mirrors),
+                )
+                for item in manifest.artifacts
+            ),
         )
 
     def _fail(self, job_id: str, error: str) -> None:

@@ -204,7 +204,7 @@ Object.assign(translations.vi, {
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible}/{total} sự kiện gần nhất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
   retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API.",
-  openArtifactCloud: "Mở trên {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng."
+  openArtifactCloud: "Mở trên {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror đang upload…", dcCloudMirrorFailed: "DC Cloud mirror chưa sẵn sàng"
 });
 
 Object.assign(translations.en, {
@@ -352,7 +352,7 @@ Object.assign(translations.en, {
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "Latest {visible}/{total} events", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
   retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API.",
-  openArtifactCloud: "Open in {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet."
+  openArtifactCloud: "Open in {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror is uploading…", dcCloudMirrorFailed: "DC Cloud mirror is not ready"
 });
 
 Object.assign(translations.vi, {
@@ -3774,14 +3774,14 @@ const eventTypeLabels = {
     submitted: "Đã tạo job", dispatched: "Đã gửi tới runner", github_run: "GitHub Actions",
     state: "Cập nhật trạng thái", running: "Runner đang xử lý", source: "ROM nguồn sẵn sàng",
     checkpoint: "Đã lưu checkpoint", upload_progress: "Đang tải artifact", artifacts: "Artifact hoàn tất",
-    warning: "Cảnh báo", error: "Lỗi", cancelled: "Đã hủy job", resumed: "Tiếp tục từ checkpoint",
+    warning: "Cảnh báo", mirror_upload_failed: "DC Cloud mirror thất bại", mirror_available: "DC Cloud mirror sẵn sàng", error: "Lỗi", cancelled: "Đã hủy job", resumed: "Tiếp tục từ checkpoint",
     plan: "Kế hoạch build", step: "Bước build", telegram_terminal_notified: "Đã gửi thông báo Telegram"
   },
   en: {
     submitted: "Job created", dispatched: "Sent to runner", github_run: "GitHub Actions",
     state: "Status update", running: "Runner processing", source: "Source ROM ready",
     checkpoint: "Checkpoint saved", upload_progress: "Uploading artifact", artifacts: "Artifacts ready",
-    warning: "Warning", error: "Error", cancelled: "Job cancelled", resumed: "Resumed from checkpoint",
+    warning: "Warning", mirror_upload_failed: "DC Cloud mirror failed", mirror_available: "DC Cloud mirror ready", error: "Error", cancelled: "Job cancelled", resumed: "Resumed from checkpoint",
     plan: "Build plan", step: "Build step", telegram_terminal_notified: "Telegram notification sent"
   }
 };
@@ -3958,6 +3958,10 @@ function artifactCloudUrl(artifact) {
   }
 }
 
+function artifactMirrorUrl(mirror) {
+  return artifactCloudUrl({ publicUrl: mirror?.browseUrl || mirror?.browse_url });
+}
+
 function artifactProvider(url) {
   const hostname = new URL(url).hostname.toLowerCase();
   if (hostname === "drive.google.com" || hostname.endsWith(".googleusercontent.com")) return "Google Drive";
@@ -4018,6 +4022,26 @@ function renderArtifacts(job) {
       const uri = document.createElement("code"); uri.textContent = t("artifactLinkUnavailable");
       card.append(header, sha, uri);
     }
+    const mirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
+    mirrors.filter((mirror) => String(mirror?.provider || "").toLowerCase() === "dccloud").forEach((mirror) => {
+      const mirrorUrl = artifactMirrorUrl(mirror);
+      const mirrorStatus = String(mirror?.status || "pending").toLowerCase();
+      const mirrorLabel = document.createElement("small");
+      mirrorLabel.className = "artifact-provider";
+      mirrorLabel.textContent = mirrorStatus === "available" ? t("dcCloudMirror") : mirrorStatus === "failed" ? t("dcCloudMirrorFailed") : t("dcCloudMirrorPending");
+      card.append(mirrorLabel);
+      if (mirrorStatus === "available" && mirrorUrl) {
+        const mirrorActions = document.createElement("div");
+        mirrorActions.className = "job-artifact-actions";
+        const openMirror = document.createElement("button");
+        openMirror.type = "button";
+        openMirror.className = "artifact-open";
+        openMirror.textContent = t("openArtifactCloud", { provider: "DC Cloud" });
+        openMirror.addEventListener("click", () => openArtifactUrl(mirrorUrl));
+        mirrorActions.append(openMirror);
+        card.append(mirrorActions);
+      }
+    });
     section.append(card);
   });
   return section;

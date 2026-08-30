@@ -503,21 +503,49 @@ class BuildRecipe:
 
 
 @dataclass(frozen=True)
+class ArtifactMirrorRecord:
+    provider: str
+    status: str
+    uri: str = ""
+    browse_url: str | None = None
+    error_code: str | None = None
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "ArtifactMirrorRecord":
+        return cls(
+            provider=str(payload.get("provider") or ""),
+            status=str(payload.get("status") or "pending"),
+            uri=str(payload.get("uri") or ""),
+            browse_url=(str(payload.get("browse_url", payload.get("browseUrl")) or "") or None),
+            error_code=(str(payload.get("error_code", payload.get("errorCode")) or "") or None),
+        )
+
+
+@dataclass(frozen=True)
 class ArtifactRecord:
     name: str
     uri: str
     sha256: str
     size_bytes: int
     public_url: str | None = None
+    mirrors: list[ArtifactMirrorRecord] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "ArtifactRecord":
+        raw_mirrors = payload.get("mirrors", [])
+        if not isinstance(raw_mirrors, (list, tuple)):
+            raw_mirrors = []
         return cls(
             name=str(payload.get("name") or ""),
             uri=str(payload.get("uri") or ""),
             sha256=str(payload.get("sha256") or ""),
             size_bytes=int(payload.get("size_bytes", payload.get("sizeBytes", 0))),
             public_url=(str(payload.get("public_url", payload.get("publicUrl")) or "") or None),
+            mirrors=[
+                ArtifactMirrorRecord.from_dict(item)
+                for item in raw_mirrors
+                if isinstance(item, Mapping)
+            ],
         )
 
 
@@ -581,5 +609,12 @@ class JobManifest:
         result = asdict(self)
         result["owner"] = asdict(self.owner)
         result["status"] = self.status.value
-        result["artifacts"] = [asdict(artifact) for artifact in self.artifacts]
+        result["artifacts"] = []
+        for artifact in self.artifacts:
+            encoded = asdict(artifact)
+            # Keep the pre-mirror wire schema byte-for-byte compatible when
+            # the optional feature is disabled.
+            if not artifact.mirrors:
+                encoded.pop("mirrors", None)
+            result["artifacts"].append(encoded)
         return result

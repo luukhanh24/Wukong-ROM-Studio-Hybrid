@@ -299,6 +299,11 @@ jobs:
           actions_callback_secret: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           github_run_id: ${{ github.run_id }}
           self_hosted: "false"
+          dccloud_mirror_enabled: ${{ vars.WUKONG_DCCLOUD_MIRROR_ENABLED || 'false' }}
+          dccloud_remote: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
+          dccloud_root: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
+          dccloud_share_url: ${{ vars.WUKONG_DCCLOUD_SHARE_URL || '' }}
+          dccloud_cloudreve_version: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
       - name: "19.1 · Chuyển manifest cho callback / Transfer terminal manifest"
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -337,6 +342,11 @@ jobs:
           actions_callback_secret: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           github_run_id: ${{ github.run_id }}
           self_hosted: "true"
+          dccloud_mirror_enabled: ${{ vars.WUKONG_DCCLOUD_MIRROR_ENABLED || 'false' }}
+          dccloud_remote: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
+          dccloud_root: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
+          dccloud_share_url: ${{ vars.WUKONG_DCCLOUD_SHARE_URL || '' }}
+          dccloud_cloudreve_version: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
       - name: "19.1 · Chuyển manifest cho callback / Transfer terminal manifest"
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

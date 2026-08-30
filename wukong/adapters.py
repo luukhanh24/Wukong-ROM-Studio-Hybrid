@@ -999,7 +999,9 @@ class RcloneStorageAdapter:
         normalized = relative_path.replace("\\", "/").strip("/")
         if not normalized or ".." in PurePosixPath(normalized).parts:
             raise ValueError("Cloud storage path is empty or contains path traversal")
-        return f"{self.remote}:{self.root}/{normalized}"
+        if self.root:
+            return f"{self.remote}:{self.root}/{normalized}"
+        return f"{self.remote}:{normalized}"
 
     def copy_file(
         self,
@@ -1393,6 +1395,95 @@ class RcloneStorageAdapter:
             size_bytes=artifact.stat().st_size,
             public_url=public_url,
         )
+
+    def mirror_artifact(
+        self,
+        artifact: Path,
+        *,
+        relative_path: str,
+        staging_key: str,
+        progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+    ) -> ArtifactRecord:
+        """Publish an artifact atomically without asking the backend for a link.
+
+        This is deliberately separate from ``publish_artifact``: WebDAV
+        backends generally do not implement ``rclone link``.  The staged
+        upload and final metadata write also make a partially uploaded ZIP
+        invisible to the public share.
+        """
+
+        artifact = artifact.resolve()
+        if not artifact.is_file():
+            raise FileNotFoundError(artifact)
+        normalized = relative_path.replace("\\", "/").strip("/")
+        staging = staging_key.replace("\\", "/").strip("/")
+        if (
+            not normalized
+            or not staging
+            or ".." in PurePosixPath(normalized).parts
+            or ".." in PurePosixPath(staging).parts
+        ):
+            raise ValueError("Mirror path is empty or contains path traversal")
+        digest = sha256_file(artifact)
+        size_bytes = artifact.stat().st_size
+        final_uri = self.remote_uri(normalized)
+        metadata_uri = final_uri + ".metadata.json"
+        try:
+            remote_metadata = self.run_command(self._args("cat", metadata_uri))
+            payload = json.loads(remote_metadata)
+            if (
+                str(payload.get("sha256") or "").casefold() == digest.casefold()
+                and int(payload.get("sizeBytes", -1)) == size_bytes
+            ):
+                # A metadata sidecar is the completion marker. When the
+                # backend exposes size information, use it to detect a
+                # stale sidecar; otherwise preserve the documented
+                # checksum-based idempotency contract.
+                stale = False
+                try:
+                    size_output = self.run_command(self._args("size", final_uri, "--json"))
+                    if size_output.strip():
+                        current_size = int(json.loads(size_output).get("bytes", -1))
+                        if current_size != size_bytes:
+                            stale = True
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    pass
+                if not stale:
+                    return ArtifactRecord(artifact.name, final_uri, digest, size_bytes)
+        except Exception:
+            # A missing or malformed metadata object is a normal first upload.
+            pass
+
+        stage_uri = self.remote_uri(f"_staging/{staging}/{artifact.name}.partial")
+        self.copy_file(artifact, f"_staging/{staging}/{artifact.name}.partial", progress_callback=progress_callback)
+        size_output = self.run_command(self._args("size", stage_uri, "--json"))
+        try:
+            remote_size = int(json.loads(size_output).get("bytes", -1))
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise SourceIntegrityError("Mirror size check returned invalid data") from exc
+        if remote_size != size_bytes:
+            raise SourceIntegrityError(
+                f"Mirror size mismatch: expected {size_bytes}, got {remote_size}"
+            )
+        self.run_command(self._args("moveto", stage_uri, final_uri, "--retries", "3"))
+        with tempfile.TemporaryDirectory(prefix="wukong-mirror-metadata-") as root:
+            metadata_path = Path(root) / (artifact.name + ".metadata.json")
+            metadata_path.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "name": artifact.name,
+                        "sha256": digest,
+                        "sizeBytes": size_bytes,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.copy_file(metadata_path, normalized + ".metadata.json")
+        return ArtifactRecord(artifact.name, final_uri, digest, size_bytes)
 
     def store_source(self, source: Path, *, device: str, digest: str | None = None) -> ArtifactRecord:
         source = source.resolve()
