@@ -1994,6 +1994,100 @@ class StudioCoreTests(unittest.TestCase):
             self.assertIn("my_stock", result["passthroughPartitions"])
             self.assertIn("my_future", result["passthroughPartitions"])
 
+    def test_static_firmware_images_are_not_dynamic_partitions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source_rom = Path(temp)
+            for name in (
+                "dsp.img",
+                "dsp_a.img",
+                "vm-bootsys.img",
+                "vm-bootsys_b.img",
+                "system.img",
+            ):
+                (source_rom / name).write_bytes(b"image")
+
+            with mock.patch.object(
+                studio_core,
+                "partition_filesystem_type",
+                return_value="ext4",
+            ):
+                partitions = studio_core.source_dynamic_partition_names(source_rom)
+
+            self.assertEqual(partitions, ["system"])
+
+    def test_static_firmware_images_are_staged_in_firmware_update(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            context = studio_core.BuildContext(
+                job_id="static-firmware",
+                spec=studio_core.BuildSpec(romPath="rom.zip"),
+                workspace=root / "workspace",
+                metadata={},
+                device={},
+            )
+            context.source_rom.mkdir(parents=True)
+            for name in studio_core.CORE_SOURCE_IMAGES | {
+                "dsp.img",
+                "dsp_a.img",
+                "vm-bootsys.img",
+                "vm-bootsys_b.img",
+                "system.img",
+            }:
+                (context.source_rom / name).write_bytes(name.encode("ascii"))
+            package_root = root / "package"
+
+            with mock.patch.object(
+                studio_core,
+                "FLASH_ROOT",
+                root / "missing-flash-template",
+            ), mock.patch.object(
+                studio_core,
+                "partition_filesystem_type",
+                return_value="ext4",
+            ):
+                studio_core._populate_shared_package_assets(context, package_root)
+
+            firmware_files = {
+                image.name for image in (package_root / "firmware-update").glob("*.img")
+            }
+            self.assertEqual(
+                firmware_files,
+                {"dsp.img", "dsp_a.img", "vm-bootsys.img", "vm-bootsys_b.img"},
+            )
+
+    def test_shared_package_cache_rebuilds_when_static_firmware_is_missing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            context = studio_core.BuildContext(
+                job_id="stale-static-firmware-cache",
+                spec=studio_core.BuildSpec(romPath="rom.zip"),
+                workspace=root / "workspace",
+                metadata={},
+                device={},
+            )
+            context.source_rom.mkdir(parents=True)
+            (context.source_rom / "dsp.img").write_bytes(b"dsp")
+            shared = context.package_cache / "shared"
+            (shared / "firmware-update").mkdir(parents=True)
+            (shared / ".ready").write_text("ready\n", encoding="utf-8")
+
+            def populate(_context, target_root):
+                firmware = target_root / "firmware-update"
+                firmware.mkdir(parents=True)
+                (firmware / "dsp.img").write_bytes(b"dsp")
+                return {"linked": 1, "copied": 0, "reused": 0}
+
+            with mock.patch.object(
+                studio_core,
+                "_populate_shared_package_assets",
+                side_effect=populate,
+            ) as populate_assets:
+                result = studio_core._ensure_shared_package_assets(context)
+
+            self.assertFalse(result["reused"])
+            populate_assets.assert_called_once_with(context, shared)
+            self.assertTrue((shared / "firmware-update" / "dsp.img").is_file())
+
     def test_debloat_paths_reject_traversal(self):
         with self.assertRaisesRegex(studio_core.StudioError, "Invalid debloat path"):
             studio_core.validate_debloat_paths([r"system\..\outside"])

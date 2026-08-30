@@ -1650,6 +1650,13 @@ def validate_source_rom(source_rom: Path) -> bool:
     return source_rom.is_dir() and all((source_rom / name).is_file() for name in required)
 
 
+def is_static_firmware_partition(name: str) -> bool:
+    partition = Path(name).stem
+    if partition.endswith(("_a", "_b")):
+        partition = partition[:-2]
+    return partition in STATIC_FIRMWARE_PARTITIONS
+
+
 def source_dynamic_partition_names(source_rom: Path) -> list[str]:
     if not source_rom.is_dir():
         return []
@@ -1657,7 +1664,9 @@ def source_dynamic_partition_names(source_rom: Path) -> list[str]:
         {
             image.stem
             for image in source_rom.glob("*.img")
-            if image.stem != "super" and partition_filesystem_type(image) is not None
+            if image.stem != "super"
+            and not is_static_firmware_partition(image.name)
+            and partition_filesystem_type(image) is not None
         },
         key=str.casefold,
     )
@@ -3753,7 +3762,7 @@ def _stage_super(context: BuildContext) -> dict[str, Any]:
     expected_partitions = {
         f"{image.stem}_a"
         for image in context.rom_repack.glob("*.img")
-        if image.stem not in STATIC_FIRMWARE_PARTITIONS
+        if not is_static_firmware_partition(image.name)
     }
     missing_inputs = sorted(expected_partitions.difference(details["partitions"]))
     if missing_inputs:
@@ -4011,6 +4020,7 @@ def _populate_shared_package_assets(context: BuildContext, target_root: Path) ->
             linked += int(method == "linked")
             copied += int(method == "copied")
             reused += int(method == "reused")
+
     for name in CORE_SOURCE_IMAGES:
         method = _link_or_copy_required(context.source_rom / name, image_cache / name, "source image")
         linked += int(method == "linked")
@@ -4023,7 +4033,15 @@ def _populate_shared_package_assets(context: BuildContext, target_root: Path) ->
 def _ensure_shared_package_assets(context: BuildContext) -> dict[str, int | bool]:
     cache_root = context.package_cache / "shared"
     marker = cache_root / ".ready"
-    if marker.is_file():
+    expected_static_firmware = {
+        image.name
+        for image in context.source_rom.glob("*.img")
+        if is_static_firmware_partition(image.name)
+    }
+    cached_static_firmware = {
+        image.name for image in (cache_root / "firmware-update").glob("*.img")
+    }
+    if marker.is_file() and expected_static_firmware.issubset(cached_static_firmware):
         return {"reused": True, "linked": 0, "copied": 0, "existing": 0}
 
     if cache_root.exists():
