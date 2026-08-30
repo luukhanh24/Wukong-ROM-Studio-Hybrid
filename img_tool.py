@@ -269,10 +269,15 @@ class ImageTool:
         
         profile = self._read_erofs_profile(fs_options)
         cmd = [mkfs_bin]
+        timestamp = str(int(time.time()))
         if profile:
+            if '-T' in profile:
+                profile[profile.index('-T') + 1] = timestamp
+            else:
+                profile.extend(['-T', timestamp])
             cmd.extend(profile)
         else:
-            cmd.extend([f'-z{compress},{level}', '-T', str(int(time.time()))])
+            cmd.extend([f'-z{compress},{level}', '-T', timestamp])
         if '--quiet' not in cmd:
             cmd.append('--quiet')
         cmd.extend(['--mount-point', f'/{name}', '--product-out', work])

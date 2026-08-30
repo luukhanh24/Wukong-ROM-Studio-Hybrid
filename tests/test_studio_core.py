@@ -3347,10 +3347,15 @@ class StudioCoreTests(unittest.TestCase):
             )
             output = unpacked / "system.img"
             tool = img_tool.ImageTool()
-            with mock.patch.object(img_tool, "run_command", return_value=0) as run:
+            with mock.patch.object(
+                img_tool.time,
+                "time",
+                return_value=1788056000,
+            ), mock.patch.object(img_tool, "run_command", return_value=0) as run:
                 self.assertTrue(tool.repack_erofs(str(data), str(output)))
             command = run.call_args.args[0]
             self.assertIn("-zlz4hc,9", command)
+            self.assertEqual(command[command.index("-T") + 1], "1788056000")
             self.assertIn("--mount-point", command)
             self.assertIn("--product-out", command)
             self.assertIn("--quiet", command)
@@ -3397,14 +3402,18 @@ class StudioCoreTests(unittest.TestCase):
             )
             output = unpacked / "system.img"
             tool = img_tool.ImageTool()
-            with mock.patch.object(img_tool, "run_command", return_value=0) as run:
+            with mock.patch.object(
+                img_tool.time,
+                "time",
+                return_value=1788056000,
+            ), mock.patch.object(img_tool, "run_command", return_value=0) as run:
                 self.assertTrue(tool.repack_erofs(str(data), str(output)))
             command = run.call_args.args[0]
             self.assertIn("-zlz4hc", command)
             self.assertIn("-C", command)
             self.assertEqual(command[command.index("-C") + 1], "16384")
             self.assertIn("-T", command)
-            self.assertEqual(command[command.index("-T") + 1], "0")
+            self.assertEqual(command[command.index("-T") + 1], "1788056000")
             self.assertIn("-U", command)
             self.assertEqual(
                 command[command.index("-U") + 1],
