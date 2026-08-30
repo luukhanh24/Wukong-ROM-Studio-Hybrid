@@ -15,6 +15,18 @@ export function catalogPayload(): JsonObject {
   return JSON.parse(JSON.stringify(catalog)) as JsonObject;
 }
 
+export function friendlyDeviceName(productCode: unknown, fallback: unknown = ""): string {
+  const product = String(productCode ?? "").trim().toUpperCase();
+  const devices = Array.isArray((catalog as JsonObject).devices)
+    ? (catalog as JsonObject).devices as unknown[]
+    : [];
+  const device = devices.find((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    return String((value as JsonObject).product ?? "").trim().toUpperCase() === product;
+  }) as JsonObject | undefined;
+  return String(device?.name ?? fallback ?? product).trim() || product || "—";
+}
+
 async function storedPresetLabels(env: Env): Promise<Record<string, string>> {
   const row = await env.DB.prepare(
     "SELECT value FROM wukong_control_plane_metadata WHERE key = 'preset_labels'"

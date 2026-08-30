@@ -8,7 +8,7 @@ const recipe = {
   device: "PJD110",
   source: { kind: "https", uri: "https://downloads.example/rom.zip" },
   execution: { target: "github-auto" },
-  build: { preset: "custom", modVersion: "ColorOS_16.0.10", mods: ["Core"] }
+  build: { preset: "custom", modVersion: "ColorOS_16.0.10", modReleaseVersion: "V6.0", mods: ["Core"] }
 };
 
 describe("GitHub Actions callbacks", () => {
@@ -133,19 +133,19 @@ describe("GitHub Actions callbacks", () => {
       text: string;
       reply_markup: { inline_keyboard: Array<Array<Record<string, unknown>>> };
     };
-    expect(notification.text).toContain("<b>Wukong ROM Studio</b>");
-    expect(notification.text).toContain("<b>Build ROM hoàn tất</b>");
-    expect(notification.text).toContain("Thiết bị  <code>PJD110</code>");
-    expect(notification.text).toContain("Phiên bản  <code>PJD110_16.0.10.500(CN01)</code>");
-    expect(notification.text).toContain("Android  <code>16</code>");
-    expect(notification.text).toContain("Bản vá  <code>2026-08-01</code>");
-    expect(notification.text).toContain("Ngày build  <code>2026-08-11 09:38:18</code>");
-    expect(notification.text).toContain("Bản build  <code>Custom</code>");
-    expect(notification.text).toContain("MOD pack  <code>ColorOS_16.0.10</code>");
-    expect(notification.text).toContain("Runner  <code>ubuntu-24.04</code>");
-    expect(notification.text).toContain("Thời gian  <code>42 phút 5 giây</code>");
-    expect(notification.text).toContain("<b>Plus</b> · 7.86 GiB");
-    expect(notification.text).toContain(`SHA-256  <code>${"a".repeat(64)}</code>`);
+    expect(notification.text).toContain("<b>✅ BUILD ROM HOÀN TẤT</b>");
+    expect(notification.text).toContain("<i>Wukong ROM Studio</i>");
+    expect(notification.text).toContain("<b>OnePlus 12</b> · <code>PJD110</code>");
+    expect(notification.text).toContain("<b>Thành công</b>");
+    expect(notification.text).toContain("<i>Phiên bản ROM</i>  <code>PJD110_16.0.10.500(CN01)</code>");
+    expect(notification.text).toContain("<i>Android</i>  <code>16</code>");
+    expect(notification.text).toContain("<i>Bản vá</i>  <code>2026-08-01</code>");
+    expect(notification.text).toContain("<i>Ngày build</i>  <code>2026-08-11 09:38:18</code>");
+    expect(notification.text).toContain("<b>Custom</b> · <code>ColorOS_16.0.10</code> · <code>V6.0</code>");
+    expect(notification.text).toContain("<i>Runner</i>  <code>ubuntu-24.04</code>");
+    expect(notification.text).toContain("<i>Thời gian</i>  <code>42 phút 5 giây</code>");
+    expect(notification.text).toContain("<b>Plus</b> · <b>7.86 GiB</b>");
+    expect(notification.text).toContain(`<i>SHA-256</i>  <code>${"a".repeat(64)}</code>`);
     expect(notification.reply_markup.inline_keyboard).toEqual([
       [{
         text: "Tải Plus · 7.86 GiB",

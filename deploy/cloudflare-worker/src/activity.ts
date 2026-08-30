@@ -1,6 +1,6 @@
 import type { AuthenticatedRequest } from "./auth";
 import type { TelegramProfile } from "./state";
-import { catalogPayload } from "./catalog";
+import { friendlyDeviceName } from "./catalog";
 import { presetEditionLabel } from "./artifact-metadata";
 
 type JsonObject = Record<string, unknown>;
@@ -84,26 +84,6 @@ function actorLines(actor: ActivityActor): string[] {
     `User  <b>${html(profile.displayName || profile.username || actor.subject)}</b>`,
     `Telegram  <code>${html(actor.subject, "—", 32)}</code>${profile.username ? ` · @${html(profile.username, "—", 64)}` : ""}`
   ];
-}
-
-const DEVICE_NAMES = (() => {
-  const catalogDevices = catalogPayload().devices;
-  const devices: unknown[] = Array.isArray(catalogDevices)
-    ? catalogDevices as unknown[]
-    : [];
-  const names = new Map<string, string>();
-  devices.forEach((value) => {
-    const device = object(value);
-    const product = String(device.product ?? "").trim().toUpperCase();
-    const name = String(device.name ?? "").trim();
-    if (product && name) names.set(product, name);
-  });
-  return names;
-})();
-
-function friendlyDeviceName(productCode: unknown, fallback: unknown): string {
-  const product = String(productCode ?? "").trim().toUpperCase();
-  return DEVICE_NAMES.get(product) ?? String(fallback ?? "").trim();
 }
 
 export function buildStartedAdminStatements(

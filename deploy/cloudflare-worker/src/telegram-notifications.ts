@@ -1,5 +1,6 @@
 import type { JobRow } from "./jobs";
 import { artifactEdition, presetEditionLabel } from "./artifact-metadata";
+import { friendlyDeviceName } from "./catalog";
 import { directArtifactUrl } from "./public-links";
 
 type JsonObject = Record<string, unknown>;
@@ -84,53 +85,55 @@ export function terminalTelegramNotification(
   const build = object(recipe.build);
   const editionLabel = presetEditionLabel(build.preset, build.editionLabels ?? build.edition_labels);
   const succeeded = status === "succeeded";
-  const title = succeeded ? "Build ROM hoàn tất" : "Build ROM cần kiểm tra";
+  const title = succeeded
+    ? "✅ BUILD ROM HOÀN TẤT"
+    : status === "cancelled"
+      ? "⚪ BUILD ROM ĐÃ HỦY"
+      : "⚠️ BUILD ROM CẦN KIỂM TRA";
   const statusLabel = succeeded
     ? "Thành công"
     : status === "cancelled"
       ? "Đã hủy"
       : "Thất bại";
   const lines = [
-    "<b>Wukong ROM Studio</b>",
     `<b>${title}</b>`,
+    "<i>Wukong ROM Studio</i>",
     "",
-    "<b>Thông tin bản ROM</b>",
-    `Trạng thái  <b>${statusLabel}</b>`,
-    `Job  <code>${text(row.job_id, "—", 64)}</code>`,
-    `Thiết bị  <code>${text(recipe.device)}</code>`,
-    `Phiên bản  <code>${text(metadata.version)}</code>`,
-    `Android  <code>${text(metadata.androidVersion ?? metadata.android_version)}</code>`,
-    `Bản vá  <code>${text(metadata.securityPatch ?? metadata.security_patch)}</code>`,
-    `Ngày build  <code>${text(metadata.buildDate ?? metadata.build_date)}</code>`,
+    `<b>${text(friendlyDeviceName(recipe.device, metadata.device ?? metadata.deviceName))}</b> · <code>${text(recipe.device)}</code>`,
+    `<b>${statusLabel}</b> · <code>${text(row.job_id, "—", 64)}</code>`,
     "",
-    "<b>Cấu hình</b>",
-    `Bản build  <code>${text(editionLabel)}</code>`,
-    `MOD pack  <code>${text(build.modVersion ?? build.mod_version)}</code>`,
-    `Phát hành  <code>${text(build.modReleaseVersion ?? build.mod_release_version)}</code>`,
-    `Runner  <code>${text(manifest.runner ?? row.runner)}</code>`
+    "<b>THÔNG TIN ROM</b>",
+    `<i>Phiên bản ROM</i>  <code>${text(metadata.version)}</code>`,
+    `<i>Android</i>  <code>${text(metadata.androidVersion ?? metadata.android_version)}</code>`,
+    `<i>Bản vá</i>  <code>${text(metadata.securityPatch ?? metadata.security_patch)}</code>`,
+    `<i>Ngày build</i>  <code>${text(metadata.buildDate ?? metadata.build_date)}</code>`,
+    "",
+    "<b>CẤU HÌNH</b>",
+    `<b>${text(editionLabel)}</b> · <code>${text(build.modVersion ?? build.mod_version)}</code> · <code>${text(build.modReleaseVersion ?? build.mod_release_version)}</code>`,
+    `<i>Runner</i>  <code>${text(manifest.runner ?? row.runner)}</code>`
   ];
   const duration = durationLabel(
     manifest.created_at ?? manifest.createdAt ?? row.created_at,
     manifest.finished_at ?? manifest.finishedAt ?? row.finished_at
   );
-  if (duration) lines.push(`Thời gian  <code>${duration}</code>`);
+  if (duration) lines.push(`<i>Thời gian</i>  <code>${duration}</code>`);
   const error = String(manifest.error ?? row.error ?? "").trim();
   if (error) {
-    lines.push("", "<b>Thông tin cần lưu ý</b>", text(error, "—", 640));
+    lines.push("", "<b>LƯU Ý</b>", text(error, "—", 640));
   }
 
   const keyboard: JsonObject[][] = [];
   const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts.slice(0, 8) : [];
-  if (artifacts.length) lines.push("", "<b>Artifact</b>");
+  if (artifacts.length) lines.push("", `<b>ARTIFACT · ${artifacts.length}</b>`);
   artifacts.forEach((value, offset) => {
     const artifact = object(value);
     const name = String(artifact.name ?? "").trim();
     const edition = artifactEdition(name, offset + 1, build.preset, build.editionLabels ?? build.edition_labels);
     const size = sizeLabel(artifact.size_bytes ?? artifact.sizeBytes);
     lines.push(
-      `${offset + 1}. <b>${text(edition)}</b> · ${size}`,
+      `${offset + 1}. <b>${text(edition)}</b> · <b>${size}</b>`,
       `<code>${text(name)}</code>`,
-      `SHA-256  <code>${text(artifact.sha256, "—", 128)}</code>`
+      `<i>SHA-256</i>  <code>${text(artifact.sha256, "—", 128)}</code>`
     );
     const url = directArtifactUrl(artifact.public_url ?? artifact.publicUrl, env);
     if (url) keyboard.push([{ text: `Tải ${edition} · ${size}`, url }]);
