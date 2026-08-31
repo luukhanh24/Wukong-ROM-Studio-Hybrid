@@ -1,0 +1,48 @@
+name: DC Cloud · Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      WUKONG_DCCLOUD_MIRROR_ENABLED: "true"
+      WUKONG_DCCLOUD_REMOTE: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
+      WUKONG_DCCLOUD_ROOT: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
+      WUKONG_DCCLOUD_SHARE_URL: ${{ vars.WUKONG_DCCLOUD_SHARE_URL }}
+      WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION }}
+      WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends rclone
+
+      - name: Restore private rclone config
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$RCLONE_CONFIG_B64"
+          mkdir -p "$(dirname "$WUKONG_RCLONE_CONFIG")"
+          umask 077
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$WUKONG_RCLONE_CONFIG"
+
+      - name: Verify scoped WebDAV and anonymous share
+        run: |
+          python tools/dccloud_preflight.py \
+            --config "$WUKONG_RCLONE_CONFIG" \
+            --write-test
+
+      - name: Remove restored credentials
+        if: always()
+        run: rm -f "$WUKONG_RCLONE_CONFIG"
