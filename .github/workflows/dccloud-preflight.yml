@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       canary_mib:
-        description: Multipart round-trip canary size in MiB (0 disables)
+        description: Native/multipart round-trip canary size in MiB (0 disables)
         required: false
         default: "100"
 

@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 from tools.dccloud_preflight import (
     _anonymous_share_list_url,
     _multipart_canary,
+    _native_canary,
     _verify_anonymous_share,
 )
 from wukong.adapters import RcloneStorageAdapter
@@ -178,6 +179,44 @@ class DCloudPreflightTests(unittest.TestCase):
                 "ROM",
                 1,
             )
+
+    def test_native_canary_publishes_one_final_file_and_cleans_up(self) -> None:
+        class FakeClient:
+            def __init__(self) -> None:
+                self.files: dict[str, bytes] = {}
+                self.deleted: list[str] = []
+
+            def read_json_file(self, uri: str) -> dict[str, object] | None:
+                body = self.files.get(uri)
+                return json.loads(body) if body is not None else None
+
+            def get_file(self, uri: str) -> dict[str, object] | None:
+                body = self.files.get(uri)
+                return {"path": uri, "size": len(body)} if body is not None else None
+
+            def ensure_folder(self, uri: str) -> None:
+                return None
+
+            def upload_file(self, source: Path, uri: str, **_: object) -> dict[str, object]:
+                self.files[uri] = source.read_bytes()
+                return {"path": uri, "size": len(self.files[uri])}
+
+            def move(self, uri: str, destination: str) -> None:
+                final_uri = f"{destination}/{uri.rsplit('/', 1)[-1]}"
+                self.files[final_uri] = self.files.pop(uri)
+
+            def delete(self, uri: str) -> None:
+                self.deleted.append(uri)
+                self.files.pop(uri, None)
+
+        client = FakeClient()
+        result = _native_canary(client, "ROM", 1)  # type: ignore[arg-type]
+
+        self.assertEqual(1, result["nativeCanaryMiB"])
+        self.assertEqual(1, result["finalFiles"])
+        self.assertEqual({}, client.files)
+        self.assertTrue(any("/ROM/_canary/" in uri for uri in client.deleted))
+        self.assertTrue(any("/_staging/" in uri for uri in client.deleted))
 
 
 if __name__ == "__main__":

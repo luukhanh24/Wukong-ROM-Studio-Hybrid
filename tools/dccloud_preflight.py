@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 from wukong.artifact_mirror import DCloudMirrorConfig
 from wukong.adapters import RcloneStorageAdapter, sha256_file
-from wukong.cloudreve import CloudreveClient
+from wukong.cloudreve import CloudreveClient, CloudreveStorageAdapter
 from wukong.split_mirror import RcloneSplitStorageAdapter
 
 
@@ -179,6 +179,58 @@ def _multipart_canary(storage: RcloneStorageAdapter, mirror_root: str, size_mib:
             raise RuntimeError("DC Cloud multipart canary cleanup failed") from cleanup_errors[0]
 
 
+def _native_canary(client: CloudreveClient, mirror_root: str, size_mib: int) -> dict[str, object]:
+    if not 1 <= size_mib <= 2048:
+        raise SystemExit("--multipart-canary-mib must be between 1 and 2048")
+    key = f"native-{uuid.uuid4().hex}"
+    relative_path = f"{mirror_root}/_canary/{key}.bin"
+    final_uri = f"cloudreve://my/WukongROM/{relative_path}"
+    metadata_uri = final_uri + ".metadata.json"
+    staging_uri = f"cloudreve://my/WukongROM/_staging/{key}"
+    primary_error: BaseException | None = None
+    try:
+        with tempfile.TemporaryDirectory(prefix="wukong-dccloud-native-canary-") as root:
+            source = Path(root) / f"{key}.bin"
+            block = bytes(range(256)) * 4096
+            with source.open("wb") as stream:
+                for _ in range(size_mib):
+                    stream.write(block)
+            expected = sha256_file(source)
+            adapter = CloudreveStorageAdapter(client)
+            record = adapter.mirror_artifact(
+                source,
+                relative_path=relative_path,
+                staging_key=key,
+            )
+            uploaded = client.get_file(record.uri)
+            if not isinstance(uploaded, dict) or int(uploaded.get("size", -1)) != source.stat().st_size:
+                raise SystemExit("DC Cloud native canary final file size mismatch")
+            metadata = client.read_json_file(metadata_uri)
+            if (
+                not isinstance(metadata, dict)
+                or str(metadata.get("sha256") or "").casefold() != expected.casefold()
+                or int(metadata.get("sizeBytes", -1)) != source.stat().st_size
+            ):
+                raise SystemExit("DC Cloud native canary metadata mismatch")
+            return {
+                "nativeCanaryMiB": size_mib,
+                "sha256": expected,
+                "finalFiles": 1,
+            }
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        cleanup_errors: list[Exception] = []
+        for target in (metadata_uri, final_uri, staging_uri):
+            try:
+                client.delete(target)
+            except Exception as exc:
+                cleanup_errors.append(exc)
+        if cleanup_errors and primary_error is None:
+            raise RuntimeError("DC Cloud native canary cleanup failed") from cleanup_errors[0]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Preflight the DC Cloud mirror")
     parser.add_argument("--config", type=Path)
@@ -232,7 +284,14 @@ def main() -> int:
                     client.delete(public_target)
         else:
             _verify_anonymous_share(config.share_url, config.root)
-        print(json.dumps({"mode": "native", "root": config.root, "share": "readable"}))
+        result: dict[str, object] = {
+            "mode": "native",
+            "root": config.root,
+            "share": "readable",
+        }
+        if args.multipart_canary_mib:
+            result.update(_native_canary(client, config.root, args.multipart_canary_mib))
+        print(json.dumps(result))
         return 0
     if args.config is None:
         raise SystemExit("--config is required for WebDAV preflight")

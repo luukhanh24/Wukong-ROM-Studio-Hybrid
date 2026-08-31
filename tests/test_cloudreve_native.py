@@ -88,6 +88,55 @@ class CloudreveNativeTests(unittest.TestCase):
             with self.assertRaisesRegex(CloudreveError, "chunk_too_large"):
                 client.upload_file(artifact, "cloudreve://my/WukongROM/_staging/job/rom.zip")
 
+    def test_native_upload_supports_onedrive_ranges_and_completion_callback(self) -> None:
+        calls: list[tuple[str, str, dict[str, object]]] = []
+
+        def request(method: str, url: str, **kwargs: object) -> _Response:
+            calls.append((method, url, kwargs))
+            if url.endswith("/session/token/refresh"):
+                return _Response({"code": 0, "data": {"access_token": "access"}})
+            if method == "PUT" and url.endswith("/file/upload"):
+                return _Response(
+                    {
+                        "code": 0,
+                        "data": {
+                            "session_id": "session",
+                            "callback_secret": "callback",
+                            "chunk_size": 4,
+                            "expires": 4102444800,
+                            "upload_urls": ["https://onedrive.example/upload-session"],
+                            "storage_policy": {"type": "onedrive"},
+                        },
+                    }
+                )
+            if url == "https://onedrive.example/upload-session":
+                return _Response({}, status_code=202)
+            if "/callback/onedrive/session/callback" in url:
+                return _Response({"code": 0, "data": None})
+            if "/file/info?" in url:
+                return _Response({"code": 0, "data": {"size": 10}})
+            raise AssertionError(f"Unexpected request: {method} {url}")
+
+        with tempfile.TemporaryDirectory() as root:
+            artifact = Path(root, "rom.zip")
+            artifact.write_bytes(b"abcdefghij")
+            client = CloudreveClient("https://cloud.example", "refresh", request=request)
+            client.upload_file(artifact, "cloudreve://my/WukongROM/_staging/job/rom.zip")
+
+        range_calls = [call for call in calls if call[1] == "https://onedrive.example/upload-session"]
+        self.assertEqual(
+            [
+                "bytes 0-3/10",
+                "bytes 4-7/10",
+                "bytes 8-9/10",
+            ],
+            [str(call[2]["headers"]["Content-Range"]) for call in range_calls],
+        )
+        self.assertEqual([b"abcd", b"efgh", b"ij"], [call[2]["data"] for call in range_calls])
+        callback = next(call for call in calls if "/callback/onedrive/session/callback" in call[1])
+        self.assertEqual("POST", callback[0])
+        self.assertEqual("Bearer access", callback[2]["headers"]["Authorization"])
+
     def test_storage_adapter_uses_sidecar_as_completion_marker(self) -> None:
         class FakeClient:
             def __init__(self) -> None:

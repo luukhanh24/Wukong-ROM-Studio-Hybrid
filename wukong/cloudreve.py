@@ -184,7 +184,7 @@ class CloudreveClient:
             raise CloudreveError("upload_session_invalid")
         if chunk_size > MAX_PROXY_CHUNK_BYTES:
             raise CloudreveError("chunk_too_large")
-        if policy_type not in {"local", "remote"}:
+        if policy_type not in {"local", "remote", "onedrive"}:
             raise CloudreveError("storage_policy_unsupported")
 
         transferred = 0
@@ -196,7 +196,13 @@ class CloudreveClient:
                 body = stream.read(min(chunk_size, size - transferred))
                 if not body:
                     raise CloudreveError("source_changed")
-                if policy_type == "local" or relay:
+                if policy_type == "onedrive":
+                    upload_urls = session.get("upload_urls")
+                    if not isinstance(upload_urls, list) or not upload_urls:
+                        raise CloudreveError("upload_session_invalid")
+                    upload_url = str(upload_urls[0])
+                    authorization = ""
+                elif policy_type == "local" or relay:
                     upload_url = self._url(f"file/upload/{quote(session_id, safe='')}/{index}")
                     authorization = f"Bearer {self.access_token()}"
                 else:
@@ -211,17 +217,33 @@ class CloudreveClient:
                 last_error: Exception | None = None
                 for attempt in range(3):
                     try:
-                        self._json(
-                            "POST",
-                            upload_url,
-                            authenticated=False,
-                            headers={
-                                "Authorization": authorization,
-                                "Content-Type": "application/octet-stream",
-                                "Content-Length": str(len(body)),
-                            },
-                            data=body,
-                        )
+                        if policy_type == "onedrive":
+                            response = self._request(
+                                "PUT",
+                                upload_url,
+                                headers={
+                                    "Content-Type": "application/octet-stream",
+                                    "Content-Length": str(len(body)),
+                                    "Content-Range": (
+                                        f"bytes {transferred}-{transferred + len(body) - 1}/{size}"
+                                    ),
+                                },
+                                data=body,
+                                timeout=self.timeout,
+                            )
+                            response.raise_for_status()
+                        else:
+                            self._json(
+                                "POST",
+                                upload_url,
+                                authenticated=False,
+                                headers={
+                                    "Authorization": authorization,
+                                    "Content-Type": "application/octet-stream",
+                                    "Content-Length": str(len(body)),
+                                },
+                                data=body,
+                            )
                         last_error = None
                         break
                     except Exception as exc:
@@ -240,6 +262,17 @@ class CloudreveClient:
                             "totalBytes": size,
                         }
                     )
+        if policy_type == "onedrive":
+            callback_secret = str(session.get("callback_secret") or "")
+            if not callback_secret:
+                raise CloudreveError("upload_session_invalid")
+            self._json(
+                "POST",
+                (
+                    f"callback/onedrive/{quote(session_id, safe='')}/"
+                    f"{quote(callback_secret, safe='')}"
+                ),
+            )
         uploaded: dict[str, Any] | None = None
         for attempt in range(5):
             uploaded = self.get_file(uri)
