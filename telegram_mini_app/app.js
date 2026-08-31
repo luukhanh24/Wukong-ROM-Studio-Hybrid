@@ -186,6 +186,19 @@ Object.assign(translations.vi, {
 });
 
 Object.assign(translations.vi, {
+  dcCloudRepair: "Repair DC Cloud mirror",
+  dcCloudRepairHint: "Upload lại ZIP lên DC Cloud nếu lần mirror trước bị lỗi.",
+  dcCloudRepairQueued: "Đã đưa yêu cầu repair DC Cloud vào hàng đợi.",
+  dcCloudRepairFailed: "Không thể bắt đầu repair DC Cloud."
+});
+Object.assign(translations.en, {
+  dcCloudRepair: "Repair DC Cloud mirror",
+  dcCloudRepairHint: "Re-upload the ZIP to DC Cloud when the previous mirror failed.",
+  dcCloudRepairQueued: "DC Cloud repair has been queued.",
+  dcCloudRepairFailed: "Could not start DC Cloud repair."
+});
+
+Object.assign(translations.vi, {
   buildTitle: "Wukong Studio", buildIntro: "Cấu hình, khởi chạy và theo dõi ROM ngay trong Mini App.",
   releaseVersion: "Phiên bản phát hành", releaseVersionHint: "Nhãn hiển thị cùng MOD pack trong mỗi job.", saveReleaseVersion: "Lưu nhãn", invalidReleaseVersion: "Nhãn dài 1–64 ký tự, an toàn cho tên file và không kết thúc bằng dấu chấm hoặc khoảng trắng.", releaseVersionSaved: "Đã lưu nhãn phát hành.", jobContext: "Ngữ cảnh job", uploadingNow: "Đang upload", uploadSummary: "Upload gần nhất", noModsSelected: "Không có MOD tùy chọn",
   probeDeferred: "Máy chủ đang bận phân tích ROM. Hãy thử lại sau ít phút.",
@@ -3962,6 +3975,20 @@ function artifactMirrorUrl(mirror) {
   return artifactCloudUrl({ publicUrl: mirror?.browseUrl || mirror?.browse_url });
 }
 
+async function repairDcCloudMirror(jobId, button) {
+  if (!jobId || !button) return;
+  button.disabled = true;
+  try {
+    await apiRequest(`/v1/jobs/${encodeURIComponent(jobId)}/mirror-repair`, { method: "POST" });
+    toast(t("dcCloudRepairQueued"));
+    await loadJobs({ force: true });
+  } catch (error) {
+    toast(error?.message || t("dcCloudRepairFailed"), true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function artifactProvider(url) {
   const hostname = new URL(url).hostname.toLowerCase();
   if (hostname === "drive.google.com" || hostname.endsWith(".googleusercontent.com")) return "Google Drive";
@@ -4040,6 +4067,19 @@ function renderArtifacts(job) {
         openMirror.addEventListener("click", () => openArtifactUrl(mirrorUrl));
         mirrorActions.append(openMirror);
         card.append(mirrorActions);
+      }
+      if (
+        terminalJobStatuses.has(job.status)
+        && mirrorStatus !== "available"
+        && (job.job_id || job.jobId)
+      ) {
+        const repair = document.createElement("button");
+        repair.type = "button";
+        repair.className = "secondary artifact-repair";
+        repair.textContent = t("dcCloudRepair");
+        repair.title = t("dcCloudRepairHint");
+        repair.addEventListener("click", () => repairDcCloudMirror(job.job_id || job.jobId, repair));
+        card.append(repair);
       }
     });
     section.append(card);

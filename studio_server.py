@@ -2116,6 +2116,7 @@ def create_app(*, start_queue: bool = True) -> Flask:
                 release_versions_provider=fixed_telegram_release_versions,
                 release_versions_saver=None,
                 cloud_provider=lambda category: hybrid_runtime.cloud_library(category=category),
+                mirror_repair_dispatcher=hybrid_runtime.dispatch_mirror_repair,
                 cache_provider=stage_cache_status,
                 cache_clearer=clear_hybrid_cache,
                 max_init_data_age_seconds=int(

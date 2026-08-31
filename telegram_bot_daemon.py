@@ -313,6 +313,7 @@ def main() -> int:
                 session_store=mini_app_sessions,
                 bot_username=os.environ.get("WUKONG_TELEGRAM_BOT_USERNAME", "WK_build_bot"),
                 state_backend="postgresql" if database_url else "file",
+                mirror_repair_dispatcher=runtime.dispatch_mirror_repair,
             )
             mini_api_server = TelegramMiniAppAPIServer(
                 mini_api,

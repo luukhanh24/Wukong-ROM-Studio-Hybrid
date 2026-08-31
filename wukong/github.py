@@ -42,11 +42,13 @@ class GitHubActionsAdapter:
         self,
         workflow: str,
         *,
-        recipe_ref: str,
+        recipe_ref: str = "",
         job_id: str | None = None,
         ref: str = "main",
     ) -> None:
-        inputs = {"recipe_ref": recipe_ref}
+        inputs: dict[str, str] = {}
+        if recipe_ref:
+            inputs["recipe_ref"] = recipe_ref
         if job_id:
             inputs["job_id"] = job_id
         self._call(

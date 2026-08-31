@@ -710,6 +710,7 @@ class TelegramMiniAppAPI:
         session_store: TelegramMiniAppSessionStore | None = None,
         bot_username: str | None = None,
         state_backend: str = "file",
+        mirror_repair_dispatcher: Callable[[str], Mapping[str, object]] | None = None,
     ) -> None:
         self.bot_token = bot_token
         self.allowed_origin = _origin_from_web_app_url(allowed_origin)
@@ -752,6 +753,7 @@ class TelegramMiniAppAPI:
             bot_username or os.environ.get("WUKONG_TELEGRAM_BOT_USERNAME", "WK_build_bot")
         ).strip().lstrip("@")
         self.state_backend = state_backend.strip().casefold() or "unknown"
+        self.mirror_repair_dispatcher = mirror_repair_dispatcher
         self._probe_cache: dict[tuple[str, str], tuple[float, dict[str, object]]] = {}
         self._probe_lock = threading.RLock()
         self._probe_slots = threading.BoundedSemaphore(2)
@@ -1287,6 +1289,22 @@ class TelegramMiniAppAPI:
                 )
             except OrchestrationError as exc:
                 return jsonify({"error": str(exc)}), 404
+
+        @app.post("/v1/jobs/<job_id>/mirror-repair")
+        def mirror_repair(job_id: str) -> Response:
+            try:
+                identity = self._identity()
+                manifest = self.orchestrator.inspect(job_id, identity)
+                if identity.role != "admin" and manifest.owner.subject != identity.subject:
+                    raise OrchestrationError("Job is not available to this account")
+                if self.mirror_repair_dispatcher is None:
+                    raise RuntimeError("Mirror repair is not configured")
+                result = self.mirror_repair_dispatcher(job_id)
+                return jsonify({"status": "queued", **dict(result)})
+            except OrchestrationError as exc:
+                return jsonify({"error": str(exc)}), 404
+            except (RuntimeError, TypeError, ValueError) as exc:
+                return jsonify({"error": str(exc), "code": "mirror_repair_failed"}), 400
 
         @app.get("/v1/jobs/<job_id>/download")
         def job_download(job_id: str) -> Response:

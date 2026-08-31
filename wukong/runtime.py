@@ -58,6 +58,32 @@ class HybridRuntime:
         )
         worker.start()
 
+    def dispatch_mirror_repair(self, job_id: str) -> dict[str, object]:
+        """Dispatch the repair workflow for a completed job."""
+        repository = os.environ.get("WUKONG_GITHUB_REPOSITORY", "").strip()
+        token = self._github_token()
+        if not token or "/" not in repository:
+            raise RuntimeError("GitHub mirror repair is not configured")
+        manifest = self.store.get(job_id)
+        if manifest is None:
+            raise ValueError("Job was not found")
+        if manifest.status not in {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}:
+            raise ValueError("Mirror repair is available after the job finishes")
+        if not any(
+            artifact.name.casefold().endswith(".zip")
+            and any(
+                str(mirror.provider).casefold() == "dccloud"
+                and str(mirror.status).casefold() != "available"
+                for mirror in artifact.mirrors
+            )
+            for artifact in manifest.artifacts
+        ):
+            raise ValueError("This job has no failed DC Cloud mirror to repair")
+        owner, name = repository.split("/", 1)
+        github = GitHubActionsAdapter(owner, name, token)
+        github.dispatch("mirror-repair.yml", job_id=job_id)
+        return {"workflow": "mirror-repair.yml", "jobId": job_id}
+
     def resume_cloud_watchers(self) -> int:
         """Resume cloud-state polling for jobs that survived a daemon restart."""
         if not self.rclone_config or not self.cloud_watchers_enabled:
