@@ -48,8 +48,8 @@ class ArtifactMirrorTests(unittest.TestCase):
 
             def run(args: list[str], **_: object) -> str:
                 calls.append(args)
-                if args[1] == "size":
-                    return json.dumps({"bytes": 3})
+                if args[1] == "lsjson":
+                    return json.dumps({"Size": 3})
                 if args[1] == "cat":
                     raise RuntimeError("not found")
                 return ""
@@ -61,8 +61,11 @@ class ArtifactMirrorTests(unittest.TestCase):
                 staging_key="job/rom.zip",
             )
             self.assertEqual("wukong-dccloud:WukongROM/ROM/V5.0/Lite/rom.zip", record.uri)
+            mkdir_index = next(index for index, command in enumerate(calls) if command[1] == "mkdir")
+            move_index = next(index for index, command in enumerate(calls) if command[1] == "moveto")
+            self.assertLess(mkdir_index, move_index)
             self.assertTrue(any(command[1] == "moveto" for command in calls))
-            self.assertTrue(any(command[1] == "size" for command in calls))
+            self.assertTrue(any(command[1] == "lsjson" and "--stat" in command for command in calls))
             self.assertTrue(any(command[1] == "copyto" and ".metadata.json" in command[3] for command in calls))
 
     def test_matching_metadata_is_idempotent(self) -> None:

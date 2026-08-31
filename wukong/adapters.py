@@ -1441,9 +1441,9 @@ class RcloneStorageAdapter:
                 # checksum-based idempotency contract.
                 stale = False
                 try:
-                    size_output = self.run_command(self._args("size", final_uri, "--json"))
+                    size_output = self.run_command(self._args("lsjson", final_uri, "--stat"))
                     if size_output.strip():
-                        current_size = int(json.loads(size_output).get("bytes", -1))
+                        current_size = int(json.loads(size_output).get("Size", -1))
                         if current_size != size_bytes:
                             stale = True
                 except (TypeError, ValueError, json.JSONDecodeError):
@@ -1456,15 +1456,21 @@ class RcloneStorageAdapter:
 
         stage_uri = self.remote_uri(f"_staging/{staging}/{artifact.name}.partial")
         self.copy_file(artifact, f"_staging/{staging}/{artifact.name}.partial", progress_callback=progress_callback)
-        size_output = self.run_command(self._args("size", stage_uri, "--json"))
+        # ``rclone size`` treats its target as a directory. Some WebDAV
+        # servers take a long time and then reject that operation for a file.
+        # A direct stat is both bounded to one object and gives the exact size.
+        size_output = self.run_command(self._args("lsjson", stage_uri, "--stat"))
         try:
-            remote_size = int(json.loads(size_output).get("bytes", -1))
+            remote_size = int(json.loads(size_output).get("Size", -1))
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             raise SourceIntegrityError("Mirror size check returned invalid data") from exc
         if remote_size != size_bytes:
             raise SourceIntegrityError(
                 f"Mirror size mismatch: expected {size_bytes}, got {remote_size}"
             )
+        final_parent = str(PurePosixPath(normalized).parent)
+        if final_parent and final_parent != ".":
+            self.run_command(self._args("mkdir", self.remote_uri(final_parent)))
         self.run_command(self._args("moveto", stage_uri, final_uri, "--retries", "3"))
         with tempfile.TemporaryDirectory(prefix="wukong-mirror-metadata-") as root:
             metadata_path = Path(root) / (artifact.name + ".metadata.json")
