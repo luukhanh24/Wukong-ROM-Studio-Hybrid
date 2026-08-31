@@ -276,14 +276,17 @@ class LocalJobExecutor:
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
-                record = storage.publish_artifact(source.path, device=recipe.device, build="published")
-                record = self._mirror_artifact(
+                record = self._publish_artifact_with_mirror(
                     job_id,
-                    record,
                     source.path,
                     recipe.device,
                     "published",
                     None,
+                    lambda: storage.publish_artifact(
+                        source.path,
+                        device=recipe.device,
+                        build="published",
+                    ),
                 )
                 return self._succeed(job_id, [record])
 
@@ -468,33 +471,34 @@ class LocalJobExecutor:
                             last_upload_push = now
                             self._push_cloud_progress(job_id, storage)
 
-                    record = (
-                        storage.publish_artifact(
-                            output,
-                            device=recipe.device,
-                            build=artifact_upload_edition(recipe, output, output_index, len(outputs))
-                            if recipe.storage.artifact_root else recipe.build.mod_version,
-                            relative_root=recipe.storage.artifact_root,
-                            progress_callback=report_upload,
-                        )
-                        if isinstance(storage, RcloneStorageAdapter)
-                        else storage.publish_artifact(
-                            output,
-                            device=recipe.device,
-                            build=recipe.build.mod_version,
-                        )
+                    artifact_build = (
+                        artifact_upload_edition(recipe, output, output_index, len(outputs))
+                        if recipe.storage.artifact_root
+                        else recipe.build.mod_version
                     )
-                    records.append(
-                        self._mirror_artifact(
-                            job_id,
-                            record,
-                            output,
-                            recipe.device,
-                            artifact_upload_edition(recipe, output, output_index, len(outputs))
-                            if recipe.storage.artifact_root else recipe.build.mod_version,
-                            recipe.storage.artifact_root,
-                        )
+                    record = self._publish_artifact_with_mirror(
+                        job_id,
+                        output,
+                        recipe.device,
+                        artifact_build,
+                        recipe.storage.artifact_root,
+                        lambda: (
+                            storage.publish_artifact(
+                                output,
+                                device=recipe.device,
+                                build=artifact_build,
+                                relative_root=recipe.storage.artifact_root,
+                                progress_callback=report_upload,
+                            )
+                            if isinstance(storage, RcloneStorageAdapter)
+                            else storage.publish_artifact(
+                                output,
+                                device=recipe.device,
+                                build=recipe.build.mod_version,
+                            )
+                        ),
                     )
+                    records.append(record)
                     self.store.append_event(
                         job_id,
                         "upload_progress",
@@ -536,6 +540,62 @@ class LocalJobExecutor:
             self.actions_ui.write_summary(failed, recipe)
             return failed
 
+    def _publish_artifact_with_mirror(
+        self,
+        job_id: str,
+        artifact: Path,
+        device: str,
+        build: str,
+        relative_root: str | None,
+        publish_primary: Callable[[], ArtifactRecord],
+    ) -> ArtifactRecord:
+        local_record = ArtifactRecord(
+            name=artifact.name,
+            uri=str(artifact),
+            sha256=sha256_file(artifact),
+            size_bytes=artifact.stat().st_size,
+        )
+        mirrored_record = self._mirror_artifact(
+            job_id,
+            local_record,
+            artifact,
+            device,
+            build,
+            relative_root,
+        )
+        try:
+            primary_record = publish_primary()
+        except Exception as exc:
+            available_mirror = next(
+                (mirror for mirror in mirrored_record.mirrors if mirror.status == "available"),
+                None,
+            )
+            if available_mirror is None:
+                raise
+            self.store.append_event(
+                job_id,
+                "primary_upload_failed",
+                provider="gdrive",
+                warning="Google Drive upload failed; the DC Cloud artifact remains available.",
+                errorType=type(exc).__name__,
+            )
+            return ArtifactRecord(
+                name=mirrored_record.name,
+                uri=available_mirror.uri,
+                sha256=mirrored_record.sha256,
+                size_bytes=mirrored_record.size_bytes,
+                public_url=available_mirror.browse_url,
+                mirrors=mirrored_record.mirrors,
+            )
+        return ArtifactRecord(
+            name=primary_record.name,
+            uri=primary_record.uri,
+            sha256=primary_record.sha256,
+            size_bytes=primary_record.size_bytes,
+            public_url=primary_record.public_url,
+            mirrors=mirrored_record.mirrors,
+        )
+
     def _mirror_artifact(
         self,
         job_id: str,
@@ -574,7 +634,7 @@ class LocalJobExecutor:
                 job_id,
                 "mirror_upload_failed",
                 provider="dccloud",
-                warning="DC Cloud mirror upload failed; Google Drive artifact remains available.",
+                warning="DC Cloud mirror upload failed; primary artifact upload will continue.",
                 errorCode=mirror.error_code or "upload_failed",
             )
         elif mirror.status == "available":
