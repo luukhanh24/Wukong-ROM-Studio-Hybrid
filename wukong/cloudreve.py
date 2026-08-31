@@ -140,8 +140,8 @@ class CloudreveClient:
             if self.get_file(current) is not None:
                 continue
             created = self._json(
-                "PUT",
-                "file",
+                "POST",
+                "file/create",
                 allow_error=True,
                 json={"uri": current, "type": "folder", "err_on_conflict": True},
             )

@@ -24,6 +24,33 @@ class _Response:
 
 
 class CloudreveNativeTests(unittest.TestCase):
+    def test_ensure_folder_uses_cloudreve_v4_create_endpoint(self) -> None:
+        calls: list[tuple[str, str, dict[str, object]]] = []
+
+        def request(method: str, url: str, **kwargs: object) -> _Response:
+            calls.append((method, url, kwargs))
+            if url.endswith("/session/token/refresh"):
+                return _Response({"code": 0, "data": {"access_token": "access"}})
+            if "/file/info?" in url:
+                return _Response({"code": 404, "msg": "not found"})
+            if url.endswith("/file/create"):
+                return _Response({"code": 0, "data": {"path": "folder"}})
+            raise AssertionError(f"Unexpected request: {method} {url}")
+
+        client = CloudreveClient("https://cloud.example", "refresh", request=request)
+        client.ensure_folder("cloudreve://my/WukongROM/_staging/job")
+
+        create_calls = [call for call in calls if call[1].endswith("/file/create")]
+        self.assertEqual(2, len(create_calls))
+        self.assertTrue(all(call[0] == "POST" for call in create_calls))
+        self.assertEqual(
+            [
+                "cloudreve://my/WukongROM/_staging",
+                "cloudreve://my/WukongROM/_staging/job",
+            ],
+            [str(call[2]["json"]["uri"]) for call in create_calls],
+        )
+
     def test_native_upload_refreshes_token_and_sends_server_sized_chunks(self) -> None:
         calls: list[tuple[str, str, dict[str, object]]] = []
 
