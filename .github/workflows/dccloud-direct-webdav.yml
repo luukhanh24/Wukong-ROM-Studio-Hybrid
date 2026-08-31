@@ -31,8 +31,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ -n "$CLOUDFLARE_API_TOKEN" ]] && echo 'Cloudflare API token present' || { echo 'Cloudflare API token missing' >&2; exit 1; }
-          [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] && echo 'Cloudflare account id present' || { echo 'Cloudflare account id missing' >&2; exit 1; }
+          if [[ -n "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo 'Cloudflare API token present'
+          else
+            echo 'Cloudflare API token missing' >&2
+            exit 1
+          fi
+          if [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo 'Cloudflare account id present'
+          else
+            echo 'Cloudflare account id missing' >&2
+            exit 1
+          fi
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
           set +e
