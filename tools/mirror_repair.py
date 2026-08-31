@@ -79,6 +79,24 @@ def main() -> int:
         )
         manifest_path.write_text(json.dumps(updated.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
         primary.copy_file(manifest_path, f"jobs/{args.job_id}/manifest.json")
+        print(
+            json.dumps(
+                {
+                    "jobId": args.job_id,
+                    "mirrors": [
+                        {
+                            "artifact": artifact.name,
+                            "provider": mirror.provider,
+                            "status": mirror.status,
+                            "errorCode": mirror.error_code,
+                        }
+                        for artifact in repaired
+                        for mirror in artifact.mirrors
+                    ],
+                },
+                sort_keys=True,
+            )
+        )
     return 1 if failed else 0
 
 
