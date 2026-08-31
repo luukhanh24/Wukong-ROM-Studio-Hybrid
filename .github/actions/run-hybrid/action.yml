@@ -32,6 +32,15 @@ inputs:
   dccloud_webdav_url:
     required: false
     default: ""
+  dccloud_upload_mode:
+    required: false
+    default: "webdav"
+  dccloud_api_url:
+    required: false
+    default: ""
+  dccloud_refresh_token:
+    required: false
+    default: ""
   dccloud_cloudreve_version:
     required: false
     default: ""
@@ -66,6 +75,9 @@ runs:
         WUKONG_DCCLOUD_ROOT: ${{ inputs.dccloud_root }}
         WUKONG_DCCLOUD_SHARE_URL: ${{ inputs.dccloud_share_url }}
         WUKONG_DCCLOUD_WEBDAV_URL: ${{ inputs.dccloud_webdav_url }}
+        WUKONG_DCCLOUD_UPLOAD_MODE: ${{ inputs.dccloud_upload_mode }}
+        WUKONG_DCCLOUD_API_URL: ${{ inputs.dccloud_api_url }}
+        WUKONG_DCCLOUD_REFRESH_TOKEN: ${{ inputs.dccloud_refresh_token }}
         WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ inputs.dccloud_cloudreve_version }}
       run: |
         set -euo pipefail
@@ -173,6 +185,9 @@ runs:
         WUKONG_DCCLOUD_ROOT: ${{ inputs.dccloud_root }}
         WUKONG_DCCLOUD_SHARE_URL: ${{ inputs.dccloud_share_url }}
         WUKONG_DCCLOUD_WEBDAV_URL: ${{ inputs.dccloud_webdav_url }}
+        WUKONG_DCCLOUD_UPLOAD_MODE: ${{ inputs.dccloud_upload_mode }}
+        WUKONG_DCCLOUD_API_URL: ${{ inputs.dccloud_api_url }}
+        WUKONG_DCCLOUD_REFRESH_TOKEN: ${{ inputs.dccloud_refresh_token }}
         WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ inputs.dccloud_cloudreve_version }}
       run: |
         set -euo pipefail
@@ -225,6 +240,9 @@ runs:
         WUKONG_DCCLOUD_REMOTE: ${{ inputs.dccloud_remote }}
         WUKONG_DCCLOUD_ROOT: ${{ inputs.dccloud_root }}
         WUKONG_DCCLOUD_SHARE_URL: ${{ inputs.dccloud_share_url }}
+        WUKONG_DCCLOUD_UPLOAD_MODE: ${{ inputs.dccloud_upload_mode }}
+        WUKONG_DCCLOUD_API_URL: ${{ inputs.dccloud_api_url }}
+        WUKONG_DCCLOUD_REFRESH_TOKEN: ${{ inputs.dccloud_refresh_token }}
         WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ inputs.dccloud_cloudreve_version }}
         WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
       run: python3 -m tools.dccloud_quota

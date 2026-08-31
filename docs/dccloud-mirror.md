@@ -4,7 +4,42 @@ Google Drive remains the canonical artifact provider and is the value exposed
 as `publicUrl`. DC Cloud is an opt-in, best-effort mirror used only by the two
 Linux GitHub Actions routes (hosted and `wukong-rom` self-hosted).
 
-## Provisioning checklist
+## Recommended mode: Cloudreve native uploader
+
+The production configuration uses Cloudreve's native upload sessions instead
+of a multi-GB WebDAV `PUT`. Each request contains only the chunk size selected
+by Cloudreve, so the public hostname may remain behind Cloudflare and no DNS or
+administrator access is required.
+
+1. Keep `WukongROM/ROM` as the read-only public share and
+   `WukongROM/_staging` outside the share.
+2. Run the bootstrap tool locally. It reads the account password through a
+   hidden prompt, exchanges it once, validates the returned refresh token and
+   stores only `WUKONG_DCCLOUD_REFRESH_TOKEN` in GitHub Secrets:
+
+   ```powershell
+   python -m tools.dccloud_bootstrap `
+     --email <DC-CLOUD-EMAIL> `
+     --repo xuankhanh24/Wukong-ROM-Studio-Hybrid
+   ```
+
+3. Set the repository variables below. Keep the feature flag disabled until
+   preflight and the representative ROM repair both pass.
+
+   ```text
+   WUKONG_DCCLOUD_MIRROR_ENABLED=false
+   WUKONG_DCCLOUD_UPLOAD_MODE=native
+   WUKONG_DCCLOUD_API_URL=https://cloud.dabeecao.org
+   WUKONG_DCCLOUD_ROOT=ROM
+   WUKONG_DCCLOUD_SHARE_URL=https://cloud.dabeecao.org/...
+   WUKONG_DCCLOUD_CLOUDREVE_VERSION=4.18.0
+   ```
+
+The password is never stored in GitHub or the repository. The refresh token is
+a broad account credential: rotate it manually before expiry, never print it,
+and disable the mirror immediately if the secret is suspected compromised.
+
+## Legacy WebDAV mode
 
 1. Confirm Cloudreve is `>= 4.16.1` before granting a scoped WebDAV account;
    older releases are affected by [GHSA-w5fv-7x5q-g8qp](https://github.com/cloudreve/cloudreve/security/advisories/GHSA-w5fv-7x5q-g8qp).
@@ -27,11 +62,12 @@ The device account is already scoped to `My Files/WukongROM`, so the rclone
 paths used by the mirror start at `wukong-dccloud:ROM/...` (not a second
 `WukongROM` segment).
 
-Set these repository variables (the first one stays `false` until preflight
-and a canary are complete):
+For installations with a DNS-only direct hostname, set these repository
+variables instead:
 
 ```text
 WUKONG_DCCLOUD_MIRROR_ENABLED=false
+WUKONG_DCCLOUD_UPLOAD_MODE=webdav
 WUKONG_DCCLOUD_REMOTE=wukong-dccloud
 WUKONG_DCCLOUD_ROOT=ROM
 WUKONG_DCCLOUD_SHARE_URL=https://cloud.dabeecao.org/...
@@ -46,7 +82,7 @@ the DNS-only hostname after confirming the Cloudflare token has DNS-edit
 permission. Do not enable the override until the hostname resolves directly
 to the Cloudreve origin and accepts the WebDAV device certificate.
 
-When enabled, `run-hybrid` verifies the remote, creates/removes a harmless
+When enabled, `run-hybrid` verifies the selected transport, creates/removes a harmless
 probe in `_staging`, checks the anonymous share, and records quota warnings at
 80%. A failed mirror never changes a successful build to failed. Run the
 manual **Wukong DC Cloud mirror repair** workflow with a `job_id` to download

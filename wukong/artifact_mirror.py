@@ -10,12 +10,14 @@ from __future__ import annotations
 import os
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping
 from urllib.parse import urlsplit
 
 from .adapters import RcloneStorageAdapter
+from .cloudreve import CloudreveClient, CloudreveStorageAdapter
+from .split_mirror import RcloneSplitStorageAdapter
 from .models import ArtifactMirrorRecord, ArtifactRecord
 
 
@@ -41,6 +43,9 @@ class DCloudMirrorConfig:
     cloudreve_version: str = ""
     validation_error: str | None = None
     webdav_url: str = ""
+    upload_mode: str = "webdav"
+    api_url: str = ""
+    refresh_token: str = field(default="", repr=False)
 
     @classmethod
     def from_env(cls, *, config_path: Path | None = None) -> "DCloudMirrorConfig":
@@ -58,13 +63,37 @@ class DCloudMirrorConfig:
         root = os.environ.get("WUKONG_DCCLOUD_ROOT", "ROM").strip().strip("/\\")
         share_url = os.environ.get("WUKONG_DCCLOUD_SHARE_URL", "").strip()
         webdav_url = os.environ.get("WUKONG_DCCLOUD_WEBDAV_URL", "").strip()
+        upload_mode = os.environ.get("WUKONG_DCCLOUD_UPLOAD_MODE", "webdav").strip().casefold()
+        api_url = os.environ.get("WUKONG_DCCLOUD_API_URL", "").strip()
+        refresh_token = os.environ.get("WUKONG_DCCLOUD_REFRESH_TOKEN", "").strip()
         validation_error = None
-        if enabled and not _REMOTE_RE.fullmatch(remote):
+        if enabled and upload_mode not in {"webdav", "native", "multipart"}:
+            validation_error = "WUKONG_DCCLOUD_UPLOAD_MODE must be webdav, native, or multipart"
+        elif enabled and upload_mode in {"webdav", "multipart"} and not _REMOTE_RE.fullmatch(remote):
             validation_error = "WUKONG_DCCLOUD_REMOTE is invalid"
         elif enabled and not _ROOT_RE.fullmatch(root):
             validation_error = "WUKONG_DCCLOUD_ROOT is invalid"
         elif enabled and not share_url:
             validation_error = "WUKONG_DCCLOUD_SHARE_URL is required when mirroring is enabled"
+        elif enabled and upload_mode == "native" and not api_url:
+            validation_error = "WUKONG_DCCLOUD_API_URL is required for native upload"
+        elif enabled and upload_mode == "native" and not refresh_token:
+            validation_error = "WUKONG_DCCLOUD_REFRESH_TOKEN is required for native upload"
+        elif enabled and upload_mode == "native":
+            try:
+                parsed_api = urlsplit(api_url)
+            except ValueError:
+                parsed_api = None
+            if (
+                parsed_api is None
+                or parsed_api.scheme.casefold() != "https"
+                or not parsed_api.hostname
+                or parsed_api.username
+                or parsed_api.password
+                or parsed_api.query
+                or parsed_api.fragment
+            ):
+                validation_error = "WUKONG_DCCLOUD_API_URL must be HTTPS without credentials"
         elif enabled and webdav_url:
             try:
                 parsed_webdav = urlsplit(webdav_url)
@@ -93,6 +122,9 @@ class DCloudMirrorConfig:
             root=root,
             share_url=share_url,
             webdav_url=webdav_url,
+            upload_mode=upload_mode,
+            api_url=api_url,
+            refresh_token=refresh_token,
             config_path=config_path,
             cloudreve_version=os.environ.get("WUKONG_DCCLOUD_CLOUDREVE_VERSION", "").strip(),
             validation_error=validation_error,
@@ -128,8 +160,23 @@ class ArtifactMirrorPublisher:
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self.config = config
-        self.storage_factory = storage_factory or (
-            lambda remote: RcloneStorageAdapter(
+        if storage_factory is not None:
+            self.storage_factory = storage_factory
+        elif config.upload_mode == "native":
+            self.storage_factory = lambda _remote: CloudreveStorageAdapter(
+                CloudreveClient(config.api_url, config.refresh_token)
+            )
+        elif config.upload_mode == "multipart":
+            self.storage_factory = lambda remote: RcloneSplitStorageAdapter(
+                RcloneStorageAdapter(
+                    remote=remote,
+                    root="",
+                    webdav_url=config.webdav_url or None,
+                    config_path=config.config_path,
+                )
+            )
+        else:
+            self.storage_factory = lambda remote: RcloneStorageAdapter(
                 remote=remote,
                 # The WebDAV device is already scoped to My Files/WukongROM;
                 # WUKONG_DCCLOUD_ROOT is therefore the first remote segment.
@@ -137,7 +184,6 @@ class ArtifactMirrorPublisher:
                 webdav_url=config.webdav_url or None,
                 config_path=config.config_path,
             )
-        )
         self.retry_attempts = max(1, min(3, retry_attempts))
         self.sleep = sleep
 

@@ -8,11 +8,52 @@ from unittest.mock import patch
 
 from wukong.adapters import RcloneStorageAdapter
 from wukong.artifact_mirror import ArtifactMirrorPublisher, DCloudMirrorConfig
+from wukong.cloudreve import CloudreveStorageAdapter
+from wukong.split_mirror import RcloneSplitStorageAdapter
 from wukong.models import ArtifactMirrorRecord, ArtifactRecord, Identity, JobManifest
 from wukong.telegram_mini_api import public_job_payload
 
 
 class ArtifactMirrorTests(unittest.TestCase):
+    def test_native_config_selects_cloudreve_adapter_without_webdav(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
+                "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
+                "WUKONG_DCCLOUD_UPLOAD_MODE": "native",
+                "WUKONG_DCCLOUD_API_URL": "https://cloud.example",
+                "WUKONG_DCCLOUD_REFRESH_TOKEN": "refresh-secret",
+                "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/s/share",
+            },
+            clear=False,
+        ):
+            config = DCloudMirrorConfig.from_env()
+        self.assertIsNone(config.validation_error)
+        self.assertNotIn("refresh-secret", repr(config))
+        storage = ArtifactMirrorPublisher(config).storage_factory(config.remote)
+        self.assertIsInstance(storage, CloudreveStorageAdapter)
+
+    def test_multipart_config_selects_cloudflare_safe_webdav_adapter(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
+                "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
+                "WUKONG_DCCLOUD_UPLOAD_MODE": "multipart",
+                "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/s/share",
+            },
+            clear=False,
+        ):
+            config = DCloudMirrorConfig.from_env()
+        self.assertIsNone(config.validation_error)
+        self.assertIsInstance(
+            ArtifactMirrorPublisher(config).storage_factory(config.remote),
+            RcloneSplitStorageAdapter,
+        )
+
     def test_disabled_actions_config_does_not_change_manifest_schema(self) -> None:
         record = ArtifactRecord("rom.zip", "drive:rom.zip", "a" * 64, 3)
         payload = JobManifest("job", Identity("test", "1", "user"), "digest", artifacts=[record]).to_dict()

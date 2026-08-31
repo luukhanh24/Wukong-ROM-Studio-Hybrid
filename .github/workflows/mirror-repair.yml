@@ -15,11 +15,15 @@ jobs:
   repair:
     runs-on: ubuntu-24.04
     env:
-      WUKONG_DCCLOUD_MIRROR_ENABLED: ${{ vars.WUKONG_DCCLOUD_MIRROR_ENABLED || 'false' }}
+      # A manual repair is an explicit opt-in even while automatic mirroring is disabled.
+      WUKONG_DCCLOUD_MIRROR_ENABLED: "true"
       WUKONG_DCCLOUD_REMOTE: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
       WUKONG_DCCLOUD_ROOT: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
       WUKONG_DCCLOUD_SHARE_URL: ${{ vars.WUKONG_DCCLOUD_SHARE_URL || '' }}
       WUKONG_DCCLOUD_WEBDAV_URL: ${{ vars.WUKONG_DCCLOUD_WEBDAV_URL || '' }}
+      WUKONG_DCCLOUD_UPLOAD_MODE: ${{ vars.WUKONG_DCCLOUD_UPLOAD_MODE || 'webdav' }}
+      WUKONG_DCCLOUD_API_URL: ${{ vars.WUKONG_DCCLOUD_API_URL || '' }}
+      WUKONG_DCCLOUD_REFRESH_TOKEN: ${{ secrets.WUKONG_DCCLOUD_REFRESH_TOKEN }}
       WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

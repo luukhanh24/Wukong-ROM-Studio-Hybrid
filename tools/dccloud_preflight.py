@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 
 from wukong.artifact_mirror import DCloudMirrorConfig
 from wukong.adapters import RcloneStorageAdapter
+from wukong.cloudreve import CloudreveClient
 
 
 def _version_at_least(value: str, minimum: tuple[int, int, int] = (4, 16, 1)) -> bool:
@@ -123,8 +124,8 @@ def _verify_anonymous_share(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Preflight the DC Cloud WebDAV mirror")
-    parser.add_argument("--config", required=True, type=Path)
+    parser = argparse.ArgumentParser(description="Preflight the DC Cloud mirror")
+    parser.add_argument("--config", type=Path)
     parser.add_argument("--write-test", action="store_true")
     args = parser.parse_args()
     config = DCloudMirrorConfig.from_env(config_path=args.config)
@@ -135,6 +136,49 @@ def main() -> int:
         raise SystemExit(config.validation_error)
     if not _version_at_least(config.cloudreve_version):
         raise SystemExit("WUKONG_DCCLOUD_CLOUDREVE_VERSION must be Cloudreve >= 4.16.1")
+    if config.upload_mode == "native":
+        client = CloudreveClient(config.api_url, config.refresh_token)
+        client.access_token()
+        account_root = "cloudreve://my/WukongROM"
+        client.ensure_folder(f"{account_root}/_staging")
+        client.ensure_folder(f"{account_root}/{config.root}")
+        if args.write_test:
+            key = f"{uuid.uuid4().hex}.preflight"
+            with tempfile.TemporaryDirectory(prefix="wukong-dccloud-preflight-") as root:
+                probe = Path(root) / key
+                probe_body = b"wukong-dccloud-preflight\n"
+                probe.write_bytes(probe_body)
+                staging_target = f"{account_root}/_staging/{key}"
+                public_target = f"{account_root}/{config.root}/{key}"
+                client.upload_file(probe, staging_target)
+                client.delete(staging_target)
+                client.upload_file(probe, public_target)
+                try:
+                    last_error: SystemExit | None = None
+                    for attempt in range(5):
+                        try:
+                            _verify_anonymous_share(
+                                config.share_url,
+                                config.root,
+                                probe_name=key,
+                                probe_body=probe_body,
+                            )
+                            last_error = None
+                            break
+                        except SystemExit as exc:
+                            last_error = exc
+                            if attempt < 4:
+                                time.sleep(2)
+                    if last_error is not None:
+                        raise last_error
+                finally:
+                    client.delete(public_target)
+        else:
+            _verify_anonymous_share(config.share_url, config.root)
+        print(json.dumps({"mode": "native", "root": config.root, "share": "readable"}))
+        return 0
+    if args.config is None:
+        raise SystemExit("--config is required for WebDAV preflight")
     storage = RcloneStorageAdapter(
         remote=config.remote,
         root="",

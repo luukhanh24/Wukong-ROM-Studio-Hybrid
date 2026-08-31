@@ -9,6 +9,7 @@ from pathlib import Path
 
 from wukong.artifact_mirror import DCloudMirrorConfig
 from wukong.adapters import RcloneStorageAdapter
+from wukong.cloudreve import CloudreveClient
 
 
 def main() -> int:
@@ -17,21 +18,24 @@ def main() -> int:
     if not config.enabled:
         return 0
     try:
-        output = subprocess.run(
-            RcloneStorageAdapter(
-                remote=config.remote,
-                root="",
-                webdav_url=config.webdav_url or None,
-                config_path=config_path,
-            )._args(
-                "about", f"{config.remote}:", "--json"
-            ),
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        ).stdout
-        payload = json.loads(output)
+        if config.upload_mode == "native":
+            payload = CloudreveClient(config.api_url, config.refresh_token).capacity()
+        else:
+            output = subprocess.run(
+                RcloneStorageAdapter(
+                    remote=config.remote,
+                    root="",
+                    webdav_url=config.webdav_url or None,
+                    config_path=config_path,
+                )._args(
+                    "about", f"{config.remote}:", "--json"
+                ),
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            ).stdout
+            payload = json.loads(output)
         used = float(payload.get("used", 0) or 0)
         total = float(payload.get("total", 0) or 0)
         ratio = used / total if total > 0 else 0
