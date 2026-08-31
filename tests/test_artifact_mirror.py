@@ -118,3 +118,27 @@ class ArtifactMirrorTests(unittest.TestCase):
             self.assertEqual("upload_failed", result.error_code)
             self.assertEqual(3, attempts)
             self.assertNotIn("credential", result.error_code or "")
+
+    def test_publisher_exposes_only_the_failed_remote_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            artifact = Path(root, "rom.zip")
+            artifact.write_bytes(b"rom")
+
+            def run(args: list[str], **_: object) -> str:
+                if args[1] == "cat":
+                    raise RuntimeError("missing")
+                if args[1] == "lsjson":
+                    return json.dumps({"Size": 3})
+                if args[1] == "moveto":
+                    raise RuntimeError("private WebDAV details")
+                return ""
+
+            config = DCloudMirrorConfig(True, share_url="https://cloud.example/share")
+            result = ArtifactMirrorPublisher(
+                config,
+                storage_factory=lambda remote: RcloneStorageAdapter(remote=remote, run_command=run),
+                sleep=lambda _: None,
+            ).publish(artifact, job_id="job", device="X", build="V5")
+            self.assertEqual("failed", result.status)
+            self.assertEqual("remote_move_failed", result.error_code)
+            self.assertNotIn("WebDAV", result.error_code or "")

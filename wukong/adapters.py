@@ -45,6 +45,14 @@ class SourceIntegrityError(SourceError):
     pass
 
 
+class MirrorCommandError(RuntimeError):
+    """A credential-free identifier for the failed WebDAV operation."""
+
+    def __init__(self, error_code: str) -> None:
+        super().__init__(error_code)
+        self.error_code = error_code
+
+
 class SourceResolutionError(SourceError):
     pass
 
@@ -1455,11 +1463,21 @@ class RcloneStorageAdapter:
             pass
 
         stage_uri = self.remote_uri(f"_staging/{staging}/{artifact.name}.partial")
-        self.copy_file(artifact, f"_staging/{staging}/{artifact.name}.partial", progress_callback=progress_callback)
+        try:
+            self.copy_file(
+                artifact,
+                f"_staging/{staging}/{artifact.name}.partial",
+                progress_callback=progress_callback,
+            )
+        except Exception as exc:
+            raise MirrorCommandError("remote_upload_failed") from exc
         # ``rclone size`` treats its target as a directory. Some WebDAV
         # servers take a long time and then reject that operation for a file.
         # A direct stat is both bounded to one object and gives the exact size.
-        size_output = self.run_command(self._args("lsjson", stage_uri, "--stat"))
+        try:
+            size_output = self.run_command(self._args("lsjson", stage_uri, "--stat"))
+        except Exception as exc:
+            raise MirrorCommandError("remote_stat_failed") from exc
         try:
             remote_size = int(json.loads(size_output).get("Size", -1))
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -1470,8 +1488,14 @@ class RcloneStorageAdapter:
             )
         final_parent = str(PurePosixPath(normalized).parent)
         if final_parent and final_parent != ".":
-            self.run_command(self._args("mkdir", self.remote_uri(final_parent)))
-        self.run_command(self._args("moveto", stage_uri, final_uri, "--retries", "3"))
+            try:
+                self.run_command(self._args("mkdir", self.remote_uri(final_parent)))
+            except Exception as exc:
+                raise MirrorCommandError("remote_mkdir_failed") from exc
+        try:
+            self.run_command(self._args("moveto", stage_uri, final_uri, "--retries", "3"))
+        except Exception as exc:
+            raise MirrorCommandError("remote_move_failed") from exc
         with tempfile.TemporaryDirectory(prefix="wukong-mirror-metadata-") as root:
             metadata_path = Path(root) / (artifact.name + ".metadata.json")
             metadata_path.write_text(
@@ -1488,7 +1512,10 @@ class RcloneStorageAdapter:
                 + "\n",
                 encoding="utf-8",
             )
-            self.copy_file(metadata_path, normalized + ".metadata.json")
+            try:
+                self.copy_file(metadata_path, normalized + ".metadata.json")
+            except Exception as exc:
+                raise MirrorCommandError("remote_metadata_failed") from exc
         return ArtifactRecord(artifact.name, final_uri, digest, size_bytes)
 
     def store_source(self, source: Path, *, device: str, digest: str | None = None) -> ArtifactRecord:

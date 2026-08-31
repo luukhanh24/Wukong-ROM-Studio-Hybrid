@@ -21,6 +21,7 @@ from .models import ArtifactMirrorRecord, ArtifactRecord
 
 _REMOTE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _ROOT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*(?:/[A-Za-z0-9][A-Za-z0-9_.-]*)*$")
+_ERROR_CODE_RE = re.compile(r"^remote_(?:upload|stat|mkdir|move|metadata)_failed$")
 _ERROR_CODES = {
     "FileNotFoundError": "source_missing",
     "SourceIntegrityError": "integrity_mismatch",
@@ -169,11 +170,17 @@ class ArtifactMirrorPublisher:
                 last_error = exc
                 if attempt + 1 < self.retry_attempts:
                     self.sleep(2**attempt)
+        stage_error = getattr(last_error, "error_code", None)
+        error_code = (
+            stage_error
+            if isinstance(stage_error, str) and _ERROR_CODE_RE.fullmatch(stage_error)
+            else _ERROR_CODES.get(type(last_error).__name__, "upload_failed")
+        )
         return ArtifactMirrorRecord(
             provider="dccloud",
             status="failed",
             browse_url=browse_url,
-            error_code=_ERROR_CODES.get(type(last_error).__name__, "upload_failed"),
+            error_code=error_code,
         )
 
 
