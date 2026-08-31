@@ -123,8 +123,9 @@ class CloudreveNativeTests(unittest.TestCase):
 
     def test_native_upload_supports_onedrive_ranges_and_completion_callback(self) -> None:
         calls: list[tuple[str, str, dict[str, object]]] = []
-        chunk_size = 320 * 1024
-        payload_size = chunk_size * 2 + 10
+        chunk_size = 50 * 1024 * 1024
+        effective_chunk_size = 10 * 1024 * 1024
+        payload_size = effective_chunk_size * 2 + 10
 
         def request(method: str, url: str, **kwargs: object) -> _Response:
             calls.append((method, url, kwargs))
@@ -161,14 +162,14 @@ class CloudreveNativeTests(unittest.TestCase):
         range_calls = [call for call in calls if call[1] == "https://onedrive.example/upload-session"]
         self.assertEqual(
             [
-                f"bytes 0-{chunk_size - 1}/{payload_size}",
-                f"bytes {chunk_size}-{chunk_size * 2 - 1}/{payload_size}",
-                f"bytes {chunk_size * 2}-{payload_size - 1}/{payload_size}",
+                f"bytes 0-{effective_chunk_size - 1}/{payload_size}",
+                f"bytes {effective_chunk_size}-{effective_chunk_size * 2 - 1}/{payload_size}",
+                f"bytes {effective_chunk_size * 2}-{payload_size - 1}/{payload_size}",
             ],
             [str(call[2]["headers"]["Content-Range"]) for call in range_calls],
         )
         self.assertEqual(
-            [chunk_size, chunk_size, 10],
+            [effective_chunk_size, effective_chunk_size, 10],
             [len(call[2]["data"]) for call in range_calls],
         )
         callback = next(call for call in calls if "/callback/onedrive/session/callback" in call[1])

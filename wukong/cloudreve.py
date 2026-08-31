@@ -23,6 +23,7 @@ from .models import ArtifactRecord
 MAX_PROXY_CHUNK_BYTES = 95 * 1024 * 1024
 ONEDRIVE_CHUNK_GRANULARITY = 320 * 1024
 ONEDRIVE_MAX_CHUNK_BYTES = 60 * 1024 * 1024
+ONEDRIVE_RECOMMENDED_CHUNK_BYTES = 10 * 1024 * 1024
 
 
 def _sha256_file(path: Path) -> str:
@@ -203,6 +204,11 @@ class CloudreveClient:
             or (size > chunk_size and chunk_size % ONEDRIVE_CHUNK_GRANULARITY != 0)
         ):
             raise CloudreveError("chunk_size_invalid")
+        effective_chunk_size = (
+            min(chunk_size, ONEDRIVE_RECOMMENDED_CHUNK_BYTES)
+            if policy_type == "onedrive"
+            else chunk_size
+        )
 
         transferred = 0
         with source.open("rb") as stream:
@@ -210,7 +216,7 @@ class CloudreveClient:
             while transferred < size:
                 if expires and time.time() >= expires - 30:
                     raise CloudreveError("upload_session_expired")
-                body = stream.read(min(chunk_size, size - transferred))
+                body = stream.read(min(effective_chunk_size, size - transferred))
                 if not body:
                     raise CloudreveError("source_changed")
                 if policy_type == "onedrive":
