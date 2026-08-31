@@ -1145,28 +1145,30 @@ def _render_mini_app_in_chrome(
                 launch_url += f"#tgWebAppData={quote(init_data, safe='')}"
             elif initial_view:
                 launch_url += f"#{initial_view}"
-            result = subprocess.run(
-                [
-                    chrome,
-                    "--headless=new",
-                    "--disable-gpu",
-                    "--disable-background-networking",
-                    "--disable-component-update",
-                    "--disable-sync",
-                    "--hide-scrollbars",
-                    "--no-first-run",
-                    "--no-default-browser-check",
-                    f"--window-size={window_width},1400",
-                    "--virtual-time-budget=8000",
-                    f"--user-data-dir={profile}",
-                    f"--screenshot={screenshot}",
-                    "--dump-dom",
-                    launch_url,
-                ],
-                capture_output=True,
-                timeout=30,
-                check=False,
-            )
+            chrome_args = [
+                chrome,
+                "--headless=new",
+                "--disable-gpu",
+                "--disable-background-networking",
+                "--disable-component-update",
+                "--disable-sync",
+                "--hide-scrollbars",
+                "--no-first-run",
+                "--no-default-browser-check",
+                f"--window-size={window_width},1400",
+                "--virtual-time-budget=8000",
+                f"--user-data-dir={profile}",
+                f"--screenshot={screenshot}",
+                "--dump-dom",
+                launch_url,
+            ]
+            try:
+                result = subprocess.run(chrome_args, capture_output=True, timeout=30, check=False)
+            except subprocess.TimeoutExpired:
+                # Hosted Windows runners occasionally delay Chrome startup while
+                # the profile is initialized. One bounded retry distinguishes that
+                # transient delay from a persistent rendering hang.
+                result = subprocess.run(chrome_args, capture_output=True, timeout=45, check=False)
             if result.returncode != 0:
                 raise AssertionError(result.stderr.decode("utf-8", errors="replace"))
             if screenshot_output is not None:

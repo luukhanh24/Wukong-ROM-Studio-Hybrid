@@ -23,6 +23,7 @@ class ArtifactMirrorTests(unittest.TestCase):
             "os.environ",
             {
                 "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
                 "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
                 "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/share",
             },
