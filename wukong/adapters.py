@@ -1494,8 +1494,25 @@ class RcloneStorageAdapter:
                 raise MirrorCommandError("remote_mkdir_failed") from exc
         try:
             self.run_command(self._args("moveto", stage_uri, final_uri, "--retries", "3"))
-        except Exception as exc:
-            raise MirrorCommandError("remote_move_failed") from exc
+        except Exception as move_exc:
+            # Cloudreve versions in the wild may reject WebDAV MOVE even
+            # though scoped read/write and ordinary uploads work. The staged
+            # object is already complete, so finish with remote COPY + size
+            # verification + cleanup. A metadata sidecar is still written
+            # last, keeping the public record's completion marker atomic.
+            try:
+                self.run_command(self._args("copyto", stage_uri, final_uri, "--retries", "3"))
+                final_size_output = self.run_command(self._args("lsjson", final_uri, "--stat"))
+                final_size = int(json.loads(final_size_output).get("Size", -1))
+                if final_size != size_bytes:
+                    raise SourceIntegrityError(
+                        f"Mirror final size mismatch: expected {size_bytes}, got {final_size}"
+                    )
+                self.run_command(self._args("deletefile", stage_uri))
+            except SourceIntegrityError:
+                raise
+            except Exception as copy_exc:
+                raise MirrorCommandError("remote_move_failed") from copy_exc
         with tempfile.TemporaryDirectory(prefix="wukong-mirror-metadata-") as root:
             metadata_path = Path(root) / (artifact.name + ".metadata.json")
             metadata_path.write_text(
