@@ -35,11 +35,19 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
-          zone_payload="$(curl --fail --silent --show-error "${auth[@]}" \
+          zone_payload="$(curl --silent --show-error "${auth[@]}" \
             "$api/zones?name=dabeecao.org&status=active&per_page=20")"
+          if [[ "$(jq -r '.success // false' <<<"$zone_payload")" != true ]]; then
+            jq '{success,errors}' <<<"$zone_payload"
+            exit 1
+          fi
           zone_id="$(jq -er '.result[0].id' <<<"$zone_payload")"
-          cloud_payload="$(curl --fail --silent --show-error "${auth[@]}" \
+          cloud_payload="$(curl --silent --show-error "${auth[@]}" \
             "$api/zones/$zone_id/dns_records?name=cloud.dabeecao.org&per_page=100")"
+          if [[ "$(jq -r '.success // false' <<<"$cloud_payload")" != true ]]; then
+            jq '{success,errors}' <<<"$cloud_payload"
+            exit 1
+          fi
           mapfile -t source_records < <(
             jq -er '.result[] | select(.type == "A" or .type == "AAAA" or .type == "CNAME") | [.type,.content,.ttl] | @tsv' \
               <<<"$cloud_payload"
