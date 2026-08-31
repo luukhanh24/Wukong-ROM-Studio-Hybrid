@@ -31,12 +31,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          [[ -n "$CLOUDFLARE_API_TOKEN" ]] && echo 'Cloudflare API token present' || { echo 'Cloudflare API token missing' >&2; exit 1; }
+          [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] && echo 'Cloudflare account id present' || { echo 'Cloudflare account id missing' >&2; exit 1; }
           api='https://api.cloudflare.com/client/v4'
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          set +e
           zone_payload="$(curl --silent --show-error "${auth[@]}" \
-            "$api/zones?name=dabeecao.org&status=active&per_page=20")"
+            "$api/zones?name=dabeecao.org&status=active&per_page=20" 2>&1)"
+          curl_status=$?
+          set -e
+          echo "Cloudflare zone request exit=$curl_status bytes=${#zone_payload}"
+          [[ "$curl_status" == 0 ]] || { echo 'Cloudflare zone request failed' >&2; exit 1; }
           if [[ "$(jq -r '.success // false' <<<"$zone_payload")" != true ]]; then
             jq '{success,errors}' <<<"$zone_payload"
             exit 1
