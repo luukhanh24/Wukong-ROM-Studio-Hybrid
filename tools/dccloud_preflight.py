@@ -132,6 +132,7 @@ def _multipart_canary(storage: RcloneStorageAdapter, mirror_root: str, size_mib:
     final_folder = final_artifact + ".parts"
     staging_folder = f"_staging/{key}/{key}.bin.parts"
     primary_error: BaseException | None = None
+    mirror_completed = False
     try:
         with tempfile.TemporaryDirectory(prefix="wukong-dccloud-multipart-canary-") as root:
             root_path = Path(root)
@@ -147,6 +148,7 @@ def _multipart_canary(storage: RcloneStorageAdapter, mirror_root: str, size_mib:
                 relative_path=final_artifact,
                 staging_key=key,
             )
+            mirror_completed = True
             manifest = json.loads(storage.read_text(f"{final_folder}/manifest.json"))
             reconstructed = root_path / "reconstructed.bin"
             with reconstructed.open("wb") as output:
@@ -165,7 +167,10 @@ def _multipart_canary(storage: RcloneStorageAdapter, mirror_root: str, size_mib:
         raise
     finally:
         cleanup_errors: list[Exception] = []
-        for target in (final_folder, staging_folder):
+        cleanup_targets = [final_folder]
+        if not mirror_completed:
+            cleanup_targets.append(staging_folder)
+        for target in cleanup_targets:
             try:
                 storage.remove_tree(target)
             except Exception as exc:
