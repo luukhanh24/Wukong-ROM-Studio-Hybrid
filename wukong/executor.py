@@ -186,10 +186,27 @@ class LocalJobExecutor:
             content_index or SCRIPT_ROOT / "content-packs" / "index.json"
         ).resolve()
         self.actions_ui = actions_ui or GitHubActionsUI()
-        self.mirror_publisher = mirror_publisher or ArtifactMirrorPublisher(
-            DCloudMirrorConfig.from_env(config_path=rclone_config),
-            storage_factory=self.storage_factory,
-        )
+        if mirror_publisher is not None:
+            self.mirror_publisher = mirror_publisher
+        else:
+            mirror_config = DCloudMirrorConfig.from_env(config_path=rclone_config)
+            # The WebDAV device is scoped to My Files/WukongROM, unlike the
+            # primary Drive remote.  Keep the mirror path relative to that
+            # scoped root so WUKONG_DCCLOUD_ROOT=ROM maps to the shared
+            # WukongROM/ROM folder rather than WukongROM/WukongROM/ROM.
+            mirror_storage_factory = (
+                self.storage_factory
+                if storage_factory is not None
+                else lambda remote: RcloneStorageAdapter(
+                    remote=remote,
+                    root="",
+                    config_path=rclone_config,
+                )
+            )
+            self.mirror_publisher = ArtifactMirrorPublisher(
+                mirror_config,
+                storage_factory=mirror_storage_factory,
+            )
         self._cloud_push_warning_at: dict[str, float] = {}
 
     def execute(self, job_id: str) -> JobManifest:

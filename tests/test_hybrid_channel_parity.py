@@ -55,6 +55,24 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_default_dccloud_factory_uses_scoped_webdav_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            "os.environ",
+            {
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
+                "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
+                "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/share",
+            },
+            clear=False,
+        ):
+            executor = LocalJobExecutor(
+                store=InMemoryJobStore(),
+                workspace_root=Path(temporary) / "workspace",
+            )
+            storage = executor.mirror_publisher.storage_factory("wukong-dccloud")
+            self.assertEqual("", storage.root)
+
     def test_daniel_build_page_materializes_to_zip_filename(self) -> None:
         recipe = BuildRecipe.from_dict(
             {
