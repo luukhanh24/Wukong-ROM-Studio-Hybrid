@@ -39,8 +39,8 @@ class DCloudMirrorConfig:
     share_url: str = ""
     config_path: Path | None = None
     cloudreve_version: str = ""
-    webdav_url: str = ""
     validation_error: str | None = None
+    webdav_url: str = ""
 
     @classmethod
     def from_env(cls, *, config_path: Path | None = None) -> "DCloudMirrorConfig":
@@ -76,6 +76,8 @@ class DCloudMirrorConfig:
                 or not parsed_webdav.hostname
                 or parsed_webdav.username
                 or parsed_webdav.password
+                or parsed_webdav.query
+                or parsed_webdav.fragment
             ):
                 validation_error = "WUKONG_DCCLOUD_WEBDAV_URL must be HTTPS without credentials"
         if enabled and share_url and validation_error is None:
