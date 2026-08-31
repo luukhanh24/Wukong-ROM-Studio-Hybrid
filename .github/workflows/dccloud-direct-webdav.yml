@@ -46,6 +46,16 @@ jobs:
             jq '{success,errors}' <<<"$zone_payload"
             exit 1
           fi
+          zone_count="$(jq '.result | length' <<<"$zone_payload")"
+          echo "Accessible dabeecao.org zones: $zone_count"
+          if [[ "$zone_count" -eq 0 ]]; then
+            if [[ "$MODE" == inspect ]]; then
+              echo 'The Cloudflare token has no Zone:Read access to dabeecao.org; no DNS mutation performed.'
+              exit 0
+            fi
+            echo 'The Cloudflare token cannot see the dabeecao.org zone.' >&2
+            exit 1
+          fi
           zone_id="$(jq -er '.result[0].id' <<<"$zone_payload")"
           cloud_payload="$(curl --silent --show-error "${auth[@]}" \
             "$api/zones/$zone_id/dns_records?name=cloud.dabeecao.org&per_page=100")"
