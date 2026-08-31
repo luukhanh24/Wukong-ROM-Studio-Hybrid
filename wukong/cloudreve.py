@@ -292,8 +292,22 @@ class CloudreveClient:
                                 if expected_start > transferred:
                                     range_start = expected_start
                                     pending = body[expected_start - transferred :]
-                            except Exception:
-                                pass
+                            except Exception as status_exc:
+                                status_code = getattr(
+                                    getattr(status_exc, "response", None),
+                                    "status_code",
+                                    None,
+                                )
+                                if (
+                                    transferred + len(body) == size
+                                    and status_code in {404, 410}
+                                ):
+                                    # OneDrive removes a completed upload
+                                    # session.  Let Cloudreve's authenticated
+                                    # callback and the final size check decide
+                                    # whether the lost final PUT succeeded.
+                                    last_error = None
+                                    break
                         if attempt < 2:
                             self.sleep(2**attempt)
                 if last_error is not None:
