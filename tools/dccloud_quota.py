@@ -18,7 +18,12 @@ def main() -> int:
         return 0
     try:
         output = subprocess.run(
-            RcloneStorageAdapter(remote=config.remote, root="", config_path=config_path)._args(
+            RcloneStorageAdapter(
+                remote=config.remote,
+                root="",
+                webdav_url=config.webdav_url or None,
+                config_path=config_path,
+            )._args(
                 "about", f"{config.remote}:", "--json"
             ),
             check=True,

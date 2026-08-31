@@ -303,6 +303,7 @@ jobs:
           dccloud_remote: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
           dccloud_root: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
           dccloud_share_url: ${{ vars.WUKONG_DCCLOUD_SHARE_URL || '' }}
+          dccloud_webdav_url: ${{ vars.WUKONG_DCCLOUD_WEBDAV_URL || '' }}
           dccloud_cloudreve_version: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
       - name: "19.1 · Chuyển manifest cho callback / Transfer terminal manifest"
         if: always()
@@ -346,6 +347,7 @@ jobs:
           dccloud_remote: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
           dccloud_root: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
           dccloud_share_url: ${{ vars.WUKONG_DCCLOUD_SHARE_URL || '' }}
+          dccloud_webdav_url: ${{ vars.WUKONG_DCCLOUD_WEBDAV_URL || '' }}
           dccloud_cloudreve_version: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
       - name: "19.1 · Chuyển manifest cho callback / Transfer terminal manifest"
         if: always()

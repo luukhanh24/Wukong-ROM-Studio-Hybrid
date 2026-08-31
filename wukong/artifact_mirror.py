@@ -39,6 +39,7 @@ class DCloudMirrorConfig:
     share_url: str = ""
     config_path: Path | None = None
     cloudreve_version: str = ""
+    webdav_url: str = ""
     validation_error: str | None = None
 
     @classmethod
@@ -56,6 +57,7 @@ class DCloudMirrorConfig:
         remote = os.environ.get("WUKONG_DCCLOUD_REMOTE", "wukong-dccloud").strip()
         root = os.environ.get("WUKONG_DCCLOUD_ROOT", "ROM").strip().strip("/\\")
         share_url = os.environ.get("WUKONG_DCCLOUD_SHARE_URL", "").strip()
+        webdav_url = os.environ.get("WUKONG_DCCLOUD_WEBDAV_URL", "").strip()
         validation_error = None
         if enabled and not _REMOTE_RE.fullmatch(remote):
             validation_error = "WUKONG_DCCLOUD_REMOTE is invalid"
@@ -63,6 +65,19 @@ class DCloudMirrorConfig:
             validation_error = "WUKONG_DCCLOUD_ROOT is invalid"
         elif enabled and not share_url:
             validation_error = "WUKONG_DCCLOUD_SHARE_URL is required when mirroring is enabled"
+        elif enabled and webdav_url:
+            try:
+                parsed_webdav = urlsplit(webdav_url)
+            except ValueError:
+                parsed_webdav = None
+            if (
+                parsed_webdav is None
+                or parsed_webdav.scheme.casefold() != "https"
+                or not parsed_webdav.hostname
+                or parsed_webdav.username
+                or parsed_webdav.password
+            ):
+                validation_error = "WUKONG_DCCLOUD_WEBDAV_URL must be HTTPS without credentials"
         if enabled and share_url and validation_error is None:
             try:
                 parsed = urlsplit(share_url)
@@ -75,6 +90,7 @@ class DCloudMirrorConfig:
             remote=remote,
             root=root,
             share_url=share_url,
+            webdav_url=webdav_url,
             config_path=config_path,
             cloudreve_version=os.environ.get("WUKONG_DCCLOUD_CLOUDREVE_VERSION", "").strip(),
             validation_error=validation_error,
@@ -116,6 +132,7 @@ class ArtifactMirrorPublisher:
                 # The WebDAV device is already scoped to My Files/WukongROM;
                 # WUKONG_DCCLOUD_ROOT is therefore the first remote segment.
                 root="",
+                webdav_url=config.webdav_url or None,
                 config_path=config.config_path,
             )
         )

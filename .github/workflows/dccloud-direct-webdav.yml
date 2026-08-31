@@ -1,0 +1,78 @@
+name: DC Cloud · Direct WebDAV hostname
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Inspect current DNS or provision a DNS-only DAV hostname"
+        required: true
+        type: choice
+        options: [inspect, provision]
+        default: inspect
+      confirm:
+        description: "For provision only, type CREATE_DNS_ONLY"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dns:
+    name: Inspect/provision dav.dabeecao.org
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      MODE: ${{ inputs.mode }}
+      CONFIRM: ${{ inputs.confirm }}
+    steps:
+      - name: Inspect or provision DNS-only hostname
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          api='https://api.cloudflare.com/client/v4'
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
+          zone_payload="$(curl --fail --silent --show-error "${auth[@]}" \
+            "$api/zones?name=dabeecao.org&status=active&per_page=20")"
+          zone_id="$(jq -er '.result[0].id' <<<"$zone_payload")"
+          cloud_payload="$(curl --fail --silent --show-error "${auth[@]}" \
+            "$api/zones/$zone_id/dns_records?name=cloud.dabeecao.org&per_page=100")"
+          mapfile -t source_records < <(
+            jq -er '.result[] | select(.type == "A" or .type == "AAAA" or .type == "CNAME") | [.type,.content,.ttl] | @tsv' \
+              <<<"$cloud_payload"
+          )
+          test "${#source_records[@]}" -gt 0
+          echo "cloud.dabeecao.org records: ${#source_records[@]}"
+          jq -r '.result[] | [.type, .proxied, .ttl] | @tsv' <<<"$cloud_payload"
+          if [[ "$MODE" == inspect ]]; then
+            echo 'Inspection only; no DNS mutation performed.'
+            exit 0
+          fi
+          [[ "$MODE" == provision && "$CONFIRM" == CREATE_DNS_ONLY ]]
+          dav_payload="$(curl --fail --silent --show-error "${auth[@]}" \
+            "$api/zones/$zone_id/dns_records?name=dav.dabeecao.org&per_page=100")"
+          if [[ "$(jq '.result | length' <<<"$dav_payload")" != 0 ]]; then
+            while IFS=$'\t' read -r type content; do
+              match="$(jq --arg type "$type" --arg content "$content" \
+                '[.result[] | select(.type == $type and .content == $content and .proxied == false)] | length' \
+                <<<"$dav_payload")"
+              [[ "$match" == 1 ]] || {
+                echo "dav.dabeecao.org already has a conflicting DNS record" >&2
+                exit 1
+              }
+            done < <(jq -r '.result[] | [.type,.content] | @tsv' <<<"$dav_payload")
+            echo 'dav.dabeecao.org already matches the source records.'
+            exit 0
+          fi
+          while IFS=$'\t' read -r type content ttl; do
+            printf '::add-mask::%s\n' "$content"
+            body="$(jq -cn --arg type "$type" --arg name dav.dabeecao.org --arg content "$content" --argjson ttl "$ttl" \
+              '{type:$type,name:$name,content:$content,ttl:$ttl,proxied:false,comment:"Wukong DC Cloud direct WebDAV"}')"
+            response="$(curl --fail --silent --show-error "${auth[@]}" -X POST \
+              "$api/zones/$zone_id/dns_records" --data "$body")"
+            jq -e '.success == true' <<<"$response" >/dev/null
+          done < <(jq -r '.result[] | select(.type == "A" or .type == "AAAA" or .type == "CNAME") | [.type,.content,.ttl] | @tsv' <<<"$cloud_payload")
+          echo 'Provisioned dav.dabeecao.org as DNS-only records.'

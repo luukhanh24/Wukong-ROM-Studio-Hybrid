@@ -135,7 +135,12 @@ def main() -> int:
         raise SystemExit(config.validation_error)
     if not _version_at_least(config.cloudreve_version):
         raise SystemExit("WUKONG_DCCLOUD_CLOUDREVE_VERSION must be Cloudreve >= 4.16.1")
-    storage = RcloneStorageAdapter(remote=config.remote, root="", config_path=args.config)
+    storage = RcloneStorageAdapter(
+        remote=config.remote,
+        root="",
+        webdav_url=config.webdav_url or None,
+        config_path=args.config,
+    )
     # Listing the configured root proves that the remote exists and the
     # scoped account can read it without exposing rclone's stderr.
     _run(storage._args("lsd", storage.remote_uri(config.root), "--max-depth", "1"))

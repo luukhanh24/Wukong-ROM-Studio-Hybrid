@@ -17,6 +17,11 @@ Linux GitHub Actions routes (hosted and `wukong-rom` self-hosted).
    permission only. Upload/create/update/delete must be denied.
 5. Add a `[wukong-dccloud]` WebDAV remote (`vendor = other`) to the private
    rclone config. Never commit its URL, username, or password.
+6. Keep the WebDAV hostname DNS-only (not Cloudflare-proxied). If the public
+   Cloudreve hostname is proxied, set `WUKONG_DCCLOUD_WEBDAV_URL` to a direct
+   HTTPS hostname such as `https://dav.dabeecao.org/dav`; WebDAV uses a
+   single-stream PUT and Cloudflare's request-size limit will reject multi-GB
+   ROMs before they reach Cloudreve.
 
 The device account is already scoped to `My Files/WukongROM`, so the rclone
 paths used by the mirror start at `wukong-dccloud:ROM/...` (not a second
@@ -30,8 +35,16 @@ WUKONG_DCCLOUD_MIRROR_ENABLED=false
 WUKONG_DCCLOUD_REMOTE=wukong-dccloud
 WUKONG_DCCLOUD_ROOT=ROM
 WUKONG_DCCLOUD_SHARE_URL=https://cloud.dabeecao.org/...
+WUKONG_DCCLOUD_WEBDAV_URL=https://dav.dabeecao.org/dav
 WUKONG_DCCLOUD_CLOUDREVE_VERSION=4.16.1
 ```
+
+The optional `WUKONG_DCCLOUD_WEBDAV_URL` overrides only the WebDAV transport
+URL at runtime; the public share URL remains `WUKONG_DCCLOUD_SHARE_URL`.
+Use the **DC Cloud · Direct WebDAV hostname** workflow to inspect or provision
+the DNS-only hostname after confirming the Cloudflare token has DNS-edit
+permission. Do not enable the override until the hostname resolves directly
+to the Cloudreve origin and accepts the WebDAV device certificate.
 
 When enabled, `run-hybrid` verifies the remote, creates/removes a harmless
 probe in `_staging`, checks the anonymous share, and records quota warnings at

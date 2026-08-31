@@ -16,6 +16,7 @@ jobs:
       WUKONG_DCCLOUD_REMOTE: ${{ vars.WUKONG_DCCLOUD_REMOTE || 'wukong-dccloud' }}
       WUKONG_DCCLOUD_ROOT: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
       WUKONG_DCCLOUD_SHARE_URL: ${{ vars.WUKONG_DCCLOUD_SHARE_URL }}
+      WUKONG_DCCLOUD_WEBDAV_URL: ${{ vars.WUKONG_DCCLOUD_WEBDAV_URL || '' }}
       WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION }}
       WUKONG_RCLONE_CONFIG: ${{ github.workspace }}/.wkstudio/secrets/rclone.conf
     steps:

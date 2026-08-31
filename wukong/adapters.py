@@ -987,18 +987,22 @@ class RcloneStorageAdapter:
         *,
         remote: str = "wukong-gdrive",
         root: str = "WukongROM",
+        webdav_url: str | None = None,
         run_command: RunCommand = _run_text,
         stream_command: StreamCommand | None = None,
         config_path: Path | None = None,
     ) -> None:
         self.remote = remote.rstrip(":")
         self.root = root.strip("/\\")
+        self.webdav_url = webdav_url.strip() if webdav_url else None
         self.run_command = run_command
         self.stream_command = stream_command
         self.config_path = config_path
 
     def _args(self, *values: str) -> list[str]:
         args = ["rclone", *values]
+        if self.webdav_url:
+            args.extend(["--webdav-url", self.webdav_url])
         if self.config_path:
             args.extend(["--config", str(self.config_path)])
         return args

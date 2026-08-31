@@ -40,6 +40,45 @@ class ArtifactMirrorTests(unittest.TestCase):
         ):
             self.assertFalse(DCloudMirrorConfig.from_env().enabled)
 
+    def test_webdav_url_override_is_validated_and_added_to_rclone_args(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
+                "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
+                "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/share",
+                "WUKONG_DCCLOUD_WEBDAV_URL": "https://dav.example/dav",
+            },
+            clear=False,
+        ):
+            config = DCloudMirrorConfig.from_env()
+        self.assertIsNone(config.validation_error)
+        storage = RcloneStorageAdapter(
+            remote="wukong-dccloud",
+            webdav_url=config.webdav_url,
+        )
+        args = storage._args("lsd", "wukong-dccloud:ROM")
+        self.assertIn("--webdav-url", args)
+        self.assertEqual("https://dav.example/dav", args[args.index("--webdav-url") + 1])
+
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
+                "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
+                "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/share",
+                "WUKONG_DCCLOUD_WEBDAV_URL": "https://user:password@dav.example/dav",
+            },
+            clear=False,
+        ):
+            invalid = DCloudMirrorConfig.from_env()
+        self.assertEqual(
+            "WUKONG_DCCLOUD_WEBDAV_URL must be HTTPS without credentials",
+            invalid.validation_error,
+        )
+
     def test_webdav_upload_stages_checks_size_moves_and_writes_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             artifact = Path(root, "rom.zip")

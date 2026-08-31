@@ -29,6 +29,9 @@ inputs:
   dccloud_share_url:
     required: false
     default: ""
+  dccloud_webdav_url:
+    required: false
+    default: ""
   dccloud_cloudreve_version:
     required: false
     default: ""
@@ -62,6 +65,7 @@ runs:
         WUKONG_DCCLOUD_REMOTE: ${{ inputs.dccloud_remote }}
         WUKONG_DCCLOUD_ROOT: ${{ inputs.dccloud_root }}
         WUKONG_DCCLOUD_SHARE_URL: ${{ inputs.dccloud_share_url }}
+        WUKONG_DCCLOUD_WEBDAV_URL: ${{ inputs.dccloud_webdav_url }}
         WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ inputs.dccloud_cloudreve_version }}
       run: |
         set -euo pipefail
@@ -168,6 +172,7 @@ runs:
         WUKONG_DCCLOUD_REMOTE: ${{ inputs.dccloud_remote }}
         WUKONG_DCCLOUD_ROOT: ${{ inputs.dccloud_root }}
         WUKONG_DCCLOUD_SHARE_URL: ${{ inputs.dccloud_share_url }}
+        WUKONG_DCCLOUD_WEBDAV_URL: ${{ inputs.dccloud_webdav_url }}
         WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ inputs.dccloud_cloudreve_version }}
       run: |
         set -euo pipefail
