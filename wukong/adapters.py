@@ -1497,11 +1497,18 @@ class RcloneStorageAdapter:
         except Exception as move_exc:
             # Cloudreve versions in the wild may reject WebDAV MOVE even
             # though scoped read/write and ordinary uploads work. The staged
-            # object is already complete, so finish with remote COPY + size
-            # verification + cleanup. A metadata sidecar is still written
-            # last, keeping the public record's completion marker atomic.
+            # object is already complete, but remote-to-remote COPY can hang
+            # on WebDAV implementations that do not support server-side
+            # copy. Re-upload from the verified local artifact instead, then
+            # verify the final object and clean up staging. A metadata sidecar
+            # is still written last, keeping the public completion marker
+            # atomic.
             try:
-                self.run_command(self._args("copyto", stage_uri, final_uri, "--retries", "3"))
+                self.copy_file(
+                    artifact,
+                    normalized,
+                    progress_callback=progress_callback,
+                )
                 final_size_output = self.run_command(self._args("lsjson", final_uri, "--stat"))
                 final_size = int(json.loads(final_size_output).get("Size", -1))
                 if final_size != size_bytes:

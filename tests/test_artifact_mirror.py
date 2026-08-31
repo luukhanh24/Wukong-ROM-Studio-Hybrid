@@ -66,7 +66,14 @@ class ArtifactMirrorTests(unittest.TestCase):
             mkdir_index = next(index for index, command in enumerate(calls) if command[1] == "mkdir")
             move_index = next(index for index, command in enumerate(calls) if command[1] == "moveto")
             self.assertLess(mkdir_index, move_index)
-            self.assertTrue(any(command[1] == "copyto" and command[2].startswith("wukong-dccloud:") for command in calls))
+            self.assertTrue(
+                any(
+                    command[1] == "copyto"
+                    and len(command) > 3
+                    and command[3].endswith("/ROM/V5.0/Lite/rom.zip")
+                    for command in calls
+                )
+            )
             self.assertTrue(any(command[1] == "deletefile" for command in calls))
             self.assertTrue(any(command[1] == "moveto" for command in calls))
             self.assertTrue(any(command[1] == "lsjson" and "--stat" in command for command in calls))
@@ -135,7 +142,11 @@ class ArtifactMirrorTests(unittest.TestCase):
                     return json.dumps({"Size": 3})
                 if args[1] == "moveto":
                     raise RuntimeError("private WebDAV details")
-                if args[1] == "copyto" and str(args[2]).startswith("wukong-dccloud:"):
+                if (
+                    args[1] == "copyto"
+                    and len(args) > 3
+                    and str(args[3]).endswith("/rom.zip")
+                ):
                     raise RuntimeError("private WebDAV details")
                 return ""
 
