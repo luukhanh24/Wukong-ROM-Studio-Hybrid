@@ -108,7 +108,7 @@ class RcloneSplitStorageAdapter:
                 )
                 staging_incomplete = f"{staging_folder}/manifest.incomplete.json"
                 self.storage.copy_file(incomplete, staging_incomplete)
-                self.storage.copy_remote(staging_incomplete, manifest_path)
+                self.storage.copy_file(incomplete, manifest_path)
                 manifest_invalidated = True
 
             try:
@@ -167,7 +167,11 @@ class RcloneSplitStorageAdapter:
                                 progress_callback=on_part if progress_callback is not None else None,
                             )
                         invalidate_manifest()
-                        self.storage.copy_remote(staging_part, final_part)
+                        self.storage.copy_file(
+                            part_path,
+                            final_part,
+                            progress_callback=on_part if progress_callback is not None else None,
+                        )
                         if not remote_matches(final_part, len(body), part_digest):
                             raise RuntimeError("DC Cloud multipart checksum mismatch")
                     parts.append({"name": part_name, "sha256": part_digest, "sizeBytes": len(body)})
@@ -213,7 +217,7 @@ class RcloneSplitStorageAdapter:
                 staging_helper = f"{staging_folder}/{helper.name}"
                 self.storage.copy_file(helper, staging_helper)
                 invalidate_manifest()
-                self.storage.copy_remote(staging_helper, f"{folder}/{helper.name}")
+                self.storage.copy_file(helper, f"{folder}/{helper.name}")
 
             manifest = root_path / "manifest.json"
             manifest.write_text(
@@ -237,6 +241,6 @@ class RcloneSplitStorageAdapter:
             staging_manifest = f"{staging_folder}/manifest.json"
             self.storage.copy_file(manifest, staging_manifest)
             invalidate_manifest()
-            self.storage.copy_remote(staging_manifest, f"{folder}/manifest.json")
+            self.storage.copy_file(manifest, f"{folder}/manifest.json")
             self.storage.remove_tree(staging_folder)
         return ArtifactRecord(artifact.name, folder_uri, digest, size)

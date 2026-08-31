@@ -1055,13 +1055,6 @@ class RcloneStorageAdapter:
             self._args("copyto", self.remote_uri(relative_path), str(target), "--retries", "3")
         )
 
-    def copy_remote(self, source_path: str, destination_path: str) -> str:
-        destination = self.remote_uri(destination_path)
-        self.run_command(
-            self._args("copyto", self.remote_uri(source_path), destination, "--retries", "3")
-        )
-        return destination
-
     def remove_tree(self, relative_path: str) -> None:
         self.run_command(self._args("purge", self.remote_uri(relative_path)))
 

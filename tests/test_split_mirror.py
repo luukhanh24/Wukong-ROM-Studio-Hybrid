@@ -106,11 +106,19 @@ class SplitMirrorTests(unittest.TestCase):
             index
             for index, call in enumerate(calls)
             if call[1] == "copyto"
-            and call[2].startswith("wukong-dccloud:")
-            and call[3].startswith("wukong-dccloud:")
+            and not call[2].startswith("wukong-dccloud:")
+            and "/ROM/" in call[3]
             and call[3].endswith("rom.zip.001")
         )
         self.assertLess(invalidate_index, promote_index)
+        self.assertFalse(
+            any(
+                call[1] == "copyto"
+                and call[2].startswith("wukong-dccloud:")
+                and call[3].startswith("wukong-dccloud:")
+                for call in calls
+            )
+        )
 
     def test_incomplete_matching_manifest_is_not_accepted_as_complete(self) -> None:
         calls: list[list[str]] = []
