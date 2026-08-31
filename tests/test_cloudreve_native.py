@@ -22,6 +22,10 @@ class _Response:
         if self.status_code >= 400:
             raise RuntimeError(f"HTTP {self.status_code}")
 
+    def iter_content(self, chunk_size: int) -> object:
+        for index in range(0, len(self.content), chunk_size):
+            yield self.content[index : index + chunk_size]
+
 
 class CloudreveNativeTests(unittest.TestCase):
     def test_ensure_folder_uses_cloudreve_v4_create_endpoint(self) -> None:
@@ -117,6 +121,8 @@ class CloudreveNativeTests(unittest.TestCase):
 
     def test_native_upload_supports_onedrive_ranges_and_completion_callback(self) -> None:
         calls: list[tuple[str, str, dict[str, object]]] = []
+        chunk_size = 320 * 1024
+        payload_size = chunk_size * 2 + 10
 
         def request(method: str, url: str, **kwargs: object) -> _Response:
             calls.append((method, url, kwargs))
@@ -129,7 +135,7 @@ class CloudreveNativeTests(unittest.TestCase):
                         "data": {
                             "session_id": "session",
                             "callback_secret": "callback",
-                            "chunk_size": 4,
+                            "chunk_size": chunk_size,
                             "expires": 4102444800,
                             "upload_urls": ["https://onedrive.example/upload-session"],
                             "storage_policy": {"type": "onedrive"},
@@ -141,28 +147,115 @@ class CloudreveNativeTests(unittest.TestCase):
             if "/callback/onedrive/session/callback" in url:
                 return _Response({"code": 0, "data": None})
             if "/file/info?" in url:
-                return _Response({"code": 0, "data": {"size": 10}})
+                return _Response({"code": 0, "data": {"size": payload_size}})
             raise AssertionError(f"Unexpected request: {method} {url}")
 
         with tempfile.TemporaryDirectory() as root:
             artifact = Path(root, "rom.zip")
-            artifact.write_bytes(b"abcdefghij")
+            artifact.write_bytes(b"a" * payload_size)
             client = CloudreveClient("https://cloud.example", "refresh", request=request)
             client.upload_file(artifact, "cloudreve://my/WukongROM/_staging/job/rom.zip")
 
         range_calls = [call for call in calls if call[1] == "https://onedrive.example/upload-session"]
         self.assertEqual(
             [
-                "bytes 0-3/10",
-                "bytes 4-7/10",
-                "bytes 8-9/10",
+                f"bytes 0-{chunk_size - 1}/{payload_size}",
+                f"bytes {chunk_size}-{chunk_size * 2 - 1}/{payload_size}",
+                f"bytes {chunk_size * 2}-{payload_size - 1}/{payload_size}",
             ],
             [str(call[2]["headers"]["Content-Range"]) for call in range_calls],
         )
-        self.assertEqual([b"abcd", b"efgh", b"ij"], [call[2]["data"] for call in range_calls])
+        self.assertEqual(
+            [chunk_size, chunk_size, 10],
+            [len(call[2]["data"]) for call in range_calls],
+        )
         callback = next(call for call in calls if "/callback/onedrive/session/callback" in call[1])
         self.assertEqual("POST", callback[0])
         self.assertEqual("Bearer access", callback[2]["headers"]["Authorization"])
+
+    def test_onedrive_upload_recovers_when_a_committed_range_response_is_lost(self) -> None:
+        uploaded_ranges: list[str] = []
+        first_put = True
+        chunk_size = 320 * 1024
+        payload_size = chunk_size * 2
+
+        def request(method: str, url: str, **kwargs: object) -> _Response:
+            nonlocal first_put
+            if url.endswith("/session/token/refresh"):
+                return _Response({"code": 0, "data": {"access_token": "access"}})
+            if method == "PUT" and url.endswith("/file/upload"):
+                return _Response(
+                    {
+                        "code": 0,
+                        "data": {
+                            "session_id": "session",
+                            "callback_secret": "callback",
+                            "chunk_size": chunk_size,
+                            "expires": 4102444800,
+                            "upload_urls": ["https://onedrive.example/upload-session"],
+                            "storage_policy": {"type": "onedrive"},
+                        },
+                    }
+                )
+            if url == "https://onedrive.example/upload-session" and method == "PUT":
+                uploaded_ranges.append(str(kwargs["headers"]["Content-Range"]))
+                if first_put:
+                    first_put = False
+                    raise TimeoutError("response lost after commit")
+                return _Response({}, status_code=202)
+            if url == "https://onedrive.example/upload-session" and method == "GET":
+                return _Response({"nextExpectedRanges": [f"{chunk_size}-"]})
+            if "/callback/onedrive/session/callback" in url:
+                return _Response({"code": 0, "data": None})
+            if "/file/info?" in url:
+                return _Response({"code": 0, "data": {"size": payload_size}})
+            raise AssertionError(f"Unexpected request: {method} {url}")
+
+        with tempfile.TemporaryDirectory() as root:
+            artifact = Path(root, "rom.zip")
+            artifact.write_bytes(b"a" * payload_size)
+            CloudreveClient(
+                "https://cloud.example",
+                "refresh",
+                request=request,
+                sleep=lambda _: None,
+            ).upload_file(artifact, "cloudreve://my/WukongROM/_staging/job/rom.zip")
+
+        self.assertEqual(
+            [
+                f"bytes 0-{chunk_size - 1}/{payload_size}",
+                f"bytes {chunk_size}-{payload_size - 1}/{payload_size}",
+            ],
+            uploaded_ranges,
+        )
+
+    def test_onedrive_upload_rejects_an_invalid_policy_chunk_size(self) -> None:
+        def request(method: str, url: str, **_: object) -> _Response:
+            if url.endswith("/session/token/refresh"):
+                return _Response({"code": 0, "data": {"access_token": "access"}})
+            return _Response(
+                {
+                    "code": 0,
+                    "data": {
+                        "session_id": "session",
+                        "callback_secret": "callback",
+                        "chunk_size": 64 * 1024 * 1024,
+                        "expires": 4102444800,
+                        "upload_urls": ["https://onedrive.example/upload-session"],
+                        "storage_policy": {"type": "onedrive"},
+                    },
+                }
+            )
+
+        with tempfile.TemporaryDirectory() as root:
+            artifact = Path(root, "rom.zip")
+            artifact.write_bytes(b"rom")
+            with self.assertRaisesRegex(CloudreveError, "chunk_size_invalid"):
+                CloudreveClient(
+                    "https://cloud.example",
+                    "refresh",
+                    request=request,
+                ).upload_file(artifact, "cloudreve://my/WukongROM/_staging/job/rom.zip")
 
     def test_storage_adapter_uses_sidecar_as_completion_marker(self) -> None:
         class FakeClient:

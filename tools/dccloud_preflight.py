@@ -205,6 +205,13 @@ def _native_canary(client: CloudreveClient, mirror_root: str, size_mib: int) -> 
             uploaded = client.get_file(record.uri)
             if not isinstance(uploaded, dict) or int(uploaded.get("size", -1)) != source.stat().st_size:
                 raise SystemExit("DC Cloud native canary final file size mismatch")
+            downloaded = Path(root) / "downloaded.bin"
+            client.download_file(record.uri, downloaded)
+            if (
+                downloaded.stat().st_size != source.stat().st_size
+                or sha256_file(downloaded).casefold() != expected.casefold()
+            ):
+                raise SystemExit("DC Cloud native canary round-trip checksum mismatch")
             metadata = client.read_json_file(metadata_uri)
             if (
                 not isinstance(metadata, dict)
@@ -212,6 +219,15 @@ def _native_canary(client: CloudreveClient, mirror_root: str, size_mib: int) -> 
                 or int(metadata.get("sizeBytes", -1)) != source.stat().st_size
             ):
                 raise SystemExit("DC Cloud native canary metadata mismatch")
+            parent_uri = final_uri.rsplit("/", 1)[0]
+            names = [
+                str(item.get("name") or "")
+                for item in client.list_children(parent_uri)
+            ]
+            if names.count(source.name) != 1 or any(
+                name.startswith(source.name + ".part") for name in names
+            ):
+                raise SystemExit("DC Cloud native canary exposed unexpected chunk files")
             return {
                 "nativeCanaryMiB": size_mib,
                 "sha256": expected,

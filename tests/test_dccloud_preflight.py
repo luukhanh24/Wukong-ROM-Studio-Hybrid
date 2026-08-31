@@ -209,6 +209,17 @@ class DCloudPreflightTests(unittest.TestCase):
                 self.deleted.append(uri)
                 self.files.pop(uri, None)
 
+            def download_file(self, uri: str, destination: Path) -> None:
+                destination.write_bytes(self.files[uri])
+
+            def list_children(self, uri: str) -> list[dict[str, object]]:
+                prefix = uri.rstrip("/") + "/"
+                return [
+                    {"name": key[len(prefix) :], "path": key}
+                    for key in self.files
+                    if key.startswith(prefix) and "/" not in key[len(prefix) :]
+                ]
+
         client = FakeClient()
         result = _native_canary(client, "ROM", 1)  # type: ignore[arg-type]
 

@@ -21,6 +21,8 @@ from .models import ArtifactRecord
 
 
 MAX_PROXY_CHUNK_BYTES = 95 * 1024 * 1024
+ONEDRIVE_CHUNK_GRANULARITY = 320 * 1024
+ONEDRIVE_MAX_CHUNK_BYTES = 60 * 1024 * 1024
 
 
 def _sha256_file(path: Path) -> str:
@@ -130,6 +132,16 @@ class CloudreveClient:
         )
         return data if isinstance(data, dict) else None
 
+    def list_children(self, uri: str) -> list[dict[str, Any]]:
+        data = self._json(
+            "GET",
+            "file?" + urlencode({"uri": uri}),
+        )
+        files = data.get("files") if isinstance(data, dict) else None
+        if not isinstance(files, list):
+            raise CloudreveError("remote_list_failed")
+        return [item for item in files if isinstance(item, dict)]
+
     def ensure_folder(self, uri: str) -> None:
         prefix, separator, raw_path = uri.partition("/WukongROM")
         if separator != "/WukongROM" or not prefix.startswith("cloudreve://"):
@@ -186,6 +198,11 @@ class CloudreveClient:
             raise CloudreveError("chunk_too_large")
         if policy_type not in {"local", "remote", "onedrive"}:
             raise CloudreveError("storage_policy_unsupported")
+        if policy_type == "onedrive" and (
+            chunk_size >= ONEDRIVE_MAX_CHUNK_BYTES
+            or (size > chunk_size and chunk_size % ONEDRIVE_CHUNK_GRANULARITY != 0)
+        ):
+            raise CloudreveError("chunk_size_invalid")
 
         transferred = 0
         with source.open("rb") as stream:
@@ -202,6 +219,8 @@ class CloudreveClient:
                         raise CloudreveError("upload_session_invalid")
                     upload_url = str(upload_urls[0])
                     authorization = ""
+                    range_start = transferred
+                    pending = body
                 elif policy_type == "local" or relay:
                     upload_url = self._url(f"file/upload/{quote(session_id, safe='')}/{index}")
                     authorization = f"Bearer {self.access_token()}"
@@ -223,12 +242,12 @@ class CloudreveClient:
                                 upload_url,
                                 headers={
                                     "Content-Type": "application/octet-stream",
-                                    "Content-Length": str(len(body)),
+                                    "Content-Length": str(len(pending)),
                                     "Content-Range": (
-                                        f"bytes {transferred}-{transferred + len(body) - 1}/{size}"
+                                        f"bytes {range_start}-{transferred + len(body) - 1}/{size}"
                                     ),
                                 },
-                                data=body,
+                                data=pending,
                                 timeout=self.timeout,
                             )
                             response.raise_for_status()
@@ -248,6 +267,33 @@ class CloudreveClient:
                         break
                     except Exception as exc:
                         last_error = exc
+                        if policy_type == "onedrive":
+                            try:
+                                status = self._request(
+                                    "GET",
+                                    upload_url,
+                                    timeout=self.timeout,
+                                )
+                                status.raise_for_status()
+                                status_payload = status.json()
+                                ranges = (
+                                    status_payload.get("nextExpectedRanges")
+                                    if isinstance(status_payload, dict)
+                                    else None
+                                )
+                                if not ranges:
+                                    last_error = None
+                                    break
+                                expected_start = int(str(ranges[0]).split("-", 1)[0])
+                                range_end = transferred + len(body)
+                                if expected_start >= range_end:
+                                    last_error = None
+                                    break
+                                if expected_start > transferred:
+                                    range_start = expected_start
+                                    pending = body[expected_start - transferred :]
+                            except Exception:
+                                pass
                         if attempt < 2:
                             self.sleep(2**attempt)
                 if last_error is not None:
@@ -303,6 +349,27 @@ class CloudreveClient:
     def read_json_file(self, uri: str) -> dict[str, Any] | None:
         if self.get_file(uri) is None:
             return None
+        response = self._download_response(uri)
+        try:
+            payload = json.loads(response.content)
+        except Exception as exc:
+            raise CloudreveError("remote_metadata_failed") from exc
+        return payload if isinstance(payload, dict) else None
+
+    def download_file(self, uri: str, destination: Path) -> None:
+        response = self._download_response(uri)
+        destination = destination.resolve()
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with destination.open("wb") as output:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        output.write(chunk)
+        except Exception as exc:
+            destination.unlink(missing_ok=True)
+            raise CloudreveError("remote_download_failed") from exc
+
+    def _download_response(self, uri: str) -> Any:
         data = self._json(
             "POST",
             "file/url",
@@ -320,10 +387,9 @@ class CloudreveClient:
                 headers={"User-Agent": "Wukong-ROM-Studio/1 CloudreveNative"},
             )
             response.raise_for_status()
-            payload = json.loads(response.content)
         except Exception as exc:
             raise CloudreveError("remote_metadata_failed") from exc
-        return payload if isinstance(payload, dict) else None
+        return response
 
 
 class CloudreveStorageAdapter:

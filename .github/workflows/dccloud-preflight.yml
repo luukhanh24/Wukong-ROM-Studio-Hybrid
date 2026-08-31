@@ -32,11 +32,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install rclone
+        if: ${{ vars.WUKONG_DCCLOUD_UPLOAD_MODE != 'native' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends rclone
 
       - name: Restore private rclone config
+        if: ${{ vars.WUKONG_DCCLOUD_UPLOAD_MODE != 'native' }}
         env:
           RCLONE_CONFIG_B64: ${{ secrets.RCLONE_CONFIG_B64 }}
         run: |
@@ -48,10 +50,11 @@ jobs:
 
       - name: Verify scoped WebDAV and anonymous share
         run: |
-          python tools/dccloud_preflight.py \
-            --config "$WUKONG_RCLONE_CONFIG" \
-            --write-test \
-            --multipart-canary-mib "${{ inputs.canary_mib }}"
+          args=(--write-test --multipart-canary-mib "${{ inputs.canary_mib }}")
+          if [[ "$WUKONG_DCCLOUD_UPLOAD_MODE" != "native" ]]; then
+            args+=(--config "$WUKONG_RCLONE_CONFIG")
+          fi
+          python tools/dccloud_preflight.py "${args[@]}"
 
       - name: Remove restored credentials
         if: always()
