@@ -34,7 +34,7 @@ inputs:
     default: ""
   dccloud_upload_mode:
     required: false
-    default: "webdav"
+    default: "multipart"
   dccloud_api_url:
     required: false
     default: ""

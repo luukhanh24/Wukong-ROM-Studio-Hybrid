@@ -4,42 +4,43 @@ Google Drive remains the canonical artifact provider and is the value exposed
 as `publicUrl`. DC Cloud is an opt-in, best-effort mirror used only by the two
 Linux GitHub Actions routes (hosted and `wukong-rom` self-hosted).
 
-## Recommended mode: Cloudreve native uploader
+## Production mode: Cloudflare-safe WebDAV multipart
 
-The production configuration uses Cloudreve's native upload sessions instead
-of a multi-GB WebDAV `PUT`. Each request contains only the chunk size selected
-by Cloudreve, so the public hostname may remain behind Cloudflare and no DNS or
-administrator access is required.
+The production configuration splits each ROM into 64 MiB raw parts before it
+uses the existing scoped WebDAV device. This keeps every request below the
+Cloudflare upload limit and needs no DNS, administrator access, CAPTCHA bypass,
+browser cookie, or Cloudreve refresh token.
 
 1. Keep `WukongROM/ROM` as the read-only public share and
    `WukongROM/_staging` outside the share.
-2. Run the bootstrap tool locally. It reads the account password through a
-   hidden prompt, exchanges it once, validates the returned refresh token and
-   stores only `WUKONG_DCCLOUD_REFRESH_TOKEN` in GitHub Secrets:
-
-   ```powershell
-   python -m tools.dccloud_bootstrap `
-     --email <DC-CLOUD-EMAIL> `
-     --repo xuankhanh24/Wukong-ROM-Studio-Hybrid
-   ```
-
-3. Set the repository variables below. Keep the feature flag disabled until
+2. Set the repository variables below. Keep the feature flag disabled until
    preflight and the representative ROM repair both pass.
 
    ```text
    WUKONG_DCCLOUD_MIRROR_ENABLED=false
-   WUKONG_DCCLOUD_UPLOAD_MODE=native
-   WUKONG_DCCLOUD_API_URL=https://cloud.dabeecao.org
+   WUKONG_DCCLOUD_UPLOAD_MODE=multipart
+   WUKONG_DCCLOUD_REMOTE=wukong-dccloud
    WUKONG_DCCLOUD_ROOT=ROM
    WUKONG_DCCLOUD_SHARE_URL=https://cloud.dabeecao.org/...
    WUKONG_DCCLOUD_CLOUDREVE_VERSION=4.18.0
    ```
 
-The password is never stored in GitHub or the repository. The refresh token is
-a broad account credential: rotate it manually before expiry, never print it,
-and disable the mirror immediately if the secret is suspected compromised.
+Each upload first enters `WukongROM/_staging/<job_id>`, outside the public
+share. Verified parts are server-side copied to `<artifact>.parts`; numbered
+parts and reconstruction scripts become usable only after `manifest.json` is
+published last. A retry downloads and checks SHA-256 before reusing any part.
+The preflight workflow can run 100 MiB or 1 GiB round-trip canaries and removes
+only its unique `_canary` folder afterwards.
 
-## Legacy WebDAV mode
+## Optional Cloudreve native mode
+
+The repository retains a native REST uploader for installations that can issue
+a refresh token without interactive CAPTCHA. The current DC Cloud login is
+protected by Turnstile, so this mode is not used for production and the
+password bootstrap cannot complete on this account. Do not copy browser
+cookies or attempt to bypass CAPTCHA.
+
+## Legacy single-PUT WebDAV mode
 
 1. Confirm Cloudreve is `>= 4.16.1` before granting a scoped WebDAV account;
    older releases are affected by [GHSA-w5fv-7x5q-g8qp](https://github.com/cloudreve/cloudreve/security/advisories/GHSA-w5fv-7x5q-g8qp).

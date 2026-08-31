@@ -2,6 +2,11 @@ name: DC Cloud · Preflight
 
 on:
   workflow_dispatch:
+    inputs:
+      canary_mib:
+        description: Multipart round-trip canary size in MiB (0 disables)
+        required: false
+        default: "100"
 
 permissions:
   contents: read
@@ -9,7 +14,7 @@ permissions:
 jobs:
   preflight:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 60
     env:
       PYTHONPATH: ${{ github.workspace }}
       WUKONG_DCCLOUD_MIRROR_ENABLED: "true"
@@ -17,7 +22,7 @@ jobs:
       WUKONG_DCCLOUD_ROOT: ${{ vars.WUKONG_DCCLOUD_ROOT || 'ROM' }}
       WUKONG_DCCLOUD_SHARE_URL: ${{ vars.WUKONG_DCCLOUD_SHARE_URL }}
       WUKONG_DCCLOUD_WEBDAV_URL: ${{ vars.WUKONG_DCCLOUD_WEBDAV_URL || '' }}
-      WUKONG_DCCLOUD_UPLOAD_MODE: ${{ vars.WUKONG_DCCLOUD_UPLOAD_MODE || 'webdav' }}
+      WUKONG_DCCLOUD_UPLOAD_MODE: ${{ vars.WUKONG_DCCLOUD_UPLOAD_MODE || 'multipart' }}
       WUKONG_DCCLOUD_API_URL: ${{ vars.WUKONG_DCCLOUD_API_URL || '' }}
       WUKONG_DCCLOUD_REFRESH_TOKEN: ${{ secrets.WUKONG_DCCLOUD_REFRESH_TOKEN }}
       WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION }}
@@ -45,7 +50,8 @@ jobs:
         run: |
           python tools/dccloud_preflight.py \
             --config "$WUKONG_RCLONE_CONFIG" \
-            --write-test
+            --write-test \
+            --multipart-canary-mib "${{ inputs.canary_mib }}"
 
       - name: Remove restored credentials
         if: always()

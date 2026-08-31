@@ -1032,6 +1032,39 @@ class RcloneStorageAdapter:
             self.run_command(args, **options)
         return uri
 
+    def make_dir(self, relative_path: str) -> str:
+        uri = self.remote_uri(relative_path)
+        self.run_command(self._args("mkdir", uri))
+        return uri
+
+    def stat_size(self, relative_path: str) -> int | None:
+        uri = self.remote_uri(relative_path)
+        try:
+            payload = json.loads(self.run_command(self._args("lsjson", uri, "--stat")))
+            size = payload.get("Size")
+            return int(size) if isinstance(size, int) and size >= 0 else None
+        except (OSError, ValueError, TypeError, json.JSONDecodeError, subprocess.CalledProcessError):
+            return None
+
+    def read_text(self, relative_path: str) -> str:
+        return self.run_command(self._args("cat", self.remote_uri(relative_path)))
+
+    def download_file(self, relative_path: str, target: Path) -> None:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        self.run_command(
+            self._args("copyto", self.remote_uri(relative_path), str(target), "--retries", "3")
+        )
+
+    def copy_remote(self, source_path: str, destination_path: str) -> str:
+        destination = self.remote_uri(destination_path)
+        self.run_command(
+            self._args("copyto", self.remote_uri(source_path), destination, "--retries", "3")
+        )
+        return destination
+
+    def remove_tree(self, relative_path: str) -> None:
+        self.run_command(self._args("purge", self.remote_uri(relative_path)))
+
     def copy_tree(self, source: Path, relative_path: str) -> str:
         source = source.resolve()
         if not source.is_dir():

@@ -1,6 +1,6 @@
 # Khảo sát DC Cloud làm nơi upload thứ hai
 
-Ngày khảo sát: 2026-08-30  
+Ngày khảo sát: 2026-08-30
 Phạm vi: đọc endpoint công khai, nguồn chính thức và trạng thái hiển thị read-only của phiên Brave đã đăng nhập qua extension; không upload, không tạo credential và không thay đổi tài khoản.
 
 ## Kết luận

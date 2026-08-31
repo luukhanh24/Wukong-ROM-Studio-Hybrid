@@ -15,8 +15,9 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from wukong.artifact_mirror import DCloudMirrorConfig
-from wukong.adapters import RcloneStorageAdapter
+from wukong.adapters import RcloneStorageAdapter, sha256_file
 from wukong.cloudreve import CloudreveClient
+from wukong.split_mirror import RcloneSplitStorageAdapter
 
 
 def _version_at_least(value: str, minimum: tuple[int, int, int] = (4, 16, 1)) -> bool:
@@ -123,10 +124,61 @@ def _verify_anonymous_share(
         raise SystemExit("DC Cloud anonymous probe download did not match its uploaded content")
 
 
+def _multipart_canary(storage: RcloneStorageAdapter, mirror_root: str, size_mib: int) -> dict[str, object]:
+    if not 1 <= size_mib <= 2048:
+        raise SystemExit("--multipart-canary-mib must be between 1 and 2048")
+    key = f"multipart-{uuid.uuid4().hex}"
+    final_artifact = f"{mirror_root}/_canary/{key}.bin"
+    final_folder = final_artifact + ".parts"
+    staging_folder = f"_staging/{key}/{key}.bin.parts"
+    primary_error: BaseException | None = None
+    try:
+        with tempfile.TemporaryDirectory(prefix="wukong-dccloud-multipart-canary-") as root:
+            root_path = Path(root)
+            source = root_path / f"{key}.bin"
+            block = bytes(range(256)) * 4096
+            with source.open("wb") as stream:
+                for _ in range(size_mib):
+                    stream.write(block)
+            expected = sha256_file(source)
+            adapter = RcloneSplitStorageAdapter(storage)
+            adapter.mirror_artifact(
+                source,
+                relative_path=final_artifact,
+                staging_key=key,
+            )
+            manifest = json.loads(storage.read_text(f"{final_folder}/manifest.json"))
+            reconstructed = root_path / "reconstructed.bin"
+            with reconstructed.open("wb") as output:
+                for part in manifest.get("parts", []):
+                    part_path = root_path / str(part["name"])
+                    storage.download_file(f"{final_folder}/{part['name']}", part_path)
+                    with part_path.open("rb") as stream:
+                        while chunk := stream.read(1024 * 1024):
+                            output.write(chunk)
+            actual = sha256_file(reconstructed)
+            if reconstructed.stat().st_size != source.stat().st_size or actual != expected:
+                raise SystemExit("DC Cloud multipart canary reconstruction checksum mismatch")
+            return {"multipartCanaryMiB": size_mib, "sha256": expected, "parts": len(manifest["parts"])}
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        cleanup_errors: list[Exception] = []
+        for target in (final_folder, staging_folder):
+            try:
+                storage.remove_tree(target)
+            except Exception as exc:
+                cleanup_errors.append(exc)
+        if cleanup_errors and primary_error is None:
+            raise RuntimeError("DC Cloud multipart canary cleanup failed") from cleanup_errors[0]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Preflight the DC Cloud mirror")
     parser.add_argument("--config", type=Path)
     parser.add_argument("--write-test", action="store_true")
+    parser.add_argument("--multipart-canary-mib", type=int, default=0)
     args = parser.parse_args()
     config = DCloudMirrorConfig.from_env(config_path=args.config)
     if not config.enabled:
@@ -221,7 +273,12 @@ def main() -> int:
                 _run(storage._args("deletefile", public_target))
     else:
         _verify_anonymous_share(config.share_url, config.root)
-    print(json.dumps({"remote": config.remote, "root": config.root, "share": "readable"}))
+    result: dict[str, object] = {"remote": config.remote, "root": config.root, "share": "readable"}
+    if args.multipart_canary_mib:
+        if config.upload_mode != "multipart":
+            raise SystemExit("--multipart-canary-mib requires WUKONG_DCCLOUD_UPLOAD_MODE=multipart")
+        result.update(_multipart_canary(storage, config.root, args.multipart_canary_mib))
+    print(json.dumps(result))
     return 0
 
 

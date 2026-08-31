@@ -3,11 +3,17 @@ from __future__ import annotations
 import base64
 import io
 import json
+from pathlib import Path
 import unittest
 from unittest import mock
 from urllib.parse import parse_qs, urlsplit
 
-from tools.dccloud_preflight import _anonymous_share_list_url, _verify_anonymous_share
+from tools.dccloud_preflight import (
+    _anonymous_share_list_url,
+    _multipart_canary,
+    _verify_anonymous_share,
+)
+from wukong.adapters import RcloneStorageAdapter
 
 
 class _Response(io.BytesIO):
@@ -96,6 +102,82 @@ class DCloudPreflightTests(unittest.TestCase):
 
         with self.assertRaisesRegex(SystemExit, "write permissions"):
             _verify_anonymous_share("https://cloud.example/s/abc", "ROM")
+
+    def test_multipart_canary_round_trips_and_cleans_remote_folders(self) -> None:
+        objects: dict[str, bytes] = {}
+        purged: list[str] = []
+
+        def run(args: list[str], **_: object) -> str:
+            command = args[1]
+            if command == "copyto":
+                source, destination = args[2], args[3]
+                if source.startswith("wukong-dccloud:") and destination.startswith("wukong-dccloud:"):
+                    objects[destination] = objects[source]
+                elif destination.startswith("wukong-dccloud:"):
+                    objects[destination] = Path(source).read_bytes()
+                else:
+                    Path(destination).write_bytes(objects[source])
+                return ""
+            if command == "cat":
+                if args[2] not in objects:
+                    raise RuntimeError("missing")
+                return objects[args[2]].decode("utf-8")
+            if command == "lsjson":
+                size = len(objects[args[2]]) if args[2] in objects else -1
+                return json.dumps({"Size": size})
+            if command == "purge":
+                prefix = args[2].rstrip("/") + "/"
+                purged.append(args[2])
+                for key in list(objects):
+                    if key == args[2] or key.startswith(prefix):
+                        del objects[key]
+                return ""
+            return ""
+
+        result = _multipart_canary(
+            RcloneStorageAdapter(remote="wukong-dccloud", root="", run_command=run),
+            "ROM",
+            1,
+        )
+
+        self.assertEqual(1, result["multipartCanaryMiB"])
+        self.assertEqual(1, result["parts"])
+        self.assertEqual({}, objects)
+        self.assertTrue(any(":ROM/_canary/" in target for target in purged))
+        self.assertTrue(any(":_staging/" in target for target in purged))
+
+    def test_multipart_canary_reports_cleanup_failure(self) -> None:
+        objects: dict[str, bytes] = {}
+
+        def run(args: list[str], **_: object) -> str:
+            command = args[1]
+            if command == "copyto":
+                source, destination = args[2], args[3]
+                if source.startswith("wukong-dccloud:") and destination.startswith("wukong-dccloud:"):
+                    objects[destination] = objects[source]
+                elif destination.startswith("wukong-dccloud:"):
+                    objects[destination] = Path(source).read_bytes()
+                else:
+                    Path(destination).write_bytes(objects[source])
+                return ""
+            if command == "cat":
+                if args[2] not in objects:
+                    raise RuntimeError("missing")
+                return objects[args[2]].decode("utf-8")
+            if command == "lsjson":
+                return json.dumps({"Size": len(objects[args[2]]) if args[2] in objects else -1})
+            if command == "purge" and ":ROM/_canary/" in args[2]:
+                raise RuntimeError("purge failed")
+            if command == "purge":
+                return ""
+            return ""
+
+        with self.assertRaisesRegex(RuntimeError, "cleanup failed"):
+            _multipart_canary(
+                RcloneStorageAdapter(remote="wukong-dccloud", root="", run_command=run),
+                "ROM",
+                1,
+            )
 
 
 if __name__ == "__main__":

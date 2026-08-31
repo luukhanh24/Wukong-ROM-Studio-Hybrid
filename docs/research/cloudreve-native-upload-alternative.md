@@ -1,6 +1,6 @@
 # Phương án upload native Cloudreve khi không có quyền DNS
 
-Ngày khảo sát: 2026-08-31  
+Ngày khảo sát: 2026-08-31
 Phạm vi: Cloudreve `4.18.0`; chỉ đối chiếu tài liệu, source, release và security advisory chính thức của Cloudreve. Không dùng cookie phiên Brave, không trích token hiện có và không thay đổi tài khoản.
 
 ## Kết luận

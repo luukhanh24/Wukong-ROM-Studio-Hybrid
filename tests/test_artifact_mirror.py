@@ -15,6 +15,31 @@ from wukong.telegram_mini_api import public_job_payload
 
 
 class ArtifactMirrorTests(unittest.TestCase):
+    def test_composite_action_default_is_cloudflare_safe_multipart(self) -> None:
+        action = (
+            Path(__file__).parents[1] / ".github" / "actions" / "run-hybrid" / "action.yml"
+        ).read_text(encoding="utf-8")
+        upload_mode_input = action.split("  dccloud_upload_mode:", 1)[1].split(
+            "  dccloud_api_url:", 1
+        )[0]
+
+        self.assertIn('default: "multipart"', upload_mode_input)
+
+    def test_default_upload_mode_is_cloudflare_safe_multipart(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "GITHUB_ACTIONS": "true",
+                "RUNNER_OS": "Linux",
+                "WUKONG_DCCLOUD_MIRROR_ENABLED": "true",
+                "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.example/s/read-only",
+            },
+            clear=True,
+        ):
+            config = DCloudMirrorConfig.from_env()
+
+        self.assertEqual("multipart", config.upload_mode)
+
     def test_native_config_selects_cloudreve_adapter_without_webdav(self) -> None:
         with patch.dict(
             "os.environ",

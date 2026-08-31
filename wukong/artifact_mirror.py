@@ -43,7 +43,7 @@ class DCloudMirrorConfig:
     cloudreve_version: str = ""
     validation_error: str | None = None
     webdav_url: str = ""
-    upload_mode: str = "webdav"
+    upload_mode: str = "multipart"
     api_url: str = ""
     refresh_token: str = field(default="", repr=False)
 
@@ -63,7 +63,7 @@ class DCloudMirrorConfig:
         root = os.environ.get("WUKONG_DCCLOUD_ROOT", "ROM").strip().strip("/\\")
         share_url = os.environ.get("WUKONG_DCCLOUD_SHARE_URL", "").strip()
         webdav_url = os.environ.get("WUKONG_DCCLOUD_WEBDAV_URL", "").strip()
-        upload_mode = os.environ.get("WUKONG_DCCLOUD_UPLOAD_MODE", "webdav").strip().casefold()
+        upload_mode = os.environ.get("WUKONG_DCCLOUD_UPLOAD_MODE", "multipart").strip().casefold()
         api_url = os.environ.get("WUKONG_DCCLOUD_API_URL", "").strip()
         refresh_token = os.environ.get("WUKONG_DCCLOUD_REFRESH_TOKEN", "").strip()
         validation_error = None
