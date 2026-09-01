@@ -20,6 +20,33 @@ function hasFailedDcCloudMirror(manifest: JsonObject): boolean {
   });
 }
 
+/** Mark pending/failed DC Cloud mirrors while an automatic or manual repair is running. */
+export function markMirrorsRepairing(manifest: JsonObject): JsonObject {
+  const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
+  return {
+    ...manifest,
+    artifacts: artifacts.map((value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+      const artifact = value as JsonObject;
+      const mirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
+      return {
+        ...artifact,
+        mirrors: mirrors.map((mirrorValue) => {
+          if (!mirrorValue || typeof mirrorValue !== "object" || Array.isArray(mirrorValue)) return mirrorValue;
+          const mirror = mirrorValue as JsonObject;
+          if (
+            String(mirror.provider ?? "").trim().toLowerCase() === "dccloud"
+            && ["failed", "pending"].includes(String(mirror.status ?? "").trim().toLowerCase())
+          ) {
+            return { ...mirror, status: "repairing" };
+          }
+          return mirror;
+        })
+      };
+    })
+  };
+}
+
 export function automaticMirrorRepairStatement(
   env: Env,
   jobId: string,

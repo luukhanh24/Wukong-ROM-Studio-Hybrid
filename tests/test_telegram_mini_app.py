@@ -97,6 +97,7 @@ class _MiniAppFixtureHandler(BaseHTTPRequestHandler):
     catalog_mod_versions = ("ColorOS_16.0.9",)
     catalog_mods_by_version = None
     jobs_fixture = False
+    upload_progress_fixture = False
     legacy_sync_contract = False
     click_job_log = False
     click_mod_toggle = False
@@ -733,6 +734,13 @@ window.addEventListener('load', () => {{
                     {"sequence": 3, "jobId": "fixture-job", "timestamp": "2026-08-25T01:02:00Z", "type": "step", "step": "inspect_rom", "status": "success", "details": {"durationSeconds": 4.2, "phase": "Plus"}},
                     {"sequence": 4, "jobId": "fixture-job", "timestamp": "2026-08-25T01:03:00Z", "type": "step", "step": "debloat", "status": "running", "message": "Đang quét 42 đường dẫn hệ thống", "details": {"removedCount": 17, "notFoundCount": 2, "phase": "Plus"}},
                 ]
+                if self.upload_progress_fixture:
+                    events.extend([
+                        {"sequence": 5, "jobId": "fixture-job", "timestamp": "2026-08-25T01:04:00Z", "type": "upload_progress", "provider": "dccloud", "stage": "mirror_upload", "fileName": "fixture-rom.zip", "fileIndex": 1, "fileCount": 1, "bytesTransferred": 2 * 1024**2, "totalBytes": 8 * 1024**2, "speedBytesPerSecond": 2 * 1024**2, "etaSeconds": 3, "percent": 25},
+                        {"sequence": 6, "jobId": "fixture-job", "timestamp": "2026-08-25T01:04:05Z", "type": "upload_progress", "provider": "dccloud", "stage": "mirror_upload", "fileName": "fixture-rom.zip", "fileIndex": 1, "fileCount": 1, "bytesTransferred": 4 * 1024**2, "totalBytes": 8 * 1024**2, "speedBytesPerSecond": 2 * 1024**2, "etaSeconds": 2, "percent": 50},
+                        {"sequence": 7, "jobId": "fixture-job", "timestamp": "2026-08-25T01:04:10Z", "type": "upload_progress", "provider": "dccloud", "stage": "mirror_upload", "fileName": "fixture-rom.zip", "fileIndex": 1, "fileCount": 1, "bytesTransferred": 6 * 1024**2, "totalBytes": 8 * 1024**2, "speedBytesPerSecond": 2 * 1024**2, "etaSeconds": 1, "percent": 75},
+                        {"sequence": 8, "jobId": "fixture-job", "timestamp": "2026-08-25T01:04:15Z", "type": "upload_progress", "provider": "dccloud", "stage": "mirror_upload", "fileName": "fixture-rom.zip", "fileIndex": 1, "fileCount": 1, "bytesTransferred": 8 * 1024**2, "totalBytes": 8 * 1024**2, "speedBytesPerSecond": 2 * 1024**2, "etaSeconds": 0, "percent": 100},
+                    ])
             else:
                 active_job = None
                 events = []
@@ -1066,6 +1074,7 @@ def _render_mini_app_in_chrome(
     catalog_mods_by_version: dict[str, list[str]] | None = None,
     initial_view: str = "",
     jobs_fixture: bool = False,
+    upload_progress_fixture: bool = False,
     legacy_sync_contract: bool = False,
     click_job_log: bool = False,
     click_mod_toggle: bool = False,
@@ -1111,6 +1120,7 @@ def _render_mini_app_in_chrome(
             "catalog_mod_versions": catalog_mod_versions,
             "catalog_mods_by_version": catalog_mods_by_version,
             "jobs_fixture": jobs_fixture,
+            "upload_progress_fixture": upload_progress_fixture,
             "legacy_sync_contract": legacy_sync_contract,
             "click_job_log": click_job_log,
             "click_mod_toggle": click_mod_toggle,
@@ -1325,6 +1335,9 @@ class TelegramMiniAppTests(unittest.TestCase):
             script,
         )
         self.assertIn("renderArtifacts", script)
+        self.assertIn("dcCloudMirrorRepairing", script)
+        self.assertIn("function jobNeedsMirrorPoll", script)
+        self.assertIn("jobShouldPoll(selectedJob)", script)
         self.assertIn("upload_progress", script)
         self.assertIn("speedBytesPerSecond", script)
         self.assertIn("event-group", script)
@@ -1769,6 +1782,33 @@ class TelegramMiniAppTests(unittest.TestCase):
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         self.assertIn('if (!copied) throw new Error("Clipboard copy failed")', script)
         self.assertGreater(screenshot_size, 10_000)
+
+    def test_live_upload_log_compacts_repeated_updates_into_a_progress_card(self) -> None:
+        dom, screenshot_size = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            upload_progress_fixture=True,
+        )
+
+        self.assertEqual(1, dom.count('class="event-upload-card"'))
+        self.assertIn('data-progress-percent="100"', dom)
+        self.assertIn("8.00 MiB", dom)
+        self.assertIn("2.00 MiB/s", dom)
+        self.assertIn("DC Cloud", dom)
+        self.assertIn("4 lần cập nhật đã gộp", dom)
+        self.assertIn("5 thẻ / 8 cập nhật", dom)
+        self.assertGreater(screenshot_size, 10_000)
+
+        expanded, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="jobs",
+            jobs_fixture=True,
+            upload_progress_fixture=True,
+            click_job_log=True,
+        )
+        self.assertNotIn('class="event-upload-card"', expanded)
+        self.assertGreaterEqual(expanded.count('class="event-upload_progress"'), 4)
 
     def test_completed_job_uses_terminal_metadata_and_lists_each_artifact_size(self) -> None:
         dom, _ = _render_mini_app_in_chrome(

@@ -146,6 +146,8 @@ export function terminalTelegramNotification(
       if (status === "available" && mirrorUrl) {
         lines.push("DC Cloud mirror  <i>sẵn sàng</i>");
         keyboard.push([{ text: `Tải ${edition} · ${size} (DC Cloud)`, url: mirrorUrl }]);
+      } else if (status === "repairing") {
+        lines.push("DC Cloud mirror  <i>đang repair…</i>");
       } else if (status === "failed") {
         lines.push("DC Cloud mirror  <i>chưa sẵn sàng</i>");
       } else {

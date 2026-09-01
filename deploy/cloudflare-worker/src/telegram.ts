@@ -91,11 +91,65 @@ async function enqueueMessage(
   ).bind(crypto.randomUUID(), dedupeKey, chatId, method, JSON.stringify(payload), now, now).run();
 }
 
+/**
+ * Replace the terminal notification payload after mirror repair. If the
+ * original message has already been delivered, Telegram can edit it in place;
+ * otherwise the same outbox row is sent once with the latest payload. Older
+ * deployments without a terminal row fall back to a new, deduplicated message.
+ */
+export async function queueJobTerminalNotificationUpdate(
+  env: Env,
+  jobId: string,
+  chatId: string,
+  payload: JsonObject
+): Promise<D1PreparedStatement> {
+  let row = await env.DB.prepare(
+    `SELECT notification_id, message_id
+     FROM wukong_telegram_notification_outbox
+     WHERE dedupe_key = ?`
+  ).bind(`job-terminal:${jobId}`).first<Record<string, unknown>>();
+  const now = new Date().toISOString();
+  if (!row) {
+    row = await env.DB.prepare(
+      `SELECT notification_id, message_id
+       FROM wukong_telegram_notification_outbox
+       WHERE dedupe_key = ?`
+    ).bind(`job-mirror-repaired:${jobId}`).first<Record<string, unknown>>();
+    if (!row) {
+      return env.DB.prepare(
+        `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
+         (notification_id, dedupe_key, chat_id, payload_json, available_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(
+        crypto.randomUUID(),
+        `job-mirror-repaired:${jobId}`,
+        chatId,
+        JSON.stringify(payload),
+        now,
+        now
+      );
+    }
+  }
+  const messageId = Number(row.message_id ?? 0);
+  return env.DB.prepare(
+    `UPDATE wukong_telegram_notification_outbox
+     SET chat_id = ?, method = ?, payload_json = ?, state = 'pending',
+         available_at = ?, sent_at = '', last_error = ''
+     WHERE notification_id = ?`
+  ).bind(
+    chatId,
+    Number.isSafeInteger(messageId) && messageId > 0 ? "editMessageText" : "sendMessage",
+    JSON.stringify(payload),
+    now,
+    String(row.notification_id)
+  );
+}
+
 export async function drainTelegramOutbox(env: Env, limit = 10): Promise<void> {
   const now = new Date().toISOString();
   const leaseExpiresAt = new Date(Date.now() + 2 * 60 * 1000).toISOString();
   const result = await env.DB.prepare(
-    `SELECT notification_id, chat_id, method, payload_json, attempts
+    `SELECT notification_id, chat_id, method, payload_json, attempts, message_id
      FROM wukong_telegram_notification_outbox
      WHERE available_at <= ? AND state IN ('pending', 'failed', 'sending')
      ORDER BY created_at ASC LIMIT ?`
@@ -118,26 +172,67 @@ export async function drainTelegramOutbox(env: Env, limit = 10): Promise<void> {
     }
     try {
       const method = String(row.method || "sendMessage");
+      const messageId = Number(row.message_id ?? 0);
+      const requestPayload = {
+        ...(method === "sendMessage" ? { chat_id: String(row.chat_id) } : {}),
+        ...(method === "editMessageText" ? {
+          chat_id: String(row.chat_id),
+          ...(Number.isSafeInteger(messageId) && messageId > 0 ? { message_id: messageId } : {})
+        } : {}),
+        ...payload
+      };
+      if (method === "editMessageText" && (!Number.isSafeInteger(messageId) || messageId <= 0)) {
+        throw new Error("Telegram edit notification is missing its message id");
+      }
       const response = await fetch(
         `https://api.telegram.org/bot${env.WUKONG_TELEGRAM_BOT_TOKEN}/${method}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...(method === "sendMessage" ? { chat_id: String(row.chat_id) } : {}),
-            ...payload
-          })
+          body: JSON.stringify(requestPayload)
         }
       );
       const resultPayload = await response.json().catch(() => ({})) as JsonObject;
       if (!response.ok || resultPayload.ok === false) {
         throw new Error(String(resultPayload.description ?? `Telegram HTTP ${response.status}`));
       }
+      const resultMessage = resultPayload.result && typeof resultPayload.result === "object"
+        && !Array.isArray(resultPayload.result)
+        ? resultPayload.result as JsonObject
+        : {};
+      const sentMessageId = Number(resultMessage.message_id ?? messageId);
+      if (method === "sendMessage" && (!Number.isSafeInteger(sentMessageId) || sentMessageId <= 0)) {
+        throw new Error("Telegram send notification did not return a message id");
+      }
+      const sentAt = new Date().toISOString();
+      const queuedPayload = String(row.payload_json);
       await env.DB.prepare(
         `UPDATE wukong_telegram_notification_outbox
-         SET state = 'sent', sent_at = ?, last_error = ''
+         SET state = CASE
+               WHEN state = 'sending' AND payload_json = ? THEN 'sent'
+               ELSE 'pending'
+             END,
+             sent_at = CASE
+               WHEN state = 'sending' AND payload_json = ? THEN ?
+               ELSE ''
+             END,
+             last_error = '',
+             message_id = CASE WHEN message_id > 0 THEN message_id ELSE ? END,
+             method = CASE
+               WHEN state = 'sending' AND payload_json = ? THEN method
+               WHEN ? = 'sendMessage' THEN 'editMessageText'
+               ELSE method
+             END
          WHERE notification_id = ?`
-      ).bind(new Date().toISOString(), notificationId).run();
+      ).bind(
+        queuedPayload,
+        queuedPayload,
+        sentAt,
+        sentMessageId,
+        queuedPayload,
+        method,
+        notificationId
+      ).run();
     } catch (error) {
       const attempts = Number(row.attempts ?? 0) + 1;
       const delaySeconds = Math.min(3600, 2 ** Math.min(attempts, 10));

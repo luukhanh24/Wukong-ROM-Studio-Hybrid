@@ -5,6 +5,7 @@ import { directArtifactUrl } from "./public-links";
 import { terminalTelegramNotification } from "./telegram-notifications";
 import { buildStartedAdminStatements } from "./activity";
 import { PRESET_LABEL } from "./catalog";
+import { markMirrorsRepairing } from "./mirror-repair-outbox";
 
 type JsonObject = Record<string, unknown>;
 
@@ -1089,6 +1090,15 @@ export async function repairMirror(
     throw new JobHttpError("This job has no failed DC Cloud mirror to repair", 409);
   }
   await dispatchMirrorRepair(env, jobId);
+  const now = new Date().toISOString();
+  const repairingManifest = {
+    ...markMirrorsRepairing(manifest),
+    updated_at: now
+  };
+  await env.DB.prepare(
+    `UPDATE wukong_jobs SET manifest_json = ?, updated_at = ?
+     WHERE job_id = ? AND status IN ('succeeded', 'failed', 'cancelled')`
+  ).bind(JSON.stringify(repairingManifest), now, jobId).run();
   return { status: "queued", workflow: "mirror-repair.yml", jobId };
 }
 

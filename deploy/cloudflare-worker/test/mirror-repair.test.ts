@@ -47,6 +47,10 @@ describe("DC Cloud mirror repair endpoint", () => {
       workflow: "mirror-repair.yml",
       jobId
     });
+    const updated = await bindings.DB.prepare(
+      "SELECT manifest_json FROM wukong_jobs WHERE job_id = ?"
+    ).bind(jobId).first<{ manifest_json: string }>();
+    expect(JSON.parse(String(updated?.manifest_json)).artifacts[0].mirrors[0].status).toBe("repairing");
   });
 
   it("creates a temporary direct download URL for an available mirror", async () => {

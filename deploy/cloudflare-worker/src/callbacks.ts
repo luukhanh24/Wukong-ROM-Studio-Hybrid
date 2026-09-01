@@ -3,8 +3,12 @@ import {
   acceptedJobCompensationStatements,
   type JobRow
 } from "./jobs";
-import { automaticMirrorRepairStatement } from "./mirror-repair-outbox";
+import {
+  automaticMirrorRepairStatement,
+  markMirrorsRepairing
+} from "./mirror-repair-outbox";
 import { terminalTelegramNotification } from "./telegram-notifications";
+import { queueJobTerminalNotificationUpdate } from "./telegram";
 
 type JsonObject = Record<string, unknown>;
 
@@ -268,7 +272,7 @@ export async function handleTerminal(
     return { jobId, status: row.status, terminal: true, outOfOrder: true };
   }
   const now = new Date().toISOString();
-  const manifest = mergedManifest(row, payload, status, now);
+  const rawManifest = mergedManifest(row, payload, status, now);
   const nextEventSequence = sequence + 1;
   const compensationStatements = payload.preExecutorFailure === true
     ? acceptedJobCompensationStatements(
@@ -279,7 +283,8 @@ export async function handleTerminal(
       status
     )
     : [];
-  const automaticRepair = automaticMirrorRepairStatement(env, jobId, status, manifest, now);
+  const automaticRepair = automaticMirrorRepairStatement(env, jobId, status, rawManifest, now);
+  const manifest = automaticRepair ? markMirrorsRepairing(rawManifest) : rawManifest;
   try {
     await env.DB.batch([
       env.DB.prepare(
@@ -370,7 +375,7 @@ function repairMirrorValue(value: unknown): JsonObject {
   }
   const source = value as JsonObject;
   const status = typeof source.status === "string" ? source.status.trim().toLowerCase() : "";
-  if (!["pending", "available", "failed"].includes(status)) {
+  if (!["pending", "available", "failed", "repairing"].includes(status)) {
     throw new CallbackHttpError("Mirror repair status is invalid", 400);
   }
   const uri = typeof source.uri === "string" ? source.uri.trim().slice(0, 4096) : "";
@@ -452,22 +457,6 @@ function repairedManifest(row: JobRow, payload: JsonObject, now: string): JsonOb
   return { ...current, artifacts: mergedArtifacts, updated_at: now };
 }
 
-function hasAvailableDcCloudMirror(manifest: JsonObject): boolean {
-  const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
-  return artifacts.some((value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-    const mirrors: unknown[] = Array.isArray((value as JsonObject).mirrors)
-      ? (value as JsonObject).mirrors as unknown[]
-      : [];
-    return mirrors.some((mirrorValue) => {
-      if (!mirrorValue || typeof mirrorValue !== "object" || Array.isArray(mirrorValue)) return false;
-      const mirror = mirrorValue as JsonObject;
-      return String(mirror.provider ?? "").trim().toLowerCase() === "dccloud"
-        && String(mirror.status ?? "").trim().toLowerCase() === "available";
-    });
-  });
-}
-
 export async function handleMirrorRepair(
   env: Env,
   body: string
@@ -486,20 +475,12 @@ export async function handleMirrorRepair(
   }
   const now = new Date().toISOString();
   const manifest = repairedManifest(row, payload, now);
-  const notification = hasAvailableDcCloudMirror(manifest)
-    ? env.DB.prepare(
-      `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
-       (notification_id, dedupe_key, chat_id, payload_json, available_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(
-      crypto.randomUUID(),
-      `job-mirror-repaired:${jobId}:${runId}`,
-      row.owner_subject,
-      JSON.stringify(terminalTelegramNotification(env, row, row.status, manifest)),
-      now,
-      now
-    )
-    : null;
+  const notification = await queueJobTerminalNotificationUpdate(
+    env,
+    jobId,
+    row.owner_subject,
+    terminalTelegramNotification(env, row, row.status, manifest)
+  );
   try {
     await env.DB.batch([
       env.DB.prepare(
@@ -511,7 +492,7 @@ export async function handleMirrorRepair(
         `UPDATE wukong_jobs SET manifest_json = ?, updated_at = ?
          WHERE job_id = ? AND status IN ('succeeded', 'failed', 'cancelled')`
       ).bind(JSON.stringify(manifest), now, jobId),
-      ...(notification ? [notification] : [])
+      notification
     ]);
   } catch (error) {
     if (await existingReceipt(env, receiptKey, payloadHash)) {

@@ -115,7 +115,8 @@ describe("GitHub Actions callbacks", () => {
       artifacts: [{
         edition: "Plus",
         downloadAvailable: true,
-        publicUrl: "https://drive.google.com/file/d/fixture/view"
+        publicUrl: "https://drive.google.com/file/d/fixture/view",
+        mirrors: [{ provider: "dccloud", status: "repairing" }]
       }],
       rom_metadata: {
         version: "PJD110_16.0.10.500(CN01)",
@@ -156,6 +157,7 @@ describe("GitHub Actions callbacks", () => {
     expect(notification.text).toContain("<i>Thời gian</i>  <code>42 phút 5 giây</code>");
     expect(notification.text).toContain("<b>Plus</b> · <b>7.86 GiB</b>");
     expect(notification.text).toContain(`<i>SHA-256</i>  <code>${"a".repeat(64)}</code>`);
+    expect(notification.text).toContain("DC Cloud mirror  <i>đang repair…</i>");
     expect(notification.reply_markup.inline_keyboard).toEqual([
       [{
         text: "Tải Plus · 7.86 GiB",
@@ -198,7 +200,21 @@ describe("GitHub Actions callbacks", () => {
          (job_id, manifest_json, recipe_json, created_at, updated_at, owner_channel,
           owner_subject, device, status, stage, progress)
          VALUES (?, ?, '{}', ?, ?, 'telegram', ?, 'PJD110', 'succeeded', 'complete', 1)`
-      ).bind(jobId, JSON.stringify({ job_id: jobId, status: "succeeded", artifacts: [artifact] }), now, now, subject)
+      ).bind(jobId, JSON.stringify({ job_id: jobId, status: "succeeded", artifacts: [artifact] }), now, now, subject),
+      bindings.DB.prepare(
+        `INSERT INTO wukong_telegram_notification_outbox
+         (notification_id, dedupe_key, chat_id, payload_json, state, attempts, available_at, created_at, sent_at, message_id)
+         VALUES (?, ?, ?, ?, 'sent', 1, ?, ?, ?, ?)`
+      ).bind(
+        `terminal-notification-${jobId}`,
+        `job-terminal:${jobId}`,
+        subject,
+        JSON.stringify({ text: "Drive ready", parse_mode: "HTML" }),
+        now,
+        now,
+        now,
+        77
+      )
     ]);
     const body = JSON.stringify({
       jobId,
@@ -237,9 +253,10 @@ describe("GitHub Actions callbacks", () => {
       }]
     });
     const repairedNotification = await bindings.DB.prepare(
-      `SELECT payload_json FROM wukong_telegram_notification_outbox
+      `SELECT method, message_id, payload_json FROM wukong_telegram_notification_outbox
        WHERE dedupe_key = ?`
-    ).bind(`job-mirror-repaired:${jobId}:99001`).first<{ payload_json: string }>();
+    ).bind(`job-terminal:${jobId}`).first<{ method: string; message_id: number; payload_json: string }>();
+    expect(repairedNotification).toMatchObject({ method: "editMessageText", message_id: 77 });
     const repairedPayload = JSON.parse(String(repairedNotification?.payload_json)) as {
       text: string;
       reply_markup: { inline_keyboard: Array<Array<Record<string, unknown>>> };

@@ -94,11 +94,42 @@ describe("Telegram webhook and pairing", () => {
     await drainTelegramOutbox(env as unknown as Env, 10);
 
     const row = await env.DB.prepare(
-      "SELECT state, attempts, sent_at FROM wukong_telegram_notification_outbox WHERE notification_id = ?"
+      "SELECT state, attempts, sent_at, message_id FROM wukong_telegram_notification_outbox WHERE notification_id = ?"
     ).bind("stale-notification").first<Record<string, unknown>>();
-    expect(row).toMatchObject({ state: "sent", attempts: 2 });
+    expect(row).toMatchObject({ state: "sent", attempts: 2, message_id: 2 });
     expect(String(row?.sent_at)).not.toBe("");
     expect(sent).toEqual([{ chat_id: "99002", text: "Recovered" }]);
+  });
+
+  it("edits the original Telegram message when a mirror repair completes", async () => {
+    const sent: Array<Record<string, unknown>> = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      sent.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return Response.json({ ok: true, result: { message_id: 42 } });
+    }));
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      `INSERT INTO wukong_telegram_notification_outbox
+       (notification_id, dedupe_key, chat_id, method, payload_json, state, attempts, available_at, created_at, sent_at, message_id)
+       VALUES (?, ?, ?, 'editMessageText', ?, 'pending', 0, ?, ?, '', ?)`
+    ).bind(
+      "repair-edit-notification",
+      "job-terminal:repair-edit-job",
+      "99003",
+      JSON.stringify({ text: "Drive + DC Cloud ready", parse_mode: "HTML" }),
+      now,
+      now,
+      19
+    ).run();
+
+    await drainTelegramOutbox(env as unknown as Env, 10);
+
+    expect(sent).toEqual([{
+      chat_id: "99003",
+      message_id: 19,
+      text: "Drive + DC Cloud ready",
+      parse_mode: "HTML"
+    }]);
   });
 
   it("restores the approved-user menu, account command, Mini App build launcher, and language callbacks", async () => {

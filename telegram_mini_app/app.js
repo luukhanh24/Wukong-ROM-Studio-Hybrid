@@ -213,11 +213,11 @@ Object.assign(translations.vi, {
   sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.",
   probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.", probeSignedPreviewOnly: "Link còn hiệu lực để phân tích nhưng không đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.",
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", checklistSourceRefreshRequired: "Cần link gốc để build cloud", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
-  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới khi job đang chạy", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây", jobHistoryToday: "Hôm nay", jobHistoryYesterday: "Hôm qua", jobSearch: "Tìm lịch sử job", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "Từ ngày", jobDateTo: "Đến ngày", allJobs: "Tất cả", clearJobFilters: "Xóa bộ lọc", jobPageSummary: "{from}–{to} / {total} job", jobPrevious: "Trước", jobNext: "Sau", jobPage: "Trang {page}", jobFilterEmpty: "Không có job phù hợp với bộ lọc.", jobHistoryLoading: "Đang tải lịch sử…",
+  jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới job và DC Cloud mirror", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây", jobHistoryToday: "Hôm nay", jobHistoryYesterday: "Hôm qua", jobSearch: "Tìm lịch sử job", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "Từ ngày", jobDateTo: "Đến ngày", allJobs: "Tất cả", clearJobFilters: "Xóa bộ lọc", jobPageSummary: "{from}–{to} / {total} job", jobPrevious: "Trước", jobNext: "Sau", jobPage: "Trang {page}", jobFilterEmpty: "Không có job phù hợp với bộ lọc.", jobHistoryLoading: "Đang tải lịch sử…",
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
-  activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible}/{total} sự kiện gần nhất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
+  activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible} thẻ / {total} cập nhật", uploadUpdates: "{count} lần cập nhật đã gộp", uploadTransferred: "Đã tải", uploadSpeed: "Tốc độ", uploadEta: "Còn lại", uploadComplete: "Hoàn tất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
   retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API.",
-  openArtifactCloud: "Mở trên {provider}", downloadArtifactCloud: "Tải xuống từ {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror đang upload…", dcCloudMirrorFailed: "DC Cloud mirror chưa sẵn sàng"
+  openArtifactCloud: "Mở trên {provider}", downloadArtifactCloud: "Tải xuống từ {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror đang upload…", dcCloudMirrorFailed: "DC Cloud mirror chưa sẵn sàng", dcCloudMirrorRepairing: "DC Cloud mirror đang repair…"
 });
 
 Object.assign(translations.en, {
@@ -361,11 +361,11 @@ Object.assign(translations.en, {
   sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.",
   probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated when the runner starts.", probeSignedPreviewOnly: "The link is still valid for analysis but does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so the runner can create a fresh link when downloading starts.",
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", checklistSourceRefreshRequired: "Original link required for cloud build", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
-  jobsLoading: "Syncing job history…", jobsConnected: "Synced · active jobs refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs", jobHistoryToday: "Today", jobHistoryYesterday: "Yesterday", jobSearch: "Search job history", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "From date", jobDateTo: "To date", allJobs: "All", clearJobFilters: "Clear filters", jobPageSummary: "{from}–{to} / {total} jobs", jobPrevious: "Previous", jobNext: "Next", jobPage: "Page {page}", jobFilterEmpty: "No jobs match these filters.", jobHistoryLoading: "Loading history…",
+  jobsLoading: "Syncing job history…", jobsConnected: "Synced · jobs and DC Cloud mirrors refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs", jobHistoryToday: "Today", jobHistoryYesterday: "Yesterday", jobSearch: "Search job history", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "From date", jobDateTo: "To date", allJobs: "All", clearJobFilters: "Clear filters", jobPageSummary: "{from}–{to} / {total} jobs", jobPrevious: "Previous", jobNext: "Next", jobPage: "Page {page}", jobFilterEmpty: "No jobs match these filters.", jobHistoryLoading: "Loading history…",
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
-  activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "Latest {visible}/{total} events", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
+  activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "{visible} cards / {total} updates", uploadUpdates: "{count} updates collapsed", uploadTransferred: "Transferred", uploadSpeed: "Speed", uploadEta: "Remaining", uploadComplete: "Complete", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
   retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API.",
-  openArtifactCloud: "Open in {provider}", downloadArtifactCloud: "Download from {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror is uploading…", dcCloudMirrorFailed: "DC Cloud mirror is not ready"
+  openArtifactCloud: "Open in {provider}", downloadArtifactCloud: "Download from {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror is uploading…", dcCloudMirrorFailed: "DC Cloud mirror is not ready", dcCloudMirrorRepairing: "DC Cloud mirror is being repaired…"
 });
 
 Object.assign(translations.vi, {
@@ -3782,6 +3782,20 @@ function buildRecipe() {
 }
 
 const terminalJobStatuses = new Set(["succeeded", "failed", "cancelled"]);
+
+function jobNeedsMirrorPoll(job) {
+  if (!job || !terminalJobStatuses.has(String(job.status || "").toLowerCase())) return false;
+  return (Array.isArray(job.artifacts) ? job.artifacts : []).some((artifact) =>
+    (Array.isArray(artifact?.mirrors) ? artifact.mirrors : []).some((mirror) =>
+      String(mirror?.provider || "").toLowerCase() === "dccloud"
+      && String(mirror?.status || "").toLowerCase() === "repairing"
+    )
+  );
+}
+
+function jobShouldPoll(job) {
+  return Boolean(job && (!terminalJobStatuses.has(String(job.status || "").toLowerCase()) || jobNeedsMirrorPoll(job)));
+}
 const eventTypeLabels = {
   vi: {
     submitted: "Đã tạo job", dispatched: "Đã gửi tới runner", github_run: "GitHub Actions",
@@ -3822,6 +3836,74 @@ function readableStepStatus(value) {
   return t({ running: "eventRunning", success: "eventSucceeded", succeeded: "eventSucceeded", failed: "eventFailed" }[String(value || "").toLowerCase()] || "eventRunning");
 }
 
+function uploadProgressSnapshot(event) {
+  const numberValue = (...keys) => {
+    for (const key of keys) {
+      const raw = event?.[key];
+      if (raw === null || raw === undefined || raw === "") continue;
+      const value = Number(raw);
+      if (Number.isFinite(value)) return value;
+    }
+    return 0;
+  };
+  const bytes = Math.max(0, numberValue("bytes", "bytesTransferred"));
+  const totalBytes = Math.max(0, numberValue("totalBytes", "sizeBytes"));
+  const calculatedPercent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 0;
+  const rawPercent = numberValue("percent");
+  const percent = Math.max(0, Math.min(100, Math.round(rawPercent || calculatedPercent)));
+  let speedBytesPerSecond = Math.max(0, numberValue("speedBytesPerSecond", "speed"));
+  const etaCandidate = ["etaSeconds", "eta"]
+    .map((key) => event?.[key])
+    .filter((raw) => raw !== null && raw !== undefined && raw !== "")
+    .map((raw) => Number(raw))
+    .find((value) => Number.isFinite(value));
+  let etaSeconds = etaCandidate === undefined ? null : Math.max(0, etaCandidate);
+  const firstBytes = Number(event?._uploadFirstBytes);
+  const firstAt = Date.parse(String(event?._uploadFirstTimestamp || ""));
+  const currentAt = Date.parse(String(event?.timestamp || ""));
+  if (speedBytesPerSecond <= 0 && Number.isFinite(firstBytes) && firstBytes >= 0 && Number.isFinite(firstAt) && Number.isFinite(currentAt) && currentAt > firstAt) {
+    speedBytesPerSecond = Math.max(0, (bytes - firstBytes) / ((currentAt - firstAt) / 1000));
+  }
+  if (etaSeconds === null && speedBytesPerSecond > 0 && totalBytes > bytes) {
+    etaSeconds = (totalBytes - bytes) / speedBytesPerSecond;
+  }
+  return { bytes, totalBytes, percent, speedBytesPerSecond, etaSeconds };
+}
+
+function uploadProgressKey(event) {
+  return [event?.fileIndex || "", event?.fileName || "", event?.provider || ""].join("|");
+}
+
+function compactLiveEvents(events) {
+  const compacted = [];
+  const uploadGroups = new Map();
+  for (const event of Array.isArray(events) ? events : []) {
+    if (event?.type !== "upload_progress") {
+      compacted.push(event);
+      continue;
+    }
+    const key = uploadProgressKey(event);
+    const previous = uploadGroups.get(key);
+    if (previous) {
+      const previousIndex = compacted.indexOf(previous);
+      const merged = {
+        ...event,
+        _uploadUpdateCount: Number(previous._uploadUpdateCount || 1) + 1,
+        _uploadFirstTimestamp: previous._uploadFirstTimestamp || previous.timestamp,
+        _uploadFirstBytes: Number.isFinite(Number(previous._uploadFirstBytes)) ? Number(previous._uploadFirstBytes) : uploadProgressSnapshot(previous).bytes,
+      };
+      if (previousIndex >= 0) compacted.splice(previousIndex, 1);
+      compacted.push(merged);
+      uploadGroups.set(key, merged);
+    } else {
+      const first = { ...event, _uploadUpdateCount: 1, _uploadFirstTimestamp: event.timestamp, _uploadFirstBytes: uploadProgressSnapshot(event).bytes };
+      compacted.push(first);
+      uploadGroups.set(key, first);
+    }
+  }
+  return compacted;
+}
+
 function eventTitle(event) {
   if (event.type === "step" && event.step) return `${readableStep(event.step)} · ${readableStepStatus(event.status)}`;
   if (event.type === "plan") return `${readableEventType(event.type)} · ${(event.steps || []).length} ${t("eventSteps")}`;
@@ -3840,12 +3922,55 @@ function eventDetailEntries(event) {
   const entries = [];
   const skip = new Set(["sequence", "jobId", "timestamp", "type", "traceback", "message", "error", "warning", "step", "stage", "status"]);
   Object.entries(event || {}).forEach(([key, value]) => {
+    if (key.startsWith("_")) return;
     if (skip.has(key)) return;
     if (key === "details" && value && typeof value === "object" && !Array.isArray(value)) {
       Object.entries(value).forEach(([detailKey, detailValue]) => entries.push([detailKey, formatEventValue(detailValue)]));
     } else entries.push([key, formatEventValue(value)]);
   });
   return entries;
+}
+
+function renderUploadProgressCard(event) {
+  const snapshot = uploadProgressSnapshot(event);
+  const card = document.createElement("div");
+  card.className = "event-upload-card";
+  card.dataset.progressPercent = String(snapshot.percent);
+  const header = document.createElement("div"); header.className = "event-upload-header";
+  const fileInfo = document.createElement("div"); fileInfo.className = "event-upload-file";
+  const file = document.createElement("strong"); file.textContent = event.fileName || t("artifact");
+  fileInfo.append(file);
+  const provider = String(event.provider || "").trim().toLowerCase();
+  if (provider) {
+    const providerLabel = document.createElement("small"); providerLabel.textContent = provider === "dccloud" ? "DC Cloud" : provider;
+    fileInfo.append(providerLabel);
+  }
+  const percent = document.createElement("b"); percent.textContent = `${snapshot.percent}%`;
+  header.append(fileInfo, percent);
+  const track = document.createElement("div"); track.className = "event-upload-track";
+  track.setAttribute("role", "progressbar");
+  track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", "100"); track.setAttribute("aria-valuenow", String(snapshot.percent));
+  const fill = document.createElement("i"); fill.style.width = `${snapshot.percent}%`; fill.setAttribute("aria-hidden", "true");
+  track.append(fill);
+  const metrics = document.createElement("div"); metrics.className = "event-upload-metrics";
+  const metric = (label, value) => {
+    const node = document.createElement("span");
+    const caption = document.createElement("small"); caption.textContent = label;
+    const content = document.createElement("b"); content.textContent = value;
+    node.append(caption, content); return node;
+  };
+  metrics.append(
+    metric(t("uploadTransferred"), `${formatBytes(snapshot.bytes)} / ${formatBytes(snapshot.totalBytes)}`),
+    metric(t("uploadSpeed"), snapshot.speedBytesPerSecond > 0 ? `${formatBytes(snapshot.speedBytesPerSecond)}/s` : "—"),
+    metric(t("uploadEta"), snapshot.percent >= 100 ? t("uploadComplete") : Number.isFinite(snapshot.etaSeconds) && snapshot.etaSeconds > 0 ? `${Math.round(snapshot.etaSeconds)}s` : "—")
+  );
+  const updates = Number(event._uploadUpdateCount || 1);
+  if (updates > 1) {
+    const note = document.createElement("small"); note.className = "event-upload-note";
+    note.textContent = t("uploadUpdates", { count: updates }); card.append(note);
+  }
+  card.prepend(header, track, metrics);
+  return card;
 }
 
 function statusLabel(status) {
@@ -4089,7 +4214,13 @@ function renderArtifacts(job) {
       const mirrorStatus = String(mirror?.status || "pending").toLowerCase();
       const mirrorLabel = document.createElement("small");
       mirrorLabel.className = "artifact-provider";
-      mirrorLabel.textContent = mirrorStatus === "available" ? t("dcCloudMirror") : mirrorStatus === "failed" ? t("dcCloudMirrorFailed") : t("dcCloudMirrorPending");
+      mirrorLabel.textContent = mirrorStatus === "available"
+        ? t("dcCloudMirror")
+        : mirrorStatus === "repairing"
+          ? t("dcCloudMirrorRepairing")
+          : mirrorStatus === "failed"
+            ? t("dcCloudMirrorFailed")
+            : t("dcCloudMirrorPending");
       card.append(mirrorLabel);
       if (mirrorStatus === "available") {
         const mirrorActions = document.createElement("div");
@@ -4112,6 +4243,7 @@ function renderArtifacts(job) {
       if (
         terminalJobStatuses.has(job.status)
         && mirrorStatus !== "available"
+        && mirrorStatus !== "repairing"
         && (job.job_id || job.jobId)
       ) {
         const repair = document.createElement("button");
@@ -4131,17 +4263,17 @@ function renderArtifacts(job) {
 function renderEvents(events, expanded = false) {
   const section = document.createElement("section"); section.className = "job-events";
   if (expanded) section.classList.add("expanded");
+  const rawPreviewEvents = events.slice(-8);
+  const visibleEvents = expanded ? events : compactLiveEvents(rawPreviewEvents);
   const heading = document.createElement("div"); heading.className = "job-events-heading";
   const title = document.createElement("h3"); title.textContent = expanded ? t("fullLogTitle") : t("eventTimeline");
-  const previewCount = Math.min(events.length, 8);
-  const count = document.createElement("span"); count.textContent = t("eventsPreview", { visible: expanded ? events.length : previewCount, total: events.length });
+  const count = document.createElement("span"); count.textContent = t("eventsPreview", { visible: expanded ? events.length : visibleEvents.length, total: events.length });
   heading.append(title, count); section.append(heading);
   const list = document.createElement("ol");
   if (!events.length) {
     const empty = document.createElement("li"); empty.textContent = t("noEvents"); list.append(empty);
   } else {
     let currentGroup = "";
-    const visibleEvents = expanded ? events : events.slice(-8);
     visibleEvents.slice().reverse().forEach((event) => {
       const group = event.step ? readableStep(event.step) : readableEventStage(event.stage || event.status || event.type || t("events"));
       if (group !== currentGroup) {
@@ -4162,9 +4294,14 @@ function renderEvents(events, expanded = false) {
       const detail = document.createElement("p");
       const details = eventDetailEntries(event);
       const visible = event.message || event.error || event.warning || (event.type === "step" ? details.slice(0, 3).map(([key, value]) => `${key}: ${value}`).join(" · ") : "") || event.stage || event.status;
-      detail.textContent = String(visible || readableEventStage(event.stage || event.status || event.type || ""));
-      if (!detail.textContent) detail.hidden = true;
-      content.append(titleRow, detail);
+      if (event.type === "upload_progress" && !expanded) {
+        detail.hidden = true;
+        content.append(titleRow, renderUploadProgressCard(event));
+      } else {
+        detail.textContent = String(visible || readableEventStage(event.stage || event.status || event.type || ""));
+        if (!detail.textContent) detail.hidden = true;
+        content.append(titleRow, detail);
+      }
       if (expanded && details.length) {
         const data = document.createElement("dl"); data.className = "event-data";
         details.forEach(([key, value]) => {
@@ -4264,7 +4401,7 @@ async function loadAdminJobDetail() {
     status.classList.add("error");
   } finally {
     if (state.adminJobView === view && requestId === view.requestId && !document.hidden) {
-      const delay = terminalJobStatuses.has(view.job.status) || view.unchangedPolls >= 6 ? 30000 : view.unchangedPolls >= 3 ? 15000 : 10000;
+      const delay = !jobShouldPoll(view.job) || view.unchangedPolls >= 6 ? 30000 : view.unchangedPolls >= 3 ? 15000 : 10000;
       view.timer = setTimeout(loadAdminJobDetail, delay);
     }
   }
@@ -4280,6 +4417,7 @@ function openJob(job) {
   state.jobEventsHasMore = false;
   state.jobHistoryFilter = job.status === "succeeded" ? "succeeded" : terminalJobStatuses.has(job.status) ? "failed" : "active";
   renderActiveJob(job, []); renderJobHistory();
+  scheduleJobsPoll(jobShouldPoll(job), true);
   loadJobDetail(jobId).catch((error) => toast(error.message, true));
 }
 
@@ -4373,8 +4511,9 @@ function renderActiveJob(job, events, inspection = null) {
   contextCopy.append(pack, release, count);
   context.append(contextTitle, contextCopy);
   const upload = [...events].reverse().find((event) => event.type === "upload_progress");
+  const uploadSnapshot = upload ? uploadProgressSnapshot(upload) : null;
   const uploadDetail = upload
-    ? `${upload.fileName || "—"} · ${Math.max(0, Math.min(100, Math.round(Number(upload.percent) || 0)))}% · ${formatBytes(upload.bytes)} / ${formatBytes(upload.totalBytes)} · ${formatBytes(upload.speedBytesPerSecond)}/s${Number.isFinite(Number(upload.etaSeconds)) ? ` · ETA ${Math.max(0, Math.round(Number(upload.etaSeconds)))}s` : ""}`
+    ? `${upload.fileName || "—"} · ${uploadSnapshot.percent}% · ${formatBytes(uploadSnapshot.bytes)} / ${formatBytes(uploadSnapshot.totalBytes)} · ${formatBytes(uploadSnapshot.speedBytesPerSecond)}/s${Number.isFinite(uploadSnapshot.etaSeconds) ? ` · ETA ${Math.max(0, Math.round(uploadSnapshot.etaSeconds))}s` : ""}`
     : "";
   const facts = document.createElement("div"); facts.className = "job-facts";
   const product = metadata.productName || job.recipe?.device;
@@ -4752,7 +4891,7 @@ function scheduleJobsPoll(active, changed = false) {
         .then(() => {
           setJobsConnection("jobsConnected");
           const selectedJob = state.jobs.find((job) => (job.job_id || job.jobId) === selectedJobId);
-          scheduleJobsPoll(Boolean(selectedJob && !terminalJobStatuses.has(selectedJob.status)), false);
+          scheduleJobsPoll(jobShouldPoll(selectedJob), false);
         })
         .catch(() => {
           setJobsConnection("jobsOffline", true);
@@ -4830,7 +4969,12 @@ async function loadJobs({ force = false } = {}) {
         job.status,
         job.stage,
         job.progress,
-        job.updated_at || job.updatedAt
+        job.updated_at || job.updatedAt,
+        (Array.isArray(job.artifacts) ? job.artifacts : []).map((artifact) =>
+          (Array.isArray(artifact?.mirrors) ? artifact.mirrors : [])
+            .filter((mirror) => String(mirror?.provider || "").toLowerCase() === "dccloud")
+            .map((mirror) => String(mirror?.status || "").toLowerCase())
+        )
       ]),
       active: state.activeJobId,
       sequence: state.activeEvents.reduce(
@@ -4843,7 +4987,7 @@ async function loadJobs({ force = false } = {}) {
     renderJobHistory();
     renderActiveJob(activeJob, state.activeEvents);
     setJobsConnection("jobsConnected");
-    scheduleJobsPoll(Boolean(running), changed);
+    scheduleJobsPoll(jobShouldPoll(activeJob || running), changed);
   } catch (error) {
     setJobsConnection("jobsOffline", true); scheduleJobsPoll(true, false); throw error;
   } finally {

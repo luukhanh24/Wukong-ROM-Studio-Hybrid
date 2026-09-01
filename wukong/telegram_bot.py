@@ -1351,6 +1351,8 @@ class TelegramBotController:
             status = getattr(mirror, "status", "pending")
             if browse_url and status == "available":
                 return f"\nDC Cloud mirror: {browse_url}"
+            if status == "repairing":
+                return "\nDC Cloud mirror: đang repair…"
             if status == "failed":
                 return "\nDC Cloud mirror: chưa sẵn sàng (Google Drive vẫn khả dụng)"
             return "\nDC Cloud mirror: đang upload…"

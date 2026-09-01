@@ -417,7 +417,7 @@ def public_job_payload(
                             continue
                         provider = str(mirror.get("provider") or "").strip().casefold()
                         status = str(mirror.get("status") or "pending").strip().casefold()
-                        if not provider or status not in {"pending", "available", "failed"}:
+                        if not provider or status not in {"pending", "available", "failed", "repairing"}:
                             continue
                         browse_url = public_artifact_url(
                             mirror.get("browse_url") or mirror.get("browseUrl")
@@ -1300,6 +1300,20 @@ class TelegramMiniAppAPI:
                 if self.mirror_repair_dispatcher is None:
                     raise RuntimeError("Mirror repair is not configured")
                 result = self.mirror_repair_dispatcher(job_id)
+                repairing_artifacts = [
+                    replace(
+                        artifact,
+                        mirrors=[
+                            replace(mirror, status="repairing")
+                            if mirror.provider.casefold() == "dccloud"
+                            and mirror.status.casefold() in {"pending", "failed"}
+                            else mirror
+                            for mirror in artifact.mirrors
+                        ],
+                    )
+                    for artifact in manifest.artifacts
+                ]
+                self.orchestrator.store.update(job_id, artifacts=repairing_artifacts)
                 return jsonify({"status": "queued", **dict(result)})
             except OrchestrationError as exc:
                 return jsonify({"error": str(exc)}), 404
@@ -1767,6 +1781,8 @@ class TelegramJobNotifier:
                     if getattr(mirror, "status", "") == "available" and mirror_url:
                         lines.append("DC Cloud mirror  <i>sẵn sàng</i>")
                         keyboard.append([{"text": "DC Cloud mirror", "url": mirror_url}])
+                    elif getattr(mirror, "status", "") == "repairing":
+                        lines.append("DC Cloud mirror  <i>đang repair…</i>")
                     elif getattr(mirror, "status", "") == "failed":
                         lines.append("DC Cloud mirror  <i>chưa sẵn sàng</i>")
                     else:

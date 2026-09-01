@@ -59,15 +59,18 @@ jobs:
             --config .wkstudio/secrets/rclone.conf \
             --manifest-output .wkstudio/repair-manifest.json
       - name: Sync repaired mirror to control plane
-        if: success()
+        if: always()
         env:
           API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || '' }}
           CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
         run: |
           set -euo pipefail
+          if [[ ! -s .wkstudio/repair-manifest.json ]]; then
+            echo "::warning::Mirror repair did not produce a manifest; leaving the existing mirror status unchanged."
+            exit 0
+          fi
           test -n "$API_URL"
           test -n "$CALLBACK_SECRET"
-          test -s .wkstudio/repair-manifest.json
           python3 -m tools.actions_control_plane mirror-repair \
             --api-url "$API_URL" \
             --job-id "${{ inputs.job_id }}" \

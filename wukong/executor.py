@@ -627,25 +627,11 @@ class LocalJobExecutor:
                 public_url=available_mirror.browse_url,
                 mirrors=mirrored_record.mirrors,
             )
-        if any(
-            mirror.provider.casefold() == "dccloud" and mirror.status == "failed"
-            for mirror in mirrored_record.mirrors
-        ):
-            self.store.append_event(
-                job_id,
-                "mirror_repair_started",
-                provider="dccloud",
-                fileName=artifact.name,
-                source="local_artifact",
-            )
-            mirrored_record = self._mirror_artifact(
-                job_id,
-                mirrored_record,
-                artifact,
-                device,
-                build,
-                relative_root,
-            )
+        # The terminal callback must be emitted as soon as the primary Drive
+        # upload completes.  A failed mirror is persisted in the manifest and
+        # repaired asynchronously by the control-plane outbox; retrying here
+        # would keep the build (and its Telegram notification) blocked on a
+        # second multi-gigabyte upload.
         return ArtifactRecord(
             name=primary_record.name,
             uri=primary_record.uri,

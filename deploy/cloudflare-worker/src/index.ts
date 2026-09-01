@@ -54,6 +54,7 @@ import {
 } from "./sessions";
 import {
   TelegramHttpError,
+  drainTelegramOutbox,
   handleTelegramWebhook,
   maintenance
 } from "./telegram";
@@ -696,8 +697,10 @@ const worker: ExportedHandler<Env> = {
           result = await handleProgress(env, body);
         } else if (path.endsWith("/mirror-repair")) {
           result = await handleMirrorRepair(env, body);
+          ctx.waitUntil(drainTelegramOutbox(env, 25));
         } else {
           result = await handleTerminal(env, body);
+          ctx.waitUntil(drainTelegramOutbox(env, 25));
           await drainAutomaticMirrorRepairOutbox(env, 1);
         }
         return json(result);

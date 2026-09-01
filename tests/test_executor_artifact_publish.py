@@ -11,7 +11,7 @@ from wukong.models import ArtifactRecord
 
 
 class ExecutorArtifactPublishTests(unittest.TestCase):
-    def test_failed_mirror_is_repaired_from_local_zip_after_primary_upload(self) -> None:
+    def test_failed_mirror_is_left_for_asynchronous_repair_after_primary_upload(self) -> None:
         order: list[str] = []
         mirror_attempts = 0
 
@@ -64,15 +64,15 @@ class ExecutorArtifactPublishTests(unittest.TestCase):
                 publish_primary,
             )
 
-        self.assertEqual(["mirror:1", "primary", "mirror:2"], order)
+        self.assertEqual(["mirror:1", "primary"], order)
         self.assertEqual("wukong-gdrive:WukongROM/ROM/V6/rom.zip", record.uri)
-        self.assertEqual("available", record.mirrors[0].status)
-        store.append_event.assert_any_call(
+        self.assertEqual("failed", record.mirrors[0].status)
+        store.append_event.assert_called_once_with(
             "job",
-            "mirror_repair_started",
+            "mirror_upload_failed",
             provider="dccloud",
-            fileName="rom.zip",
-            source="local_artifact",
+            warning="DC Cloud mirror upload failed; primary artifact upload will continue.",
+            errorCode="upload_failed",
         )
 
     def test_dccloud_upload_runs_from_local_zip_before_primary_upload(self) -> None:
