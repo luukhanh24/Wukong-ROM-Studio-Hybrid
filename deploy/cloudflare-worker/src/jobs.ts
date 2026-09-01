@@ -1,6 +1,6 @@
 import type { AuthenticatedRequest } from "./auth";
 import { artifactEdition } from "./artifact-metadata";
-import { cancelWorkflowRunForJob, dispatchBuild } from "./github";
+import { cancelWorkflowRunForJob, dispatchBuild, dispatchMirrorRepair } from "./github";
 import { directArtifactUrl } from "./public-links";
 import { terminalTelegramNotification } from "./telegram-notifications";
 import { buildStartedAdminStatements } from "./activity";
@@ -949,6 +949,41 @@ export async function inspectJob(
     throw new JobHttpError("Job not found", 404);
   }
   return row;
+}
+
+export async function repairMirror(
+  env: Env,
+  auth: AuthenticatedRequest,
+  jobId: string
+): Promise<JsonObject> {
+  const row = await inspectJob(env, auth, jobId);
+  if (!isTerminalStatus(row.status)) {
+    throw new JobHttpError("Mirror repair is available after the job finishes", 409);
+  }
+  let manifest: JsonObject;
+  try {
+    manifest = JSON.parse(row.manifest_json) as JsonObject;
+  } catch {
+    throw new JobHttpError("Job manifest is unavailable", 409);
+  }
+  const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
+  const repairable = artifacts.some((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const artifact = value as JsonObject;
+    if (!String(artifact.name ?? "").toLowerCase().endsWith(".zip")) return false;
+    const mirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
+    return mirrors.some((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const mirror = item as JsonObject;
+      return String(mirror.provider ?? "").toLowerCase() === "dccloud"
+        && String(mirror.status ?? "").toLowerCase() !== "available";
+    });
+  });
+  if (!repairable) {
+    throw new JobHttpError("This job has no failed DC Cloud mirror to repair", 409);
+  }
+  await dispatchMirrorRepair(env, jobId);
+  return { status: "queued", workflow: "mirror-repair.yml", jobId };
 }
 
 export async function jobEvents(

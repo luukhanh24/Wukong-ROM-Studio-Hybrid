@@ -20,6 +20,7 @@ import {
   listJobs,
   listJobsForSubject,
   publicJob,
+  repairMirror,
   resumeJob
 } from "./jobs";
 import {
@@ -564,6 +565,17 @@ async function routeWithIdentity(
         return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
       }
       return json({ error: "Job could not be resumed" }, 409);
+    }
+  }
+  const mirrorRepair = path.match(/^\/v1\/jobs\/([A-Za-z0-9-]{1,64})\/mirror-repair$/);
+  if (mirrorRepair && request.method === "POST") {
+    try {
+      return json(await repairMirror(env, auth, mirrorRepair[1]!));
+    } catch (error) {
+      if (error instanceof JobHttpError || error instanceof GitHubHttpError) {
+        return json({ error: error.message, code: "mirror_repair_failed" }, error.status);
+      }
+      return json({ error: "DC Cloud mirror repair could not be started" }, 409);
     }
   }
   const download = path.match(/^\/v1\/jobs\/([A-Za-z0-9-]{1,64})\/download$/);

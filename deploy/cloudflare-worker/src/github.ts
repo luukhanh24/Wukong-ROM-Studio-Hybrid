@@ -82,6 +82,32 @@ export async function dispatchBuild(env: Env, jobId: string): Promise<void> {
   }
 }
 
+export async function dispatchMirrorRepair(env: Env, jobId: string): Promise<void> {
+  if (env.WUKONG_DISABLE_EXTERNAL_DISPATCH === "1") return;
+  if (!env.WUKONG_GITHUB_TOKEN.trim()) {
+    throw new GitHubHttpError("GitHub Actions dispatch is not configured", 503);
+  }
+  const [owner, repository] = repositoryParts(env);
+  const workflow = encodeURIComponent("mirror-repair.yml");
+  const response = await githubFetch(
+    env,
+    `/repos/${owner}/${repository}/actions/workflows/${workflow}/dispatches`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        ref: env.WUKONG_GITHUB_REF || "main",
+        inputs: { job_id: jobId }
+      })
+    }
+  );
+  if (response.status !== 204) {
+    const detail = (await response.text()).slice(0, 512);
+    throw new GitHubHttpError(
+      `DC Cloud mirror repair dispatch failed (${response.status})${detail ? `: ${detail}` : ""}`
+    );
+  }
+}
+
 export async function listWorkflowRuns(env: Env): Promise<WorkflowRun[]> {
   if (!env.WUKONG_GITHUB_TOKEN.trim()) {
     throw new GitHubHttpError("GitHub Actions run lookup is not configured", 503);
