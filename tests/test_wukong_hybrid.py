@@ -1006,6 +1006,66 @@ class SourceAndStorageContractTests(unittest.TestCase):
             metadata = json.loads(remote_files[uri + ".metadata.json"])
             self.assertEqual(hashlib.sha256(remote_files[uri]).hexdigest(), metadata["sha256"])
 
+    def test_filtered_checkpoint_archive_excludes_later_stage_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root, "workspace")
+            (source / ".studio-markers").mkdir(parents=True)
+            (source / "source_rom").mkdir()
+            (source / "rom-unpack" / "system").mkdir(parents=True)
+            (source / ".wkstudio-workspace.json").write_text("{}", encoding="utf-8")
+            (source / ".studio-markers" / "extract_payload.json").write_text(
+                '{"status":"success"}', encoding="utf-8"
+            )
+            (source / "source_rom" / "system.img").write_bytes(b"source-image")
+            (source / "rom-unpack" / "system" / "build.prop").write_text(
+                "should-not-be-uploaded", encoding="utf-8"
+            )
+            remote_files: dict[str, bytes] = {}
+
+            def fake_run(args: list[str], **_: object) -> str:
+                operation = args[1]
+                if operation == "copyto":
+                    remote_files[args[3]] = Path(args[2]).read_bytes()
+                elif operation == "moveto":
+                    remote_files[args[3]] = remote_files.pop(args[2])
+                elif operation == "cat":
+                    return remote_files[args[2]].decode("utf-8")
+                return ""
+
+            def fake_stream(args: list[str], payload: bytes | None = None) -> bytes:
+                operation = args[1]
+                if operation == "rcat":
+                    self.assertEqual(int(args[args.index("--size") + 1]), len(payload or b""))
+                    remote_files[args[2]] = payload or b""
+                    return b""
+                if operation == "cat":
+                    return remote_files[args[2]]
+                raise AssertionError(args)
+
+            storage = RcloneStorageAdapter(
+                run_command=fake_run,
+                stream_command=fake_stream,
+            )
+            uri = storage.sync_tree_subset(
+                source,
+                "checkpoints/job/extract_payload",
+                (
+                    ".wkstudio-workspace.json",
+                    ".studio-markers/extract_payload.json",
+                    "source_rom",
+                ),
+            )
+            restored = Path(root, "restored")
+            storage.restore_tree(uri, restored)
+
+            self.assertTrue((restored / ".wkstudio-workspace.json").is_file())
+            self.assertTrue((restored / ".studio-markers" / "extract_payload.json").is_file())
+            self.assertEqual(
+                (restored / "source_rom" / "system.img").read_bytes(),
+                b"source-image",
+            )
+            self.assertFalse((restored / "rom-unpack").exists())
+
     def test_checkpoint_restore_rejects_path_traversal_archive(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             archive = io.BytesIO()

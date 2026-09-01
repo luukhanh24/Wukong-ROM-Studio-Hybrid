@@ -18,8 +18,10 @@ from wukong.executor import (
     CHECKPOINT_STAGES,
     DEFAULT_CLOUD_CHECKPOINT_STAGES,
     LocalJobExecutor,
+    checkpoint_paths_for_stage,
     checkpoint_stages_for_environment,
     cloud_progress_sync_mode,
+    sync_checkpoint_tree,
     source_target_for,
 )
 from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
@@ -55,6 +57,35 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_extract_checkpoint_contains_only_resume_inputs(self) -> None:
+        self.assertEqual(
+            (
+                ".wkstudio-workspace.json",
+                ".studio-markers/extract_payload.json",
+                "source_rom",
+            ),
+            checkpoint_paths_for_stage("extract_payload"),
+        )
+        self.assertIsNone(checkpoint_paths_for_stage("unpack_partitions"))
+
+    def test_extract_checkpoint_uses_subset_capable_storage(self) -> None:
+        calls: list[tuple[str, object]] = []
+
+        class Storage:
+            def sync_tree_subset(self, _source: Path, _relative: str, paths: object) -> str:
+                calls.append(("subset", paths))
+                return "checkpoint://filtered"
+
+            def sync_tree(self, _source: Path, _relative: str) -> str:
+                calls.append(("full", None))
+                return "checkpoint://full"
+
+        result = sync_checkpoint_tree(Storage(), Path("workspace"), "checkpoints/job/extract_payload", "extract_payload")
+
+        self.assertEqual("checkpoint://filtered", result)
+        self.assertEqual("subset", calls[0][0])
+        self.assertEqual(checkpoint_paths_for_stage("extract_payload"), calls[0][1])
+
     def test_default_dccloud_factory_uses_scoped_webdav_root(self) -> None:
         with tempfile.TemporaryDirectory() as temporary, patch.dict(
             "os.environ",

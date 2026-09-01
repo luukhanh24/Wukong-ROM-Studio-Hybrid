@@ -30,6 +30,17 @@ CHECKPOINT_STAGES = set(CHECKPOINT_PIPELINE_STEPS)
 # snapshot (it avoids re-downloading and re-extracting the ROM) and let local
 # runs retain their cheap filesystem checkpoints after every reusable stage.
 DEFAULT_CLOUD_CHECKPOINT_STAGES = {"extract_payload"}
+# A post-extraction resume only needs the workspace identity, the successful
+# stage marker, and the extracted source images consumed by ``batch_unpack``.
+# Keeping this contract explicit prevents a hosted checkpoint from scanning
+# and uploading later-stage trees such as ``rom-unpack`` and package caches.
+CLOUD_CHECKPOINT_PATHS: dict[str, tuple[str, ...]] = {
+    "extract_payload": (
+        ".wkstudio-workspace.json",
+        ".studio-markers/extract_payload.json",
+        "source_rom",
+    ),
+}
 CLOUD_PROGRESS_RETRY_SECONDS = 30.0
 CLOUD_PROGRESS_INTERVAL_SECONDS = 90.0
 CLOUD_PROGRESS_DELTA_PERCENT = 10.0
@@ -80,6 +91,32 @@ def checkpoint_stages_for_environment() -> set[str]:
         for item in configured.split(",")
         if item.strip() in CHECKPOINT_STAGES
     }
+
+
+def checkpoint_paths_for_stage(stage: str) -> tuple[str, ...] | None:
+    """Return the minimal workspace paths needed to resume ``stage``.
+
+    ``None`` intentionally means full-workspace behavior for stages whose
+    dependency contract has not been narrowed yet.  This keeps custom
+    checkpoint policies safe while the hosted extract snapshot is optimized.
+    """
+
+    return CLOUD_CHECKPOINT_PATHS.get(stage)
+
+
+def sync_checkpoint_tree(
+    storage: Any,
+    source: Path,
+    relative_path: str,
+    stage: str,
+) -> str:
+    """Upload a stage checkpoint using its narrowed dependency contract."""
+
+    checkpoint_paths = checkpoint_paths_for_stage(stage)
+    sync_tree_subset = getattr(storage, "sync_tree_subset", None)
+    if checkpoint_paths and callable(sync_tree_subset):
+        return sync_tree_subset(source, relative_path, checkpoint_paths)
+    return storage.sync_tree(source, relative_path)
 
 
 def cloud_progress_sync_mode(
@@ -402,9 +439,12 @@ class LocalJobExecutor:
                                 "on",
                             }:
                                 raise RuntimeError("Cloud checkpoints disabled by WUKONG_DISABLE_CLOUD_CHECKPOINTS")
-                            checkpoint = storage.sync_tree(
+                            relative_checkpoint = f"checkpoints/{job_id}/{stage}"
+                            checkpoint = sync_checkpoint_tree(
+                                storage,
                                 build_workspace,
-                                f"checkpoints/{job_id}/{stage}",
+                                relative_checkpoint,
+                                stage,
                             )
                         else:
                             checkpoint = f"local:{build_workspace}"

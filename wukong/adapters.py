@@ -18,7 +18,7 @@ from html.parser import HTMLParser
 from http.cookiejar import CookieJar
 from pathlib import Path
 from pathlib import PurePosixPath
-from typing import Any, Callable, Mapping, Protocol
+from typing import Any, Callable, Iterable, Mapping, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
@@ -1066,11 +1066,25 @@ class RcloneStorageAdapter:
         self.run_command(self._args("copy", str(source), uri, "--retries", "3"))
         return uri
 
-    def sync_tree(self, source: Path, relative_path: str) -> str:
+    def sync_tree(
+        self,
+        source: Path,
+        relative_path: str,
+        *,
+        include_paths: Iterable[str] | None = None,
+    ) -> str:
+        """Archive and upload a workspace checkpoint.
+
+        ``include_paths`` is optional for backwards compatibility.  When it
+        is supplied, only those relative paths are scanned and written to the
+        TAR, which keeps hosted checkpoints small without copying the source
+        tree to a second staging directory.
+        """
         source = source.resolve()
         if not source.is_dir():
             raise FileNotFoundError(source)
-        self._validate_checkpoint_source(source)
+        selected_paths = self._normalize_checkpoint_paths(source, include_paths)
+        self._validate_checkpoint_source(source, selected_paths)
         uri = self.remote_uri(f"{relative_path}/{uuid.uuid4().hex}.tar")
         staging_uri = uri + ".partial"
         metadata_uri = uri + ".metadata.json"
@@ -1078,11 +1092,11 @@ class RcloneStorageAdapter:
 
         def write_archive(output: Any) -> tuple[str, int]:
             writer = _HashingWriter(output)
-            self._write_checkpoint_archive(source, writer)
+            self._write_checkpoint_archive(source, writer, selected_paths)
             return writer.digest.hexdigest(), writer.size_bytes
 
         counter = _CountingWriter()
-        self._write_checkpoint_archive(source, counter)
+        self._write_checkpoint_archive(source, counter, selected_paths)
         archive_size = counter.size_bytes
         try:
             digest, size_bytes = self._upload_stream(
@@ -1125,15 +1139,39 @@ class RcloneStorageAdapter:
                     pass
             raise
 
+    def sync_tree_subset(
+        self,
+        source: Path,
+        relative_path: str,
+        include_paths: Iterable[str],
+    ) -> str:
+        """Upload only the listed relative workspace paths."""
+
+        return self.sync_tree(source, relative_path, include_paths=include_paths)
+
     @staticmethod
-    def _write_checkpoint_archive(source: Path, output: Any) -> None:
+    def _write_checkpoint_archive(
+        source: Path,
+        output: Any,
+        include_paths: tuple[PurePosixPath, ...] | None = None,
+    ) -> None:
         # A size hint makes rclone stream reliably to Drive. Counting the TAR
         # first costs one extra disk pass but avoids a same-sized local copy.
         with tarfile.open(fileobj=output, mode="w|", dereference=False) as archive:
-            for child in sorted(source.iterdir(), key=lambda item: item.name.casefold()):
+            if include_paths is None:
+                children = [
+                    (child, PurePosixPath(child.name))
+                    for child in sorted(source.iterdir(), key=lambda item: item.name.casefold())
+                ]
+            else:
+                children = [
+                    (source.joinpath(*relative.parts), relative)
+                    for relative in include_paths
+                ]
+            for child, relative in children:
                 archive.add(
                     child,
-                    arcname=child.name,
+                    arcname=relative.as_posix(),
                     recursive=True,
                     filter=RcloneStorageAdapter._checkpoint_tar_filter,
                 )
@@ -1144,17 +1182,68 @@ class RcloneStorageAdapter:
         return member
 
     @staticmethod
-    def _validate_checkpoint_source(source: Path) -> None:
-        for directory, directory_names, file_names in os.walk(source, followlinks=False):
-            current = Path(directory)
-            for name in [*directory_names, *file_names]:
-                path = current / name
+    def _validate_checkpoint_source(
+        source: Path,
+        include_paths: tuple[PurePosixPath, ...] | None = None,
+    ) -> None:
+        roots = (
+            [source]
+            if include_paths is None
+            else [source.joinpath(*relative.parts) for relative in include_paths]
+        )
+        for root in roots:
+            if root.is_symlink():
+                paths = [root]
+            elif root.is_dir():
+                paths = []
+                for directory, directory_names, file_names in os.walk(root, followlinks=False):
+                    current = Path(directory)
+                    paths.extend(current / name for name in [*directory_names, *file_names])
+            else:
+                paths = [root]
+            for path in paths:
                 if path.is_symlink():
                     link_name = os.readlink(path)
                     if not link_name or "\x00" in link_name:
                         raise SourceIntegrityError(
                             f"Checkpoint workspace contains an invalid symbolic link: {path.relative_to(source)}"
                         )
+
+    @staticmethod
+    def _normalize_checkpoint_paths(
+        source: Path,
+        include_paths: Iterable[str] | None,
+    ) -> tuple[PurePosixPath, ...] | None:
+        if include_paths is None:
+            return None
+        normalized: list[PurePosixPath] = []
+        for raw_path in include_paths:
+            value = str(raw_path).replace("\\", "/")
+            path = PurePosixPath(value)
+            if (
+                not value
+                or path.is_absolute()
+                or value.startswith("/")
+                or (path.parts and path.parts[0].endswith(":"))
+                or any(part in {"", ".", ".."} for part in path.parts)
+            ):
+                raise ValueError(f"Invalid checkpoint include path: {raw_path!r}")
+            candidate = source.joinpath(*path.parts)
+            if not candidate.exists() and not candidate.is_symlink():
+                raise FileNotFoundError(candidate)
+            normalized.append(path)
+
+        # Stable order plus ancestor de-duplication prevents duplicate TAR
+        # members when a caller names both a directory and one of its files.
+        result: list[PurePosixPath] = []
+        for path in sorted(
+            set(normalized),
+            key=lambda item: (len(item.parts), item.as_posix().casefold()),
+        ):
+            if any(path.parts[: len(parent.parts)] == parent.parts for parent in result):
+                continue
+            result.append(path)
+        return tuple(sorted(result, key=lambda item: item.as_posix().casefold()))
 
     def restore_tree(self, uri: str, destination: Path) -> Path:
         destination = destination.resolve()
