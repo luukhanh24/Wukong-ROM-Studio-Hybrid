@@ -452,6 +452,22 @@ function repairedManifest(row: JobRow, payload: JsonObject, now: string): JsonOb
   return { ...current, artifacts: mergedArtifacts, updated_at: now };
 }
 
+function hasAvailableDcCloudMirror(manifest: JsonObject): boolean {
+  const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
+  return artifacts.some((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const mirrors: unknown[] = Array.isArray((value as JsonObject).mirrors)
+      ? (value as JsonObject).mirrors as unknown[]
+      : [];
+    return mirrors.some((mirrorValue) => {
+      if (!mirrorValue || typeof mirrorValue !== "object" || Array.isArray(mirrorValue)) return false;
+      const mirror = mirrorValue as JsonObject;
+      return String(mirror.provider ?? "").trim().toLowerCase() === "dccloud"
+        && String(mirror.status ?? "").trim().toLowerCase() === "available";
+    });
+  });
+}
+
 export async function handleMirrorRepair(
   env: Env,
   body: string
@@ -470,6 +486,20 @@ export async function handleMirrorRepair(
   }
   const now = new Date().toISOString();
   const manifest = repairedManifest(row, payload, now);
+  const notification = hasAvailableDcCloudMirror(manifest)
+    ? env.DB.prepare(
+      `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
+       (notification_id, dedupe_key, chat_id, payload_json, available_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(
+      crypto.randomUUID(),
+      `job-mirror-repaired:${jobId}:${runId}`,
+      row.owner_subject,
+      JSON.stringify(terminalTelegramNotification(env, row, row.status, manifest)),
+      now,
+      now
+    )
+    : null;
   try {
     await env.DB.batch([
       env.DB.prepare(
@@ -480,7 +510,8 @@ export async function handleMirrorRepair(
       env.DB.prepare(
         `UPDATE wukong_jobs SET manifest_json = ?, updated_at = ?
          WHERE job_id = ? AND status IN ('succeeded', 'failed', 'cancelled')`
-      ).bind(JSON.stringify(manifest), now, jobId)
+      ).bind(JSON.stringify(manifest), now, jobId),
+      ...(notification ? [notification] : [])
     ]);
   } catch (error) {
     if (await existingReceipt(env, receiptKey, payloadHash)) {

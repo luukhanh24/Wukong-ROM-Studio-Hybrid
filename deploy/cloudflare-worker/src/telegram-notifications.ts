@@ -137,6 +137,21 @@ export function terminalTelegramNotification(
     );
     const url = directArtifactUrl(artifact.public_url ?? artifact.publicUrl, env);
     if (url) keyboard.push([{ text: `Tải ${edition} · ${size}`, url }]);
+    const mirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
+    mirrors.forEach((value) => {
+      const mirror = object(value);
+      if (String(mirror.provider ?? "").trim().toLowerCase() !== "dccloud") return;
+      const status = String(mirror.status ?? "").trim().toLowerCase();
+      const mirrorUrl = directArtifactUrl(mirror.browse_url ?? mirror.browseUrl, env);
+      if (status === "available" && mirrorUrl) {
+        lines.push("DC Cloud mirror  <i>sẵn sàng</i>");
+        keyboard.push([{ text: `Tải ${edition} · ${size} (DC Cloud)`, url: mirrorUrl }]);
+      } else if (status === "failed") {
+        lines.push("DC Cloud mirror  <i>chưa sẵn sàng</i>");
+      } else {
+        lines.push("DC Cloud mirror  <i>đang upload</i>");
+      }
+    });
   });
   if (env.WUKONG_TELEGRAM_WEB_APP_URL.startsWith("https://")) {
     keyboard.push([{

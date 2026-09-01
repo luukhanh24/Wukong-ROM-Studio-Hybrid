@@ -236,6 +236,19 @@ describe("GitHub Actions callbacks", () => {
         }]
       }]
     });
+    const repairedNotification = await bindings.DB.prepare(
+      `SELECT payload_json FROM wukong_telegram_notification_outbox
+       WHERE dedupe_key = ?`
+    ).bind(`job-mirror-repaired:${jobId}:99001`).first<{ payload_json: string }>();
+    const repairedPayload = JSON.parse(String(repairedNotification?.payload_json)) as {
+      text: string;
+      reply_markup: { inline_keyboard: Array<Array<Record<string, unknown>>> };
+    };
+    expect(repairedPayload.text).toContain("DC Cloud mirror  <i>sẵn sàng</i>");
+    expect(repairedPayload.reply_markup.inline_keyboard).toContainEqual([{
+      text: "Tải Plus · 120.56 KiB (DC Cloud)",
+      url: "https://cloud.dabeecao.org/s/BokhN"
+    }]);
     const duplicate = await SELF.fetch("https://worker.example/internal/actions/mirror-repair", {
       method: "POST",
       headers: await actionsHeaders(body),

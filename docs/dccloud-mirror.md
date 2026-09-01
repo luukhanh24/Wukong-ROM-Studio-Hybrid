@@ -102,3 +102,7 @@ maintenance trigger, with a maximum of five dispatch attempts. Repeated
 terminal callbacks do not create duplicate repair requests. The repair workflow
 falls back to the Google Drive file ID when the stored artifact path cannot be
 resolved, then verifies the downloaded size and SHA-256 before uploading.
+
+Telegram terminal notifications include a **Tải … (DC Cloud)** button whenever
+the mirror is available. If the mirror finishes later through repair, a second
+notification is queued with the same DC Cloud download link.
