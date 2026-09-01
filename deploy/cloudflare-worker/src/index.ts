@@ -15,6 +15,7 @@ import {
   artifactDownloadUrl,
   cancelJob,
   createJob,
+  dcCloudArtifactDownload,
   inspectJob,
   jobEvents,
   listJobHistory,
@@ -588,6 +589,22 @@ async function routeWithIdentity(
       return json({ downloadUrl: target, provider: new URL(target).hostname });
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : "Job not found" }, 404);
+    }
+  }
+  const dcCloudDownload = path.match(/^\/v1\/jobs\/([A-Za-z0-9-]{1,64})\/artifacts\/([0-9]+)\/dccloud-download$/);
+  if (dcCloudDownload && request.method === "GET") {
+    try {
+      const row = await inspectJob(env, auth, dcCloudDownload[1]!);
+      return json(
+        await dcCloudArtifactDownload(env, row, Number(dcCloudDownload[2])),
+        200,
+        { "Cache-Control": "private, no-store" }
+      );
+    } catch (error) {
+      if (error instanceof JobHttpError) {
+        return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
+      }
+      return json({ error: "DC Cloud download URL could not be created", code: "dccloud_download_failed" }, 502);
     }
   }
   return json({ error: "Not found" }, 404);

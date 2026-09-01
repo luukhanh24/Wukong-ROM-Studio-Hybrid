@@ -319,6 +319,112 @@ export function artifactDownloadUrl(row: JobRow, env: Env): string {
   }).find(Boolean) ?? "";
 }
 
+function cloudreveShareUri(env: Env, mirrorUri: string): { endpoint: string; uri: string } {
+  let share: URL;
+  try {
+    share = new URL(env.WUKONG_DCCLOUD_SHARE_URL.trim());
+  } catch {
+    throw new JobHttpError("DC Cloud download is not configured", 503, "dccloud_unconfigured");
+  }
+  if (share.protocol !== "https:") {
+    throw new JobHttpError("DC Cloud download is not configured", 503, "dccloud_unconfigured");
+  }
+  const parts = share.pathname.split("/").filter(Boolean);
+  if (parts.length !== 2 || parts[0] !== "s" || !/^[A-Za-z0-9_-]{1,128}$/.test(parts[1] ?? "")) {
+    throw new JobHttpError("DC Cloud share link is invalid", 503, "dccloud_unconfigured");
+  }
+  const prefix = "cloudreve://my/";
+  const normalized = mirrorUri.replaceAll("\\", "/");
+  if (!normalized.toLowerCase().startsWith(prefix)) {
+    throw new JobHttpError("DC Cloud artifact URI is invalid", 409, "dccloud_uri_invalid");
+  }
+  const path = normalized.slice(prefix.length);
+  const root = env.WUKONG_DCCLOUD_ROOT.trim().replace(/^\/+|\/+$/g, "");
+  const rootPrefix = root ? `${root}/` : "";
+  const nestedMarker = root ? `/${root}/` : "";
+  const markerIndex = rootPrefix && path.startsWith(rootPrefix)
+    ? 0
+    : nestedMarker
+      ? path.indexOf(nestedMarker)
+      : -1;
+  if (markerIndex < 0) {
+    throw new JobHttpError("DC Cloud artifact path is invalid", 409, "dccloud_uri_invalid");
+  }
+  const relative = markerIndex === 0
+    ? path.slice(rootPrefix.length)
+    : path.slice(markerIndex + nestedMarker.length);
+  const encoded = relative.split("/").filter(Boolean).map((segment) => {
+    try {
+      return encodeURIComponent(decodeURIComponent(segment));
+    } catch {
+      throw new JobHttpError("DC Cloud artifact path is invalid", 409, "dccloud_uri_invalid");
+    }
+  }).join("/");
+  if (!encoded || encoded.split("/").some((segment) => segment === "." || segment === "..")) {
+    throw new JobHttpError("DC Cloud artifact path is invalid", 409, "dccloud_uri_invalid");
+  }
+  return {
+    endpoint: `${share.origin}/api/v4/file/url`,
+    uri: `cloudreve://${parts[1]}@share/${encoded}`
+  };
+}
+
+export async function dcCloudArtifactDownload(
+  env: Env,
+  row: JobRow,
+  artifactIndex: number
+): Promise<JsonObject> {
+  if (!Number.isSafeInteger(artifactIndex) || artifactIndex < 0) {
+    throw new JobHttpError("Artifact not found", 404);
+  }
+  const manifest = parseJson(row.manifest_json);
+  const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
+  const rawArtifact = artifacts[artifactIndex];
+  if (!rawArtifact || typeof rawArtifact !== "object" || Array.isArray(rawArtifact)) {
+    throw new JobHttpError("Artifact not found", 404);
+  }
+  const artifact = rawArtifact as JsonObject;
+  const mirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
+  const mirror = mirrors.find((item) => item && typeof item === "object" && !Array.isArray(item)
+    && String((item as JsonObject).provider ?? "").trim().toLowerCase() === "dccloud") as JsonObject | undefined;
+  if (!mirror || String(mirror.status ?? "").trim().toLowerCase() !== "available") {
+    throw new JobHttpError("DC Cloud mirror is not available yet", 409, "dccloud_unavailable");
+  }
+  const mirrorUri = typeof mirror.uri === "string" ? mirror.uri.trim() : "";
+  const target = cloudreveShareUri(env, mirrorUri);
+  let response: Response;
+  try {
+    response = await fetch(target.endpoint, {
+      method: "POST",
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ uris: [target.uri] })
+    });
+  } catch {
+    throw new JobHttpError("DC Cloud download URL could not be created", 502, "dccloud_download_failed");
+  }
+  if (!response.ok) {
+    throw new JobHttpError("DC Cloud download URL could not be created", 502, "dccloud_download_failed");
+  }
+  const payload = await response.json().catch(() => null) as JsonObject | null;
+  const data = payload?.data && typeof payload.data === "object" && !Array.isArray(payload.data)
+    ? payload.data as JsonObject
+    : null;
+  const urls = data?.urls;
+  const url = Array.isArray(urls) && urls[0] && typeof urls[0] === "object" && !Array.isArray(urls[0])
+    ? (urls[0] as JsonObject).url
+    : "";
+  const downloadUrl = directArtifactUrl(url, env);
+  if (Number(payload?.code ?? -1) !== 0 || !downloadUrl) {
+    throw new JobHttpError("DC Cloud download URL could not be created", 502, "dccloud_download_failed");
+  }
+  const expires = typeof data?.expires === "string" ? data.expires : "";
+  return {
+    downloadUrl,
+    provider: "dccloud",
+    ...(expires ? { expires } : {})
+  };
+}
+
 async function existingByIdempotency(
   env: Env,
   subject: string,
