@@ -5,6 +5,7 @@ const MAX_CATALOG_PAGE = 2 * 1024 * 1024;
 const MAX_RESOLVER_BODY = 1024 * 1024;
 // Keep the transport in the same release as the Worker: production deployment
 // verifies this endpoint's X-Wukong-Release header before switching traffic.
+// This also keeps Telegram artifact links and Mini App downloads on one release.
 const PRODUCTION_WORKER_ORIGINS = new Set([
   "https://wukong-control-plane.wukong-rom-studio-api.workers.dev",
   "https://wukong-control-plane-staging.wukong-rom-studio-api.workers.dev"
