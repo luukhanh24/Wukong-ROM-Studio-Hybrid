@@ -569,6 +569,27 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, {
+  adminReleaseKicker: "ADMIN · PHIÊN BẢN", adminReleaseTitle: "Phiên bản phát hành", adminReleaseHint: "Đổi nhãn vĩnh viễn cho nền MOD đang chọn. Nhãn mới áp dụng cho mọi job sau.",
+  adminModPackLabel: "Nền MOD", adminReleaseNameLabel: "Tên phiên bản", saveReleasePermanent: "Lưu vĩnh viễn", releaseVersionPermanentSaved: "Đã lưu {pack} thành {label} cho mọi job sau.",
+  adminBatchKicker: "ADMIN · TỰ ĐỘNG HÓA", adminBatchTitle: "Build ROM đồng loạt", adminBatchHint: "Chọn nhiều thiết bị và nền MOD; hệ thống tự tìm ROM nguồn, tạo job và theo dõi từng cấu hình.", openBatchBuild: "Mở trang batch build",
+  backToSystem: "Quay lại Hệ thống", adminBatchPipelineKicker: "ADMIN · BATCH PIPELINE", adminBatchPageTitle: "Build nhiều phiên bản", adminBatchPageHint: "Mỗi thiết bị × nền MOD tạo một job. Lite và Plus được đóng gói vào đúng thư mục phiên bản trên Drive.",
+  batchConfigTitle: "Cấu hình bản ROM", batchReleaseNote: "Phiên bản phát hành được lấy tự động theo từng nền MOD từ nhãn đã lưu trong Thư viện.", batchDevicesLegend: "Thiết bị hỗ trợ", batchModsLegend: "Nền MOD", batchEditionsLegend: "Bản ROM cần build",
+  batchSelectAll: "Chọn tất cả", batchClearAll: "Bỏ chọn tất cả", startBatchBuild: "Tìm ROM nguồn & bắt đầu build", batchMonitorTitle: "Tiến độ batch", batchNoActive: "Chưa có batch đang mở.", refreshBatch: "Làm mới",
+  batchByMod: "Theo nền MOD", batchWaitingForSource: "Đang chờ tìm ROM nguồn", batchLogSummary: "Log job · {count} sự kiện", batchStatusSummary: "{release} · {status} · {count} cấu hình", batchSelectionSummary: "{count} cấu hình",
+  batchCreatedToast: "Đã tạo {count} cấu hình batch build.", batchSelectionRequired: "Hãy chọn ít nhất một thiết bị, một nền MOD và một bản {lite}/{plus}."
+});
+Object.assign(translations.en, {
+  adminReleaseKicker: "ADMIN · RELEASE", adminReleaseTitle: "Release version", adminReleaseHint: "Rename the selected MOD pack permanently. The new label applies to future jobs.",
+  adminModPackLabel: "MOD pack", adminReleaseNameLabel: "Release name", saveReleasePermanent: "Save permanently", releaseVersionPermanentSaved: "Saved {pack} as {label} for future jobs.",
+  adminBatchKicker: "ADMIN · AUTOMATION", adminBatchTitle: "Batch ROM builds", adminBatchHint: "Choose multiple devices and MOD packs; the system finds source ROMs, creates jobs, and tracks each configuration.", openBatchBuild: "Open batch build",
+  backToSystem: "Back to System", adminBatchPipelineKicker: "ADMIN · BATCH PIPELINE", adminBatchPageTitle: "Build multiple releases", adminBatchPageHint: "Each device × MOD pack creates one job. Lite and Plus are packaged into their matching release folders on Drive.",
+  batchConfigTitle: "ROM configuration", batchReleaseNote: "Release versions are selected automatically per MOD pack from the labels saved in Library.", batchDevicesLegend: "Supported devices", batchModsLegend: "MOD packs", batchEditionsLegend: "ROM editions to build",
+  batchSelectAll: "Select all", batchClearAll: "Clear all", startBatchBuild: "Find source ROMs & start builds", batchMonitorTitle: "Batch progress", batchNoActive: "No batch is currently open.", refreshBatch: "Refresh",
+  batchByMod: "By MOD pack", batchWaitingForSource: "Waiting to find source ROM", batchLogSummary: "Job log · {count} events", batchStatusSummary: "{release} · {status} · {count} configurations", batchSelectionSummary: "{count} configurations",
+  batchCreatedToast: "Created {count} batch build configurations.", batchSelectionRequired: "Choose at least one device, one MOD pack, and one {lite}/{plus} edition."
+});
+
+Object.assign(translations.vi, {
   jobSearchPlaceholder: "Job ID / thiết bị / phiên bản / user",
   jobModPlaceholder: "ColorOS_16.0.10"
 });
@@ -665,6 +686,7 @@ const state = {
   adminUserJobsTimer: null,
   adminMutationControllers: new Set(),
   activeBatchId: localStorage.getItem("wukong-active-batch") || "",
+  batchPayload: null,
   batchPollTimer: null,
   batchRequestId: 0,
   batchRequestController: null,
@@ -718,6 +740,7 @@ function applyLanguage() {
   renderRomDevices();
   renderAdminUsers();
   renderDebloatSummary();
+  if (state.batchPayload && !$("#admin-batch-page")?.hidden) renderBatch(state.batchPayload);
   updateSummary();
   updateTelegramState();
   updateSourceDetection();
@@ -2440,7 +2463,7 @@ function updateBatchSummary() {
   const count = batchSelections("#batch-devices").length * modVersions.length;
   const editions = [$("#batch-lite").checked ? presetLabel("lite") : "", $("#batch-plus").checked ? presetLabel("plus") : ""].filter(Boolean).join(" + ");
   const releases = [...new Set(modVersions.map(value => state.catalog?.modReleaseVersions?.[value]).filter(Boolean))].join(" + ");
-  $("#batch-summary").textContent = `${count} cấu hình${editions ? ` · ${editions}` : ""}${releases ? ` · ${releases}` : ""}`;
+  $("#batch-summary").textContent = `${t("batchSelectionSummary", { count })}${editions ? ` · ${editions}` : ""}${releases ? ` · ${releases}` : ""}`;
 }
 
 function renderBatchChoices() {
@@ -2483,17 +2506,18 @@ function closeBatchBuildPage() {
 function batchReleaseSummary(payload) {
   return payload.releaseVersion
     || [...new Set(Object.values(payload.releaseVersions || {}).filter(Boolean))].join(" + ")
-    || "Theo nền MOD";
+    || t("batchByMod");
 }
 
 function renderBatch(payload) {
-  $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${(payload.items || []).length} cấu hình`;
+  state.batchPayload = payload;
+  $("#batch-status").textContent = t("batchStatusSummary", { release: batchReleaseSummary(payload), status: payload.status, count: (payload.items || []).length });
   $("#batch-items").replaceChildren(...(payload.items || []).map(item => {
     const row = document.createElement("article"); const head = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${item.device} · ${item.modVersion}${item.releaseVersion ? ` · ${item.releaseVersion}` : ""}`;
     const status = document.createElement("span"); status.textContent = `${item.status}${item.stage ? ` · ${item.stage}` : ""} · ${Math.round(Number(item.progress || 0) * 100)}%`; head.append(title, status);
-    const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || "Đang chờ tìm ROM nguồn"; row.append(head, detail);
+    const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || t("batchWaitingForSource"); row.append(head, detail);
     if (Array.isArray(item.jobEvents) && item.jobEvents.length) {
-      const log = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = `Log job · ${item.jobEvents.length} sự kiện`;
+      const log = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = t("batchLogSummary", { count: item.jobEvents.length });
       const lines = document.createElement("div"); lines.className = "batch-job-log";
       lines.append(...item.jobEvents.slice().reverse().map(event => {
         const line = document.createElement("p"); const time = document.createElement("time"); time.textContent = formatDate(event.timestamp);
@@ -2552,7 +2576,7 @@ async function loadLatestBatch() {
 async function startBatchBuild() {
   const devices = batchSelections("#batch-devices"), modVersions = batchSelections("#batch-mod-versions");
   const editions = [$("#batch-lite").checked ? "lite" : "", $("#batch-plus").checked ? "plus" : ""].filter(Boolean);
-  if (!devices.length || !modVersions.length || !editions.length) throw new Error(`Hãy chọn ít nhất một thiết bị, một nền MOD và một bản ${presetLabel("lite")}/${presetLabel("plus")}.`);
+  if (!devices.length || !modVersions.length || !editions.length) throw new Error(t("batchSelectionRequired", { lite: presetLabel("lite"), plus: presetLabel("plus") }));
   const button = $("#start-batch-build"); button.disabled = true;
   state.batchRequestController?.abort();
   const controller = new AbortController();
@@ -2572,8 +2596,8 @@ async function startBatchBuild() {
     localStorage.setItem("wukong-active-batch", state.activeBatchId);
     pending.batchId = payload.batchId;
     localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
-    $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${payload.itemCount} cấu hình`;
-    toast(`Đã tạo ${payload.itemCount} cấu hình batch build.`);
+    $("#batch-status").textContent = t("batchStatusSummary", { release: batchReleaseSummary(payload), status: payload.status, count: payload.itemCount });
+    toast(t("batchCreatedToast", { count: payload.itemCount }));
     loadBatch().catch(error => { if (error?.name !== "AbortError") toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true); });
   } finally {
     if (state.batchRequestController === controller) state.batchRequestController = null;
