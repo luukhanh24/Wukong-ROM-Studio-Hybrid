@@ -1,42 +1,42 @@
 ---
-name: Wukong ROM Studio Hybrid
-description: A chromatic technical atlas for identifying, composing, routing, and monitoring ROM builds with truthful operational state.
+name: Wukong ROM Studio · Warm Paper Workbench
+description: A quiet technical workbench for identifying, composing, routing, and monitoring ROM builds with truthful operational state.
 colors:
-  canvas: "#eceef6"
-  pearl-surface: "#fbfaf6"
+  canvas: "#f3f1eb"
+  pearl-surface: "#f8f7f2"
   raised-surface: "#ffffff"
-  soft-surface: "#f1f0ea"
-  ink-violet: "#29255d"
-  atlas-ink: "#20213a"
-  muted-ink: "#67687e"
-  hairline: "#d8d8e5"
-  hairline-strong: "#aaa9bf"
-  action-cobalt: "#3457d5"
-  action-cobalt-strong: "#2745b4"
-  action-cobalt-soft: "#e7ebff"
-  verified-green: "#118777"
-  verified-green-soft: "#ddf5ef"
-  focus-aqua: "#18a89a"
-  signal-coral: "#e86f5b"
-  signal-coral-soft: "#ffebe6"
-  signal-sun: "#efb844"
-  signal-sun-soft: "#fff4ce"
+  soft-surface: "#eeece6"
+  graphite: "#252a33"
+  ink: "#252830"
+  muted-ink: "#656861"
+  hairline: "#d8d5cc"
+  hairline-strong: "#aaa79d"
+  action-cobalt: "#315f9e"
+  action-cobalt-strong: "#244a7c"
+  action-cobalt-soft: "#e8edf4"
+  verified-green: "#2f765b"
+  verified-green-soft: "#e8f1ed"
+  focus-aqua: "#4f76a6"
+  signal-coral: "#9b6257"
+  signal-coral-soft: "#f3eae7"
+  signal-sun: "#9a7131"
+  signal-sun-soft: "#f5efe3"
   liquid-lens-accent: "#0088ff"
   liquid-lens-accent-night: "#0091ff"
   liquid-chromatic-edge: "#ff4660"
   failure-red: "var(--tg-theme-destructive-text-color, #c94f56)"
   failure-red-soft: "#fce9e8"
-  night-canvas: "#111222"
-  night-surface: "#1a1b31"
-  night-surface-raised: "#20213a"
-  night-surface-soft: "#292a46"
-  night-ink-violet: "#171538"
-  night-ink: "#f3f2fb"
-  night-muted-ink: "#b0aec7"
-  night-action-cobalt: "#6683f0"
-  night-focus-aqua: "#45cbbb"
-  night-signal-coral: "#f18976"
-  night-signal-sun: "#f3c45c"
+  night-canvas: "#17191d"
+  night-surface: "#1d2025"
+  night-surface-raised: "#24282e"
+  night-surface-soft: "#2c3138"
+  night-graphite: "#f4f2eb"
+  night-ink: "#f4f2eb"
+  night-muted-ink: "#a5aaa6"
+  night-action-cobalt: "#78a7dc"
+  night-focus-aqua: "#8cb3e5"
+  night-signal-coral: "#d49a8f"
+  night-signal-sun: "#d1ad6c"
 typography:
   display:
     fontFamily: "IBM Plex Sans, ui-sans-serif, system-ui, sans-serif"
@@ -62,7 +62,7 @@ typography:
     lineHeight: 1.4
   label:
     fontFamily: "JetBrains Mono, monospace"
-    fontSize: "9px"
+    fontSize: "11px"
     fontWeight: 500
     lineHeight: 1.2
     letterSpacing: "0.06em"
@@ -98,18 +98,18 @@ components:
     rounded: "{rounded.control}"
   field:
     backgroundColor: "{colors.raised-surface}"
-    textColor: "{colors.atlas-ink}"
+    textColor: "{colors.ink}"
     typography: "{typography.body}"
     rounded: "{rounded.sm}"
-    padding: "9px 11px"
+    padding: "10px 12px"
     height: "44px"
   dossier-sheet:
     backgroundColor: "{colors.raised-surface}"
-    textColor: "{colors.atlas-ink}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.sheet}"
     padding: "22px"
   title-plate:
-    backgroundColor: "{colors.ink-violet}"
+    backgroundColor: "{colors.graphite}"
     textColor: "{colors.raised-surface}"
     typography: "{typography.display}"
     rounded: "{rounded.title-plate}"
@@ -121,38 +121,38 @@ components:
     height: "54px"
 ---
 
-# Design System: Wukong ROM Studio Hybrid
+# Design System: Wukong ROM Studio · Warm Paper Workbench
 
 ## Overview
 
-**Creative North Star: "The Chromatic Technical Atlas"**
+**Creative North Star: "Quiet Technical Workbench"**
 
-Wukong is an editorial operating instrument for real ROM work. It turns a dense sequence—identify a source, compose a build, verify its route, dispatch it, and inspect the result—into a legible atlas of numbered sections, measured facts, and truthful state. Ink-violet instruments anchor the interface; pearl work sheets carry the recipe; cobalt, aqua, coral, and sun provide a precise chromatic language instead of generic dashboard decoration.
+Wukong is an operational instrument for real ROM work. It turns a dense sequence—identify a source, compose a build, verify its route, dispatch it, and inspect the result—into a legible paper ledger of numbered sections, measured facts, and truthful state. Graphite instruments anchor the interface; warm-paper sheets carry the recipe; restrained cobalt and semantic green, amber, and red communicate state without decoration.
 
 The interface is expressive without becoming theatrical. Geometric title-plate marks, colored section spines, index numbers, and subtle asymmetry give it authorship. Dense controls remain calm through strict alignment, small type for machine data, restrained elevation, and short, smooth state transitions. It works as a Telegram Mini App first while remaining clear on desktop, dark mode, and short landscape viewports.
 
 **Key Characteristics:**
 
 - Editorial hierarchy and technical density share the same canvas.
-- Ink-violet and pearl establish the world; cobalt acts; aqua, coral, sun, green, and red communicate distinct state roles.
+- Graphite and warm paper establish the world; cobalt acts; green, amber, and red communicate distinct state roles.
 - IBM Plex Sans explains, while JetBrains Mono identifies and measures.
-- Numbered section markers and colored spines create an atlas-like reading path.
+- Numbered section markers and ruled ledger marks create a clear reading path.
 - Runtime, source, delivery, and readiness surfaces always report actual state.
 - Motion is smooth and restrained, with a complete reduced-motion path.
 
 ## Colors
 
-The palette combines a cool lavender canvas with pearl work surfaces and an ink-violet anchor. Saturated colors are assigned by function, never scattered to make the screen look lively.
+The palette combines warm paper surfaces with graphite ink and a restrained cobalt action color. Semantic colors are assigned by function, never scattered to make the screen look lively.
 
 ### Primary
 
-- **Ink Violet:** The masthead, title plates, sticky dispatch docket, dark mobile navigation, and other high-authority instruments.
+- **Graphite:** The masthead, sticky dispatch docket, dark mobile navigation, and other high-authority instruments.
 - **Action Cobalt:** Primary actions, the active destination rule, selected task tabs, standard selected MODs, and running state.
 
 ### Secondary
 
-- **Signal Aqua:** Keyboard focus, the wordmark tile, build-option spine, interface/core MOD selection, and successful source analysis accents.
-- **Signal Coral:** Delivery spine, active navigation index, camera MOD selection, and geometric editorial marks.
+- **Signal Aqua:** Keyboard focus, the wordmark tile, build-option spine, interface/core MOD selection, and successful source analysis accents. This is a category/focus accent, never a runtime status.
+- **Signal Coral:** Delivery spine, active navigation index, camera MOD selection, and geometric editorial marks. This is a category/navigation accent, never an error or warning state.
 
 ### Tertiary
 
@@ -162,14 +162,14 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 ### Neutral
 
-- **Cool Atlas Canvas:** Separates the working sheets and accepts narrow aqua/coral edge fields without becoming decorative wallpaper.
+- **Warm Paper Canvas:** Separates the working sheets and keeps long sessions calm without becoming decorative wallpaper.
 - **Pearl / Raised / Soft Surfaces:** Establish three levels for instruments, controls, and nested rows.
-- **Atlas Ink / Muted Ink / Hairlines:** Carry primary copy, supporting copy, table structure, and precise boundaries.
-- **Night Atlas Set:** Dark mode preserves the same hierarchy with violet-charcoal surfaces and brighter semantic signals.
+- **Graphite Ink / Muted Ink / Hairlines:** Carry primary copy, supporting copy, table structure, and precise boundaries.
+- **Night Workbench Set:** Dark mode preserves the same hierarchy with graphite surfaces and brighter semantic signals.
 
 ### Named Rules
 
-**The Chromatic Grammar Rule.** Cobalt means action or standard selection; aqua means focus, interface, or verified analysis; coral distinguishes camera and delivery; sun means waiting or limited; green means valid or complete; red means failed or destructive.
+**The Semantic State Rule.** Cobalt means action or selection; green means valid or complete; amber means waiting or limited; red means failed or destructive. Aqua and coral may distinguish a control category or navigation surface, but never replace a semantic state color. Focus is always a visible outline, never color alone.
 
 **The Pearl Majority Rule.** Most editable space remains pearl or neutral. Saturated color appears at decisions, categories, and state transitions, never as a blanket fill across every container.
 
@@ -187,11 +187,12 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 ### Hierarchy
 
-- **Display:** Bold, tightly tracked, compact title-plate headings. The size expands from 32px to 48px but stays short and left-aligned.
-- **Headline:** Eighteen-pixel section titles that sit beside numbered atlas markers.
-- **Body:** Sixteen-pixel interface prose with a 1.5 line-height; supporting explanations step down to 10–14px according to density.
-- **Data:** Twelve-pixel machine-readable values with compact line-height and reliable wrapping or truncation.
-- **Label:** Nine-pixel tracked labels for indexes, runtime headings, state metadata, and counts; uppercase only where the content is genuinely a label.
+- **Display:** Bold, tightly tracked destination headings. The size expands from 28px to 40px but stays short and left-aligned.
+- **Headline:** Eighteen-pixel section titles beside numbered ledger markers.
+- **Body:** Fourteen- to sixteen-pixel interface prose with a 1.5 line-height.
+- **Helper:** At least 12px for explanatory text and recovery guidance.
+- **Data:** Eleven- to twelve-pixel machine-readable values with compact line-height and reliable wrapping or truncation.
+- **Label:** At least 10px (11px for important Vietnamese labels); no user-facing copy below 10px.
 
 ### Named Rules
 
@@ -201,17 +202,17 @@ The palette combines a cool lavender canvas with pearl work surfaces and an ink-
 
 ## Layout
 
-The desktop canvas is capped at 1280px with 28px horizontal page padding. A 64px sticky masthead and 52px four-destination contents rail—Studio, Jobs, Catalog, and System—create a persistent instrument frame. Catalog is a searchable, read-only inventory of the exact device and MOD data used by Studio and every runner. Each operational view begins with a compact destination heading; Studio adds a three-cell runtime rail that connects orientation with live state.
+The desktop canvas is capped at 1280px with 28px horizontal page padding. A sticky masthead and four-destination contents rail—Studio, Jobs, Catalog, and System—create a persistent instrument frame. Catalog is a searchable, read-only inventory of the exact device and MOD data used by Studio and every runner. Each operational view begins with a compact destination heading; Studio adds a three-cell runtime rail that connects orientation with live state.
 
 The Studio recipe uses a flexible work column and a 320px sticky dispatch docket separated by a 16px gutter. Numbered dossier sections remain in the work column, with four-pixel chromatic spines indicating source, build, and delivery. Controls use compact internal rhythms; source facts form a measured grid rather than separate cards.
 
-At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a five-slot floating liquid bottom instrument. Studio, Jobs, Profile, Catalog and System are equal destinations; Profile uses the authenticated Telegram avatar as its tab mark. The capsule and moving lens use locally bounded translucency, backdrop blur, vibrancy, rim highlights and subtle chromatic edge separation. The lens slides or drags among all five slots with a restrained exponential ease-out and no bounce or elastic overscroll. When Profile is active the lens disappears and the avatar gains an image-derived halo, keeping identity distinct from work destinations. The page reserves at least 108px plus the device safe area so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
+At 860px and below, the recipe returns to document flow, runtime cells stack, and navigation becomes a five-slot floating Liquid Dock. Studio, Jobs, Profile, Catalog and System are equal destinations; Profile uses the authenticated Telegram avatar as its tab mark. The dock uses locally bounded translucency, backdrop blur, rim highlights and restrained chromatic separation. The lens slides or drags among all five slots with a smooth ease-out and no bounce. The page reserves bottom safe-area clearance so navigation and the compact dispatch action cannot cover fields or errors. At 390px, source facts and maintenance actions collapse to a single column. Short landscape restores the three-cell runtime rail while retaining bottom clearance.
 
-View changes use a 380ms eased rise-and-fade. Controls transition color, border, shadow, and transform in roughly 180–220ms. Hover movement is limited to one pixel for work elements and two pixels for the active mobile destination. Reduced-motion preference collapses animation and smooth scrolling.
+Motion tokens are fixed: control feedback 160ms, panel/state transition 240ms, view transition 280ms, and Liquid Dock 360ms, all using `cubic-bezier(.16,1,.3,1)`. Progress animates with `scaleX`, never layout-changing width. Greeting marquee runs at most once when text overflows, pauses when hidden, and exposes the full message through an accessible label. Reduced motion removes translate, scale, marquee, smooth scrolling, and scroll-linked effects; only a fade up to 80ms remains.
 
 ### Named Rules
 
-**The Atlas Path Rule.** Orient with the title plate, expose runtime truth, then lead through numbered work sections to one dispatch docket.
+**The Ledger Path Rule.** Orient with the destination heading, expose runtime truth, then lead through numbered work sections to one dispatch docket.
 
 **The Work Stays Reachable Rule.** Every fixed or sticky control receives matching content clearance and must never obscure an input, error, toast, or submit action.
 
@@ -219,7 +220,7 @@ View changes use a 380ms eased rise-and-fade. Controls transition color, border,
 
 ## Elevation & Depth
 
-The atlas uses a restrained hierarchy of violet-tinted shadows. Low elevation separates runtime rails, dossier sheets, and operational ledgers from the cool canvas. Medium elevation belongs to title plates and the dispatch docket. The strongest floating shadow is reserved for the mobile navigation instrument and its out-of-view dispatch shortcut. Inner highlights are limited to framed tools such as Smart Source and the liquid navigation lens.
+The workbench uses a restrained hierarchy of neutral shadows. Low elevation separates runtime rails, dossier sheets, and operational ledgers from the warm canvas. Medium elevation belongs to destination headings and the dispatch docket. The strongest floating shadow is reserved for the mobile navigation instrument and its out-of-view dispatch shortcut. Inner highlights are limited to framed tools such as Smart Source and the Liquid Dock lens.
 
 ### Shadow Vocabulary
 
@@ -250,7 +251,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 ### Buttons
 
 - **Shape:** Primary actions use a 10px corner and a 46px minimum height; compact source analysis remains at least 40px high.
-- **Primary:** Solid Action Cobalt, white text, confident weight, and a small violet-tinted action shadow.
+- **Primary:** Solid Action Cobalt, white text, confident weight, and a small neutral action shadow.
 - **Hover / Active:** Hover deepens to strong cobalt; active moves down one pixel and contracts slightly. No elastic or ornamental motion.
 - **Focus:** A three-pixel Signal Aqua focus-visible ring remains independent of the button's semantic color.
 - **Secondary:** Pearl or transparent controls use a hairline border; hover may borrow cobalt or aqua only when it clarifies action.
@@ -266,7 +267,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 - **Dossier sheets:** Raised pearl surfaces with 18px corners, a one-pixel hairline, a low shadow, and a four-pixel semantic spine.
 - **Operational ledgers:** Rows share a container and borders instead of becoming separate cards.
 - **Internal padding:** Major sheets use 20–22px on desktop and 12–15px on narrow screens.
-- **Editorial title plate:** Ink-violet with solid cobalt ring and coral block geometry; never a gradient or image-backed hero.
+- **Destination heading:** Graphite ink with a ruled baseline and restrained cobalt action marker; never a gradient or image-backed hero.
 
 ### Inputs / Fields
 
@@ -293,7 +294,7 @@ The masthead rotates one short operational greeting at a time: time-of-day greet
 
 ### Runtime Rail
 
-Three cells expose runner choice, pipeline readiness, and recent job access. Aqua, sun, and coral top rules make the cells distinguishable; dots and text communicate the actual state. Waiting may pulse subtly, while ready changes to verified green.
+Three cells expose runner choice, pipeline readiness, and recent job access. Aqua, sun, and coral top rules make the cells distinguishable as instrument categories; dots and text communicate the actual state using the Semantic State Rule. Waiting may pulse subtly, while ready changes to verified green.
 
 ### Smart Source
 
@@ -311,7 +312,7 @@ The ROM URL, source state, analysis control, and six metadata facts form one bor
 
 ### Delivery State Row
 
-ZIP, Drive, and Telegram stages support `pending`, `running`, `complete`, `failed`, and `skipped`. Node, copy, and state metadata change together; the color assignment follows the chromatic grammar.
+ZIP, Drive, and Telegram stages support `pending`, `running`, `complete`, `failed`, and `skipped`. Node, copy, and state metadata change together; the color assignment follows the semantic state rule.
 
 ### Dispatch Docket
 
@@ -326,8 +327,8 @@ Every active job exposes its device and ROM facts together with MOD-pack identit
 ### Do:
 
 - **Do** keep runtime, source, pipeline, delivery, and readiness copy bound to real state.
-- **Do** preserve the atlas reading path: compact destination heading, runtime rail, numbered dossier, dispatch docket.
-- **Do** use cobalt, aqua, coral, sun, green, and red according to the Chromatic Grammar Rule.
+- **Do** preserve the ledger reading path: compact destination heading, runtime rail, numbered dossier, dispatch docket.
+- **Do** use cobalt, green, amber, and red according to the Semantic State Rule.
 - **Do** group MODs by function and show selection through border, tonal surface, and check mark.
 - **Do** keep Vietnamese and English labels, errors, and recovery actions in parity.
 - **Do** keep MOD-pack identity and its fixed default or current-job release override together in selection, job context, history, and logs.

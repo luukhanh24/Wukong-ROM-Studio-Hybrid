@@ -1,3 +1,7 @@
+import { createFeedback } from "./modules/feedback.js";
+import { bindRovingTablist } from "./modules/a11y.js";
+import { MOTION, reducedMotion as prefersReducedMotionQuery } from "./modules/motion.js";
+
 let TelegramApp = window.Telegram && window.Telegram.WebApp;
 const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
@@ -182,7 +186,7 @@ Object.assign(translations.vi, {
   miniSettings: "Thiết đặt Mini App", defaultPreset: "Preset mặc định",
   searchMods: "Lọc MOD để chọn", jobActionHint: "Nhập ID để mở tác vụ; bot sẽ kiểm tra quyền và trạng thái.",
   stageQueued: "Chờ", stagePreflight: "Kiểm tra", stageDownloading: "Tải ROM", stageRunning: "Đang build", stageUploading: "Đang upload", stageTerminal: "Thành công / Lỗi",
-  previewMode: "CHẾ ĐỘ XEM TRƯỚC", authenticatedPreview: "Chưa xác thực — mở từ nút Mini App trong bot"
+  previewMode: "CHẾ ĐỘ XEM TRƯỚC", authenticatedPreview: "Chưa xác thực — mở từ nút Mini App trong bot", apiOfflineStatus: "API · NGOẠI TUYẾN"
 });
 
 Object.assign(translations.vi, {
@@ -238,7 +242,29 @@ Object.assign(translations.en, {
   miniSettings: "Mini App settings", defaultPreset: "Default preset",
   searchMods: "Filter selectable MODs", jobActionHint: "Enter an ID to reveal actions; the bot verifies ownership and state.",
   stageQueued: "Queued", stagePreflight: "Preflight", stageDownloading: "Downloading", stageRunning: "Running", stageUploading: "Uploading", stageTerminal: "Succeeded / Failed",
-  previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button"
+  previewMode: "PREVIEW MODE", authenticatedPreview: "Not authenticated — open from the bot's Mini App button", apiOfflineStatus: "API · OFFLINE"
+});
+
+Object.assign(translations.vi, {
+  cancelJobConfirmTitle: "Hủy job này?",
+  cancelJobConfirmMessage: "Job đang chạy sẽ dừng và không thể hoàn tác. Bạn có chắc muốn tiếp tục không?",
+  confirmCancelJob: "Hủy job",
+  cancelJobError: "Không thể hủy job. Hãy thử lại hoặc làm mới trạng thái.",
+  apiOnline: "API đã kết nối lại · đang đồng bộ",
+  glossaryRunner: "Runner là máy chủ thực hiện các bước build.",
+  glossaryOta: "OTA là gói cập nhật do máy chủ ROM cung cấp.",
+  glossaryVbmeta: "vbmeta là metadata xác minh tính toàn vẹn của Android."
+});
+
+Object.assign(translations.en, {
+  cancelJobConfirmTitle: "Cancel this job?",
+  cancelJobConfirmMessage: "The running job will stop and cannot be undone. Continue?",
+  confirmCancelJob: "Cancel job",
+  cancelJobError: "The job could not be cancelled. Try again or refresh its status.",
+  apiOnline: "API connected again · syncing now",
+  glossaryRunner: "A runner is the machine that executes the build stages.",
+  glossaryOta: "OTA is an update package provided by the ROM server.",
+  glossaryVbmeta: "vbmeta contains Android integrity-verification metadata."
 });
 
 Object.assign(translations.vi, {
@@ -397,7 +423,7 @@ Object.assign(translations.vi, {
   romAllRegions: "Tất cả khu vực", romLatestOnly: "Bản mới nhất mỗi khu vực", romAllVersions: "Toàn bộ phiên bản",
   romCatalogIdle: "Tìm ROM theo thiết bị của bạn",
   romCatalogIdleHint: "Chọn thiết bị OnePlus, OPPO hoặc Realme, sau đó chọn khu vực và phiên bản.",
-  romCatalogCount: "{count} bản ROM", romCatalogRetry: "Không tải được kho ROM. Hãy thử tìm lại.",
+  romCatalogCount: "{count} bản ROM", romCatalogRetry: "Không tải được kho ROM. Hãy thử tìm lại.", romCatalogRetryAction: "Tải lại kho ROM",
   romFilterRequired: "Chọn thiết bị để tải các phiên bản ROM.",
   maintenanceGateTitle: "Studio đang tạm đóng",
   maintenanceGateStatus: "Các job đang chạy vẫn được xử lý an toàn.",
@@ -452,7 +478,7 @@ Object.assign(translations.en, {
   romAllRegions: "All regions", romLatestOnly: "Latest release per region", romAllVersions: "All versions",
   romCatalogIdle: "Find a ROM for your device",
   romCatalogIdleHint: "Choose a OnePlus, OPPO or Realme device, then select a region and version.",
-  romCatalogCount: "{count} releases", romCatalogRetry: "Could not load the ROM library. Search again to retry.",
+  romCatalogCount: "{count} releases", romCatalogRetry: "Could not load the ROM library. Search again to retry.", romCatalogRetryAction: "Retry ROM library",
   romFilterRequired: "Choose a device to load its ROM versions.",
   maintenanceGateTitle: "Studio is temporarily closed",
   maintenanceGateStatus: "Running jobs continue safely in the background.",
@@ -496,6 +522,12 @@ const pipelineLabels = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+const feedback = createFeedback({
+  getNode: () => $("#toast"),
+  getHaptics: () => TelegramApp?.HapticFeedback,
+  duration: 3600
+});
 Object.assign(translations.vi, {
   openUserJob: "Xem job", jobCreator: "Người tạo job", jobParameters: "Toàn bộ thông số job", loadMoreUserJobs: "Tải thêm job cũ",
   jobParametersHint: "Chỉ đọc · Cấu hình đã lưu và trạng thái thực tế. Thông tin xác thực và link ROM nguồn ký tạm thời được ẩn.",
@@ -614,7 +646,13 @@ const state = {
   selectedAdminUserId: "",
   adminUserReturnScrollY: 0,
   adminJobView: null,
-  workspaceLoaded: false
+  workspaceLoaded: false,
+  router: { initialized: false, current: null, suppressHistory: false, scrollPositions: new Map(), telegramBackHandler: null },
+  pendingCancelJobId: "",
+  cancelJobReturnFocus: null,
+  apiOnline: navigator.onLine !== false,
+  apiError: null,
+  visualViewportFrame: 0
 };
 
 function t(key, values = {}) {
@@ -636,6 +674,7 @@ function applyLanguage() {
   $$('[data-i18n-placeholder]').forEach((node) => { node.placeholder = t(node.dataset.i18nPlaceholder); });
   $$('[data-i18n]').forEach((node) => { node.textContent = t(node.dataset.i18n); });
   $$("[data-i18n-aria]").forEach((node) => node.setAttribute("aria-label", t(node.dataset.i18nAria)));
+  $$("[data-i18n-title]").forEach((node) => node.title = t(node.dataset.i18nTitle));
   $("#language").textContent = state.language === "vi" ? "VI / EN" : "EN / VI";
   const devicePlaceholder = $("#device option[value='']");
   if (devicePlaceholder) devicePlaceholder.textContent = t("chooseDevice");
@@ -656,14 +695,31 @@ function applyLanguage() {
   updateSourceDetection();
 }
 
-function toast(message, error = false) {
-  const node = $("#toast");
-  node.textContent = message;
-  node.classList.toggle("error", error);
-  node.classList.add("visible");
-  clearTimeout(state.toastTimer);
-  state.toastTimer = setTimeout(() => node.classList.remove("visible"), 3600);
-  if (TelegramApp?.HapticFeedback) TelegramApp.HapticFeedback.notificationOccurred(error ? "error" : "success");
+function toast(message, error = false, options = {}) {
+  feedback.show(message, { error, ...options });
+  state.toastTimer = null;
+}
+
+function showError(error, target = "#recipe-error") {
+  const message = String(error?.message || error || t("requestFailed"));
+  const node = typeof target === "string" ? $(target) : target;
+  if (node) {
+    const content = node.querySelector?.("span") || node;
+    content.textContent = message;
+    node.hidden = false;
+    node.classList.add("visible");
+    node.setAttribute("role", "alert");
+  }
+  toast(message, true);
+}
+
+function clearError(target = "#recipe-error") {
+  const node = typeof target === "string" ? $(target) : target;
+  if (!node) return;
+  node.hidden = true;
+  node.textContent = "";
+  node.classList.remove("visible");
+  if (node.id === "jobs-connection") node.setAttribute("role", "status");
 }
 
 const themeMedia = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -686,6 +742,7 @@ function handleSystemThemeChange() {
 function bindTelegramThemeEvents() {
   if (!TelegramApp || TelegramApp === telegramThemeEventsBoundTo) return;
   TelegramApp.onEvent?.("themeChanged", handleSystemThemeChange);
+  TelegramApp.onEvent?.("viewportChanged", syncTelegramInsets);
   telegramThemeEventsBoundTo = TelegramApp;
 }
 
@@ -749,10 +806,11 @@ function renderGreeting() {
   $("#greeting-kicker").textContent = state.me?.unlimited ? t("unlimited") : t("buildAllowance");
   const message = $("#greeting-message");
   if (!message) return;
+  message.setAttribute("aria-label", item.text);
   if (!prefersReducedMotion() && message.textContent !== "—") {
     message.animate(
       [{ opacity: .2, filter: "blur(5px)", transform: "translateY(4px)" }, { opacity: 1, filter: "blur(0)", transform: "translateY(0)" }],
-      { duration: 360, easing: "cubic-bezier(.16,1,.3,1)" }
+      { duration: MOTION.panel, easing: MOTION.easing }
     );
   }
   message.textContent = item.text;
@@ -770,6 +828,17 @@ function scheduleGreeting() {
 
 function updateMastheadScroll() {
   cancelAnimationFrame(state.mastheadFrame);
+  if (prefersReducedMotion()) {
+    const root = document.documentElement.style;
+    root.setProperty("--masthead-scroll", "0");
+    root.setProperty("--masthead-height", `${window.innerWidth <= 860 ? 60 : 64}px`);
+    root.setProperty("--masthead-surface-mix", "3%");
+    root.setProperty("--masthead-backdrop-blur", "3px");
+    root.setProperty("--masthead-greeting-opacity", "1");
+    root.setProperty("--masthead-greeting-offset", "0px");
+    document.body.classList.remove("masthead-compact");
+    return;
+  }
   state.mastheadFrame = requestAnimationFrame(() => {
     const progress = Math.max(0, Math.min(1, window.scrollY / 80));
     const root = document.documentElement.style;
@@ -830,9 +899,15 @@ async function apiRequest(path, options = {}) {
     response = await fetch(`${miniApiEndpoint}${path}`, { ...options, headers, cache: "no-store" });
   } catch (cause) {
     if (cause?.name === "AbortError") throw cause;
+    state.apiOnline = false;
+    updateTelegramState();
     const error = new Error(t("requestFailed"));
     error.connectionFailed = true;
     throw error;
+  }
+  if (!state.apiOnline) {
+    state.apiOnline = true;
+    updateTelegramState();
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -927,7 +1002,7 @@ function animateLiquidPosition(target) {
   if (prefersReducedMotion()) { setLiquidPosition(target); return; }
   const start = state.liquidPosition;
   const distance = target - start;
-  const duration = 360;
+  const duration = MOTION.dock;
   const startedAt = performance.now();
   const tick = (now) => {
     const progress = Math.min(1, (now - startedAt) / duration);
@@ -941,7 +1016,73 @@ function animateLiquidPosition(target) {
   state.liquidAnimationFrame = requestAnimationFrame(tick);
 }
 
-function navigate(name, smooth = true) {
+function routeFromLocation(routeState = history.state) {
+  const hash = String(location.hash || "").replace(/^#/, "");
+  const parts = hash.split("/").filter(Boolean);
+  const view = String(routeState?.wukong ? routeState.view : parts[0] || "build");
+  const subview = String(routeState?.wukong ? routeState.subview || "" : parts[1] || "");
+  const scrollY = Number(routeState?.wukong ? routeState.scrollY : 0) || 0;
+  const subviewData = routeState?.wukong && routeState.subviewData && typeof routeState.subviewData === "object" ? routeState.subviewData : null;
+  const focusId = String(routeState?.wukong ? routeState.focusId || "" : "");
+  return { view: document.getElementById(view) ? view : "build", subview, subviewData, scrollY, focusId };
+}
+
+function hasOpenSubview() {
+  return Boolean(
+    $("#system")?.classList.contains("admin-user-open")
+    || $("#system")?.classList.contains("admin-job-open")
+    || $("#system")?.classList.contains("admin-batch-open")
+  );
+}
+
+function syncTelegramBackButton() {
+  const button = TelegramApp?.BackButton;
+  if (!button) return;
+  if (!state.router.telegramBackHandler) state.router.telegramBackHandler = () => navigateBack();
+  button.offClick?.(state.router.telegramBackHandler);
+  const shouldShow = hasOpenSubview() || state.router.current?.view !== "build";
+  if (shouldShow) {
+    button.onClick?.(state.router.telegramBackHandler);
+    button.show?.();
+  } else button.hide?.();
+}
+
+function pushSubviewRoute(subview, subviewData = null, { fromHistory = false } = {}) {
+  const view = document.body.dataset.view || state.router.current?.view || "build";
+  if (state.router.current?.view === view && state.router.current?.subview === String(subview || "")) {
+    syncTelegramBackButton();
+    return;
+  }
+  const route = { wukong: true, view, subview: String(subview || ""), subviewData: subviewData || null, scrollY: window.scrollY, focusId: document.activeElement?.id || "" };
+  state.router.current = { view, subview: route.subview, scrollY: route.scrollY };
+  if (!fromHistory && !state.router.suppressHistory) {
+    history.pushState(route, "", `#${view}${route.subview ? `/${route.subview}` : ""}`);
+  }
+  syncTelegramBackButton();
+}
+
+function clearSubviewRoute() {
+  if (state.router.suppressHistory) { syncTelegramBackButton(); return; }
+  const current = state.router.current;
+  if (!current?.subview) { syncTelegramBackButton(); return; }
+  const route = { wukong: true, view: current.view, subview: "", scrollY: window.scrollY };
+  state.router.current = route;
+  history.replaceState(route, "", `#${route.view}`);
+  syncTelegramBackButton();
+}
+
+function navigateBack() {
+  if (state.adminJobView) { closeAdminJobPage(); return; }
+  if ($("#system")?.classList.contains("admin-user-open")) { closeAdminUserPage(); return; }
+  if ($("#system")?.classList.contains("admin-batch-open")) { closeBatchBuildPage(); return; }
+  if (hasOpenSubview()) { clearSubviewRoute(); return; }
+  if (state.router.current?.view && state.router.current.view !== "build") {
+    if (history.state?.wukong) history.back();
+    else navigate("build", true, { replace: false });
+  }
+}
+
+function navigate(name, smooth = true, { fromHistory = false, replace = false, subview = "", scrollY = 0, focusId = "" } = {}) {
   if (!document.getElementById(name)) name = "build";
   if (name !== "system") {
     clearTimeout(state.adminUsersPollTimer);
@@ -951,9 +1092,24 @@ function navigate(name, smooth = true) {
     clearTimeout(state.batchPollTimer);
     state.batchPollTimer = null;
   }
+  const current = state.router.current;
+  const route = { view: name, subview: String(subview || ""), scrollY: fromHistory ? Number(scrollY) || 0 : 0, focusId: fromHistory ? String(focusId || "") : document.activeElement?.id || "" };
+  if (!fromHistory) {
+    if (current?.view) state.router.scrollPositions.set(current.view, window.scrollY);
+    const historyState = { wukong: true, ...route };
+    if (!state.router.initialized || replace || current?.view === name) {
+      history.replaceState(historyState, "", `#${name}${route.subview ? `/${route.subview}` : ""}`);
+    } else {
+      history.pushState(historyState, "", `#${name}${route.subview ? `/${route.subview}` : ""}`);
+    }
+  }
+  state.router.initialized = true;
+  state.router.current = route;
   document.body.dataset.view = name;
-  if ($("#system")?.classList.contains("admin-user-open")) {
+  if (name !== "system") {
+    closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
     closeAdminUserPage({ restoreFocus: false, scroll: false });
+    closeBatchBuildPage();
   }
   $$(".view").forEach((node) => node.classList.toggle("active", node.id === name));
   $$(".bottom-nav [data-nav], .contents-rail [data-nav]").forEach((node) => {
@@ -972,11 +1128,13 @@ function navigate(name, smooth = true) {
   if (smooth && !prefersReducedMotion()) {
     void bottomNav?.offsetWidth;
     bottomNav?.classList.add("is-shifting");
-    setTimeout(() => bottomNav?.classList.remove("is-shifting"), 520);
+    setTimeout(() => bottomNav?.classList.remove("is-shifting"), MOTION.dock);
   }
-  history.replaceState(null, "", `#${name}`);
-  window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
+  const rememberedScroll = fromHistory ? (route.scrollY || state.router.scrollPositions.get(name) || 0) : 0;
+  window.scrollTo({ top: rememberedScroll, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
+  syncTelegramBackButton();
   updateDispatchFab();
+  if (fromHistory && route.focusId) requestAnimationFrame(() => document.getElementById(route.focusId)?.focus({ preventScroll: true }));
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
   if (name === "profile") renderProfileView();
   if (name === "catalog") loadRomDevices();
@@ -1056,14 +1214,14 @@ function bindLiquidBottomTabs() {
       const active = buttons.find((button) => button.classList.contains("active"));
       animateLiquidPosition(Number(active?.dataset.slot || 0));
     }
-    setTimeout(() => { state.liquidSuppressClick = false; }, 350);
+    setTimeout(() => { state.liquidSuppressClick = false; }, MOTION.dock);
   };
   nav.addEventListener("pointerup", finish);
   nav.addEventListener("pointercancel", finish);
 }
 
 function prefersReducedMotion() {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+  return prefersReducedMotionQuery(window);
 }
 
 function updateDispatchFab() {
@@ -1287,6 +1445,7 @@ function presentMissingApi() {
   const node = $("#source-state");
   node.classList.remove("probing", "analyzed", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   node.classList.add("probe-unavailable");
+  node.setAttribute("role", "alert");
   const unconfigured = status === "unconfigured";
   const insideTelegram = Boolean(TelegramApp?.platform && TelegramApp.platform !== "unknown");
   $("#source-kicker").textContent = t(unconfigured ? "apiUnavailableKicker" : "apiAuthKicker");
@@ -1440,6 +1599,7 @@ function updateSourceDetection() {
   updateSummary();
   node.classList.toggle("detected", Boolean(detection?.valid));
   node.classList.toggle("invalid", Boolean(detection && !detection.valid));
+  node.setAttribute("role", detection && !detection.valid ? "alert" : "status");
   node.classList.remove("probing", "analyzed", "preview-only", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   const marker = node.querySelector(".source-state-mark span");
   const facts = $("#source-facts");
@@ -1492,6 +1652,7 @@ function setProbePresentation(status, messageKey) {
   const node = $("#source-state");
   node.classList.remove("probing", "analyzed", "preview-only", "probe-deferred", "probe-limited", "probe-failed", "probe-unavailable", "backend-offline");
   node.classList.add(status);
+  node.setAttribute("role", ["probe-failed", "backend-offline", "probe-deferred"].includes(status) ? "alert" : "status");
   const kickerKey = status === "analyzed" ? "probeReadyKicker" : status === "preview-only" ? "probeLimitedKicker" : status === "probe-failed" ? "probeFailedKicker" : status === "probe-deferred" ? "probeDeferredKicker" : status === "probe-limited" ? "probeLimitedKicker" : "sourceDetectedKicker";
   $("#source-kicker").textContent = t(kickerKey);
   $("#source-state-message").textContent = t(messageKey);
@@ -1932,7 +2093,7 @@ function applyProbeResult(result, uri, { announce = true } = {}) {
   if (device && [...$("#device").options].some((option) => option.value === device)) {
     $("#device").value = device;
     state.sourceAutoDevice = device;
-    if (announce) toast(t("autoSelected", { device }));
+    if (announce) toast(t("autoSelected", { device }), false, { haptic: false });
   }
   selectModPackForVersion(version);
   state.sourceProbeUri = uri;
@@ -2085,6 +2246,10 @@ function renderPipelineSteps(reset = true) {
     const label = document.createElement("label");
     const input = document.createElement("input"); input.type = "checkbox"; input.value = step.id; input.checked = reset ? Boolean(step.default) : current.has(step.id);
     const span = document.createElement("span"); span.textContent = pipelineLabels[state.language][step.id] || step.label;
+    if (step.id === "patch_vbmeta") {
+      span.title = t("glossaryVbmeta");
+      span.setAttribute("aria-label", span.textContent + ". " + t("glossaryVbmeta"));
+    }
     label.append(input, span); return label;
   }));
   updatePipelineCount();
@@ -2178,10 +2343,11 @@ function renderBatchChoices() {
   updateBatchSummary();
 }
 
-function openBatchBuildPage() {
+function openBatchBuildPage({ fromHistory = false } = {}) {
   if (state.me?.role !== "admin") return;
   renderBatchChoices();
   $("#system").classList.add("admin-batch-open"); $("#admin-batch-page").hidden = false;
+  pushSubviewRoute("batch", null, { fromHistory });
   window.scrollTo({ top: 0, behavior: "instant" }); $("#admin-batch-back").focus({ preventScroll: true });
   loadLatestBatch().catch(() => {});
 }
@@ -2189,6 +2355,7 @@ function openBatchBuildPage() {
 function closeBatchBuildPage() {
   clearTimeout(state.batchPollTimer); state.batchPollTimer = null;
   $("#system").classList.remove("admin-batch-open"); $("#admin-batch-page").hidden = true;
+  clearSubviewRoute();
 }
 
 function batchReleaseSummary(payload) {
@@ -2280,19 +2447,22 @@ function updateTelegramState() {
   const authenticated = Boolean(effectiveInitData() || activeSignedLaunchToken());
   const keyboardConnected = telegramTransportAvailable();
   const sessionAvailable = authenticated || keyboardConnected;
-  const connected = miniApiAvailable();
+  const configured = miniApiAvailable();
+  const connected = configured && state.apiOnline;
   const connection = $("#telegram-state");
   const connectionText = connection?.querySelector("span");
   if (connectionText) {
-    const stateKey = connected ? "connected" : sessionAvailable ? "apiSessionOnly" : "previewMode";
+    const stateKey = connected ? "connected" : configured && !state.apiOnline ? "apiOfflineStatus" : sessionAvailable ? "apiSessionOnly" : "previewMode";
     connectionText.dataset.i18n = stateKey;
     connectionText.textContent = t(stateKey);
   }
   connection?.classList.toggle("preview", !connected);
+  connection?.classList.toggle("offline", configured && !state.apiOnline);
+  connection?.setAttribute("role", configured && !state.apiOnline ? "alert" : "status");
   $("#telegram-health")?.classList.toggle("ok", connected);
   const authText = $("#telegram-auth-state");
   if (authText) {
-    const stateKey = connected ? "authenticated" : sessionAvailable ? "apiUnavailableMessage" : "authenticatedPreview";
+    const stateKey = connected ? "authenticated" : configured && !state.apiOnline ? "apiOfflineMessage" : sessionAvailable ? "apiUnavailableMessage" : "authenticatedPreview";
     authText.dataset.i18n = stateKey;
     authText.textContent = t(stateKey);
   }
@@ -2568,8 +2738,10 @@ function initializeApprovedWorkspace() {
   $("#maintenance-gate").hidden = true;
   if (state.workspaceLoaded) return;
   state.workspaceLoaded = true;
-  navigate(location.hash.slice(1) || "build", false);
-  loadCatalog().finally(() => requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" })));
+  const initialRoute = routeFromLocation();
+  navigate(initialRoute.view, false, { replace: true, subview: initialRoute.subview, scrollY: initialRoute.scrollY, focusId: initialRoute.focusId });
+  restoreSubviewRoute(initialRoute).catch((error) => showError(error, "#session-diag"));
+  loadCatalog().finally(() => requestAnimationFrame(() => window.scrollTo({ top: initialRoute.scrollY || 0, behavior: "auto" })));
   refreshLiveReleaseVersions().catch(() => {});
   loadJobs({ force: true }).catch(() => {});
 }
@@ -2867,6 +3039,7 @@ function renderRomCatalogResults() {
   if (status !== "ready") {
     const empty = document.createElement("div");
     empty.className = "rom-catalog-empty";
+    if (status === "error") empty.setAttribute("role", "alert");
     const title = document.createElement("strong");
     title.textContent = t(status === "loading" ? "romCatalogLoading" : status === "error" ? "romCatalogRetry" : "romCatalogIdle");
     empty.append(title);
@@ -2874,6 +3047,14 @@ function renderRomCatalogResults() {
       const hint = document.createElement("p");
       hint.textContent = t("romCatalogIdleHint");
       empty.append(hint);
+    }
+    if (status === "error") {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "secondary compact";
+      retry.textContent = t("romCatalogRetryAction");
+      retry.addEventListener("click", () => searchRomCatalog());
+      empty.append(retry);
     }
     target.replaceChildren(empty);
     return;
@@ -3280,6 +3461,7 @@ function closeAdminUserPage({ restoreFocus = true, scroll = true } = {}) {
   if (restoreFocus && telegramId) {
     requestAnimationFrame(() => $$(".user-open").find((button) => button.dataset.userId === String(telegramId))?.focus());
   }
+  clearSubviewRoute();
 }
 
 function requestAdminAction(user, action) {
@@ -3367,7 +3549,7 @@ async function runAdminUserAction(user, action) {
   await openAdminUser(user.telegramId);
 }
 
-async function openAdminUser(telegramId) {
+async function openAdminUser(telegramId, { fromHistory = false } = {}) {
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
   if (!$("#system")?.classList.contains("admin-user-open")) state.adminUserReturnScrollY = window.scrollY;
@@ -3440,9 +3622,13 @@ async function openAdminUser(telegramId) {
   const jobTabButtons = {};
   for (const [key, labelKey] of [["active", "jobTabActive"], ["succeeded", "jobTabSucceeded"], ["failed", "jobTabFailed"]]) {
     const button = document.createElement("button"); button.type = "button"; button.setAttribute("role", "tab");
+    button.id = `admin-job-tab-${key}`;
+    button.setAttribute("aria-controls", "admin-job-history-panel");
+    button.tabIndex = key === adminJobState.filter ? 0 : -1;
+    button.setAttribute("aria-selected", String(key === adminJobState.filter));
     const label = document.createElement("span"); label.textContent = t(labelKey);
     const count = document.createElement("b"); count.textContent = "0"; button.append(label, count);
-    button.addEventListener("click", () => { adminJobState.filter = key; adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); });
+    button.addEventListener("click", () => { adminJobState.filter = key; adminJobState.page = 1; loadAdminJobs().catch((error) => showError(error, "#admin-job-connection")); });
     jobTabs.append(button); jobTabButtons[key] = { button, count };
   }
   const jobFilters = document.createElement("form"); jobFilters.className = "job-history-filters admin-job-history-filters";
@@ -3458,7 +3644,7 @@ async function openAdminUser(telegramId) {
   const adminJobField = (labelKey, control, wide = false) => { const label = document.createElement("label"); label.className = wide ? "field job-history-search" : "field"; const text = document.createElement("span"); text.dataset.i18n = labelKey; text.textContent = t(labelKey); label.append(text, control); return label; };
   jobFilters.append(adminJobField("jobSearch", adminJobSearch, true), adminJobField("jobPresetFilter", adminJobPreset), adminJobField("jobModFilter", adminJobMod), adminJobField("jobDateFrom", adminJobFrom), adminJobField("jobDateTo", adminJobTo));
   const clearAdminJobFilters = document.createElement("button"); clearAdminJobFilters.type = "reset"; clearAdminJobFilters.className = "secondary compact"; clearAdminJobFilters.textContent = t("clearJobFilters"); jobFilters.append(clearAdminJobFilters, adminJobDatalist);
-  const jobHistory = document.createElement("div"); jobHistory.className = "user-audit";
+  const jobHistory = document.createElement("div"); jobHistory.id = "admin-job-history-panel"; jobHistory.className = "user-audit"; jobHistory.setAttribute("role", "tabpanel"); jobHistory.setAttribute("aria-labelledby", `admin-job-tab-${adminJobState.filter}`); jobHistory.tabIndex = 0;
   const jobPagination = document.createElement("div"); jobPagination.className = "job-history-pagination admin-job-history-pagination";
   const jobPageSummary = document.createElement("span"); const jobPageButtons = document.createElement("nav"); jobPageButtons.className = "job-page-buttons"; jobPageButtons.setAttribute("aria-label", t("jobHistory"));
   jobPagination.append(jobPageSummary, jobPageButtons);
@@ -3504,7 +3690,9 @@ async function openAdminUser(telegramId) {
       const selected = key === adminJobState.filter;
       jobTabButtons[key].button.classList.toggle("active", selected);
       jobTabButtons[key].button.setAttribute("aria-selected", String(selected));
+      jobTabButtons[key].button.tabIndex = selected ? 0 : -1;
     }
+    jobHistory.setAttribute("aria-labelledby", `admin-job-tab-${adminJobState.filter}`);
     jobHistory.replaceChildren(...(page.jobs || []).map(historyEntry));
     if (!page.jobs?.length) { const empty = document.createElement("p"); empty.className = "job-filter-empty"; empty.textContent = t("jobFilterEmpty"); jobHistory.append(empty); }
     const first = adminJobState.total ? (adminJobState.page - 1) * adminJobState.pageSize + 1 : 0;
@@ -3533,8 +3721,10 @@ async function openAdminUser(telegramId) {
   [adminJobPreset, adminJobMod, adminJobFrom, adminJobTo].forEach((control) => control.addEventListener("change", () => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }));
   jobFilters.addEventListener("reset", () => setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }, 0));
   root.replaceChildren(header, activityTitle, currentActivity, grid, actions, jobsTitle, jobTabs, jobFilters, jobHistory, jobPagination, auditTitle, audit, loadMoreAudit);
+  bindRovingTablist(jobTabs, { onSelect: (target) => target.click() });
   $("#admin-user-page").hidden = false;
   $("#system").classList.add("admin-user-open");
+  pushSubviewRoute("admin-user", { telegramId: String(telegramId) }, { fromHistory });
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   requestAnimationFrame(() => $("#admin-user-back").focus());
   loadAdminJobs().catch((error) => toast(error.message, true));
@@ -3950,7 +4140,7 @@ function renderUploadProgressCard(event) {
   const track = document.createElement("div"); track.className = "event-upload-track";
   track.setAttribute("role", "progressbar");
   track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", "100"); track.setAttribute("aria-valuenow", String(snapshot.percent));
-  const fill = document.createElement("i"); fill.style.width = `${snapshot.percent}%`; fill.setAttribute("aria-hidden", "true");
+  const fill = document.createElement("i"); fill.style.setProperty("--upload-progress", String(snapshot.percent / 100)); fill.setAttribute("aria-hidden", "true");
   track.append(fill);
   const metrics = document.createElement("div"); metrics.className = "event-upload-metrics";
   const metric = (label, value) => {
@@ -4111,6 +4301,29 @@ async function repairDcCloudMirror(jobId, button) {
     toast(error?.message || t("dcCloudRepairFailed"), true);
   } finally {
     button.disabled = false;
+  }
+}
+
+async function restoreSubviewRoute(route) {
+  if (route?.view !== "system" || !route.subview || state.me?.role !== "admin") return;
+  try {
+    if (route.subview === "batch") {
+      openBatchBuildPage({ fromHistory: true });
+      return;
+    }
+    const telegramId = String(route.subviewData?.telegramId || state.selectedAdminUserId || "");
+    if (!telegramId) return;
+    if (route.subview === "admin-user") {
+      await openAdminUser(telegramId, { fromHistory: true });
+      return;
+    }
+    if (route.subview === "admin-job") {
+      await openAdminUser(telegramId, { fromHistory: true });
+      const job = route.subviewData?.job || { job_id: String(route.subviewData?.jobId || "") };
+      if (job.job_id || job.jobId) openAdminJobPage(job, { fromHistory: true });
+    }
+  } catch (error) {
+    showError(error, "#admin-job-connection");
   }
 }
 
@@ -4318,15 +4531,31 @@ function renderEvents(events, expanded = false) {
   section.append(list); return section;
 }
 
+function requestCancelJob(job, trigger = null) {
+  const dialog = $("#cancel-job-dialog");
+  if (!dialog) return runJobAction("cancel", job.job_id || job.jobId);
+  if (dialog.open) return Promise.resolve();
+  const jobId = job.job_id || job.jobId;
+  state.pendingCancelJobId = String(jobId);
+  state.cancelJobReturnFocus = trigger || document.activeElement;
+  $("#cancel-job-message").textContent = `${t("cancelJobConfirmMessage")} (${jobId})`;
+  dialog.showModal();
+  requestAnimationFrame(() => $("#cancel-job-confirm")?.focus({ preventScroll: true }));
+  return Promise.resolve();
+}
+
 function jobAction(label, action, job, danger = false) {
   const button = document.createElement("button"); button.type = "button"; button.textContent = label;
   button.dataset.jobFocus = `job-action-${action}`;
   if (danger) button.classList.add("danger");
-  button.addEventListener("click", () => runJobAction(action, job.job_id || job.jobId).catch((error) => toast(error.message, true)));
+  button.addEventListener("click", () => {
+    if (action === "cancel") { requestCancelJob(job, button).catch((error) => showError(error, "#jobs-connection")); return; }
+    runJobAction(action, job.job_id || job.jobId).catch((error) => showError(error, "#jobs-connection"));
+  });
   return button;
 }
 
-function openAdminJobPage(job) {
+function openAdminJobPage(job, { fromHistory = false } = {}) {
   if (state.me?.role !== "admin" || !state.selectedAdminUserId) return;
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
@@ -4341,6 +4570,7 @@ function openAdminJobPage(job) {
   state.adminJobView = view;
   $("#system").classList.add("admin-job-open");
   $("#admin-job-page").hidden = false;
+  pushSubviewRoute("admin-job", { telegramId: String(state.selectedAdminUserId || ""), jobId: String(view.jobId), job }, { fromHistory });
   renderActiveJob(job, [], view);
   const status = $("#admin-job-connection");
   status.classList.remove("error");
@@ -4364,6 +4594,7 @@ function closeAdminJobPage({ restoreFocus = true, scroll = true, refreshUser = t
   if (refreshUser && state.selectedAdminUserId && !document.hidden) {
     refreshAdminUserActivity();
   }
+  clearSubviewRoute();
 }
 
 async function loadAdminJobDetail() {
@@ -4491,7 +4722,7 @@ function renderActiveJob(job, events, inspection = null) {
   const stage = document.createElement("strong"); stage.textContent = job.stage || statusLabel(job.status);
   const percentage = document.createElement("b"); percentage.textContent = `${jobProgress(job)}%`;
   progressCopy.append(stage, percentage);
-  const track = document.createElement("div"); const fill = document.createElement("i"); fill.style.width = `${jobProgress(job)}%`; track.append(fill);
+  const track = document.createElement("div"); const fill = document.createElement("i"); fill.style.setProperty("--job-progress", String(jobProgress(job) / 100)); track.append(fill);
   progress.append(progressCopy, track);
   const build = job.recipe?.build || {};
   const context = document.createElement("section"); context.className = "job-context";
@@ -4763,7 +4994,11 @@ function renderJobHistory() {
     const selected = button.dataset.jobFilter === state.jobHistoryFilter;
     button.classList.toggle("active", selected);
     button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    button.setAttribute("aria-controls", "job-history-panel");
   });
+  const selectedTab = $$("[data-job-filter]").find((button) => button.dataset.jobFilter === state.jobHistoryFilter);
+  $("#job-history-panel")?.setAttribute("aria-labelledby", selectedTab?.id || "job-tab-active");
   for (const key of ["active", "succeeded", "failed"]) {
     const count = $(`#job-count-${key}`);
     if (count) count.textContent = String(state.jobHistoryStatusCounts[key] || 0);
@@ -4839,6 +5074,7 @@ function renderJobHistory() {
 function setJobsConnection(key, error = false) {
   const node = $("#jobs-connection"); if (!node) return;
   node.classList.toggle("error", error); node.classList.toggle("online", !error);
+  node.setAttribute("role", error ? "alert" : "status");
   node.querySelector("span").textContent = t(key);
 }
 
@@ -5009,6 +5245,7 @@ async function runJobAction(action, jobId) {
 async function submitRecipe() {
   if (!miniApiAvailable()) throw new Error(t(miniApiUnavailableMessageKey()));
   const recipe = buildRecipe();
+  TelegramApp?.HapticFeedback?.impactOccurred?.("medium");
   const canonical = JSON.stringify(recipe);
   let pending = null;
   try { pending = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
@@ -5029,7 +5266,7 @@ async function submitRecipe() {
   resetJobDraft();
   await apiRequest("/v1/drafts/source", { method: "DELETE" }).catch(() => {});
   await loadSession({ countOpen: false });
-  toast(t("buildCreated")); navigate("jobs"); await loadJobs({ force: true });
+  toast(t("buildCreated"), false, { haptic: "success" }); navigate("jobs"); await loadJobs({ force: true });
 }
 
 function scheduleSourceProbe() {
@@ -5160,10 +5397,79 @@ function bindEvents() {
   $$('[data-nav]').forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
   bindLiquidBottomTabs();
   $("#cache-clear-confirm")?.addEventListener("click", () => performCacheClear());
+  const cancelDialog = $("#cancel-job-dialog");
+  const cancelConfirm = $("#cancel-job-confirm");
+  cancelConfirm?.addEventListener("click", async () => {
+    const jobId = state.pendingCancelJobId;
+    if (!jobId) return;
+    TelegramApp?.HapticFeedback?.impactOccurred?.("medium");
+    cancelConfirm.disabled = true;
+    try {
+      await runJobAction("cancel", jobId);
+      cancelDialog?.close("confirm");
+      toast(t("cancel"));
+    } catch (error) {
+      showError(error, "#jobs-connection");
+      cancelDialog?.close("error");
+    } finally {
+      cancelConfirm.disabled = false;
+      state.pendingCancelJobId = "";
+    }
+  });
+  cancelDialog?.addEventListener("close", () => {
+    const target = state.cancelJobReturnFocus;
+    state.cancelJobReturnFocus = null;
+    if (target?.isConnected) requestAnimationFrame(() => target.focus({ preventScroll: true }));
+  });
+  // Native dialog modality is supplemented with a small, shared focus loop so
+  // every confirmation/editor dialog behaves consistently in WebViews.
+  let lastDialogTrigger = null;
+  document.addEventListener("pointerdown", (event) => {
+    if ($("dialog[open]")) return;
+    const trigger = event.target.closest?.("button, [role=button]");
+    if (trigger) lastDialogTrigger = trigger;
+  }, true);
+  document.addEventListener("focusin", (event) => {
+    if ($("dialog[open]")) return;
+    const trigger = event.target.closest?.("button, [role=button]");
+    if (trigger) lastDialogTrigger = trigger;
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    const dialog = $("dialog[open]");
+    if (!dialog) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      dialog.close("escape");
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = $$('dialog[open] button:not([disabled]), dialog[open] input:not([disabled]), dialog[open] select:not([disabled]), dialog[open] textarea:not([disabled]), dialog[open] [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+  $$("dialog").forEach((dialog) => dialog.addEventListener("close", () => {
+    if (dialog.id === "cancel-job-dialog") return;
+    const trigger = lastDialogTrigger;
+    lastDialogTrigger = null;
+    if (trigger?.isConnected) requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
+  }));
   $$("[data-theme-value]").forEach((button) => button.addEventListener("click", () => applyTheme(button.dataset.themeValue, true)));
   themeMedia?.addEventListener?.("change", handleSystemThemeChange);
   bindTelegramThemeEvents();
   window.addEventListener("scroll", updateMastheadScroll, { passive: true });
+  window.addEventListener("popstate", (event) => {
+    const route = routeFromLocation(event.state);
+    state.router.suppressHistory = true;
+    closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
+    closeAdminUserPage({ restoreFocus: false, scroll: false });
+    closeBatchBuildPage();
+    state.router.suppressHistory = false;
+    navigate(route.view, false, { fromHistory: true, replace: true, subview: route.subview, scrollY: route.scrollY, focusId: route.focusId });
+    restoreSubviewRoute(route).catch((error) => showError(error, "#session-diag"));
+  });
   let greetingResizeFrame = 0;
   window.addEventListener("resize", () => {
     cancelAnimationFrame(greetingResizeFrame);
@@ -5180,7 +5486,8 @@ function bindEvents() {
     event.preventDefault();
     const button = event.submitter || event.currentTarget.querySelector('[type="submit"]');
     if (button) button.disabled = true;
-    try { await submitRecipe(); } catch (error) { toast(error.message, true); }
+    clearError("#recipe-error");
+    try { await submitRecipe(); } catch (error) { showError(error, "#recipe-error"); }
     finally { if (button) button.disabled = false; }
   });
   $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
@@ -5212,22 +5519,16 @@ function bindEvents() {
   });
   $$('[data-library-tab]').forEach((button) => {
     button.addEventListener("click", () => selectLibraryTab(button.dataset.libraryTab));
-    button.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-      event.preventDefault();
-      const name = event.key === "Home" ? "rom" : event.key === "End" ? "technical"
-        : button.dataset.libraryTab === "rom" ? "technical" : "rom";
-      selectLibraryTab(name, true);
-    });
   });
+  bindRovingTablist($(".library-tabs"), { onSelect: (target) => target.click() });
   $("#paste-source").addEventListener("click", () => pasteSourceFromClipboard().catch((error) => toast(error.message, true)));
   $("#connect-telegram").addEventListener("click", () => connectTelegramSession());
   $("#refresh-access").addEventListener("click", () => {
     if (!miniApiAvailable()) { connectTelegramSession(); return; }
-    loadSession({ countOpen: false }).catch((error) => toast(error.message, true));
+    loadSession({ countOpen: false }).catch((error) => showError(error, "#session-diag"));
   });
   $("#refresh-maintenance").addEventListener("click", () => {
-    loadSession({ countOpen: false }).catch((error) => toast(error.message, true));
+    loadSession({ countOpen: false }).catch((error) => showError(error, "#session-diag"));
   });
   $("#maintenance-toggle").addEventListener("click", () => {
     updateMaintenance().catch((error) => toast(error.message, true));
@@ -5268,7 +5569,7 @@ function bindEvents() {
   $("#save-admin-release").addEventListener("click", () => savePermanentReleaseVersion().catch(error => toast(error.message, true)));
   $("#save-admin-preset-labels").addEventListener("click", () => savePermanentPresetLabels().catch(error => toast(error.message, true)));
   $("#open-batch-build").addEventListener("click", openBatchBuildPage);
-  $("#admin-batch-back").addEventListener("click", closeBatchBuildPage);
+  $("#admin-batch-back").addEventListener("click", () => navigateBack());
   $("#start-batch-build").addEventListener("click", () => startBatchBuild().catch(error => toast(error.message, true)));
   $("#refresh-batch").addEventListener("click", () => loadBatch().catch(error => toast(error.message, true)));
   $("#batch-devices").addEventListener("change", updateBatchSummary);
@@ -5296,11 +5597,24 @@ function bindEvents() {
     renderMods();
   });
   $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
-  $$("[data-job-filter]").forEach((button) => button.addEventListener("click", () => {
+  const jobFilterButtons = $$("[data-job-filter]");
+  const selectJobFilter = (button) => {
     state.jobHistoryFilter = button.dataset.jobFilter;
     state.jobHistoryPage = 1;
-    loadJobs({ force: true }).catch((error) => toast(error.message, true));
-  }));
+    $("#job-history-panel")?.setAttribute("aria-labelledby", button.id);
+    jobFilterButtons.forEach((tab) => {
+      const selected = tab === button;
+      tab.classList.toggle("active", selected);
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    loadJobs({ force: true }).catch((error) => showError(error, "#jobs-connection"));
+  };
+  jobFilterButtons.forEach((button, index) => {
+    button.tabIndex = index === 0 ? 0 : -1;
+    button.addEventListener("click", () => selectJobFilter(button));
+  });
+  bindRovingTablist($("#job-history-tabs"), { onSelect: selectJobFilter });
   const reloadJobHistory = () => {
     state.jobHistoryPage = 1;
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
@@ -5323,8 +5637,8 @@ function bindEvents() {
   $("#user-prev").addEventListener("click", () => { state.adminUsersOffset = Math.max(0, state.adminUsersOffset - 25); loadAdminUsers().catch(() => {}); });
   $("#user-next").addEventListener("click", () => { state.adminUsersOffset += 25; loadAdminUsers().catch(() => {}); });
   $("#add-user").addEventListener("click", () => $("#user-create-dialog").showModal());
-  $("#admin-user-back").addEventListener("click", () => closeAdminUserPage());
-  $("#admin-job-back").addEventListener("click", () => closeAdminJobPage());
+  $("#admin-user-back").addEventListener("click", () => navigateBack());
+  $("#admin-job-back").addEventListener("click", () => navigateBack());
   $("#refresh-admin-job").addEventListener("click", () => loadAdminJobDetail());
   $("#user-create-form").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -5342,6 +5656,7 @@ function bindEvents() {
     } catch (error) { toast(error.message, true); }
   });
   document.addEventListener("visibilitychange", () => {
+    document.body.classList.toggle("page-hidden", document.hidden);
     if (document.hidden) {
       clearTimeout(state.adminUsersPollTimer);
       clearTimeout(state.adminUserPollTimer);
@@ -5360,6 +5675,35 @@ function bindEvents() {
       ensureAutomaticTelegramConnection();
       loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
     }
+  });
+  const updateKeyboardViewport = () => {
+    const viewport = window.visualViewport;
+    const focused = document.activeElement;
+    const editable = focused?.matches?.("input, textarea, select");
+    const keyboardOpen = Boolean(viewport && editable && viewport.height < window.innerHeight - 120);
+    document.body.classList.toggle("keyboard-open", keyboardOpen);
+    if (keyboardOpen) {
+      cancelAnimationFrame(state.visualViewportFrame);
+      state.visualViewportFrame = requestAnimationFrame(() => focused?.scrollIntoView?.({ block: "center", behavior: "auto" }));
+    }
+  };
+  window.visualViewport?.addEventListener("resize", updateKeyboardViewport, { passive: true });
+  window.visualViewport?.addEventListener("scroll", updateKeyboardViewport, { passive: true });
+  document.addEventListener("focusin", updateKeyboardViewport);
+  document.addEventListener("focusout", () => document.body.classList.remove("keyboard-open"));
+  window.addEventListener("offline", () => {
+    state.apiOnline = false;
+    updateTelegramState();
+    setJobsConnection("jobsOffline", true);
+  });
+  window.addEventListener("online", () => {
+    state.apiOnline = true;
+    updateTelegramState();
+    toast(t("apiOnline"));
+    loadSession({ countOpen: false }).then(() => {
+      initializeApprovedWorkspace();
+      return loadJobs({ force: true });
+    }).catch(() => {});
   });
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
   const docket = $(".dispatch-docket");
@@ -5386,9 +5730,20 @@ function renderSessionDiagnostics() {
   node.textContent = t("sessionDiagOk", { platform: (TelegramApp?.platform || "?") + via, chars });
 }
 
+function syncTelegramInsets() {
+  const root = document.documentElement.style;
+  const safe = TelegramApp?.safeAreaInset || {};
+  const content = TelegramApp?.contentSafeAreaInset || {};
+  root.setProperty("--telegram-safe-top", `${Math.max(0, Number(safe.top) || 0)}px`);
+  root.setProperty("--telegram-safe-bottom", `${Math.max(0, Number(safe.bottom) || 0)}px`);
+  root.setProperty("--telegram-content-safe-top", `${Math.max(0, Number(content.top) || 0)}px`);
+  root.setProperty("--telegram-content-safe-bottom", `${Math.max(0, Number(content.bottom) || 0)}px`);
+}
+
 function activateTelegramApp() {
   try {
     TelegramApp.ready(); TelegramApp.expand();
+    syncTelegramInsets();
     if (TelegramApp.isVersionAtLeast?.("7.7")) TelegramApp.disableVerticalSwipes?.();
     if (TelegramApp.isVersionAtLeast?.("6.1")) {
       TelegramApp.setHeaderColor?.("secondary_bg_color");

@@ -236,6 +236,15 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
             ).read_text(encoding="utf-8"),
             (output / "WukongStudio.svg").read_text(encoding="utf-8"),
         )
+        self.assertTrue((output / "modules" / "feedback.js").is_file())
+        self.assertTrue((output / "modules" / "a11y.js").is_file())
+        self.assertTrue((output / "modules" / "motion.js").is_file())
+        bundled_app = (output / "app.js").read_text(encoding="utf-8")
+        self.assertIn('./modules/feedback.js?v=privacy-test', bundled_app)
+        self.assertIn('./modules/a11y.js?v=privacy-test', bundled_app)
+        self.assertIn('./modules/motion.js?v=privacy-test', bundled_app)
+        bundled_index = (output / "index.html").read_text(encoding="utf-8")
+        self.assertIn('./fflate.js?v=privacy-test', bundled_index)
         self.assertIn('"outputDirectory": ".vercel-static"', vercel)
         self.assertIn("X-Robots-Tag", vercel)
 

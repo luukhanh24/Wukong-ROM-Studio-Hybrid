@@ -660,6 +660,11 @@ window.addEventListener('load', () => {{
                 "application/javascript; charset=utf-8",
             )
             return
+        if path.startswith("/modules/"):
+            module = ROOT / "telegram_mini_app" / path.lstrip("/")
+            if module.is_file() and module.suffix == ".js":
+                self._send(module.read_bytes(), "application/javascript; charset=utf-8")
+                return
         if path.startswith("/assets/"):
             asset = ROOT / "telegram_mini_app" / path.lstrip("/")
             if asset.is_file():
@@ -1284,6 +1289,7 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_static_app_exposes_bilingual_build_and_job_contract(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
+        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
 
         for element_id in (
             "recipe-form",
@@ -1348,6 +1354,19 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("const selectedJobId = state.activeJobId", script)
         self.assertIn("loadJobDetail(selectedJobId)", script)
         self.assertIn("function renderPageButtons", script)
+        self.assertIn('id="cancel-job-dialog"', html)
+        self.assertIn('id="cancel-job-confirm"', html)
+        self.assertIn("history.pushState", script)
+        self.assertIn('window.addEventListener("popstate"', script)
+        self.assertIn("TelegramApp?.BackButton", script)
+        self.assertIn("window.visualViewport", script)
+        self.assertIn("bindRovingTablist", script)
+        self.assertIn("transform:scaleX(var(--upload-progress", styles)
+        self.assertIn("transform: scaleX(var(--job-progress", styles)
+        self.assertIn("restoreSubviewRoute", script)
+        self.assertIn('telegramId: String(state.selectedAdminUserId || "")', script)
+        self.assertIn("romCatalogRetryAction", script)
+        self.assertIn("@layer tokens, reset, base, components, features, responsive, themes, motion, a11y", styles)
         self.assertIn("setTimeout(reloadJobHistory, 300)", script)
         self.assertIn("const unique = new Map()", script)
         self.assertNotIn("githubRunLink", script)

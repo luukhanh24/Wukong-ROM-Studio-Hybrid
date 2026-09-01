@@ -107,7 +107,7 @@
               <div><dt data-i18n="securityPatch">Bản vá bảo mật</dt><dd id="source-security-patch">—</dd></div>
               <div><dt data-i18n="buildDate">Ngày build</dt><dd id="source-build-date">—</dd></div>
               <div><dt data-i18n="sourceSizeDetected">Dung lượng</dt><dd id="source-size-detected">—</dd></div>
-              <div><dt data-i18n="otaType">Kiểu OTA</dt><dd id="source-ota-type">—</dd></div>
+              <div><dt data-i18n="otaType" data-i18n-title="glossaryOta">Kiểu OTA</dt><dd id="source-ota-type">—</dd></div>
               <div><dt data-i18n="contentType">Định dạng</dt><dd id="source-content-type">—</dd></div>
               <div><dt data-i18n="fileName">Tên file</dt><dd id="source-filename">—</dd></div>
               <div><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
@@ -121,7 +121,7 @@
 
         <section class="dossier-section build-options" id="build-options">
           <header class="section-heading"><span>02</span><div><h2 data-i18n="recipeTitle">Cấu hình bản ROM</h2><p data-i18n="recipeHint">Preset là điểm bắt đầu; từng MOD và giai đoạn vẫn có thể chỉnh riêng.</p></div></header>
-          <div class="field-grid three"><label class="field"><span data-i18n="runner">Nơi chạy</span><select id="execution"><option value="github-auto">GitHub Auto</option><option value="github-hosted">GitHub Hosted</option><option value="self-hosted-linux">Self-hosted Linux</option></select></label><label class="field"><span data-i18n="edition">Phiên bản</span><select id="preset"><option value="lite">Lite</option><option value="plus" selected>Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><label class="field"><span data-i18n="modPack">Nền MOD</span><select id="mod-version"></select><small id="mod-release-version">—</small></label></div>
+          <div class="field-grid three"><label class="field"><span data-i18n="runner">Nơi chạy</span><select id="execution" aria-describedby="runner-hint"><option value="github-auto">GitHub Auto</option><option value="github-hosted">GitHub Hosted</option><option value="self-hosted-linux">Self-hosted Linux</option></select><small class="field-hint" id="runner-hint" data-i18n="glossaryRunner">Runner là máy chủ thực hiện các bước build.</small></label><label class="field"><span data-i18n="edition">Phiên bản</span><select id="preset"><option value="lite">Lite</option><option value="plus" selected>Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label><label class="field"><span data-i18n="modPack">Nền MOD</span><select id="mod-version"></select><small id="mod-release-version">—</small></label></div>
           <div class="release-version-editor"><div><strong id="release-version-title" data-i18n="releaseVersion">Phiên bản phát hành</strong><small id="release-version-hint" data-i18n="releaseVersionHint">Mặc định cố định theo MOD pack; thay đổi chỉ áp dụng cho job hiện tại.</small></div><div class="release-version-controls"><label class="sr-only" for="mod-release-version-input" data-i18n="releaseVersion">Phiên bản phát hành</label><input id="mod-release-version-input" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="release-version-hint"><button id="save-mod-release-version" type="button" data-i18n="saveReleaseVersion">Áp dụng cho job</button></div></div>
           <div class="release-version-editor custom-release-active" id="custom-preset-label-editor" hidden><div><strong data-i18n="customPresetJobTitle">Tên bản Custom</strong><small id="custom-preset-label-hint" data-i18n="customPresetJobHint">Đổi Custom thành tên riêng như Limited; chỉ áp dụng cho job hiện tại.</small></div><div class="release-version-controls"><label class="sr-only" for="custom-preset-label-input" data-i18n="customPresetJobTitle">Tên bản Custom</label><input id="custom-preset-label-input" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="custom-preset-label-hint" placeholder="Limited"><button id="apply-custom-preset-label" type="button" data-i18n="applyCustomPresetJob">Áp dụng cho job</button></div></div>
           <div class="selection-bar"><div><strong data-i18n="mods">MOD áp dụng</strong><small id="mod-count">0 đã chọn</small></div><div><button id="select-defaults" type="button" data-i18n="defaults">Mặc định</button><button id="select-all" type="button" data-i18n="selectAll">Tất cả</button><button id="clear-mods" type="button" data-i18n="clear">Bỏ chọn</button></div></div>
@@ -148,6 +148,7 @@
             <p data-i18n="pairingHint">Telegram không gửi phiên cho lần mở này. Kết nối một lần qua bot; nếu được hỏi, bấm START rồi quay lại Mini App.</p>
             <button id="connect-telegram" type="button" data-i18n="pairingButton">Kết nối Telegram</button>
           </div>
+          <p class="inline-error" id="recipe-error" role="alert" hidden></p>
           <button class="primary" id="submit-recipe" type="submit" disabled><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
         </aside>
       </form>
@@ -160,9 +161,9 @@
       <section class="job-history-sheet">
         <header><div><small data-i18n="jobHistoryKicker">LỊCH SỬ</small><h2 data-i18n="jobHistory">Các lần chạy gần đây</h2></div><span id="job-history-count">0</span></header>
         <div class="job-history-tabs" id="job-history-tabs" role="tablist" aria-label="Job status">
-          <button class="active" type="button" role="tab" aria-selected="true" data-job-filter="active"><span data-i18n="jobTabActive">Đang chạy</span><b id="job-count-active">0</b></button>
-          <button type="button" role="tab" aria-selected="false" data-job-filter="succeeded"><span data-i18n="jobTabSucceeded">Hoàn tất</span><b id="job-count-succeeded">0</b></button>
-          <button type="button" role="tab" aria-selected="false" data-job-filter="failed"><span data-i18n="jobTabFailed">Lỗi / hủy</span><b id="job-count-failed">0</b></button>
+          <button id="job-tab-active" class="active" type="button" role="tab" aria-selected="true" aria-controls="job-history-panel" tabindex="0" data-job-filter="active"><span data-i18n="jobTabActive">Đang chạy</span><b id="job-count-active">0</b></button>
+          <button id="job-tab-succeeded" type="button" role="tab" aria-selected="false" aria-controls="job-history-panel" tabindex="-1" data-job-filter="succeeded"><span data-i18n="jobTabSucceeded">Hoàn tất</span><b id="job-count-succeeded">0</b></button>
+          <button id="job-tab-failed" type="button" role="tab" aria-selected="false" aria-controls="job-history-panel" tabindex="-1" data-job-filter="failed"><span data-i18n="jobTabFailed">Lỗi / hủy</span><b id="job-count-failed">0</b></button>
         </div>
         <form class="job-history-filters" id="job-history-filters">
           <label class="field job-history-search"><span data-i18n="jobSearch">Tìm lịch sử job</span><input id="job-history-search" type="search" maxlength="128" autocomplete="off" data-i18n-placeholder="jobSearchPlaceholder" placeholder="Job ID / thiết bị / phiên bản / user"></label>
@@ -172,7 +173,7 @@
           <label class="field"><span data-i18n="jobDateTo">Đến ngày</span><input id="job-history-to" type="date"></label>
           <button class="secondary compact" id="clear-job-history-filters" type="reset" data-i18n="clearJobFilters">Xóa bộ lọc</button>
         </form>
-        <div class="job-history" id="job-history"></div>
+        <div class="job-history-panel" id="job-history-panel" role="tabpanel" aria-labelledby="job-tab-active" tabindex="0"><div class="job-history" id="job-history"></div></div>
         <div class="job-history-pagination" id="job-history-pagination" hidden><span id="job-history-page-summary"></span><nav class="job-page-buttons" id="job-page-buttons" aria-label="Job history pages"></nav></div>
         <div class="job-empty" id="job-empty" hidden><strong data-i18n="noJobsTitle">Chưa có job</strong><p data-i18n="noJobsMessage">Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.</p><button class="primary compact" type="button" data-nav="build" data-i18n="newBuild">Tạo build đầu tiên</button></div>
       </section>
@@ -181,7 +182,7 @@
     <section class="view" id="catalog" aria-labelledby="catalog-title">
       <header class="page-head"><div><h1 id="catalog-title" data-i18n="catalogTitle">Thư viện</h1><p data-i18n="libraryIntro">Tìm ROM nguồn, tra cứu thiết bị và bộ MOD.</p></div></header>
       <div class="library-tabs" role="tablist" aria-label="Thư viện" data-i18n-aria="catalogTitle">
-        <button id="library-rom-tab" type="button" role="tab" aria-selected="true" aria-controls="rom-catalog-panel" data-library-tab="rom" data-i18n="libraryRom">ROM / OTA</button>
+        <button id="library-rom-tab" type="button" role="tab" aria-selected="true" aria-controls="rom-catalog-panel" tabindex="0" data-library-tab="rom" data-i18n="libraryRom">ROM / OTA</button>
         <button id="library-technical-tab" type="button" role="tab" aria-selected="false" aria-controls="library-technical" tabindex="-1" data-library-tab="technical" data-i18n="libraryTechnical">Thiết bị & MOD</button>
       </div>
       <section class="rom-catalog-panel" id="rom-catalog-panel" role="tabpanel" aria-labelledby="library-rom-tab">
@@ -298,6 +299,9 @@
   <dialog class="user-dialog admin-action-dialog" id="admin-action-dialog" aria-labelledby="admin-action-title" aria-describedby="admin-action-message"><form method="dialog" id="admin-action-form"><header><div><small data-i18n="adminActionKicker">CẬP NHẬT QUYỀN</small><h2 id="admin-action-title">—</h2></div><button value="cancel" data-i18n-aria="closeDialog" aria-label="Đóng">×</button></header><p id="admin-action-message"></p><label class="field" id="admin-action-value-field" hidden><span id="admin-action-value-label" data-i18n="creditValue">Số lượt build</span><input id="admin-action-value" inputmode="numeric"></label><label class="field" id="admin-action-reason-field" hidden><span data-i18n="actionReason">Lý do</span><textarea id="admin-action-reason" rows="3"></textarea></label><p class="dialog-error" id="admin-action-error" role="alert" hidden></p><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="primary" id="admin-action-confirm" value="default" type="submit" data-i18n="confirmAction">Xác nhận</button></footer></form></dialog>
   <dialog class="confirm-dialog" id="cache-clear-dialog" aria-labelledby="cache-clear-title" aria-describedby="cache-clear-message">
     <form method="dialog"><div class="confirm-mark" aria-hidden="true">!</div><h2 id="cache-clear-title" data-i18n="clearCacheConfirmTitle">Xóa cache dùng chung?</h2><p id="cache-clear-message" data-i18n="clearCacheConfirmMessage">Chỉ quản trị viên được phép thực hiện. Toàn bộ stage cache dùng chung sẽ bị xóa và các job sau có thể cần tải, xử lý lại dữ liệu.</p><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="danger-confirm" id="cache-clear-confirm" value="default" type="button" data-i18n="confirmClearCache">Xóa cache</button></footer></form>
+  </dialog>
+  <dialog class="confirm-dialog" id="cancel-job-dialog" aria-labelledby="cancel-job-title" aria-describedby="cancel-job-message">
+    <form method="dialog"><div class="confirm-mark" aria-hidden="true">!</div><h2 id="cancel-job-title" data-i18n="cancelJobConfirmTitle">Hủy job này?</h2><p id="cancel-job-message" data-i18n="cancelJobConfirmMessage">Job đang chạy sẽ dừng và không thể hoàn tác.</p><footer><button value="cancel" data-i18n="cancelDialog">Quay lại</button><button class="danger-confirm" id="cancel-job-confirm" type="button" value="default" data-i18n="confirmCancelJob">Hủy job</button></footer></form>
   </dialog>
   <script src="./fflate.js"></script>
   <script src="./app.js" type="module"></script>
