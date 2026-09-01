@@ -147,7 +147,7 @@ const translations = {
     sourceDetectedKicker: "ĐÃ NHẬN DIỆN", sourceInvalidKicker: "CHƯA HỢP LỆ", sourceInvalidTitle: "Không nhận ra nguồn ROM", sourceInvalidMessage: "Dùng URL HTTP/HTTPS hoặc đường dẫn rclone remote:path.",
     provider: "Nhà cung cấp", detectedType: "Loại nguồn", detectedDevice: "Thiết bị", detectedVersion: "Phiên bản", analyzeSource: "Phân tích ROM", editSourceManual: "Chỉnh thông tin thủ công",
     deepProbeHint: "Phân tích ngay tại đây để kiểm tra máy chủ, tên file và dung lượng mà không tải cả ROM.", probeAnalyzing: "Đang phân tích…", probeSuccess: "Nguồn ROM hoạt động và đã được nhận diện.", probeLimited: "Trình duyệt không được máy chủ ROM cho phép đọc metadata. Link vẫn được giữ nguyên và sẽ được kiểm tra đầy đủ ở bước preflight.", probeFailed: "Nguồn ROM không phản hồi hoặc đã hết hạn. Hãy dùng link mới hơn.", probeReadyKicker: "ROM KHẢ DỤNG", probeLimitedKicker: "CHỜ PREFLIGHT", probeFailedKicker: "KHÔNG KHẢ DỤNG", resolvedHost: "Máy chủ đích", fileName: "Tên file", chooseDevice: "Chọn đúng thiết bị sau khi nhận diện", deviceRequired: "Hãy chọn thiết bị trước khi tạo job.", incompleteLabel: "HỒ SƠ CHƯA ĐỦ", finishSource: "Hoàn tất cấu hình", completeSourceHint: "Dán nguồn ROM và chọn đúng thiết bị để tiếp tục.", chooseDeviceHint: "Nguồn đã hợp lệ. Hãy chọn thiết bị trong phần chỉnh thủ công bên dưới.", sourceDirect: "Tải trực tiếp", sourceResolver: "Link OTA chưa resolve", sourcePage: "Trang OTA", sourceDriveType: "Drive riêng tư", providerDirect: "Máy chủ HTTP", providerDrive: "Google Drive / rclone",
-    runtimePipeline: "PIPELINE", runtimeWaiting: "Chờ recipe hợp lệ", runtimeReady: "Recipe sẵn sàng gửi", runtimeLastBuild: "BUILD GẦN NHẤT", runtimeJobs: "Xem trong Jobs", checklistSource: "Nguồn ROM", checklistSourcePending: "Chưa có URL hợp lệ", checklistSourceDone: "Đã nhận diện nguồn", checklistDevice: "Thiết bị đích", checklistDevicePending: "Cần chọn thủ công", checklistDeviceDone: "Đã chọn thiết bị", checklistRunner: "Tuyến thực thi", checklistRunnerDone: "Đã cấu hình runner", readinessProgress: "{done}/3 điều kiện", pipelinePending: "Chưa chạy", pipelineRunning: "Đang chạy", pipelineComplete: "Hoàn tất", pipelineFailed: "Lỗi", pipelineSkipped: "Bỏ qua", modGroupGoogle: "Google & ứng dụng", modGroupCamera: "Camera & hình ảnh", modGroupInterface: "Giao diện hệ thống", modGroupSecurity: "Bảo mật & quyền", modGroupCore: "Hệ thống & công cụ", modGroupOther: "Khác"
+    runtimePipeline: "PIPELINE", runtimeWaiting: "Chờ recipe hợp lệ", runtimeReady: "Recipe sẵn sàng gửi", runtimeLastBuild: "BUILD GẦN NHẤT", runtimeJobs: "Xem trong Jobs", checklistSource: "Nguồn ROM", checklistSourcePending: "Chưa có URL hợp lệ", checklistSourceDone: "Đã nhận diện nguồn", checklistDevice: "Thiết bị đích", checklistDevicePending: "Cần chọn thủ công", checklistDeviceDone: "Đã chọn thiết bị", checklistRunner: "Tuyến thực thi", checklistRunnerDone: "Đã cấu hình runner", readinessProgress: "{done}/3 điều kiện", pipelinePending: "Chưa chạy", pipelineRunning: "Đang chạy", pipelineComplete: "Hoàn tất", pipelinePartial: "Hoàn tất một phần", pipelineFailed: "Lỗi", pipelineSkipped: "Bỏ qua", modGroupGoogle: "Google & ứng dụng", modGroupCamera: "Camera & hình ảnh", modGroupInterface: "Giao diện hệ thống", modGroupSecurity: "Bảo mật & quyền", modGroupCore: "Hệ thống & công cụ", modGroupOther: "Khác"
   },
   en: {
     connected: "BOT CONNECTED", buildTitle: "Wukong Studio", buildIntro: "Configure, launch and monitor a ROM directly in the Mini App.",
@@ -173,7 +173,7 @@ const translations = {
     sourceDetectedKicker: "SOURCE RECOGNIZED", sourceInvalidKicker: "NOT VALID YET", sourceInvalidTitle: "ROM source not recognized", sourceInvalidMessage: "Use an HTTP/HTTPS URL or an rclone remote:path reference.",
     provider: "Provider", detectedType: "Source type", detectedDevice: "Device", detectedVersion: "Version", analyzeSource: "Analyze ROM", editSourceManual: "Edit source details manually",
     deepProbeHint: "Analyze here to check the host, filename and size without downloading the full ROM.", probeAnalyzing: "Analyzing…", probeSuccess: "The ROM source is reachable and has been identified.", probeLimited: "The ROM server does not allow browser metadata access. The link is preserved and will be fully checked during preflight.", probeFailed: "The ROM source did not respond or has expired. Use a newer link.", probeReadyKicker: "ROM AVAILABLE", probeLimitedKicker: "PREFLIGHT NEEDED", probeFailedKicker: "UNAVAILABLE", resolvedHost: "Resolved host", fileName: "Filename", chooseDevice: "Choose the correct device after detection", deviceRequired: "Choose a device before creating the job.", incompleteLabel: "DOCKET INCOMPLETE", finishSource: "Complete configuration", completeSourceHint: "Paste a ROM source and choose the correct device to continue.", chooseDeviceHint: "The source is valid. Choose a device in the manual details below.", sourceDirect: "Direct download", sourceResolver: "Unresolved OTA link", sourcePage: "OTA page", sourceDriveType: "Private Drive", providerDirect: "HTTP server", providerDrive: "Google Drive / rclone",
-    runtimePipeline: "PIPELINE", runtimeWaiting: "Waiting for a valid recipe", runtimeReady: "Recipe ready to dispatch", runtimeLastBuild: "LAST BUILD", runtimeJobs: "Inspect in Jobs", checklistSource: "ROM source", checklistSourcePending: "Valid URL required", checklistSourceDone: "Source recognized", checklistDevice: "Target device", checklistDevicePending: "Manual selection required", checklistDeviceDone: "Device selected", checklistRunner: "Execution route", checklistRunnerDone: "Runner configured", readinessProgress: "{done}/3 checks", pipelinePending: "Not started", pipelineRunning: "Running", pipelineComplete: "Complete", pipelineFailed: "Failed", pipelineSkipped: "Skipped", modGroupGoogle: "Google & apps", modGroupCamera: "Camera & imaging", modGroupInterface: "System interface", modGroupSecurity: "Security & access", modGroupCore: "System & tools", modGroupOther: "Other"
+    runtimePipeline: "PIPELINE", runtimeWaiting: "Waiting for a valid recipe", runtimeReady: "Recipe ready to dispatch", runtimeLastBuild: "LAST BUILD", runtimeJobs: "Inspect in Jobs", checklistSource: "ROM source", checklistSourcePending: "Valid URL required", checklistSourceDone: "Source recognized", checklistDevice: "Target device", checklistDevicePending: "Manual selection required", checklistDeviceDone: "Device selected", checklistRunner: "Execution route", checklistRunnerDone: "Runner configured", readinessProgress: "{done}/3 checks", pipelinePending: "Not started", pipelineRunning: "Running", pipelineComplete: "Complete", pipelinePartial: "Partially complete", pipelineFailed: "Failed", pipelineSkipped: "Skipped", modGroupGoogle: "Google & apps", modGroupCamera: "Camera & imaging", modGroupInterface: "System interface", modGroupSecurity: "Security & access", modGroupCore: "System & tools", modGroupOther: "Other"
   }
 };
 
@@ -569,24 +569,24 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, {
-  adminReleaseKicker: "ADMIN · PHIÊN BẢN", adminReleaseTitle: "Phiên bản phát hành", adminReleaseHint: "Đổi nhãn vĩnh viễn cho nền MOD đang chọn. Nhãn mới áp dụng cho mọi job sau.",
+  adminReleaseKicker: "ADMIN · PHIÊN BẢN", adminReleaseTitle: "Phiên bản phát hành", adminReleaseHint: "Đổi nhãn vĩnh viễn cho nền MOD đang chọn. Nhãn mới áp dụng cho mọi job sau.", adminBuildLabelsKicker: "ADMIN · TÊN BẢN BUILD",
   adminModPackLabel: "Nền MOD", adminReleaseNameLabel: "Tên phiên bản", saveReleasePermanent: "Lưu vĩnh viễn", releaseVersionPermanentSaved: "Đã lưu {pack} thành {label} cho mọi job sau.",
   adminBatchKicker: "ADMIN · TỰ ĐỘNG HÓA", adminBatchTitle: "Build ROM đồng loạt", adminBatchHint: "Chọn nhiều thiết bị và nền MOD; hệ thống tự tìm ROM nguồn, tạo job và theo dõi từng cấu hình.", openBatchBuild: "Mở trang batch build",
   backToSystem: "Quay lại Hệ thống", adminBatchPipelineKicker: "ADMIN · BATCH PIPELINE", adminBatchPageTitle: "Build nhiều phiên bản", adminBatchPageHint: "Mỗi thiết bị × nền MOD tạo một job. Lite và Plus được đóng gói vào đúng thư mục phiên bản trên Drive.",
   batchConfigTitle: "Cấu hình bản ROM", batchReleaseNote: "Phiên bản phát hành được lấy tự động theo từng nền MOD từ nhãn đã lưu trong Thư viện.", batchDevicesLegend: "Thiết bị hỗ trợ", batchModsLegend: "Nền MOD", batchEditionsLegend: "Bản ROM cần build",
   batchSelectAll: "Chọn tất cả", batchClearAll: "Bỏ chọn tất cả", startBatchBuild: "Tìm ROM nguồn & bắt đầu build", batchMonitorTitle: "Tiến độ batch", batchNoActive: "Chưa có batch đang mở.", refreshBatch: "Làm mới",
   batchByMod: "Theo nền MOD", batchWaitingForSource: "Đang chờ tìm ROM nguồn", batchLogSummary: "Log job · {count} sự kiện", batchStatusSummary: "{release} · {status} · {count} cấu hình", batchSelectionSummary: "{count} cấu hình",
-  batchCreatedToast: "Đã tạo {count} cấu hình batch build.", batchSelectionRequired: "Hãy chọn ít nhất một thiết bị, một nền MOD và một bản {lite}/{plus}."
+  batchCreatedToast: "Đã tạo {count} cấu hình batch build.", batchProgressFailed: "Batch đã được tạo; chưa tải được tiến độ: {message}", batchSelectionRequired: "Hãy chọn ít nhất một thiết bị, một nền MOD và một bản {lite}/{plus}."
 });
 Object.assign(translations.en, {
-  adminReleaseKicker: "ADMIN · RELEASE", adminReleaseTitle: "Release version", adminReleaseHint: "Rename the selected MOD pack permanently. The new label applies to future jobs.",
+  adminReleaseKicker: "ADMIN · RELEASE", adminReleaseTitle: "Release version", adminReleaseHint: "Rename the selected MOD pack permanently. The new label applies to future jobs.", adminBuildLabelsKicker: "ADMIN · BUILD LABELS",
   adminModPackLabel: "MOD pack", adminReleaseNameLabel: "Release name", saveReleasePermanent: "Save permanently", releaseVersionPermanentSaved: "Saved {pack} as {label} for future jobs.",
   adminBatchKicker: "ADMIN · AUTOMATION", adminBatchTitle: "Batch ROM builds", adminBatchHint: "Choose multiple devices and MOD packs; the system finds source ROMs, creates jobs, and tracks each configuration.", openBatchBuild: "Open batch build",
   backToSystem: "Back to System", adminBatchPipelineKicker: "ADMIN · BATCH PIPELINE", adminBatchPageTitle: "Build multiple releases", adminBatchPageHint: "Each device × MOD pack creates one job. Lite and Plus are packaged into their matching release folders on Drive.",
   batchConfigTitle: "ROM configuration", batchReleaseNote: "Release versions are selected automatically per MOD pack from the labels saved in Library.", batchDevicesLegend: "Supported devices", batchModsLegend: "MOD packs", batchEditionsLegend: "ROM editions to build",
   batchSelectAll: "Select all", batchClearAll: "Clear all", startBatchBuild: "Find source ROMs & start builds", batchMonitorTitle: "Batch progress", batchNoActive: "No batch is currently open.", refreshBatch: "Refresh",
   batchByMod: "By MOD pack", batchWaitingForSource: "Waiting to find source ROM", batchLogSummary: "Job log · {count} events", batchStatusSummary: "{release} · {status} · {count} configurations", batchSelectionSummary: "{count} configurations",
-  batchCreatedToast: "Created {count} batch build configurations.", batchSelectionRequired: "Choose at least one device, one MOD pack, and one {lite}/{plus} edition."
+  batchCreatedToast: "Created {count} batch build configurations.", batchProgressFailed: "The batch was created, but progress could not be loaded: {message}", batchSelectionRequired: "Choose at least one device, one MOD pack, and one {lite}/{plus} edition."
 });
 
 Object.assign(translations.vi, {
@@ -2445,7 +2445,7 @@ async function savePermanentReleaseVersion() {
     await refreshLiveReleaseVersions({ signal: controller.signal });
     if (controller.signal.aborted || !isAdminRouteActive("catalog")) return;
     renderAdminReleaseEditor();
-    toast(`Đã lưu ${pack} thành ${label} cho mọi job sau.`);
+    toast(t("releaseVersionPermanentSaved", { pack, label }));
   } finally {
     endAdminMutation(controller);
   }
@@ -2511,10 +2511,10 @@ function batchReleaseSummary(payload) {
 
 function renderBatch(payload) {
   state.batchPayload = payload;
-  $("#batch-status").textContent = t("batchStatusSummary", { release: batchReleaseSummary(payload), status: payload.status, count: (payload.items || []).length });
+  $("#batch-status").textContent = t("batchStatusSummary", { release: batchReleaseSummary(payload), status: statusLabel(payload.status), count: (payload.items || []).length });
   $("#batch-items").replaceChildren(...(payload.items || []).map(item => {
     const row = document.createElement("article"); const head = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${item.device} · ${item.modVersion}${item.releaseVersion ? ` · ${item.releaseVersion}` : ""}`;
-    const status = document.createElement("span"); status.textContent = `${item.status}${item.stage ? ` · ${item.stage}` : ""} · ${Math.round(Number(item.progress || 0) * 100)}%`; head.append(title, status);
+    const status = document.createElement("span"); status.textContent = `${statusLabel(item.status)}${item.stage ? ` · ${readableEventStage(item.stage)}` : ""} · ${Math.round(Number(item.progress || 0) * 100)}%`; head.append(title, status);
     const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || t("batchWaitingForSource"); row.append(head, detail);
     if (Array.isArray(item.jobEvents) && item.jobEvents.length) {
       const log = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = t("batchLogSummary", { count: item.jobEvents.length });
@@ -2529,7 +2529,7 @@ function renderBatch(payload) {
     return row;
   }));
   $("#batch-events").replaceChildren(...(payload.events || []).slice().reverse().map(item => {
-    const row = document.createElement("article"); const time = document.createElement("time"); time.textContent = formatDate(item.createdAt); const message = document.createElement("span"); message.textContent = item.message || item.eventType; row.append(time, message); return row;
+    const row = document.createElement("article"); const time = document.createElement("time"); time.textContent = formatDate(item.createdAt); const message = document.createElement("span"); message.textContent = item.message || readableEventType(item.eventType); row.append(time, message); return row;
   }));
   if (["succeeded", "partial", "failed", "cancelled"].includes(payload.status)) {
     localStorage.removeItem("wukong-batch-request");
@@ -2596,9 +2596,9 @@ async function startBatchBuild() {
     localStorage.setItem("wukong-active-batch", state.activeBatchId);
     pending.batchId = payload.batchId;
     localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
-    $("#batch-status").textContent = t("batchStatusSummary", { release: batchReleaseSummary(payload), status: payload.status, count: payload.itemCount });
+    $("#batch-status").textContent = t("batchStatusSummary", { release: batchReleaseSummary(payload), status: statusLabel(payload.status), count: payload.itemCount });
     toast(t("batchCreatedToast", { count: payload.itemCount }));
-    loadBatch().catch(error => { if (error?.name !== "AbortError") toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true); });
+    loadBatch().catch(error => { if (error?.name !== "AbortError") toast(t("batchProgressFailed", { message: error.message }), true); });
   } finally {
     if (state.batchRequestController === controller) state.batchRequestController = null;
     button.disabled = false;
@@ -3993,7 +3993,7 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
       deviceLine.textContent = detailParts.join(" · ");
       copy.append(deviceLine);
     }
-    const detail = document.createElement("small"); detail.textContent = `${statusLabel(job.status)} · ${jobProgress(job)}% · ${job.stage || "—"}\n${formatDate(job.created_at || job.createdAt)} · ${job.job_id || job.jobId}`;
+    const detail = document.createElement("small"); detail.textContent = `${statusLabel(job.status)} · ${jobProgress(job)}% · ${job.stage ? readableEventStage(job.stage) : "—"}\n${formatDate(job.created_at || job.createdAt)} · ${job.job_id || job.jobId}`;
     copy.append(name, detail);
     const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
     open.id = `admin-job-open-${String(job.job_id || job.jobId).replace(/[^A-Za-z0-9_-]/g, "-")}`;
@@ -4515,11 +4515,12 @@ function renderUploadProgressCard(event) {
 }
 
 function statusLabel(status) {
+  const key = String(status || "").toLowerCase();
   return t({
-    queued: "stageQueued", preflight: "stagePreflight", downloading: "stageDownloading",
-    running: "stageRunning", uploading: "stageUploading", succeeded: "pipelineComplete",
+    queued: "stageQueued", pending: "pipelinePending", preflight: "stagePreflight", downloading: "stageDownloading",
+    running: "stageRunning", uploading: "stageUploading", succeeded: "pipelineComplete", success: "pipelineComplete", complete: "pipelineComplete", partial: "pipelinePartial",
     failed: "pipelineFailed", cancelled: "cancel"
-  }[status] || status);
+  }[key] || status);
 }
 
 function jobMetadata(job) {
@@ -5085,7 +5086,7 @@ function renderActiveJob(job, events, inspection = null) {
   } else creator.hidden = true;
   const progress = document.createElement("div"); progress.className = "job-progress";
   const progressCopy = document.createElement("div");
-  const stage = document.createElement("strong"); stage.textContent = job.stage || statusLabel(job.status);
+  const stage = document.createElement("strong"); stage.textContent = job.stage ? readableEventStage(job.stage) : statusLabel(job.status);
   const percentage = document.createElement("b"); percentage.textContent = `${jobProgress(job)}%`;
   progressCopy.append(stage, percentage);
   const track = document.createElement("div"); const fill = document.createElement("i"); fill.style.setProperty("--job-progress", String(jobProgress(job) / 100)); track.append(fill);
