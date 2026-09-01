@@ -88,3 +88,17 @@ probe in `_staging`, checks the anonymous share, and records quota warnings at
 80%. A failed mirror never changes a successful build to failed. Run the
 manual **Wukong DC Cloud mirror repair** workflow with a `job_id` to download
 and checksum the Drive artifact, then retry the mirror.
+
+## Automatic recovery
+
+When an initial mirror upload fails, the executor retries from the local ZIP
+after the canonical Drive upload completes. This first repair does not depend
+on Drive and runs while the build runner still owns the original artifact.
+
+If the terminal manifest still contains a failed DC Cloud mirror, the control
+plane atomically adds one repair request to its D1 outbox. It dispatches
+`mirror-repair.yml` immediately and retries a failed dispatch from the minute
+maintenance trigger, with a maximum of five dispatch attempts. Repeated
+terminal callbacks do not create duplicate repair requests. The repair workflow
+falls back to the Google Drive file ID when the stored artifact path cannot be
+resolved, then verifies the downloaded size and SHA-256 before uploading.

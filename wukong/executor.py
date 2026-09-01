@@ -587,6 +587,25 @@ class LocalJobExecutor:
                 public_url=available_mirror.browse_url,
                 mirrors=mirrored_record.mirrors,
             )
+        if any(
+            mirror.provider.casefold() == "dccloud" and mirror.status == "failed"
+            for mirror in mirrored_record.mirrors
+        ):
+            self.store.append_event(
+                job_id,
+                "mirror_repair_started",
+                provider="dccloud",
+                fileName=artifact.name,
+                source="local_artifact",
+            )
+            mirrored_record = self._mirror_artifact(
+                job_id,
+                mirrored_record,
+                artifact,
+                device,
+                build,
+                relative_root,
+            )
         return ArtifactRecord(
             name=primary_record.name,
             uri=primary_record.uri,

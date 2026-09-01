@@ -11,6 +11,70 @@ from wukong.models import ArtifactRecord
 
 
 class ExecutorArtifactPublishTests(unittest.TestCase):
+    def test_failed_mirror_is_repaired_from_local_zip_after_primary_upload(self) -> None:
+        order: list[str] = []
+        mirror_attempts = 0
+
+        class RecoveringMirrorStorage:
+            def mirror_artifact(self, artifact: Path, **_: object) -> ArtifactRecord:
+                nonlocal mirror_attempts
+                mirror_attempts += 1
+                order.append(f"mirror:{mirror_attempts}")
+                if mirror_attempts == 1:
+                    raise RuntimeError("temporary DC Cloud failure")
+                return ArtifactRecord(
+                    artifact.name,
+                    f"cloudreve://my/WukongROM/ROM/{artifact.name}",
+                    "a" * 64,
+                    artifact.stat().st_size,
+                )
+
+        with tempfile.TemporaryDirectory() as root:
+            artifact = Path(root, "rom.zip")
+            artifact.write_bytes(b"rom")
+            store = Mock()
+            publisher = ArtifactMirrorPublisher(
+                DCloudMirrorConfig(True, share_url="https://cloud.example/share"),
+                storage_factory=lambda _remote: RecoveringMirrorStorage(),
+                retry_attempts=1,
+                sleep=lambda _: None,
+            )
+            executor = LocalJobExecutor(
+                store=store,
+                workspace_root=Path(root, "jobs"),
+                mirror_publisher=publisher,
+            )
+
+            def publish_primary() -> ArtifactRecord:
+                order.append("primary")
+                return ArtifactRecord(
+                    artifact.name,
+                    "wukong-gdrive:WukongROM/ROM/V6/rom.zip",
+                    "a" * 64,
+                    artifact.stat().st_size,
+                    "https://drive.google.com/open?id=fixture",
+                )
+
+            record = executor._publish_artifact_with_mirror(
+                "job",
+                artifact,
+                "PKG110",
+                "V6",
+                "ROM/V6",
+                publish_primary,
+            )
+
+        self.assertEqual(["mirror:1", "primary", "mirror:2"], order)
+        self.assertEqual("wukong-gdrive:WukongROM/ROM/V6/rom.zip", record.uri)
+        self.assertEqual("available", record.mirrors[0].status)
+        store.append_event.assert_any_call(
+            "job",
+            "mirror_repair_started",
+            provider="dccloud",
+            fileName="rom.zip",
+            source="local_artifact",
+        )
+
     def test_dccloud_upload_runs_from_local_zip_before_primary_upload(self) -> None:
         order: list[str] = []
 

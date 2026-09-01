@@ -95,6 +95,7 @@ import {
   processBatch,
   processOpenBatches
 } from "./batch-builds";
+import { drainAutomaticMirrorRepairOutbox } from "./mirror-repair-outbox";
 
 const RELEASE_SHA = /^[0-9a-f]{40}$/;
 
@@ -690,11 +691,15 @@ const worker: ExportedHandler<Env> = {
       const body = await request.text();
       try {
         await verifyActionsHmac(request, env, body);
-        const result = path.endsWith("/progress")
-          ? await handleProgress(env, body)
-          : path.endsWith("/mirror-repair")
-            ? await handleMirrorRepair(env, body)
-            : await handleTerminal(env, body);
+        let result: Record<string, unknown>;
+        if (path.endsWith("/progress")) {
+          result = await handleProgress(env, body);
+        } else if (path.endsWith("/mirror-repair")) {
+          result = await handleMirrorRepair(env, body);
+        } else {
+          result = await handleTerminal(env, body);
+          await drainAutomaticMirrorRepairOutbox(env, 1);
+        }
         return json(result);
       } catch (error) {
         if (error instanceof CallbackHttpError) {
@@ -838,6 +843,7 @@ const worker: ExportedHandler<Env> = {
   async scheduled(_controller, env, ctx): Promise<void> {
     ctx.waitUntil(maintenance(env));
     ctx.waitUntil(processOpenBatches(env));
+    ctx.waitUntil(drainAutomaticMirrorRepairOutbox(env, 5));
   }
 };
 

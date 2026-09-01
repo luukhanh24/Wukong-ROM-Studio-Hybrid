@@ -4,12 +4,58 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import subprocess
 import tempfile
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from wukong.adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file
 from wukong.artifact_mirror import ArtifactMirrorPublisher, DCloudMirrorConfig, attach_mirror
 from wukong.models import ArtifactRecord, JobManifest
+
+
+_DRIVE_FILE_ID = re.compile(r"^[A-Za-z0-9_-]{10,256}$")
+
+
+def _drive_file_id(public_url: str | None) -> str:
+    if not public_url:
+        return ""
+    parsed = urlsplit(public_url)
+    if parsed.scheme != "https" or parsed.hostname != "drive.google.com":
+        return ""
+    candidate = str((parse_qs(parsed.query).get("id") or [""])[0])
+    parts = [part for part in parsed.path.split("/") if part]
+    if not candidate and len(parts) >= 3 and parts[0] == "file" and parts[1] == "d":
+        candidate = parts[2]
+    return candidate if _DRIVE_FILE_ID.fullmatch(candidate) else ""
+
+
+def _download_primary_artifact(
+    primary: RcloneStorageAdapter,
+    artifact: ArtifactRecord,
+    destination: Path,
+) -> None:
+    try:
+        primary.run_command(
+            primary._args("copyto", artifact.uri, str(destination), "--retries", "3")
+        )
+        return
+    except subprocess.CalledProcessError:
+        file_id = _drive_file_id(artifact.public_url)
+        if not file_id:
+            raise
+    primary.run_command(
+        primary._args(
+            "backend",
+            "copyid",
+            f"{primary.remote}:",
+            file_id,
+            str(destination),
+            "--retries",
+            "3",
+        )
+    )
 
 
 def main() -> int:
@@ -38,7 +84,7 @@ def main() -> int:
             if Path(artifact.name).name != artifact.name:
                 raise ValueError("Artifact name contains a path separator")
             local = directory / artifact.name
-            primary.run_command(primary._args("copyto", artifact.uri, str(local), "--retries", "3"))
+            _download_primary_artifact(primary, artifact, local)
             if not local.is_file() or local.stat().st_size != artifact.size_bytes:
                 raise SourceIntegrityError(f"Primary artifact size mismatch: {artifact.name}")
             if sha256_file(local).casefold() != artifact.sha256.casefold():

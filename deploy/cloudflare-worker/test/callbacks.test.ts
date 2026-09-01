@@ -84,7 +84,12 @@ describe("GitHub Actions callbacks", () => {
           name: "Wukong_Plus_V6.0_PJD110.zip",
           size_bytes: 8_444_909_399,
           sha256: "a".repeat(64),
-          public_url: "https://drive.google.com/file/d/fixture/view"
+          public_url: "https://drive.google.com/file/d/fixture/view",
+          mirrors: [{
+            provider: "dccloud",
+            status: "failed",
+            error_code: "remote_upload_failed"
+          }]
         }]
       }
     });
@@ -129,6 +134,11 @@ describe("GitHub Actions callbacks", () => {
     ).bind(`job-terminal:${job.job_id}`).first<{ count: number; payload_json: string }>();
     expect(Number(locks?.count)).toBe(0);
     expect(Number(notifications?.count)).toBe(1);
+    const automaticRepairs = await bindings.DB.prepare(
+      `SELECT COUNT(*) AS count, state, attempts
+       FROM wukong_mirror_repair_outbox WHERE job_id = ?`
+    ).bind(job.job_id).first<{ count: number; state: string; attempts: number }>();
+    expect(automaticRepairs).toMatchObject({ count: 1, state: "dispatched", attempts: 1 });
     const notification = JSON.parse(String(notifications?.payload_json)) as {
       text: string;
       reply_markup: { inline_keyboard: Array<Array<Record<string, unknown>>> };

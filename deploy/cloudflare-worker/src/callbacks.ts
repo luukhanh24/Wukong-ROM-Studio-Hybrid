@@ -3,6 +3,7 @@ import {
   acceptedJobCompensationStatements,
   type JobRow
 } from "./jobs";
+import { automaticMirrorRepairStatement } from "./mirror-repair-outbox";
 import { terminalTelegramNotification } from "./telegram-notifications";
 
 type JsonObject = Record<string, unknown>;
@@ -278,6 +279,7 @@ export async function handleTerminal(
       status
     )
     : [];
+  const automaticRepair = automaticMirrorRepairStatement(env, jobId, status, manifest, now);
   try {
     await env.DB.batch([
       env.DB.prepare(
@@ -325,6 +327,7 @@ export async function handleTerminal(
         now,
         now
       ),
+      ...(automaticRepair ? [automaticRepair] : []),
       ...compensationStatements
     ]);
   } catch (error) {
