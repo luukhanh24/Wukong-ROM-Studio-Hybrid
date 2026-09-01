@@ -5,7 +5,7 @@
 export function createFeedback({ getNode, getHaptics, duration = 3600 } = {}) {
   let timer = null;
   return {
-    show(message, { error = false, haptic = null } = {}) {
+    show(message, { error = false, haptic = false } = {}) {
       const node = getNode?.();
       if (!node) return;
       node.textContent = String(message || "");
@@ -13,7 +13,7 @@ export function createFeedback({ getNode, getHaptics, duration = 3600 } = {}) {
       node.classList.add("visible");
       clearTimeout(timer);
       timer = setTimeout(() => node.classList.remove("visible"), duration);
-      if (haptic !== false) getHaptics?.()?.notificationOccurred?.(haptic || (error ? "error" : "success"));
+      if (haptic) getHaptics?.()?.notificationOccurred?.(haptic === true ? (error ? "error" : "success") : haptic);
     },
     clear() {
       clearTimeout(timer);

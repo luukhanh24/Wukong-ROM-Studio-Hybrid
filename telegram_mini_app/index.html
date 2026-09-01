@@ -100,21 +100,22 @@
             </div>
             <dl class="source-facts" id="source-facts" hidden>
               <div><dt data-i18n="provider">Nhà cung cấp</dt><dd id="source-provider">···</dd></div>
-              <div><dt data-i18n="detectedProduct">Product</dt><dd id="source-product-detected">···</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="detectedProduct">Product</dt><dd id="source-product-detected">···</dd></div>
               <div><dt data-i18n="detectedDevice">Mã thiết bị</dt><dd id="source-device-detected">—</dd></div>
               <div><dt data-i18n="detectedVersion">Phiên bản</dt><dd id="source-version-detected">···</dd></div>
-              <div><dt data-i18n="androidVersion">Android</dt><dd id="source-android-version">—</dd></div>
-              <div><dt data-i18n="securityPatch">Bản vá bảo mật</dt><dd id="source-security-patch">—</dd></div>
-              <div><dt data-i18n="buildDate">Ngày build</dt><dd id="source-build-date">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="androidVersion">Android</dt><dd id="source-android-version">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="securityPatch">Bản vá bảo mật</dt><dd id="source-security-patch">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="buildDate">Ngày build</dt><dd id="source-build-date">—</dd></div>
               <div><dt data-i18n="sourceSizeDetected">Dung lượng</dt><dd id="source-size-detected">—</dd></div>
-              <div><dt data-i18n="otaType" data-i18n-title="glossaryOta">Kiểu OTA</dt><dd id="source-ota-type">—</dd></div>
-              <div><dt data-i18n="contentType">Định dạng</dt><dd id="source-content-type">—</dd></div>
-              <div><dt data-i18n="fileName">Tên file</dt><dd id="source-filename">—</dd></div>
-              <div><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
-              <div><dt>MD5</dt><dd id="source-md5">—</dd></div>
-              <div><dt data-i18n="lastModified">Cập nhật máy chủ</dt><dd id="source-last-modified">—</dd></div>
-              <div><dt data-i18n="deepInspection">Kiểm tra ZIP</dt><dd id="source-deep-inspection">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="otaType" data-i18n-title="glossaryOta">Kiểu OTA</dt><dd id="source-ota-type">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="contentType">Định dạng</dt><dd id="source-content-type">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="fileName">Tên file</dt><dd id="source-filename">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="resolvedHost">Máy chủ đích</dt><dd id="source-host">—</dd></div>
+              <div class="source-fact-secondary"><dt>MD5</dt><dd id="source-md5">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="lastModified">Cập nhật máy chủ</dt><dd id="source-last-modified">—</dd></div>
+              <div class="source-fact-secondary"><dt data-i18n="deepInspection">Kiểm tra ZIP</dt><dd id="source-deep-inspection">—</dd></div>
             </dl>
+            <button id="toggle-source-facts" class="source-facts-toggle" type="button" hidden aria-expanded="false" aria-controls="source-facts" data-i18n="showMoreMetadata">Xem thêm thông số</button>
           </div>
           <details class="advanced source-manual"><summary><span data-i18n="editSourceManual">Chỉnh thông tin thủ công</span><b>+</b></summary><div class="advanced-body"><div class="field-grid"><label class="field"><span data-i18n="device">Thiết bị</span><select id="device"></select></label><label class="field"><span data-i18n="sourceSize">Dung lượng ROM (byte)</span><input id="source-size" inputmode="numeric" placeholder="Tự nhận diện nếu có"></label></div></div></details>
         </section>
@@ -134,7 +135,7 @@
           <header class="section-heading"><span>03</span><div><h2 data-i18n="deliveryTitle">Kết quả build</h2><p data-i18n="deliveryHint">Đóng gói ZIP, tải lên Drive và gửi link qua Telegram.</p></div></header>
           <div class="switches"><label data-state="pending"><input id="package" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="packageZip">ZIP flashable</strong><small data-i18n="packageHint">Đóng gói sau repack</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="publish" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="publish">Upload Drive</strong><small data-i18n="publishHint">Tạo link tải khi thành công</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label><label data-state="pending"><input id="notify" type="checkbox" checked><i aria-hidden="true"></i><span><strong data-i18n="notify">Báo qua Telegram</strong><small data-i18n="notifyHint">Trạng thái và link trong chat</small></span><em data-i18n="pipelinePending">Chưa chạy</em></label></div>
         </section>
-        <aside class="dispatch-docket incomplete">
+        <section class="dispatch-docket incomplete" aria-labelledby="readiness-label">
           <header><small id="readiness-label" data-i18n="incompleteLabel">HỒ SƠ CHƯA ĐỦ</small><span id="readiness-count">1/4 điều kiện</span></header>
           <strong id="launch-summary">— / PLUS / GITHUB AUTO</strong>
           <ol class="readiness-checklist">
@@ -150,7 +151,7 @@
           </div>
           <p class="inline-error" id="recipe-error" role="alert" hidden></p>
           <button class="primary" id="submit-recipe" type="submit" disabled><span data-i18n="finishSource">Hoàn tất cấu hình</span><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
-        </aside>
+        </section>
       </form>
     </section>
 
@@ -243,7 +244,7 @@
         <div><b>03</b><i></i><span><strong>Google Drive</strong><small data-i18n="driveChecked">Kiểm quyền trước upload</small></span></div>
         <div><b>04</b><i></i><span><strong>Content packs</strong><small id="catalog-status">Loading catalog…</small></span></div>
       </div>
-      <section class="system-actions"><h2 data-i18n="sessionDiagTitle">Phiên Telegram</h2><p id="session-diag" style="margin:4px 0 0;font-size:12px;line-height:1.5;opacity:.85">…</p></section>
+      <section class="system-actions"><h2 data-i18n="sessionDiagTitle">Phiên Telegram</h2><p id="session-diag" style="margin:4px 0 0;font-size:12px;line-height:1.5;opacity:.85">…</p><button id="session-retry" class="secondary compact" type="button" hidden data-i18n="retrySession">Thử đồng bộ lại phiên</button></section>
       <section class="system-actions admin-maintenance" id="admin-maintenance" hidden>
         <header><div><h2 data-i18n="maintenance">Bảo trì & thiết đặt</h2><p id="maintenance-admin-status">Studio đang mở cho người dùng.</p></div><span class="maintenance-state-badge" id="maintenance-state-badge">ĐANG MỞ</span></header>
         <label class="field field-wide"><span data-i18n="maintenanceMessage">Thông báo cho người dùng</span><textarea id="maintenance-message-input" rows="3" maxlength="500">Hệ thống đang được bảo trì. Vui lòng quay lại sau.</textarea></label>

@@ -1,8 +1,17 @@
 import { createFeedback } from "./modules/feedback.js";
 import { bindRovingTablist } from "./modules/a11y.js";
 import { MOTION, reducedMotion as prefersReducedMotionQuery } from "./modules/motion.js";
+import { composeFeatures, createFeatureRegistry } from "./modules/feature-registry.js";
+import { createSourceFeature } from "./modules/features/source.js";
+import { createBuildFeature } from "./modules/features/build.js";
+import { createJobsFeature } from "./modules/features/jobs.js";
+import { createCatalogFeature } from "./modules/features/catalog.js";
+import { createProfileFeature } from "./modules/features/profile.js";
+import { createAdminFeature } from "./modules/features/admin.js";
 
 let TelegramApp = window.Telegram && window.Telegram.WebApp;
+let featureRegistry = null;
+const featureForView = (name) => name;
 const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
 const telegramBotUsername = (document.querySelector('meta[name="wukong-telegram-bot"]')?.content?.trim().replace(/^@/, "") || "");
@@ -211,10 +220,10 @@ Object.assign(translations.vi, {
 
 Object.assign(translations.vi, {
   detectedProduct: "Product", productCode: "Mã sản phẩm", deviceName: "Tên thiết bị", detectedDevice: "Mã thiết bị", androidVersion: "Android", securityPatch: "Bản vá bảo mật", buildDate: "Ngày build", sourceSizeDetected: "Dung lượng ROM nguồn", otaType: "Kiểu OTA", contentType: "Định dạng", lastModified: "Cập nhật máy chủ", deepInspection: "Kiểm tra ZIP",
-  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", pasteLink: "Dán", clearLink: "Xóa", linkPasted: "Đã dán link ROM và bắt đầu phân tích.", draftPasted: "Đã lấy link ROM bạn gửi cho bot và bắt đầu phân tích.", clipboardEmpty: "Clipboard không có văn bản và bot chưa có link nháp.", clipboardDenied: "Không đọc được clipboard. Hãy cấp quyền hoặc dán thủ công.", clipboardManual: "Telegram chặn clipboard. Hãy gửi link cho bot rồi quay lại bấm Dán, hoặc nhấn giữ ô để dán thủ công.", sourceCleared: "Đã xóa nguồn ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} thông số", copyMetadata: "Sao chép thông số", metadataCopied: "Đã sao chép toàn bộ thông số ROM.", showMoreMetadata: "Xem thêm thông số", hideMoreMetadata: "Ẩn bớt thông số", pasteLink: "Dán", clearLink: "Xóa", linkPasted: "Đã dán link ROM và bắt đầu phân tích.", draftPasted: "Đã lấy link ROM bạn gửi cho bot và bắt đầu phân tích.", clipboardEmpty: "Clipboard không có văn bản và bot chưa có link nháp.", clipboardDenied: "Không đọc được clipboard. Hãy cấp quyền hoặc dán thủ công.", clipboardManual: "Telegram chặn clipboard. Hãy gửi link cho bot rồi quay lại bấm Dán, hoặc nhấn giữ ô để dán thủ công.", sourceCleared: "Đã xóa nguồn ROM.", deepInspected: "Đã đọc metadata trong ZIP", headersOnly: "Chỉ đọc được header máy chủ",
   apiUnavailableKicker: "API CHƯA KẾT NỐI", apiUnavailableMessage: "Bản Mini App này chưa được gắn máy chủ API. Không thể đọc metadata sâu hoặc tạo job cho đến khi quản trị viên triển khai API.", apiUnavailableButton: "Chưa có máy chủ API", apiSessionOnly: "TELEGRAM · CHƯA CÓ API",
   apiAuthKicker: "CẦN PHIÊN TELEGRAM", apiAuthMessage: "Lần mở này thiếu phiên Telegram. Bấm Kết nối Telegram để phục hồi an toàn.", apiAuthButton: "Kết nối Telegram", pairingHint: "Telegram không gửi phiên cho lần mở này. Kết nối một lần qua bot; nếu được hỏi, bấm START rồi quay lại Mini App.", pairingButton: "Kết nối Telegram", pairingOpening: "Đã mở bot. Hãy bấm START nếu Telegram yêu cầu rồi quay lại đây…", pairingWaiting: "Đang chờ bot xác nhận tài khoản…", pairingReady: "Đã kết nối Telegram. Mini App API sẵn sàng.", pairingFailed: "Không thể kết nối phiên Telegram. Hãy thử lại.", apiOfflineKicker: "MẤT KẾT NỐI API", apiOfflineMessage: "Không kết nối được máy chủ Mini App API. Link vẫn được giữ nguyên; hãy thử lại khi API hoạt động.",
-  sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.",
+  sessionDiagTitle: "Phiên Telegram", sessionDiagOk: "Thư viện Telegram đã nạp · nền {platform} · initData {chars} ký tự · phiên hợp lệ.", sessionDiagNoData: "Thư viện đã nạp nhưng initData trống. Quay lại tab Studio và bấm Kết nối Telegram để phục hồi phiên an toàn.", sessionDiagNoLib: "Không nạp được thư viện Telegram. Bấm Kết nối Telegram để dùng phiên dự phòng qua bot.", sessionDiagLaunchToken: "Bot đã cấp phiên dự phòng có chữ ký · Mini App API đã sẵn sàng.", sessionSyncFailed: "Không thể đồng bộ phiên Telegram. Hãy thử lại hoặc kết nối lại qua bot.", retrySession: "Thử đồng bộ lại phiên",
   probePartial: "Nguồn ROM hoạt động nhưng metadata chưa đủ. Hãy kiểm tra link hoặc dùng trang OTA có metadata đầy đủ.", probeStale: "Đã bỏ kết quả cũ vì URL nguồn đã thay đổi.", probeSignedExpired: "Link tải ký trực tiếp đã hết hạn hoặc không còn đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.", probeSignedPreviewOnly: "Link còn hiệu lực để phân tích nhưng không đủ thời gian cho build cloud. Hãy dán link OPlus downloadCheck hoặc trang Daniel Springer gốc để runner tự tạo link mới khi bắt đầu tải.",
   checklistApi: "Mini App API", checklistApiDone: "Đã xác thực với máy chủ", checklistApiPending: "Chưa kết nối máy chủ", checklistApiAuthPending: "Bấm Kết nối Telegram", checklistSourceVerified: "Đã đọc metadata ROM", checklistSourceProbePending: "Đang chờ phân tích metadata", checklistSourceRefreshRequired: "Cần link gốc để build cloud", readinessProgress: "{done}/4 điều kiện", apiRequiredHint: "Mini App API chưa sẵn sàng nên chưa thể tạo job.", sourceProbePendingHint: "Hãy chờ phân tích metadata ROM hoàn tất.",
   jobsLoading: "Đang đồng bộ lịch sử job…", jobsConnected: "Đã đồng bộ · tự làm mới job và DC Cloud mirror", jobsOffline: "Mất kết nối API · sẽ tự thử lại", jobHistoryKicker: "LỊCH SỬ", jobHistory: "Các lần chạy gần đây", jobHistoryToday: "Hôm nay", jobHistoryYesterday: "Hôm qua", jobSearch: "Tìm lịch sử job", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "Từ ngày", jobDateTo: "Đến ngày", allJobs: "Tất cả", clearJobFilters: "Xóa bộ lọc", jobPageSummary: "{from}–{to} / {total} job", jobPrevious: "Trước", jobNext: "Sau", jobPage: "Trang {page}", jobFilterEmpty: "Không có job phù hợp với bộ lọc.", jobHistoryLoading: "Đang tải lịch sử…",
@@ -381,10 +390,10 @@ Object.assign(translations.en, {
 
 Object.assign(translations.en, {
   detectedProduct: "Product", productCode: "Product code", deviceName: "Device name", detectedDevice: "Device code", androidVersion: "Android", securityPatch: "Security patch", buildDate: "Build date", sourceSizeDetected: "Source ROM size", otaType: "OTA type", contentType: "Content type", lastModified: "Server modified", deepInspection: "ZIP inspection",
-  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", pasteLink: "Paste", clearLink: "Clear", linkPasted: "ROM link pasted and analysis started.", draftPasted: "ROM link retrieved from the bot and analysis started.", clipboardEmpty: "The clipboard is empty and the bot has no saved link.", clipboardDenied: "Clipboard access failed. Allow access or paste manually.", clipboardManual: "Telegram blocked clipboard access. Send the link to the bot and press Paste again, or long-press the field to paste manually.", sourceCleared: "ROM source cleared.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
+  metadataTitle: "ROM METADATA", metadataCompleteness: "{complete}/{total} fields", copyMetadata: "Copy metadata", metadataCopied: "All ROM metadata was copied.", showMoreMetadata: "Show more metadata", hideMoreMetadata: "Show less metadata", pasteLink: "Paste", clearLink: "Clear", linkPasted: "ROM link pasted and analysis started.", draftPasted: "ROM link retrieved from the bot and analysis started.", clipboardEmpty: "The clipboard is empty and the bot has no saved link.", clipboardDenied: "Clipboard access failed. Allow access or paste manually.", clipboardManual: "Telegram blocked clipboard access. Send the link to the bot and press Paste again, or long-press the field to paste manually.", sourceCleared: "ROM source cleared.", deepInspected: "Metadata read from ZIP", headersOnly: "Server headers only",
   apiUnavailableKicker: "API NOT CONNECTED", apiUnavailableMessage: "This Mini App release is not bound to an API server. Deep metadata and job creation remain unavailable until the administrator deploys the API.", apiUnavailableButton: "API server unavailable", apiSessionOnly: "TELEGRAM · API OFFLINE",
   apiAuthKicker: "TELEGRAM SESSION REQUIRED", apiAuthMessage: "This launch is missing a Telegram session. Press Connect Telegram to recover securely.", apiAuthButton: "Connect Telegram", pairingHint: "Telegram did not provide a session. Connect once through the bot; press START if prompted, then return to the Mini App.", pairingButton: "Connect Telegram", pairingOpening: "The bot is open. Press START if prompted, then return here…", pairingWaiting: "Waiting for the bot to confirm your account…", pairingReady: "Telegram connected. The Mini App API is ready.", pairingFailed: "Could not connect the Telegram session. Please try again.", apiOfflineKicker: "API CONNECTION LOST", apiOfflineMessage: "The Mini App API could not be reached. The link is preserved; retry when the API is online.",
-  sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.",
+  sessionDiagTitle: "Telegram session", sessionDiagOk: "Telegram bridge loaded · platform {platform} · initData {chars} chars · session valid.", sessionDiagNoData: "The bridge loaded but initData is empty. Return to Studio and press Connect Telegram to recover securely.", sessionDiagNoLib: "The Telegram bridge did not load. Press Connect Telegram to use the bot pairing fallback.", sessionDiagLaunchToken: "The bot supplied a signed fallback session · Mini App API is ready.", sessionSyncFailed: "Telegram session sync failed. Try again or reconnect through the bot.", retrySession: "Retry session sync",
   probePartial: "The ROM source is reachable, but metadata is incomplete. Check the link or use an OTA page with complete metadata.", probeStale: "The old result was discarded because the source URL changed.", probeSignedExpired: "The direct signed download link expired or does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so a fresh link can be generated when the runner starts.", probeSignedPreviewOnly: "The link is still valid for analysis but does not have enough time left for a cloud build. Paste the original OPlus downloadCheck or Daniel Springer page so the runner can create a fresh link when downloading starts.",
   checklistApi: "Mini App API", checklistApiDone: "Authenticated with server", checklistApiPending: "API server not connected", checklistApiAuthPending: "Press Connect Telegram", checklistSourceVerified: "ROM metadata inspected", checklistSourceProbePending: "Waiting for metadata analysis", checklistSourceRefreshRequired: "Original link required for cloud build", readinessProgress: "{done}/4 checks", apiRequiredHint: "The Mini App API is not ready, so a job cannot be created.", sourceProbePendingHint: "Wait for ROM metadata analysis to finish.",
   jobsLoading: "Syncing job history…", jobsConnected: "Synced · jobs and DC Cloud mirrors refresh automatically", jobsOffline: "API connection lost · retrying automatically", jobHistoryKicker: "HISTORY", jobHistory: "Recent runs", jobHistoryToday: "Today", jobHistoryYesterday: "Yesterday", jobSearch: "Search job history", jobPresetFilter: "Preset", jobModFilter: "MOD version", jobDateFrom: "From date", jobDateTo: "To date", allJobs: "All", clearJobFilters: "Clear filters", jobPageSummary: "{from}–{to} / {total} jobs", jobPrevious: "Previous", jobNext: "Next", jobPage: "Page {page}", jobFilterEmpty: "No jobs match these filters.", jobHistoryLoading: "Loading history…",
@@ -587,6 +596,8 @@ const state = {
   jobsUnchangedPolls: 0,
   jobsSyncSignature: "",
   jobDetailRequestId: 0,
+  jobDetailController: null,
+  jobsRequestController: null,
   expandedConfigJobId: "",
   jobEventsHasMore: false,
   jobHistoryFilter: "active",
@@ -627,8 +638,11 @@ const state = {
   romCatalogReleases: [],
   romCatalogStatus: "idle",
   romCatalogRequestId: 0,
+  romCatalogController: null,
   romDevices: [],
   romDevicesStatus: "idle",
+  romDevicesRequestId: 0,
+  romDevicesController: null,
   romResolved: null,
   romResolveController: null,
   romCatalogTruncated: false,
@@ -638,8 +652,21 @@ const state = {
   adminUserStatusCounts: { approved: 0, pending: 0, revoked: 0 },
   adminUsersOffset: 0,
   adminUsersLoading: false,
+  adminUsersRequestId: 0,
+  adminUsersController: null,
+  adminUserDetailRequestId: 0,
+  adminUserDetailController: null,
+  adminUserActivityRequestId: 0,
+  adminUserActivityController: null,
+  adminAuditRequestId: 0,
+  adminAuditController: null,
+  adminUserJobsRequestId: 0,
+  adminUserJobsController: null,
+  adminUserJobsTimer: null,
   activeBatchId: localStorage.getItem("wukong-active-batch") || "",
   batchPollTimer: null,
+  batchRequestId: 0,
+  batchRequestController: null,
   adminUsersPollTimer: null,
   adminUserPollTimer: null,
   adminUserEventCursor: { createdAt: "1970-01-01T00:00:00.000Z", eventId: "" },
@@ -647,7 +674,7 @@ const state = {
   adminUserReturnScrollY: 0,
   adminJobView: null,
   workspaceLoaded: false,
-  router: { initialized: false, current: null, suppressHistory: false, scrollPositions: new Map(), telegramBackHandler: null },
+  router: { initialized: false, current: null, suppressHistory: false, scrollPositions: new Map(), focusPositions: new Map(), telegramBackHandler: null },
   pendingCancelJobId: "",
   cancelJobReturnFocus: null,
   apiOnline: navigator.onLine !== false,
@@ -710,7 +737,7 @@ function showError(error, target = "#recipe-error") {
     node.classList.add("visible");
     node.setAttribute("role", "alert");
   }
-  toast(message, true);
+  toast(message, true, { haptic: "error" });
 }
 
 function clearError(target = "#recipe-error") {
@@ -720,6 +747,25 @@ function clearError(target = "#recipe-error") {
   node.textContent = "";
   node.classList.remove("visible");
   if (node.id === "jobs-connection") node.setAttribute("role", "status");
+}
+
+function showSessionError(error, { notify = false } = {}) {
+  const detail = String(error?.message || error || "").trim();
+  const message = detail ? `${t("sessionSyncFailed")} ${detail}` : t("sessionSyncFailed");
+  const node = $("#session-diag");
+  if (node) {
+    node.textContent = message;
+    node.classList.add("error");
+    node.setAttribute("role", "alert");
+  }
+  const retry = $("#session-retry");
+  if (retry) retry.hidden = false;
+  const accessMessage = $("#access-message");
+  if (accessMessage && !$("#access-gate")?.hidden) {
+    accessMessage.textContent = message;
+    accessMessage.setAttribute("role", "alert");
+  }
+  if (notify) toast(message, true);
 }
 
 const themeMedia = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -742,7 +788,9 @@ function handleSystemThemeChange() {
 function bindTelegramThemeEvents() {
   if (!TelegramApp || TelegramApp === telegramThemeEventsBoundTo) return;
   TelegramApp.onEvent?.("themeChanged", handleSystemThemeChange);
-  TelegramApp.onEvent?.("viewportChanged", syncTelegramInsets);
+  ["viewportChanged", "safeAreaChanged", "contentSafeAreaChanged"].forEach((eventName) => {
+    TelegramApp.onEvent?.(eventName, syncTelegramInsets);
+  });
   telegramThemeEventsBoundTo = TelegramApp;
 }
 
@@ -807,12 +855,6 @@ function renderGreeting() {
   const message = $("#greeting-message");
   if (!message) return;
   message.setAttribute("aria-label", item.text);
-  if (!prefersReducedMotion() && message.textContent !== "—") {
-    message.animate(
-      [{ opacity: .2, filter: "blur(5px)", transform: "translateY(4px)" }, { opacity: 1, filter: "blur(0)", transform: "translateY(0)" }],
-      { duration: MOTION.panel, easing: MOTION.easing }
-    );
-  }
   message.textContent = item.text;
   updateGreetingOverflow();
 }
@@ -1038,7 +1080,7 @@ function hasOpenSubview() {
 function syncTelegramBackButton() {
   const button = TelegramApp?.BackButton;
   if (!button) return;
-  if (!state.router.telegramBackHandler) state.router.telegramBackHandler = () => navigateBack();
+  if (!state.router.telegramBackHandler) state.router.telegramBackHandler = () => back();
   button.offClick?.(state.router.telegramBackHandler);
   const shouldShow = hasOpenSubview() || state.router.current?.view !== "build";
   if (shouldShow) {
@@ -1053,7 +1095,22 @@ function pushSubviewRoute(subview, subviewData = null, { fromHistory = false } =
     syncTelegramBackButton();
     return;
   }
-  const route = { wukong: true, view, subview: String(subview || ""), subviewData: subviewData || null, scrollY: window.scrollY, focusId: document.activeElement?.id || "" };
+  const parentScrollY = window.scrollY;
+  const parentFocusId = document.activeElement?.id || state.router.current?.focusId || "";
+  // Keep the parent entry authoritative before adding the child entry. This
+  // makes Browser/Telegram Back restore the exact list position and trigger.
+  if (!fromHistory && !state.router.suppressHistory) {
+    const parentRoute = {
+      wukong: true,
+      view,
+      subview: "",
+      subviewData: null,
+      scrollY: parentScrollY,
+      focusId: parentFocusId
+    };
+    history.replaceState(parentRoute, "", `#${view}`);
+  }
+  const route = { wukong: true, view, subview: String(subview || ""), subviewData: subviewData || null, scrollY: parentScrollY, focusId: parentFocusId };
   state.router.current = { view, subview: route.subview, scrollY: route.scrollY };
   if (!fromHistory && !state.router.suppressHistory) {
     history.pushState(route, "", `#${view}${route.subview ? `/${route.subview}` : ""}`);
@@ -1071,7 +1128,24 @@ function clearSubviewRoute() {
   syncTelegramBackButton();
 }
 
-function navigateBack() {
+function back() {
+  // All Back affordances share the browser history stack. The popstate
+  // handler closes the current subview and rehydrates the previous route,
+  // preserving its scroll/focus state instead of replacing the entry.
+  if (hasOpenSubview() && history.state?.wukong && history.state.subview) {
+    // Close the visible surface immediately for Telegram's synchronous
+    // BackButton UX, then let popstate reconcile the URL/state.
+    state.router.suppressHistory = true;
+    try {
+      if (state.adminJobView) closeAdminJobPage();
+      else if ($("#system")?.classList.contains("admin-user-open")) closeAdminUserPage();
+      else if ($("#system")?.classList.contains("admin-batch-open")) closeBatchBuildPage();
+    } finally {
+      state.router.suppressHistory = false;
+    }
+    history.back();
+    return;
+  }
   if (state.adminJobView) { closeAdminJobPage(); return; }
   if ($("#system")?.classList.contains("admin-user-open")) { closeAdminUserPage(); return; }
   if ($("#system")?.classList.contains("admin-batch-open")) { closeBatchBuildPage(); return; }
@@ -1093,9 +1167,17 @@ function navigate(name, smooth = true, { fromHistory = false, replace = false, s
     state.batchPollTimer = null;
   }
   const current = state.router.current;
-  const route = { view: name, subview: String(subview || ""), scrollY: fromHistory ? Number(scrollY) || 0 : 0, focusId: fromHistory ? String(focusId || "") : document.activeElement?.id || "" };
+  if (current?.view && current.view !== name) featureRegistry?.leave(featureForView(current.view));
+  const sameView = current?.view === name;
+  const route = { view: name, subview: String(subview || ""), scrollY: fromHistory ? Number(scrollY) || 0 : sameView ? window.scrollY : 0, focusId: fromHistory ? String(focusId || "") : document.activeElement?.id || "" };
   if (!fromHistory) {
-    if (current?.view) state.router.scrollPositions.set(current.view, window.scrollY);
+    if (current?.view) {
+      state.router.scrollPositions.set(current.view, window.scrollY);
+      const focusId = state.router.focusPositions.get(current.view) || "";
+      if (history.state?.wukong && history.state.view === current.view) {
+        history.replaceState({ ...history.state, scrollY: window.scrollY, focusId }, "", location.href);
+      }
+    }
     const historyState = { wukong: true, ...route };
     if (!state.router.initialized || replace || current?.view === name) {
       history.replaceState(historyState, "", `#${name}${route.subview ? `/${route.subview}` : ""}`);
@@ -1106,6 +1188,8 @@ function navigate(name, smooth = true, { fromHistory = false, replace = false, s
   state.router.initialized = true;
   state.router.current = route;
   document.body.dataset.view = name;
+  featureRegistry?.enter(featureForView(name), route);
+  featureRegistry?.render(featureForView(name), route);
   if (name !== "system") {
     closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
     closeAdminUserPage({ restoreFocus: false, scroll: false });
@@ -1130,18 +1214,14 @@ function navigate(name, smooth = true, { fromHistory = false, replace = false, s
     bottomNav?.classList.add("is-shifting");
     setTimeout(() => bottomNav?.classList.remove("is-shifting"), MOTION.dock);
   }
-  const rememberedScroll = fromHistory ? (route.scrollY || state.router.scrollPositions.get(name) || 0) : 0;
+  const rememberedScroll = fromHistory
+    ? (Number.isFinite(Number(route.scrollY)) ? Number(route.scrollY) : (state.router.scrollPositions.get(name) || 0))
+    : 0;
   window.scrollTo({ top: rememberedScroll, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
   syncTelegramBackButton();
   updateDispatchFab();
   if (fromHistory && route.focusId) requestAnimationFrame(() => document.getElementById(route.focusId)?.focus({ preventScroll: true }));
-  if (name === "jobs") loadJobs({ force: true }).catch(() => {});
-  if (name === "profile") renderProfileView();
-  if (name === "catalog") loadRomDevices();
-  if (name === "system" && state.me?.role === "admin") {
-    loadAdminUsers().catch(() => {});
-    if (!$("#admin-batch-page").hidden) loadLatestBatch().catch(() => {});
-  }
+  if (name === "system" && state.me?.role === "admin" && !$("#admin-batch-page").hidden) loadLatestBatch().catch(() => {});
 }
 
 function bindLiquidBottomTabs() {
@@ -1336,6 +1416,36 @@ function updateMetadataCompleteness() {
   };
 }
 
+function updateSourceFactsDisclosure(forceCollapse = false) {
+  const facts = $("#source-facts");
+  const toggle = $("#toggle-source-facts");
+  if (!facts || !toggle) return;
+  const mobile = window.matchMedia?.("(max-width: 600px)")?.matches ?? window.innerWidth <= 600;
+  if (!mobile || facts.hidden) {
+    facts.classList.remove("source-facts-collapsed", "source-facts-expanded");
+    toggle.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+    return;
+  }
+  toggle.hidden = false;
+  if (forceCollapse || (!facts.classList.contains("source-facts-collapsed") && !facts.classList.contains("source-facts-expanded"))) {
+    facts.classList.add("source-facts-collapsed");
+    facts.classList.remove("source-facts-expanded");
+  }
+  const expanded = facts.classList.contains("source-facts-expanded");
+  toggle.setAttribute("aria-expanded", String(expanded));
+  toggle.textContent = t(expanded ? "hideMoreMetadata" : "showMoreMetadata");
+}
+
+function toggleSourceFacts() {
+  const facts = $("#source-facts");
+  if (!facts) return;
+  const expanded = !facts.classList.contains("source-facts-expanded");
+  facts.classList.toggle("source-facts-expanded", expanded);
+  facts.classList.toggle("source-facts-collapsed", !expanded);
+  updateSourceFactsDisclosure();
+}
+
 function resetSourceFacts(detection, uri) {
   sourceFactDefinitions.forEach(([id]) => setSourceFact(id, ""));
   if (!detection?.valid) { updateMetadataCompleteness(); return; }
@@ -1510,8 +1620,8 @@ async function pollTelegramPairing(pairing) {
     updateSourceDetection();
     loadSession().then(() => {
       initializeApprovedWorkspace();
-    }).catch(() => {});
-    toast(t("pairingReady"));
+    }).catch((error) => showSessionError(error));
+    toast(t("pairingReady"), false, { haptic: "success" });
     return;
   }
   const recoveryText = $("#session-recovery p");
@@ -1520,10 +1630,10 @@ async function pollTelegramPairing(pairing) {
   const delay = pairingBackoff[Math.min(state.pairingPollAttempt, pairingBackoff.length - 1)];
   state.pairingPollAttempt += 1;
   state.pairingPollTimer = setTimeout(() => {
-    pollTelegramPairing(pairing).catch(() => {
+    pollTelegramPairing(pairing).catch((error) => {
       state.pairingInFlight = false;
       updateSummary();
-      toast(t("pairingFailed"), true);
+      showSessionError(error, { notify: true });
     });
   }, delay);
 }
@@ -1546,7 +1656,7 @@ async function connectTelegramSession() {
   } catch (error) {
     state.pairingInFlight = false;
     updateSummary();
-    toast(error.message || t("pairingFailed"), true);
+    showSessionError(error, { notify: true });
   }
 }
 
@@ -1613,7 +1723,7 @@ function updateSourceDetection() {
     $("#source-state-title").textContent = t("sourceIdleTitle");
     $("#source-state-message").textContent = t("sourceIdleMessage");
     resetSourceFacts(null, "");
-    facts.hidden = true; factsHead.hidden = true; probe.hidden = true; return;
+    facts.hidden = true; factsHead.hidden = true; probe.hidden = true; updateSourceFactsDisclosure(); return;
   }
   if (!detection.valid) {
     marker.textContent = "?";
@@ -1621,7 +1731,7 @@ function updateSourceDetection() {
     $("#source-state-title").textContent = t("sourceInvalidTitle");
     $("#source-state-message").textContent = t("sourceInvalidMessage");
     resetSourceFacts(null, "");
-    facts.hidden = true; factsHead.hidden = true; probe.hidden = true; return;
+    facts.hidden = true; factsHead.hidden = true; probe.hidden = true; updateSourceFactsDisclosure(); return;
   }
   marker.textContent = detection.marker;
   $("#source-kicker").textContent = t("sourceDetectedKicker");
@@ -1629,6 +1739,7 @@ function updateSourceDetection() {
   $("#source-state-message").textContent = t("deepProbeHint");
   resetSourceFacts(detection, currentUri);
   facts.hidden = false; factsHead.hidden = false;
+  updateSourceFactsDisclosure(uriChanged);
   probe.hidden = detection.marker === "DRV";
   if (detection.device && [...$("#device").options].some((option) => option.value === detection.device)) {
     $("#device").value = detection.device;
@@ -2354,6 +2465,9 @@ function openBatchBuildPage({ fromHistory = false } = {}) {
 
 function closeBatchBuildPage() {
   clearTimeout(state.batchPollTimer); state.batchPollTimer = null;
+  state.batchRequestId += 1;
+  state.batchRequestController?.abort();
+  state.batchRequestController = null;
   $("#system").classList.remove("admin-batch-open"); $("#admin-batch-page").hidden = true;
   clearSubviewRoute();
 }
@@ -2395,18 +2509,36 @@ function renderBatch(payload) {
 async function loadBatch() {
   if (!state.activeBatchId || state.me?.role !== "admin" || $("#admin-batch-page").hidden) return;
   clearTimeout(state.batchPollTimer);
-  const payload = await apiRequest(`/v1/admin/batch-builds/${encodeURIComponent(state.activeBatchId)}`);
-  renderBatch(payload);
-  if (!["succeeded", "partial", "failed", "cancelled"].includes(payload.status)) state.batchPollTimer = setTimeout(() => loadBatch().catch(() => {}), 10000);
+  state.batchRequestController?.abort();
+  const controller = new AbortController();
+  state.batchRequestController = controller;
+  const requestId = ++state.batchRequestId;
+  try {
+    const payload = await apiRequest(`/v1/admin/batch-builds/${encodeURIComponent(state.activeBatchId)}`, { signal: controller.signal });
+    if (controller.signal.aborted || requestId !== state.batchRequestId || $("#admin-batch-page").hidden) return;
+    renderBatch(payload);
+    if (!["succeeded", "partial", "failed", "cancelled"].includes(payload.status)) state.batchPollTimer = setTimeout(() => loadBatch().catch(() => {}), 10000);
+  } finally {
+    if (state.batchRequestController === controller) state.batchRequestController = null;
+  }
 }
 
 async function loadLatestBatch() {
   if (state.activeBatchId) return loadBatch();
-  const payload = await apiRequest("/v1/admin/batch-builds");
-  const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
-  if (!latest?.batchId) return;
-  state.activeBatchId = latest.batchId;
-  return loadBatch();
+  state.batchRequestController?.abort();
+  const controller = new AbortController();
+  state.batchRequestController = controller;
+  const requestId = ++state.batchRequestId;
+  try {
+    const payload = await apiRequest("/v1/admin/batch-builds", { signal: controller.signal });
+    if (controller.signal.aborted || requestId !== state.batchRequestId || $("#admin-batch-page").hidden) return;
+    const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
+    if (!latest?.batchId) return;
+    state.activeBatchId = latest.batchId;
+    return loadBatch();
+  } finally {
+    if (state.batchRequestController === controller) state.batchRequestController = null;
+  }
 }
 
 async function startBatchBuild() {
@@ -2414,6 +2546,10 @@ async function startBatchBuild() {
   const editions = [$("#batch-lite").checked ? "lite" : "", $("#batch-plus").checked ? "plus" : ""].filter(Boolean);
   if (!devices.length || !modVersions.length || !editions.length) throw new Error(`Hãy chọn ít nhất một thiết bị, một nền MOD và một bản ${presetLabel("lite")}/${presetLabel("plus")}.`);
   const button = $("#start-batch-build"); button.disabled = true;
+  state.batchRequestController?.abort();
+  const controller = new AbortController();
+  state.batchRequestController = controller;
+  const requestId = ++state.batchRequestId;
   try {
     const body = JSON.stringify({ devices, modVersions, editions });
     let pending = null;
@@ -2422,15 +2558,19 @@ async function startBatchBuild() {
       pending = { body, key: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` };
       localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
     }
-    const payload = await apiRequest("/v1/admin/batch-builds", { method: "POST", headers: { "Idempotency-Key": pending.key }, body });
+    const payload = await apiRequest("/v1/admin/batch-builds", { method: "POST", headers: { "Idempotency-Key": pending.key }, body, signal: controller.signal });
+    if (controller.signal.aborted || requestId !== state.batchRequestId || $("#admin-batch-page").hidden) return;
     state.activeBatchId = payload.batchId;
     localStorage.setItem("wukong-active-batch", state.activeBatchId);
     pending.batchId = payload.batchId;
     localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
     $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${payload.itemCount} cấu hình`;
     toast(`Đã tạo ${payload.itemCount} cấu hình batch build.`);
-    loadBatch().catch(error => toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true));
-  } finally { button.disabled = false; }
+    loadBatch().catch(error => { if (error?.name !== "AbortError") toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true); });
+  } finally {
+    if (state.batchRequestController === controller) state.batchRequestController = null;
+    button.disabled = false;
+  }
 }
 
 function filterMods() {
@@ -2764,7 +2904,7 @@ function renderAccessGate() {
     $$("dialog[open]").forEach((dialog) => dialog.close());
     clearTimeout(state.maintenancePollTimer);
     if (!document.hidden) state.maintenancePollTimer = setTimeout(() => {
-      loadSession({ countOpen: false }).catch(() => renderAccessGate());
+      loadSession({ countOpen: false }).catch((error) => { showSessionError(error); renderAccessGate(); });
     }, 30000);
     return;
   }
@@ -2867,9 +3007,23 @@ async function loadSession({ countOpen = true } = {}) {
   state.me = payload.user || null;
   state.maintenance = payload.maintenance || state.maintenance;
   renderAccount();
+  renderSessionDiagnostics();
   updateSummary();
   if (state.me?.role === "admin") loadAdminUsers().catch(() => {});
   return state.me;
+}
+
+async function retrySessionSync() {
+  const button = $("#session-retry");
+  if (button) button.disabled = true;
+  try {
+    await loadSession({ countOpen: false });
+    initializeApprovedWorkspace();
+  } catch (error) {
+    showSessionError(error, { notify: true });
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 async function updateMaintenance() {
@@ -2948,15 +3102,23 @@ async function loadRomDevices() {
   if (!privateApiAvailable() || ["loading", "ready"].includes(state.romDevicesStatus)) return;
   state.romDevicesStatus = "loading";
   renderRomDevices();
+  state.romDevicesController?.abort();
+  const controller = new AbortController();
+  state.romDevicesController = controller;
+  const requestId = ++state.romDevicesRequestId;
   try {
-    const payload = await apiRequest("/v1/rom-catalog/devices");
+    const payload = await apiRequest("/v1/rom-catalog/devices", { signal: controller.signal });
+    if (controller.signal.aborted || requestId !== state.romDevicesRequestId) return;
     if (!Array.isArray(payload.devices)) throw new Error("Invalid device catalog");
     state.romDevices = payload.devices.filter((device) => ["oneplus", "oppo", "realme"].includes(String(device.brand).toLowerCase()));
     state.romDevicesStatus = "ready";
-  } catch (_) {
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== state.romDevicesRequestId) return;
     state.romDevicesStatus = "error";
+  } finally {
+    if (state.romDevicesController === controller) state.romDevicesController = null;
+    if (requestId === state.romDevicesRequestId) renderRomDevices();
   }
-  renderRomDevices();
 }
 
 function chooseRomDevice(device) {
@@ -2983,6 +3145,24 @@ function resetRomResolved() {
   state.romResolveController?.abort();
   state.romResolveController = null;
   state.romResolved = null;
+}
+
+function cancelCatalogRequests() {
+  state.romDevicesRequestId += 1;
+  state.romDevicesController?.abort();
+  state.romDevicesController = null;
+  state.romCatalogRequestId += 1;
+  state.romCatalogController?.abort();
+  state.romCatalogController = null;
+  state.romResolveController?.abort();
+  state.romResolveController = null;
+  state.romDevicesStatus = "idle";
+  state.romCatalogStatus = "idle";
+  state.romResolved = null;
+  // A cancelled request must not strand the primary action disabled on the
+  // next Catalog visit (the request's finally block intentionally skips stale
+  // request IDs).
+  $("#search-rom-catalog")?.removeAttribute("disabled");
 }
 
 function filteredRomReleases() {
@@ -3165,13 +3345,17 @@ async function searchRomCatalog() {
     if (value) params.set(key, value);
   });
   button.disabled = true;
+  state.romCatalogController?.abort();
+  const controller = new AbortController();
+  state.romCatalogController = controller;
   const requestId = ++state.romCatalogRequestId;
   resetRomResolved();
   state.romCatalogStatus = "loading";
   renderRomVersions(false);
   renderRomCatalogResults();
   try {
-    const payload = await apiRequest(`/v1/rom-catalog?${params.toString()}`);
+    const payload = await apiRequest(`/v1/rom-catalog?${params.toString()}`, { signal: controller.signal });
+    if (controller.signal.aborted) return;
     if (requestId !== state.romCatalogRequestId) return;
     state.romCatalogReleases = Array.isArray(payload.releases) ? payload.releases : [];
     state.romCatalogStatus = "ready";
@@ -3179,12 +3363,14 @@ async function searchRomCatalog() {
     renderRomVersions(false);
     renderRomCatalogResults();
   } catch (error) {
+    if (controller.signal.aborted) return;
     if (requestId !== state.romCatalogRequestId) return;
     state.romCatalogReleases = [];
     state.romCatalogStatus = "error";
     renderRomVersions(false);
     renderRomCatalogResults();
   } finally {
+    if (state.romCatalogController === controller) state.romCatalogController = null;
     if (requestId === state.romCatalogRequestId) button.disabled = false;
   }
 }
@@ -3297,7 +3483,7 @@ function renderAdminUsers() {
     const quota = document.createElement("span"); quota.className = "user-quota";
     quota.textContent = user.unlimited ? t("unlimited") : `${user.buildCredits || 0} · ${t("jobsCount", { count: user.jobCount || 0 })}`;
     const status = document.createElement("span"); status.className = `access-badge ${user.accessStatus}`; status.textContent = accessLabel(user.accessStatus);
-    const open = document.createElement("button"); open.type = "button"; open.className = "user-open"; open.dataset.userId = String(user.telegramId); open.textContent = "›"; open.setAttribute("aria-label", `${t("displayName")}: ${name.textContent}`);
+    const open = document.createElement("button"); open.type = "button"; open.className = "user-open"; open.id = `admin-user-open-${String(user.telegramId).replace(/[^A-Za-z0-9_-]/g, "-")}`; open.dataset.userId = String(user.telegramId); open.textContent = "›"; open.setAttribute("aria-label", `${t("displayName")}: ${name.textContent}`);
     open.addEventListener("click", () => openAdminUser(user.telegramId).catch((error) => toast(error.message, true)));
     row.append(identity, activity, quota, status, open);
     return row;
@@ -3318,13 +3504,18 @@ async function loadAdminUsers({ reset = false } = {}) {
   if (state.me?.role !== "admin" || state.adminUsersLoading) return;
   if (reset) state.adminUsersOffset = 0;
   state.adminUsersLoading = true;
+  state.adminUsersController?.abort();
+  const controller = new AbortController();
+  state.adminUsersController = controller;
+  const requestId = ++state.adminUsersRequestId;
   try {
     const query = encodeURIComponent($("#user-search")?.value?.trim() || "");
     const status = encodeURIComponent($("#user-status")?.value || "");
     const quota = encodeURIComponent($("#user-quota-filter")?.value || "");
     const activity = encodeURIComponent($("#user-activity-filter")?.value || "");
     const sort = encodeURIComponent($("#user-sort")?.value || "lastSeenAt");
-    const payload = await apiRequest(`/v1/admin/users?query=${query}&status=${status}&quota=${quota}&activity=${activity}&sort=${sort}&offset=${state.adminUsersOffset}&limit=25`);
+    const payload = await apiRequest(`/v1/admin/users?query=${query}&status=${status}&quota=${quota}&activity=${activity}&sort=${sort}&offset=${state.adminUsersOffset}&limit=25`, { signal: controller.signal });
+    if (controller.signal.aborted || requestId !== state.adminUsersRequestId) return;
     state.adminUsers = Array.isArray(payload.users) ? payload.users : [];
     state.adminUsersTotal = Number(payload.total || 0);
     const statusCounts = payload.statusCounts || {};
@@ -3335,12 +3526,41 @@ async function loadAdminUsers({ reset = false } = {}) {
     };
     renderAdminUsers();
   } finally {
-    state.adminUsersLoading = false;
+    if (state.adminUsersController === controller) state.adminUsersController = null;
+    if (requestId === state.adminUsersRequestId) state.adminUsersLoading = false;
     clearTimeout(state.adminUsersPollTimer);
-    if (!document.hidden && state.me?.role === "admin" && document.body.dataset.view === "system") {
+    if (!controller.signal.aborted && requestId === state.adminUsersRequestId && !document.hidden && state.me?.role === "admin" && document.body.dataset.view === "system") {
       state.adminUsersPollTimer = setTimeout(() => loadAdminUsers().catch(() => {}), 10000);
     }
   }
+}
+
+function cancelAdminRequests() {
+  clearTimeout(state.adminUsersPollTimer);
+  state.adminUsersPollTimer = null;
+  clearTimeout(state.adminUserPollTimer);
+  state.adminUserPollTimer = null;
+  state.adminUsersRequestId += 1;
+  state.adminUsersController?.abort();
+  state.adminUsersController = null;
+  state.adminUsersLoading = false;
+  state.adminUserDetailRequestId += 1;
+  state.adminUserDetailController?.abort();
+  state.adminUserDetailController = null;
+  state.adminUserActivityRequestId += 1;
+  state.adminUserActivityController?.abort();
+  state.adminUserActivityController = null;
+  state.adminAuditRequestId += 1;
+  state.adminAuditController?.abort();
+  state.adminAuditController = null;
+  state.adminUserJobsRequestId += 1;
+  state.adminUserJobsController?.abort();
+  state.adminUserJobsController = null;
+  clearTimeout(state.adminUserJobsTimer);
+  state.adminUserJobsTimer = null;
+  state.batchRequestId += 1;
+  state.batchRequestController?.abort();
+  state.batchRequestController = null;
 }
 
 function detailFact(label, value) {
@@ -3402,6 +3622,10 @@ async function refreshAdminUserActivity() {
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
   if (!telegramId || document.hidden || state.adminJobView) return;
+  state.adminUserActivityController?.abort();
+  const controller = new AbortController();
+  state.adminUserActivityController = controller;
+  const requestId = ++state.adminUserActivityRequestId;
   try {
     const collected = [];
     let latestUser = null;
@@ -3411,8 +3635,8 @@ async function refreshAdminUserActivity() {
         afterCreatedAt: nextCursor.createdAt,
         afterEventId: nextCursor.eventId
       });
-      const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}/activity?${query}`);
-      if (state.selectedAdminUserId !== telegramId || state.adminJobView) return;
+      const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}/activity?${query}`, { signal: controller.signal });
+      if (controller.signal.aborted || requestId !== state.adminUserActivityRequestId || state.selectedAdminUserId !== telegramId || state.adminJobView) return;
       latestUser = payload.user;
       const events = Array.isArray(payload.events) ? payload.events : [];
       collected.push(...events);
@@ -3438,14 +3662,30 @@ async function refreshAdminUserActivity() {
       if (incoming.length) audit.prepend(...incoming);
     }
     state.adminUserEventCursor = nextCursor;
-  } catch (_) {
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== state.adminUserActivityRequestId) return;
     // Keep the current snapshot and retry without interrupting the admin.
   } finally {
-    if (state.selectedAdminUserId === telegramId) scheduleAdminUserActivityPoll();
+    if (state.adminUserActivityController === controller) state.adminUserActivityController = null;
+    if (!controller.signal.aborted && requestId === state.adminUserActivityRequestId && state.selectedAdminUserId === telegramId) scheduleAdminUserActivityPoll();
   }
 }
 
 function closeAdminUserPage({ restoreFocus = true, scroll = true } = {}) {
+  state.adminUserDetailRequestId += 1;
+  state.adminUserDetailController?.abort();
+  state.adminUserDetailController = null;
+  state.adminUserActivityRequestId += 1;
+  state.adminUserActivityController?.abort();
+  state.adminUserActivityController = null;
+  state.adminAuditRequestId += 1;
+  state.adminAuditController?.abort();
+  state.adminAuditController = null;
+  state.adminUserJobsRequestId += 1;
+  state.adminUserJobsController?.abort();
+  state.adminUserJobsController = null;
+  clearTimeout(state.adminUserJobsTimer);
+  state.adminUserJobsTimer = null;
   closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
@@ -3553,9 +3793,37 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
   if (!$("#system")?.classList.contains("admin-user-open")) state.adminUserReturnScrollY = window.scrollY;
-  const payload = await apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}`);
+  state.adminAuditRequestId += 1;
+  state.adminAuditController?.abort();
+  state.adminAuditController = null;
+  state.adminUserJobsRequestId += 1;
+  state.adminUserJobsController?.abort();
+  state.adminUserJobsController = null;
+  clearTimeout(state.adminUserJobsTimer);
+  state.adminUserJobsTimer = null;
+  state.adminUserActivityRequestId += 1;
+  state.adminUserActivityController?.abort();
+  state.adminUserActivityController = null;
+  state.adminUserDetailController?.abort();
+  const controller = new AbortController();
+  state.adminUserDetailController = controller;
+  const requestId = ++state.adminUserDetailRequestId;
+  let payload;
+  let initialJobsPage;
+  try {
+    [payload, initialJobsPage] = await Promise.all([
+      apiRequest(`/v1/admin/users/${encodeURIComponent(telegramId)}`, { signal: controller.signal }),
+      apiRequest("/v1/admin/users/" + encodeURIComponent(telegramId) + "/jobs?page=1", { signal: controller.signal })
+    ]);
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== state.adminUserDetailRequestId) return;
+    throw error;
+  }
+  if (state.adminUserDetailController === controller) state.adminUserDetailController = null;
+  // Navigation can happen while the two detail requests are in flight. Never
+  // let a late response repaint a different user or reopen a stale subview.
+  if (controller.signal.aborted || requestId !== state.adminUserDetailRequestId || document.body.dataset.view !== "system" || state.me?.role !== "admin") return;
   const user = payload.user; const events = Array.isArray(payload.events) ? payload.events : [];
-  const initialJobsPage = await apiRequest("/v1/admin/users/" + encodeURIComponent(telegramId) + "/jobs?page=1");
   state.selectedAdminUserId = user.telegramId;
   state.adminUserEventCursor = events[0]?.createdAt
     ? { createdAt: String(events[0].createdAt), eventId: String(events[0].eventId || "") }
@@ -3595,15 +3863,22 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
   loadMoreAudit.hidden = !payload.eventsHasMore;
   loadMoreAudit.addEventListener("click", async () => {
     loadMoreAudit.disabled = true;
+    state.adminAuditController?.abort();
+    const controller = new AbortController();
+    state.adminAuditController = controller;
+    const auditRequestId = ++state.adminAuditRequestId;
     try {
-      const page = await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/events?cursor=${encodeURIComponent(auditCursor)}&limit=100`);
+      const page = await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/events?cursor=${encodeURIComponent(auditCursor)}&limit=100`, { signal: controller.signal });
+      if (controller.signal.aborted || auditRequestId !== state.adminAuditRequestId || state.selectedAdminUserId !== user.telegramId) return;
       const nextEvents = Array.isArray(page.events) ? page.events : [];
       audit.append(...nextEvents.map(adminAuditArticle));
       auditCursor = String(page.nextCursor || "");
       loadMoreAudit.hidden = !page.hasMore;
     } catch (error) {
+      if (controller.signal.aborted || auditRequestId !== state.adminAuditRequestId) return;
       toast(error.message, true);
     } finally {
+      if (state.adminAuditController === controller) state.adminAuditController = null;
       loadMoreAudit.disabled = false;
     }
   });
@@ -3628,7 +3903,7 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
     button.setAttribute("aria-selected", String(key === adminJobState.filter));
     const label = document.createElement("span"); label.textContent = t(labelKey);
     const count = document.createElement("b"); count.textContent = "0"; button.append(label, count);
-    button.addEventListener("click", () => { adminJobState.filter = key; adminJobState.page = 1; loadAdminJobs().catch((error) => showError(error, "#admin-job-connection")); });
+    button.addEventListener("click", () => { adminJobState.filter = key; adminJobState.page = 1; loadAdminJobs().catch((error) => { if (error?.name !== "AbortError") showError(error, "#admin-job-connection"); }); });
     jobTabs.append(button); jobTabButtons[key] = { button, count };
   }
   const jobFilters = document.createElement("form"); jobFilters.className = "job-history-filters admin-job-history-filters";
@@ -3662,6 +3937,7 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
     const detail = document.createElement("small"); detail.textContent = `${statusLabel(job.status)} · ${jobProgress(job)}% · ${job.stage || "—"}\n${formatDate(job.created_at || job.createdAt)} · ${job.job_id || job.jobId}`;
     copy.append(name, detail);
     const open = document.createElement("button"); open.type = "button"; open.className = "secondary";
+    open.id = `admin-job-open-${String(job.job_id || job.jobId).replace(/[^A-Za-z0-9_-]/g, "-")}`;
     open.dataset.openUserJob = job.job_id || job.jobId; open.textContent = t("openUserJob");
     open.addEventListener("click", () => openAdminJobPage({ ...job, createdBy: job.createdBy || user }));
     const editionBadge = jobEditionBadge(job);
@@ -3699,10 +3975,14 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
     const last = adminJobState.total ? Math.min(adminJobState.page * adminJobState.pageSize, adminJobState.total) : 0;
     jobPageSummary.textContent = t("jobPageSummary", { from: first, to: last, total: adminJobState.total });
     jobPagination.hidden = adminJobState.total === 0;
-    renderPageButtons(jobPageButtons, adminJobState.page, adminJobState.totalPages, (pageNumber) => { adminJobState.page = pageNumber; loadAdminJobs().catch((error) => toast(error.message, true)); });
+    renderPageButtons(jobPageButtons, adminJobState.page, adminJobState.totalPages, (pageNumber) => { adminJobState.page = pageNumber; loadAdminJobs().catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); }); });
   };
   const loadAdminJobs = async () => {
     const requestId = ++adminJobState.requestId;
+    state.adminUserJobsController?.abort();
+    const controller = new AbortController();
+    state.adminUserJobsController = controller;
+    const pageRequestId = ++state.adminUserJobsRequestId;
     const params = new URLSearchParams({ page: String(adminJobState.page), status: adminJobState.filter });
     appendJobHistoryFilters(params, {
       search: adminJobSearch,
@@ -3712,14 +3992,20 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
       to: adminJobTo
     });
     jobPagination.hidden = false; jobPageSummary.textContent = t("jobHistoryLoading");
-    const page = await apiRequest("/v1/admin/users/" + encodeURIComponent(user.telegramId) + "/jobs?" + params.toString());
-    if (requestId !== adminJobState.requestId) return;
-    renderAdminJobs(page);
+    try {
+      const page = await apiRequest("/v1/admin/users/" + encodeURIComponent(user.telegramId) + "/jobs?" + params.toString(), { signal: controller.signal });
+      if (controller.signal.aborted || pageRequestId !== state.adminUserJobsRequestId || requestId !== adminJobState.requestId || state.selectedAdminUserId !== user.telegramId) return;
+      renderAdminJobs(page);
+    } catch (error) {
+      if (controller.signal.aborted || pageRequestId !== state.adminUserJobsRequestId) return;
+      throw error;
+    } finally {
+      if (state.adminUserJobsController === controller) state.adminUserJobsController = null;
+    }
   };
-  let adminJobSearchTimer;
-  adminJobSearch.addEventListener("input", () => { clearTimeout(adminJobSearchTimer); adminJobSearchTimer = setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }, 300); });
-  [adminJobPreset, adminJobMod, adminJobFrom, adminJobTo].forEach((control) => control.addEventListener("change", () => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }));
-  jobFilters.addEventListener("reset", () => setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => toast(error.message, true)); }, 0));
+  adminJobSearch.addEventListener("input", () => { clearTimeout(state.adminUserJobsTimer); state.adminUserJobsTimer = setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); }); }, 300); });
+  [adminJobPreset, adminJobMod, adminJobFrom, adminJobTo].forEach((control) => control.addEventListener("change", () => { adminJobState.page = 1; loadAdminJobs().catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); }); }));
+  jobFilters.addEventListener("reset", () => { clearTimeout(state.adminUserJobsTimer); state.adminUserJobsTimer = setTimeout(() => { adminJobState.page = 1; loadAdminJobs().catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); }); }, 0); });
   root.replaceChildren(header, activityTitle, currentActivity, grid, actions, jobsTitle, jobTabs, jobFilters, jobHistory, jobPagination, auditTitle, audit, loadMoreAudit);
   bindRovingTablist(jobTabs, { onSelect: (target) => target.click() });
   $("#admin-user-page").hidden = false;
@@ -3727,7 +4013,7 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
   pushSubviewRoute("admin-user", { telegramId: String(telegramId) }, { fromHistory });
   window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   requestAnimationFrame(() => $("#admin-user-back").focus());
-  loadAdminJobs().catch((error) => toast(error.message, true));
+  loadAdminJobs().catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); });
   scheduleAdminUserActivityPoll();
 }
 
@@ -4314,7 +4600,12 @@ async function restoreSubviewRoute(route) {
     const telegramId = String(route.subviewData?.telegramId || state.selectedAdminUserId || "");
     if (!telegramId) return;
     if (route.subview === "admin-user") {
+      if ($("#system")?.classList.contains("admin-user-open") && String(state.selectedAdminUserId) === telegramId) {
+        if (route.focusId) requestAnimationFrame(() => document.getElementById(route.focusId)?.focus({ preventScroll: true }));
+        return;
+      }
       await openAdminUser(telegramId, { fromHistory: true });
+      if (route.focusId) requestAnimationFrame(() => document.getElementById(route.focusId)?.focus({ preventScroll: true }));
       return;
     }
     if (route.subview === "admin-job") {
@@ -4564,6 +4855,7 @@ function openAdminJobPage(job, { fromHistory = false } = {}) {
   ++state.jobDetailRequestId;
   const view = {
     jobId: job.job_id || job.jobId, job, events: [], requestId: 0, timer: null,
+    controller: null,
     returnScrollY: window.scrollY, expandedConfigJobId: "", expandedLogJobId: "",
     jobEventsHasMore: false, unchangedPolls: 0, signature: ""
   };
@@ -4584,6 +4876,9 @@ function closeAdminJobPage({ restoreFocus = true, scroll = true, refreshUser = t
   const view = state.adminJobView;
   if (!view) return;
   clearTimeout(view.timer);
+  view.requestId += 1;
+  view.controller?.abort();
+  view.controller = null;
   state.adminJobView = null;
   $("#system").classList.remove("admin-job-open");
   $("#admin-job-page").hidden = true;
@@ -4601,12 +4896,15 @@ async function loadAdminJobDetail() {
   const view = state.adminJobView;
   if (!view || document.hidden || state.me?.role !== "admin") return;
   clearTimeout(view.timer);
+  view.controller?.abort();
+  const controller = new AbortController();
+  view.controller = controller;
   const requestId = ++view.requestId;
   const after = view.events.reduce((max, event) => Math.max(max, Number(event.sequence || 0)), 0);
   const status = $("#admin-job-connection");
   try {
-    const payload = await apiRequest(`/v1/sync?jobId=${encodeURIComponent(view.jobId)}&after=${after}`);
-    if (state.adminJobView !== view || requestId !== view.requestId) return;
+    const payload = await apiRequest(`/v1/sync?jobId=${encodeURIComponent(view.jobId)}&after=${after}`, { signal: controller.signal });
+    if (controller.signal.aborted || state.adminJobView !== view || requestId !== view.requestId) return;
     const job = payload.activeJob;
     if (!job || (job.job_id || job.jobId) !== view.jobId) {
       renderActiveJob(null, [], view);
@@ -4626,12 +4924,13 @@ async function loadAdminJobDetail() {
     if (status.textContent !== t("userJobSynced")) status.textContent = t("userJobSynced");
     status.classList.remove("error");
   } catch (error) {
-    if (state.adminJobView !== view || requestId !== view.requestId) return;
+    if (controller.signal.aborted || state.adminJobView !== view || requestId !== view.requestId) return;
     const message = error.connectionFailed ? t("jobsOffline") : error.message;
     if (status.textContent !== message) status.textContent = message;
     status.classList.add("error");
   } finally {
-    if (state.adminJobView === view && requestId === view.requestId && !document.hidden) {
+    if (view.controller === controller) view.controller = null;
+    if (!controller.signal.aborted && state.adminJobView === view && requestId === view.requestId && !document.hidden) {
       const delay = !jobShouldPoll(view.job) || view.unchangedPolls >= 6 ? 30000 : view.unchangedPolls >= 3 ? 15000 : 10000;
       view.timer = setTimeout(loadAdminJobDetail, delay);
     }
@@ -4649,7 +4948,9 @@ function openJob(job) {
   state.jobHistoryFilter = job.status === "succeeded" ? "succeeded" : terminalJobStatuses.has(job.status) ? "failed" : "active";
   renderActiveJob(job, []); renderJobHistory();
   scheduleJobsPoll(jobShouldPoll(job), true);
-  loadJobDetail(jobId).catch((error) => toast(error.message, true));
+  loadJobDetail(jobId).catch((error) => {
+    if (error?.name !== "AbortError") toast(error.message, true);
+  });
 }
 
 function renderJobParameters(job, root, reader) {
@@ -5080,32 +5381,40 @@ function setJobsConnection(key, error = false) {
 
 async function loadJobDetail(jobId) {
   if (!jobId) return;
+  state.jobDetailController?.abort();
+  const controller = new AbortController();
+  state.jobDetailController = controller;
   const requestId = ++state.jobDetailRequestId;
   const sameJob = state.activeEventsJobId === jobId;
   const after = sameJob
     ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
     : 0;
   const encodedJobId = encodeURIComponent(jobId);
-  const [job, eventPayload] = await Promise.all([
-    apiRequest(`/v1/jobs/${encodedJobId}`),
-    apiRequest(`/v1/jobs/${encodedJobId}/events?after=${after}`)
-  ]);
-  if (requestId !== state.jobDetailRequestId || state.activeJobId !== jobId) return;
-  if (!job || (job.job_id || job.jobId) !== jobId) throw new Error(t("jobUnavailable"));
-  const incoming = Array.isArray(eventPayload?.events) ? eventPayload.events : [];
-  state.jobEventsHasMore = incoming.length >= 500;
-  const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
-  const unique = new Map();
-  merged.forEach((event) => {
-    const sequence = Number(event?.sequence || 0);
-    const fallback = `${event?.timestamp || ""}|${event?.type || ""}|${JSON.stringify(event || {})}`;
-    unique.set(sequence > 0 ? `sequence:${sequence}` : `event:${fallback}`, event);
-  });
-  state.activeEvents = [...unique.values()];
-  state.activeEventsJobId = jobId;
-  const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
-  if (index >= 0 && job) state.jobs[index] = job;
-  renderActiveJob(job, state.activeEvents); renderJobHistory();
+  try {
+    const [job, eventPayload] = await Promise.all([
+      apiRequest(`/v1/jobs/${encodedJobId}`, { signal: controller.signal }),
+      apiRequest(`/v1/jobs/${encodedJobId}/events?after=${after}`, { signal: controller.signal })
+    ]);
+    if (controller.signal.aborted) return;
+    if (requestId !== state.jobDetailRequestId || state.activeJobId !== jobId) return;
+    if (!job || (job.job_id || job.jobId) !== jobId) throw new Error(t("jobUnavailable"));
+    const incoming = Array.isArray(eventPayload?.events) ? eventPayload.events : [];
+    state.jobEventsHasMore = incoming.length >= 500;
+    const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
+    const unique = new Map();
+    merged.forEach((event) => {
+      const sequence = Number(event?.sequence || 0);
+      const fallback = `${event?.timestamp || ""}|${event?.type || ""}|${JSON.stringify(event || {})}`;
+      unique.set(sequence > 0 ? `sequence:${sequence}` : `event:${fallback}`, event);
+    });
+    state.activeEvents = [...unique.values()];
+    state.activeEventsJobId = jobId;
+    const index = state.jobs.findIndex((item) => (item.job_id || item.jobId) === jobId);
+    if (index >= 0 && job) state.jobs[index] = job;
+    renderActiveJob(job, state.activeEvents); renderJobHistory();
+  } finally {
+    if (state.jobDetailController === controller) state.jobDetailController = null;
+  }
 }
 
 function scheduleJobsPoll(active, changed = false) {
@@ -5139,6 +5448,19 @@ function scheduleJobsPoll(active, changed = false) {
   }, delay);
 }
 
+function cancelJobsRequests() {
+  clearTimeout(state.jobsPollTimer);
+  state.jobsPollTimer = null;
+  state.jobHistoryRequestId += 1;
+  state.jobDetailRequestId += 1;
+  state.jobsRequestController?.abort();
+  state.jobsRequestController = null;
+  state.jobDetailController?.abort();
+  state.jobDetailController = null;
+  state.jobsLoading = false;
+  state.jobHistoryLoading = false;
+}
+
 async function loadJobs({ force = false } = {}) {
   if (state.adminJobView) return;
   if (state.jobsLoading && !force) return;
@@ -5146,6 +5468,9 @@ async function loadJobs({ force = false } = {}) {
   state.jobsLoading = true;
   state.jobHistoryLoading = true;
   $("#job-history")?.setAttribute("aria-busy", "true");
+  state.jobsRequestController?.abort();
+  const controller = new AbortController();
+  state.jobsRequestController = controller;
   renderJobHistory();
   const historyRequestId = ++state.jobHistoryRequestId;
   try {
@@ -5156,7 +5481,8 @@ async function loadJobs({ force = false } = {}) {
       ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
       : 0;
     const params = jobHistoryParams({ jobId: requestedId, after });
-    const payload = await apiRequest(`/v1/sync?${params.toString()}`);
+    const payload = await apiRequest(`/v1/sync?${params.toString()}`, { signal: controller.signal });
+    if (controller.signal.aborted) return;
     if (historyRequestId !== state.jobHistoryRequestId || selectionVersion !== state.jobDetailRequestId || requestedId !== state.activeJobId) return;
     state.maintenance = payload.maintenance || state.maintenance;
     renderAccount();
@@ -5225,8 +5551,10 @@ async function loadJobs({ force = false } = {}) {
     setJobsConnection("jobsConnected");
     scheduleJobsPoll(jobShouldPoll(activeJob || running), changed);
   } catch (error) {
+    if (error?.name === "AbortError") return;
     setJobsConnection("jobsOffline", true); scheduleJobsPoll(true, false); throw error;
   } finally {
+    if (state.jobsRequestController === controller) state.jobsRequestController = null;
     if (historyRequestId === state.jobHistoryRequestId) {
       state.jobsLoading = false;
       state.jobHistoryLoading = false;
@@ -5366,13 +5694,13 @@ function openCacheClearDialog() {
   if (state.cacheClearPending) return;
   const dialog = $("#cache-clear-dialog");
   if (dialog && !dialog.open) dialog.showModal();
-  TelegramApp?.HapticFeedback?.impactOccurred?.("medium");
 }
 
 async function performCacheClear() {
   if (state.cacheClearPending) return;
   const button = $("#cache-clear-confirm");
   state.cacheClearPending = true;
+  TelegramApp?.HapticFeedback?.impactOccurred?.("medium");
   if (button) {
     button.disabled = true;
     button.textContent = t("cacheClearing");
@@ -5394,7 +5722,10 @@ async function performCacheClear() {
 
 function bindEvents() {
   $("#language").addEventListener("click", () => { state.language = state.language === "vi" ? "en" : "vi"; localStorage.setItem("wukong-language", state.language); applyLanguage(); });
-  $$('[data-nav]').forEach((button) => button.addEventListener("click", () => navigate(button.dataset.nav)));
+  $$('[data-nav]').forEach((button, index) => {
+    if (!button.id) button.id = `nav-${button.dataset.nav}-${index}`;
+    button.addEventListener("click", () => navigate(button.dataset.nav));
+  });
   bindLiquidBottomTabs();
   $("#cache-clear-confirm")?.addEventListener("click", () => performCacheClear());
   const cancelDialog = $("#cancel-job-dialog");
@@ -5463,9 +5794,11 @@ function bindEvents() {
   window.addEventListener("popstate", (event) => {
     const route = routeFromLocation(event.state);
     state.router.suppressHistory = true;
-    closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
-    closeAdminUserPage({ restoreFocus: false, scroll: false });
-    closeBatchBuildPage();
+    // Keep an already-visible parent page when stepping back from a child;
+    // only close surfaces that are not part of the destination route.
+    if (route.subview !== "admin-job") closeAdminJobPage({ restoreFocus: false, scroll: false, refreshUser: false });
+    if (route.subview !== "admin-user") closeAdminUserPage({ restoreFocus: false, scroll: false });
+    if (route.subview !== "batch") closeBatchBuildPage();
     state.router.suppressHistory = false;
     navigate(route.view, false, { fromHistory: true, replace: true, subview: route.subview, scrollY: route.scrollY, focusId: route.focusId });
     restoreSubviewRoute(route).catch((error) => showError(error, "#session-diag"));
@@ -5476,6 +5809,7 @@ function bindEvents() {
     greetingResizeFrame = requestAnimationFrame(() => {
       updateGreetingOverflow();
       updateDockShellPath();
+      updateSourceFactsDisclosure();
     });
   }, { passive: true });
   document.fonts?.ready?.then(updateGreetingOverflow).catch(() => {});
@@ -5490,31 +5824,9 @@ function bindEvents() {
     try { await submitRecipe(); } catch (error) { showError(error, "#recipe-error"); }
     finally { if (button) button.disabled = false; }
   });
-  $("#source-uri").addEventListener("input", () => { updateSourceDetection(); scheduleSourceProbe(); });
-  $("#source-uri").addEventListener("paste", () => queueMicrotask(() => { updateSourceDetection(); scheduleSourceProbe(); }));
   $("#open-rom-catalog").addEventListener("click", () => {
     selectLibraryTab("rom");
     navigate("catalog");
-    $("#rom-device-picker summary").focus();
-  });
-  $("#rom-catalog-form").addEventListener("submit", (event) => {
-    event.preventDefault();
-    searchRomCatalog();
-  });
-  $("#rom-device-search").addEventListener("input", renderRomDevices);
-  $("#rom-region-filter").addEventListener("change", () => { resetRomResolved(); renderRomVersions(false); renderRomCatalogResults(); });
-  $("#rom-version-filter").addEventListener("change", () => { resetRomResolved(); renderRomCatalogResults(); });
-  $("#rom-device-search").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") { event.preventDefault(); $("[data-rom-device]")?.focus(); }
-  });
-  $("#rom-devices-retry").addEventListener("click", loadRomDevices);
-  $("#rom-device-picker").addEventListener("toggle", () => {
-    if ($("#rom-device-picker").open) loadRomDevices();
-  });
-  $("#rom-device-picker").addEventListener("keydown", (event) => {
-    if (event.key !== "Escape") return;
-    event.preventDefault();
-    $("#rom-device-picker").open = false;
     $("#rom-device-picker summary").focus();
   });
   $$('[data-library-tab]').forEach((button) => {
@@ -5525,11 +5837,12 @@ function bindEvents() {
   $("#connect-telegram").addEventListener("click", () => connectTelegramSession());
   $("#refresh-access").addEventListener("click", () => {
     if (!miniApiAvailable()) { connectTelegramSession(); return; }
-    loadSession({ countOpen: false }).catch((error) => showError(error, "#session-diag"));
+    loadSession({ countOpen: false }).catch((error) => showSessionError(error, { notify: true }));
   });
   $("#refresh-maintenance").addEventListener("click", () => {
-    loadSession({ countOpen: false }).catch((error) => showError(error, "#session-diag"));
+    loadSession({ countOpen: false }).catch((error) => showSessionError(error, { notify: true }));
   });
+  $("#session-retry")?.addEventListener("click", () => retrySessionSync());
   $("#maintenance-toggle").addEventListener("click", () => {
     updateMaintenance().catch((error) => toast(error.message, true));
   });
@@ -5569,9 +5882,9 @@ function bindEvents() {
   $("#save-admin-release").addEventListener("click", () => savePermanentReleaseVersion().catch(error => toast(error.message, true)));
   $("#save-admin-preset-labels").addEventListener("click", () => savePermanentPresetLabels().catch(error => toast(error.message, true)));
   $("#open-batch-build").addEventListener("click", openBatchBuildPage);
-  $("#admin-batch-back").addEventListener("click", () => navigateBack());
-  $("#start-batch-build").addEventListener("click", () => startBatchBuild().catch(error => toast(error.message, true)));
-  $("#refresh-batch").addEventListener("click", () => loadBatch().catch(error => toast(error.message, true)));
+  $("#admin-batch-back").addEventListener("click", () => back());
+  $("#start-batch-build").addEventListener("click", () => startBatchBuild().catch(error => { if (error?.name !== "AbortError") toast(error.message, true); }));
+  $("#refresh-batch").addEventListener("click", () => loadBatch().catch(error => { if (error?.name !== "AbortError") toast(error.message, true); }));
   $("#batch-devices").addEventListener("change", updateBatchSummary);
   $("#batch-mod-versions").addEventListener("change", updateBatchSummary);
   $("#batch-select-all-devices").addEventListener("click", () => setBatchSelections("#batch-devices", true));
@@ -5596,7 +5909,9 @@ function bindEvents() {
     $("#preset").value = state.defaultPreset;
     renderMods();
   });
-  $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => toast(error.message, true)));
+  $("#refresh-jobs").addEventListener("click", () => loadJobs({ force: true }).catch((error) => {
+    if (error?.name !== "AbortError") toast(error.message, true);
+  }));
   const jobFilterButtons = $$("[data-job-filter]");
   const selectJobFilter = (button) => {
     state.jobHistoryFilter = button.dataset.jobFilter;
@@ -5608,7 +5923,9 @@ function bindEvents() {
       tab.setAttribute("aria-selected", String(selected));
       tab.tabIndex = selected ? 0 : -1;
     });
-    loadJobs({ force: true }).catch((error) => showError(error, "#jobs-connection"));
+    loadJobs({ force: true }).catch((error) => {
+      if (error?.name !== "AbortError") showError(error, "#jobs-connection");
+    });
   };
   jobFilterButtons.forEach((button, index) => {
     button.tabIndex = index === 0 ? 0 : -1;
@@ -5617,7 +5934,9 @@ function bindEvents() {
   bindRovingTablist($("#job-history-tabs"), { onSelect: selectJobFilter });
   const reloadJobHistory = () => {
     state.jobHistoryPage = 1;
-    loadJobs({ force: true }).catch((error) => toast(error.message, true));
+    loadJobs({ force: true }).catch((error) => {
+      if (error?.name !== "AbortError") toast(error.message, true);
+    });
   };
   let jobHistorySearchTimer;
   $("#job-history-search")?.addEventListener("input", () => {
@@ -5637,8 +5956,8 @@ function bindEvents() {
   $("#user-prev").addEventListener("click", () => { state.adminUsersOffset = Math.max(0, state.adminUsersOffset - 25); loadAdminUsers().catch(() => {}); });
   $("#user-next").addEventListener("click", () => { state.adminUsersOffset += 25; loadAdminUsers().catch(() => {}); });
   $("#add-user").addEventListener("click", () => $("#user-create-dialog").showModal());
-  $("#admin-user-back").addEventListener("click", () => navigateBack());
-  $("#admin-job-back").addEventListener("click", () => navigateBack());
+  $("#admin-user-back").addEventListener("click", () => back());
+  $("#admin-job-back").addEventListener("click", () => back());
   $("#refresh-admin-job").addEventListener("click", () => loadAdminJobDetail());
   $("#user-create-form").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -5673,7 +5992,7 @@ function bindEvents() {
       if (document.body.dataset.view === "system" && !$("#admin-batch-page").hidden) loadLatestBatch().catch(() => {});
       scheduleGreeting();
       ensureAutomaticTelegramConnection();
-      loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
+      loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch((error) => showSessionError(error));
     }
   });
   const updateKeyboardViewport = () => {
@@ -5681,6 +6000,10 @@ function bindEvents() {
     const focused = document.activeElement;
     const editable = focused?.matches?.("input, textarea, select");
     const keyboardOpen = Boolean(viewport && editable && viewport.height < window.innerHeight - 120);
+    const keyboardInset = viewport
+      ? Math.max(0, window.innerHeight - viewport.height - Math.max(0, viewport.offsetTop || 0))
+      : 0;
+    document.documentElement.style.setProperty("--keyboard-bottom-inset", `${keyboardOpen ? keyboardInset : 0}px`);
     document.body.classList.toggle("keyboard-open", keyboardOpen);
     if (keyboardOpen) {
       cancelAnimationFrame(state.visualViewportFrame);
@@ -5689,8 +6012,17 @@ function bindEvents() {
   };
   window.visualViewport?.addEventListener("resize", updateKeyboardViewport, { passive: true });
   window.visualViewport?.addEventListener("scroll", updateKeyboardViewport, { passive: true });
-  document.addEventListener("focusin", updateKeyboardViewport);
-  document.addEventListener("focusout", () => document.body.classList.remove("keyboard-open"));
+  document.addEventListener("focusin", (event) => {
+    const view = document.body.dataset.view;
+    if (view && event.target?.id && !event.target.closest("[data-nav]")) state.router.focusPositions.set(view, event.target.id);
+    updateKeyboardViewport();
+  });
+  document.addEventListener("focusout", () => {
+    document.body.classList.remove("keyboard-open");
+    // Recompute immediately as WebViews do not all emit a visualViewport
+    // resize when the keyboard dismisses from a focused control.
+    updateKeyboardViewport();
+  });
   window.addEventListener("offline", () => {
     state.apiOnline = false;
     updateTelegramState();
@@ -5699,11 +6031,11 @@ function bindEvents() {
   window.addEventListener("online", () => {
     state.apiOnline = true;
     updateTelegramState();
-    toast(t("apiOnline"));
+    toast(t("apiOnline"), false, { haptic: false });
     loadSession({ countOpen: false }).then(() => {
       initializeApprovedWorkspace();
       return loadJobs({ force: true });
-    }).catch(() => {});
+    }).catch((error) => showSessionError(error));
   });
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
   const docket = $(".dispatch-docket");
@@ -5720,6 +6052,9 @@ function bindEvents() {
 function renderSessionDiagnostics() {
   const node = $("#session-diag");
   if (!node) return;
+  node.classList.remove("error");
+  node.setAttribute("role", "status");
+  $("#session-retry")?.setAttribute("hidden", "");
   if (activeSignedLaunchToken()) { node.textContent = t("sessionDiagLaunchToken"); return; }
   if (!TelegramApp && !effectiveInitData()) { node.textContent = t("sessionDiagNoLib"); return; }
   const rawDirect = String(TelegramApp?.initData || "");
@@ -5759,18 +6094,63 @@ function ensureAutomaticTelegramConnection() {
   if (pairing) {
     state.pairingInFlight = true;
     updateSummary();
-    pollTelegramPairing(pairing).catch(() => {
+    pollTelegramPairing(pairing).catch((error) => {
       state.pairingInFlight = false;
       updateSummary();
-      toast(t("pairingFailed"), true);
+      showSessionError(error, { notify: true });
     });
     return;
   }
   connectTelegramSession();
 }
 
+function initializeFeatureRegistry() {
+  const context = {
+    state,
+    api: apiRequest,
+    t,
+    telegram: TelegramApp,
+  router: { navigate, back },
+    feedback,
+    dom: { one: (selector) => document.querySelector(selector) },
+    actions: {
+      updateSourceDetection,
+      scheduleSourceProbe,
+      searchRomCatalog,
+      renderRomDevices,
+      resetRomResolved,
+      renderRomVersions,
+      renderRomCatalogResults,
+      loadRomDevices,
+      cancelCatalogRequests,
+      loadJobs,
+      cancelJobsRequests,
+      loadAdminUsers,
+      cancelAdminRequests,
+      updateSummary,
+      renderMods,
+      renderProfileView,
+      toggleSourceFacts,
+      cancelSourceProbe: () => {
+        clearTimeout(state.sourceProbeTimer);
+        state.sourceProbeController?.abort?.();
+        state.sourceProbeController = null;
+      }
+    }
+  };
+  featureRegistry = createFeatureRegistry(context, {
+    build: composeFeatures(createBuildFeature(), createSourceFeature()),
+    jobs: createJobsFeature(),
+    catalog: createCatalogFeature(),
+    profile: createProfileFeature(),
+    admin: createAdminFeature()
+  });
+  featureRegistry.bind();
+}
+
 function startMiniApp() {
   applyTheme(state.theme);
+  initializeFeatureRegistry();
   bindEvents();
   updateMastheadScroll();
   scheduleGreeting();
@@ -5783,7 +6163,7 @@ function startMiniApp() {
   if (miniApiAvailable()) {
     loadSession().then(() => {
       initializeApprovedWorkspace();
-    }).catch((error) => toast(error.message, true));
+    }).catch((error) => showSessionError(error, { notify: true }));
   } else renderAccessGate();
 }
 
@@ -5811,7 +6191,7 @@ if (TelegramApp) {
     renderSessionDiagnostics();
     ensureAutomaticTelegramConnection();
     if (miniApiAvailable()) {
-      loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch(() => {});
+      loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace()).catch((error) => showSessionError(error));
     } else renderAccessGate();
   });
   bridge.addEventListener("error", renderSessionDiagnostics);

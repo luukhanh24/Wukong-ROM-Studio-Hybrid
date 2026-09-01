@@ -1,7 +1,10 @@
 /** Keyboard behavior shared by tablists. */
 export function bindRovingTablist(root, { onSelect } = {}) {
   if (!root) return () => {};
-  const tabs = () => [...root.querySelectorAll('[role="tab"]')];
+  const tabs = () => [...root.querySelectorAll('[role="tab"]')].filter((tab) => {
+    const style = getComputedStyle(tab);
+    return !tab.closest("[hidden]") && style.display !== "none" && style.visibility !== "hidden";
+  });
   const sync = (selected) => tabs().forEach((tab) => {
     const active = tab === selected;
     tab.tabIndex = active ? 0 : -1;

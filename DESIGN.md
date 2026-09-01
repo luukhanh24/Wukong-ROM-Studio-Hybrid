@@ -9,8 +9,8 @@ colors:
   graphite: "#252a33"
   ink: "#252830"
   muted-ink: "#656861"
-  hairline: "#d8d5cc"
-  hairline-strong: "#aaa79d"
+  hairline: "#8e897e"
+  hairline-strong: "#716d64"
   action-cobalt: "#315f9e"
   action-cobalt-strong: "#244a7c"
   action-cobalt-soft: "#e8edf4"
@@ -19,24 +19,27 @@ colors:
   focus-aqua: "#4f76a6"
   signal-coral: "#9b6257"
   signal-coral-soft: "#f3eae7"
-  signal-sun: "#9a7131"
+  # Contrast-approved warm warning accent (4.5:1+ on warm paper).
+  signal-sun: "#8b6112"
   signal-sun-soft: "#f5efe3"
   liquid-lens-accent: "#0088ff"
   liquid-lens-accent-night: "#0091ff"
   liquid-chromatic-edge: "#ff4660"
-  failure-red: "var(--tg-theme-destructive-text-color, #c94f56)"
+  failure-red: "var(--tg-theme-destructive-text-color, #a33d45)"
   failure-red-soft: "#fce9e8"
   night-canvas: "#17191d"
   night-surface: "#1d2025"
-  night-surface-raised: "#24282e"
-  night-surface-soft: "#2c3138"
-  night-graphite: "#f4f2eb"
-  night-ink: "#f4f2eb"
-  night-muted-ink: "#a5aaa6"
-  night-action-cobalt: "#78a7dc"
+  night-surface-raised: "#23272d"
+  night-surface-soft: "#2b2f35"
+  night-graphite: "#121417"
+  night-ink: "#f1efe9"
+  night-muted-ink: "#b9b6ae"
+  night-hairline: "#767b83"
+  night-hairline-strong: "#8d929a"
+  night-action-cobalt: "#4f6f99"
   night-focus-aqua: "#8cb3e5"
-  night-signal-coral: "#d49a8f"
-  night-signal-sun: "#d1ad6c"
+  night-signal-coral: "#bf8a7f"
+  night-signal-sun: "#c2a16b"
 typography:
   display:
     fontFamily: "IBM Plex Sans, ui-sans-serif, system-ui, sans-serif"
@@ -250,7 +253,7 @@ Circles are reserved for status lamps, readiness checks, the title-plate ring, a
 
 ### Buttons
 
-- **Shape:** Primary actions use a 10px corner and a 46px minimum height; compact source analysis remains at least 40px high.
+- **Shape:** Primary actions use a 10px corner and a 46px minimum height; compact source analysis remains at least 44px high.
 - **Primary:** Solid Action Cobalt, white text, confident weight, and a small neutral action shadow.
 - **Hover / Active:** Hover deepens to strong cobalt; active moves down one pixel and contracts slightly. No elastic or ornamental motion.
 - **Focus:** A three-pixel Signal Aqua focus-visible ring remains independent of the button's semantic color.
@@ -290,11 +293,11 @@ Selecting a user from System opens a dedicated second-level page inside the Syst
 
 ### Masthead Greeting
 
-The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. A single quiet status dot replaces decorative emoji. On mobile the greeting occupies the flexible space between the wordmark and language control. Copy that exceeds the available width travels horizontally at a measured pace; short copy stays still. On scroll the surface remains highly transparent and increases only to a light blur, so underlying content remains visible and the foreground controls stay crisp. The greeting stops while the document is hidden and becomes static under reduced motion.
+The masthead rotates one short operational greeting at a time: time-of-day greeting, a restrained build wish, and current Build Allowance/job context. A single quiet status dot replaces decorative emoji. On mobile the greeting occupies the flexible space between the wordmark and language control. Copy that exceeds the available width travels horizontally at a measured pace; short copy stays still. The warm-paper masthead keeps an opaque surface so foreground controls remain crisp while scrolling. The greeting stops while the document is hidden and becomes static under reduced motion.
 
 ### Runtime Rail
 
-Three cells expose runner choice, pipeline readiness, and recent job access. Aqua, sun, and coral top rules make the cells distinguishable as instrument categories; dots and text communicate the actual state using the Semantic State Rule. Waiting may pulse subtly, while ready changes to verified green.
+Three cells expose runner choice, pipeline readiness, and recent job access. Aqua, sun, and coral top rules make the cells distinguishable as instrument categories; dots and text communicate the actual state using the Semantic State Rule. Only active processing may pulse subtly; waiting stays still, while ready changes to verified green.
 
 ### Smart Source
 

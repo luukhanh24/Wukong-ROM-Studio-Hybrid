@@ -1349,6 +1349,12 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("event-group", script)
         self.assertIn("activeEventsJobId", script)
         self.assertIn("jobDetailRequestId", script)
+        self.assertIn("adminUserDetailController", script)
+        self.assertIn("adminUserActivityController", script)
+        self.assertIn("adminAuditController", script)
+        self.assertIn("adminUserJobsController", script)
+        self.assertIn("batchRequestController", script)
+        self.assertIn("featureRegistry?.render", script)
         self.assertIn("function jobHistoryParams", script)
         self.assertIn("/v1/sync?${params.toString()}", script)
         self.assertIn("const selectedJobId = state.activeJobId", script)
@@ -1357,6 +1363,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('id="cancel-job-dialog"', html)
         self.assertIn('id="cancel-job-confirm"', html)
         self.assertIn("history.pushState", script)
+        self.assertIn("function back()", script)
         self.assertIn('window.addEventListener("popstate"', script)
         self.assertIn("TelegramApp?.BackButton", script)
         self.assertIn("window.visualViewport", script)
@@ -1654,7 +1661,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('backdrop-filter:blur(10px) saturate(1.5) contrast(1.08)', styles)
         self.assertIn('--dock-foreground: #171b22', styles)
         self.assertIn('--dock-foreground: #f5f7fb', styles)
-        self.assertIn('bottom:calc(132px + env(safe-area-inset-bottom))', styles)
+        self.assertIn('bottom:calc(132px + var(--safe-bottom))', styles)
         self.assertIn('.bottom-nav button:not(.dock-profile) { top:7px; height:56px; min-height:56px;', styles)
         self.assertIn("const bodyTop = 32;", script)
         self.assertIn("const capRadius = Math.min(42", script)
@@ -1886,6 +1893,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             "source-md5",
             "source-last-modified",
             "source-deep-inspection",
+            "toggle-source-facts",
         ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("downloadcheck", script.casefold())
@@ -1911,6 +1919,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("sourceProbeController?.abort()", script)
         self.assertIn("110000", script)
         self.assertIn("metadataCompleteness", script)
+        self.assertIn("source-fact-secondary", html)
+        self.assertIn("updateSourceFactsDisclosure", script)
         self.assertIn("copySourceMetadata", script)
         self.assertIn("apiUnavailableMessage", script)
         self.assertIn("checklistApiPending", script)
