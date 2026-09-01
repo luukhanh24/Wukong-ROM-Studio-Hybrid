@@ -270,14 +270,14 @@ h2 { letter-spacing: -.015em; }
 .source-state-copy p { max-width: 58ch; margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .source-state.detected { background: var(--surface-soft); }
 .source-state.probing { background: var(--sun-soft); }
-.source-state.probing .source-state-mark { border-color: var(--sun); color: #8b6112; animation: probe-orbit 1.2s var(--motion-ease) infinite; }
+.source-state.probing .source-state-mark { border-color: var(--sun); color: var(--sun); animation: probe-orbit 1.2s var(--motion-ease) infinite; }
 .source-state.analyzed { background: var(--success-soft); }
 .source-state.analyzed .source-state-mark, .source-state.analyzed .source-state-copy > small { border-color: var(--aqua); color: var(--success); }
 .source-state.preview-only { background: var(--sun-soft); }
-.source-state.preview-only .source-state-mark, .source-state.preview-only .source-state-copy > small { border-color: var(--sun); color: #8b6112; }
+.source-state.preview-only .source-state-mark, .source-state.preview-only .source-state-copy > small { border-color: var(--sun); color: var(--sun); }
 .source-state.probe-deferred, .source-state.probe-limited { background: var(--surface-soft); }
 .source-state.probe-deferred .source-state-mark, .source-state.probe-deferred .source-state-copy > small { border-color: var(--accent); color: var(--accent-strong); }
-.source-state.probe-limited .source-state-mark, .source-state.probe-limited .source-state-copy > small { border-color: var(--sun); color: #8b6112; }
+.source-state.probe-limited .source-state-mark, .source-state.probe-limited .source-state-copy > small { border-color: var(--sun); color: var(--sun); }
 .source-state.probe-failed { background: var(--danger-soft); }
 .source-state.probe-failed .source-state-mark, .source-state.probe-failed .source-state-copy > small { border-color: var(--danger); color: var(--danger); }
 .source-state.probe-unavailable, .source-state.backend-offline { background: var(--danger-soft); }
@@ -629,7 +629,7 @@ h2 { letter-spacing: -.015em; }
 .cloud-results strong { font: 500 10px/1.35 "JetBrains Mono", monospace; overflow-wrap: anywhere; }
 .cloud-results small { flex: 0 0 auto; color: var(--muted); font: 500 10px/1.3 "JetBrains Mono", monospace; }
 
-.catalog-total { padding: 9px 11px; border: 1px solid #d7a34f; border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--accent-soft); font: 500 10px/1.3 "JetBrains Mono", monospace; }
+.catalog-total { padding: 9px 11px; border: 1px solid var(--sun); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--accent-soft); font: 500 10px/1.3 "JetBrains Mono", monospace; }
 .catalog-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-raised); }
 .catalog-sheet { margin-top: 14px; }
 .catalog-sheet > header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 11px; border-bottom: 1px solid var(--line); }
@@ -675,7 +675,7 @@ h2 { letter-spacing: -.015em; }
 .bottom-nav, .dispatch-fab { display: none; }
 .toast { position: fixed; top: 76px; right: 18px; z-index: 100; max-width: min(420px, calc(100vw - 36px)); padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); color: var(--ink); background: var(--surface-raised); box-shadow: var(--shadow-md); font-size: 11px; opacity: 0; visibility: hidden; transform: translateY(-160%); transition: opacity var(--motion-control) var(--motion-ease), transform var(--motion-control) var(--motion-ease), visibility 0s linear var(--motion-control); }
 .toast.visible { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: 0s; }
-.toast.error { border-color: #e36b5f; background: var(--danger); }
+.toast.error { border-color: var(--danger); background: var(--danger); }
 .inline-error { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--danger); border-radius: var(--radius-md); color: var(--danger); background: var(--danger-soft); font-size: 12px; line-height: 1.45; }
 .field-hint { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .jobs-connection.error { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
@@ -1108,8 +1108,8 @@ body.page-hidden .switches label[data-state="running"] i { animation-play-state:
 .batch-choice-grid label{display:flex;align-items:center;gap:10px;min-height:58px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer}.batch-choice-grid label:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}.batch-choice-grid label span{display:grid;gap:3px}.batch-choice-grid label small{color:var(--muted);font:500 10px/1.3 "JetBrains Mono",monospace}
 .batch-summary{margin:16px 0;padding:12px 14px;border-radius:10px;background:var(--surface);font-weight:750}.batch-submit{width:100%;min-height:50px}.batch-monitor>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.batch-monitor h2,.batch-monitor p{margin:0}.batch-monitor p{margin-top:5px;color:var(--muted);font-size:12px}
 .batch-monitor>header button{min-width:44px;min-height:44px;padding:8px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-md);color:var(--ink);background:var(--surface);font-weight:650}
-.batch-items,.batch-events{display:grid;gap:9px;margin-top:15px}.batch-items article,.batch-events article{padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}.batch-items article>div{display:flex;justify-content:space-between;gap:12px}.batch-items article span{color:var(--accent);font:600 11px/1.4 "JetBrains Mono",monospace}.batch-items article small{display:block;margin-top:6px;color:var(--muted)}.batch-events{max-height:360px;overflow:auto}.batch-events article{display:grid;grid-template-columns:130px 1fr;gap:12px}.batch-events time{color:var(--muted);font:500 10px/1.5 "JetBrains Mono",monospace}
-.batch-items details{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}.batch-items details summary{cursor:pointer;color:var(--accent);font-size:12px;font-weight:700}.batch-job-log{display:grid!important;gap:6px!important;margin-top:9px}.batch-job-log p{display:grid;grid-template-columns:130px 1fr;gap:10px;margin:0;padding:7px;border-radius:7px;background:var(--surface-raised);font-size:11px}.batch-job-log time{color:var(--muted);font:500 10px/1.5 "JetBrains Mono",monospace}
+.batch-items,.batch-events{display:grid;gap:9px;margin-top:15px}.batch-items article,.batch-events article{padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}.batch-items article>div{display:flex;justify-content:space-between;gap:12px}.batch-items article span{color:var(--accent);font:600 11px/1.4 "JetBrains Mono",monospace}.batch-items article small{display:block;margin-top:6px;color:var(--muted)}.batch-events{max-height:360px;overflow:auto}.batch-events article{display:grid;grid-template-columns:130px 1fr;gap:12px}.batch-events time{color:var(--muted);font:500 11px/1.5 "JetBrains Mono",monospace}
+.batch-items details{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}.batch-items details summary{cursor:pointer;color:var(--accent);font-size:12px;font-weight:700}.batch-job-log{display:grid!important;gap:6px!important;margin-top:9px}.batch-job-log p{display:grid;grid-template-columns:130px 1fr;gap:10px;margin:0;padding:7px;border-radius:7px;background:var(--surface-raised);font-size:11px}.batch-job-log time{color:var(--muted);font:500 11px/1.5 "JetBrains Mono",monospace}
 @media(max-width:720px){.catalog-release-admin>div,.catalog-preset-admin>div,.batch-choice-grid{grid-template-columns:1fr}.admin-batch-launch>header{align-items:stretch;flex-direction:column}.batch-fieldset-actions{position:static;width:100%;margin:-3px 0 10px}.batch-fieldset-actions button{flex:1}.batch-choice-grid.compact{grid-template-columns:1fr 1fr}.batch-items article>div{align-items:flex-start;flex-direction:column}.batch-events article{grid-template-columns:1fr;gap:3px}.admin-batch-page{padding-bottom:calc(110px + var(--safe-bottom))}}
 #system.admin-job-open > :not(.admin-job-page) { display:none; }
 #system.admin-job-open > .admin-job-page { display:block; }

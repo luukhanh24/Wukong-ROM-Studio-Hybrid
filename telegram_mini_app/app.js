@@ -663,6 +663,7 @@ const state = {
   adminUserJobsRequestId: 0,
   adminUserJobsController: null,
   adminUserJobsTimer: null,
+  adminMutationControllers: new Set(),
   activeBatchId: localStorage.getItem("wukong-active-batch") || "",
   batchPollTimer: null,
   batchRequestId: 0,
@@ -2408,16 +2409,23 @@ function renderAdminReleaseEditor() {
 
 async function savePermanentReleaseVersion() {
   if (state.me?.role !== "admin") return;
+  const controller = beginAdminMutation();
   const pack = $("#admin-release-pack").value;
   const label = $("#admin-release-label").value.trim();
-  if (!isSafePresetLabel(label)) throw new Error(t("invalidReleaseVersion"));
-  const payload = await apiRequest("/v1/mod-release-versions", {
-    method: "PUT", body: JSON.stringify({ modReleaseVersions: { [pack]: label } })
-  });
-  state.catalog.modReleaseVersions = { ...state.catalog.modReleaseVersions, ...(payload.modReleaseVersions || {}) };
-  await refreshLiveReleaseVersions();
-  renderAdminReleaseEditor();
-  toast(`Đã lưu ${pack} thành ${label} cho mọi job sau.`);
+  try {
+    if (!isSafePresetLabel(label)) throw new Error(t("invalidReleaseVersion"));
+    const payload = await apiRequest("/v1/mod-release-versions", {
+      method: "PUT", body: JSON.stringify({ modReleaseVersions: { [pack]: label } }), signal: controller.signal
+    });
+    if (controller.signal.aborted || !isAdminRouteActive("catalog")) return;
+    state.catalog.modReleaseVersions = { ...state.catalog.modReleaseVersions, ...(payload.modReleaseVersions || {}) };
+    await refreshLiveReleaseVersions({ signal: controller.signal });
+    if (controller.signal.aborted || !isAdminRouteActive("catalog")) return;
+    renderAdminReleaseEditor();
+    toast(`Đã lưu ${pack} thành ${label} cho mọi job sau.`);
+  } finally {
+    endAdminMutation(controller);
+  }
 }
 
 function batchSelections(selector) { return $$(`${selector} input:checked`).map(input => input.value); }
@@ -3035,17 +3043,21 @@ async function updateMaintenance() {
     toast(t("maintenanceMessage"), true);
     return;
   }
+  const controller = beginAdminMutation();
   button.disabled = true;
   try {
     const payload = await apiRequest("/v1/system/maintenance", {
       method: "PUT",
-      body: JSON.stringify({ enabled, message })
+      body: JSON.stringify({ enabled, message }),
+      signal: controller.signal
     });
+    if (controller.signal.aborted || !isAdminRouteActive("system")) return;
     state.maintenance = payload.maintenance;
     state.maintenanceMessageDirty = false;
     renderMaintenanceAdmin();
     toast(t(enabled ? "maintenanceEnabledToast" : "maintenanceDisabledToast"));
   } finally {
+    endAdminMutation(controller);
     button.disabled = false;
   }
 }
@@ -3535,6 +3547,20 @@ async function loadAdminUsers({ reset = false } = {}) {
   }
 }
 
+function beginAdminMutation() {
+  const controller = new AbortController();
+  state.adminMutationControllers.add(controller);
+  return controller;
+}
+
+function endAdminMutation(controller) {
+  state.adminMutationControllers.delete(controller);
+}
+
+function isAdminRouteActive(view = "") {
+  return state.me?.role === "admin" && (!view || document.body.dataset.view === view);
+}
+
 function cancelAdminRequests() {
   clearTimeout(state.adminUsersPollTimer);
   state.adminUsersPollTimer = null;
@@ -3561,6 +3587,8 @@ function cancelAdminRequests() {
   state.batchRequestId += 1;
   state.batchRequestController?.abort();
   state.batchRequestController = null;
+  state.adminMutationControllers.forEach((controller) => controller.abort());
+  state.adminMutationControllers.clear();
 }
 
 function detailFact(label, value) {
@@ -3769,24 +3797,31 @@ function requestAdminAction(user, action) {
 
 async function runAdminUserAction(user, action) {
   const input = await requestAdminAction(user, action);
-  if (!input) return;
+  if (!input || !isAdminRouteActive("system")) return;
+  const controller = beginAdminMutation();
   let path = action; let body = {};
-  if (action === "approve" || action === "revoke") body.reason = input.reason;
-  if (action === "credit-add") { path = "allowance"; body = { operation: "add", value: 1, reason: input.reason }; }
-  if (action === "credit-subtract") { path = "allowance"; body = { operation: "add", value: -input.value, reason: input.reason }; }
-  if (action === "credit-set") {
-    path = "allowance";
-    body = { operation: "set", value: input.value, reason: input.reason || "admin allocation" };
+  try {
+    if (action === "approve" || action === "revoke") body.reason = input.reason;
+    if (action === "credit-add") { path = "allowance"; body = { operation: "add", value: 1, reason: input.reason }; }
+    if (action === "credit-subtract") { path = "allowance"; body = { operation: "add", value: -input.value, reason: input.reason }; }
+    if (action === "credit-set") {
+      path = "allowance";
+      body = { operation: "set", value: input.value, reason: input.reason || "admin allocation" };
+    }
+    if (action === "unlimited") {
+      path = "allowance";
+      const next = !user.unlimited;
+      body = { operation: "unlimited", unlimited: next, reason: input.reason || "admin enabled unlimited" };
+    }
+    await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/${path}`, { method: "POST", body: JSON.stringify(body), signal: controller.signal });
+    if (controller.signal.aborted || !isAdminRouteActive("system")) return;
+    toast(t("userUpdated"));
+    await loadAdminUsers({ reset: false });
+    if (controller.signal.aborted || !isAdminRouteActive("system")) return;
+    await openAdminUser(user.telegramId);
+  } finally {
+    endAdminMutation(controller);
   }
-  if (action === "unlimited") {
-    path = "allowance";
-    const next = !user.unlimited;
-    body = { operation: "unlimited", unlimited: next, reason: input.reason || "admin enabled unlimited" };
-  }
-  await apiRequest(`/v1/admin/users/${encodeURIComponent(user.telegramId)}/${path}`, { method: "POST", body: JSON.stringify(body) });
-  toast(t("userUpdated"));
-  await loadAdminUsers({ reset: false });
-  await openAdminUser(user.telegramId);
 }
 
 async function openAdminUser(telegramId, { fromHistory = false } = {}) {
@@ -3851,7 +3886,7 @@ async function openAdminUser(telegramId, { fromHistory = false } = {}) {
   const definitions = user.accessStatus === "approved"
     ? [["credit-add", t("addCredit")], ["credit-subtract", t("subtractCredit")], ["credit-set", t("setCredit")], ["unlimited", t("toggleUnlimited")], ["revoke", t("revokeUser"), "danger"]]
     : [["approve", t("approveUser")]];
-  definitions.forEach(([action, label, className]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (className) button.className = className; button.disabled = Boolean(user.configuredAdmin); button.addEventListener("click", () => runAdminUserAction(user, action).catch((error) => toast(error.message, true))); actions.append(button); });
+  definitions.forEach(([action, label, className]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; if (className) button.className = className; button.disabled = Boolean(user.configuredAdmin); button.addEventListener("click", () => runAdminUserAction(user, action).catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); })); actions.append(button); });
   const auditTitle = document.createElement("h3"); auditTitle.textContent = t("auditTitle");
   const audit = document.createElement("div"); audit.id = "admin-user-audit-log"; audit.className = "user-audit";
   audit.replaceChildren(...events.map(adminAuditArticle));
@@ -4129,17 +4164,23 @@ function isSafePresetLabel(value) {
 
 async function savePermanentPresetLabels() {
   if (state.me?.role !== "admin") return;
+  const controller = beginAdminMutation();
   const values = {};
-  for (const key of ["lite", "plus", "custom"]) {
-    const value = $(`#admin-preset-label-${key}`).value.trim();
-    if (!isSafePresetLabel(value)) throw new Error(t("invalidPresetLabel"));
-    values[key] = value;
+  try {
+    for (const key of ["lite", "plus", "custom"]) {
+      const value = $(`#admin-preset-label-${key}`).value.trim();
+      if (!isSafePresetLabel(value)) throw new Error(t("invalidPresetLabel"));
+      values[key] = value;
+    }
+    const payload = await apiRequest("/v1/preset-labels", { method: "PUT", body: JSON.stringify({ presetLabels: values }), signal: controller.signal });
+    if (controller.signal.aborted || !isAdminRouteActive("catalog")) return;
+    state.presetLabels = { ...state.presetLabels, ...(payload.presetLabels || {}) };
+    renderPresetLabels();
+    renderBatchChoices();
+    toast(t("presetLabelsSaved"));
+  } finally {
+    endAdminMutation(controller);
   }
-  const payload = await apiRequest("/v1/preset-labels", { method: "PUT", body: JSON.stringify({ presetLabels: values }) });
-  state.presetLabels = { ...state.presetLabels, ...(payload.presetLabels || {}) };
-  renderPresetLabels();
-  renderBatchChoices();
-  toast(t("presetLabelsSaved"));
 }
 
 function renderReleaseVersion() {
@@ -5636,11 +5677,11 @@ async function loadCatalog() {
   }
 }
 
-async function refreshLiveReleaseVersions() {
+async function refreshLiveReleaseVersions({ signal } = {}) {
   if (!state.catalog || !privateApiAvailable()) return;
   try {
     const selected = $("#mod-version").value;
-    const live = await apiRequest("/v1/mod-release-versions");
+    const live = await apiRequest("/v1/mod-release-versions", { signal });
     state.catalog.modReleaseVersions = { ...state.catalog.modReleaseVersions, ...(live.modReleaseVersions || {}) };
     options(
       $("#mod-version"),
@@ -5699,6 +5740,7 @@ function openCacheClearDialog() {
 async function performCacheClear() {
   if (state.cacheClearPending) return;
   const button = $("#cache-clear-confirm");
+  const controller = beginAdminMutation();
   state.cacheClearPending = true;
   TelegramApp?.HapticFeedback?.impactOccurred?.("medium");
   if (button) {
@@ -5706,12 +5748,14 @@ async function performCacheClear() {
     button.textContent = t("cacheClearing");
   }
   try {
-    const payload = await apiRequest("/v1/cache/clear", { method: "POST" });
+    const payload = await apiRequest("/v1/cache/clear", { method: "POST", signal: controller.signal });
+    if (controller.signal.aborted || !isAdminRouteActive("system")) return;
     $("#cache-clear-dialog")?.close();
     toast(t("cacheCleared", { count: payload.entryCount ?? 0 }));
   } catch (error) {
-    toast(error.message, true);
+    if (error?.name !== "AbortError") toast(error.message, true);
   } finally {
+    endAdminMutation(controller);
     state.cacheClearPending = false;
     if (button) {
       button.disabled = false;
@@ -5844,7 +5888,7 @@ function bindEvents() {
   });
   $("#session-retry")?.addEventListener("click", () => retrySessionSync());
   $("#maintenance-toggle").addEventListener("click", () => {
-    updateMaintenance().catch((error) => toast(error.message, true));
+    updateMaintenance().catch((error) => { if (error?.name !== "AbortError") toast(error.message, true); });
   });
   $("#maintenance-message-input").addEventListener("input", () => { state.maintenanceMessageDirty = true; });
   $("#clear-source").addEventListener("click", clearSource);
@@ -5879,8 +5923,8 @@ function bindEvents() {
   $("#catalog-search").addEventListener("input", renderCatalog);
   $("#catalog-version").addEventListener("change", renderCatalog);
   $("#admin-release-pack").addEventListener("change", () => { $("#admin-release-label").value = state.catalog.modReleaseVersions[$("#admin-release-pack").value] || $("#admin-release-pack").value; });
-  $("#save-admin-release").addEventListener("click", () => savePermanentReleaseVersion().catch(error => toast(error.message, true)));
-  $("#save-admin-preset-labels").addEventListener("click", () => savePermanentPresetLabels().catch(error => toast(error.message, true)));
+  $("#save-admin-release").addEventListener("click", () => savePermanentReleaseVersion().catch(error => { if (error?.name !== "AbortError") toast(error.message, true); }));
+  $("#save-admin-preset-labels").addEventListener("click", () => savePermanentPresetLabels().catch(error => { if (error?.name !== "AbortError") toast(error.message, true); }));
   $("#open-batch-build").addEventListener("click", openBatchBuildPage);
   $("#admin-batch-back").addEventListener("click", () => back());
   $("#start-batch-build").addEventListener("click", () => startBatchBuild().catch(error => { if (error?.name !== "AbortError") toast(error.message, true); }));
@@ -5961,6 +6005,7 @@ function bindEvents() {
   $("#refresh-admin-job").addEventListener("click", () => loadAdminJobDetail());
   $("#user-create-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    const controller = beginAdminMutation();
     try {
       await apiRequest("/v1/admin/users", {
         method: "POST",
@@ -5968,11 +6013,17 @@ function bindEvents() {
           telegramId: $("#new-user-id").value.trim(),
           username: $("#new-user-username").value.trim(),
           displayName: $("#new-user-display-name").value.trim()
-        })
+        }),
+        signal: controller.signal
       });
+      if (controller.signal.aborted || !isAdminRouteActive("system")) return;
       $("#user-create-form").reset(); $("#user-create-dialog").close(); toast(t("userCreated"));
       await loadAdminUsers({ reset: true });
-    } catch (error) { toast(error.message, true); }
+    } catch (error) {
+      if (error?.name !== "AbortError") toast(error.message, true);
+    } finally {
+      endAdminMutation(controller);
+    }
   });
   document.addEventListener("visibilitychange", () => {
     document.body.classList.toggle("page-hidden", document.hidden);
