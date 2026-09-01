@@ -16,6 +16,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Repair DC Cloud mirrors for one job")
     parser.add_argument("job_id")
     parser.add_argument("--config", required=True, type=Path)
+    parser.add_argument("--manifest-output", type=Path)
     args = parser.parse_args()
     config = DCloudMirrorConfig.from_env(config_path=args.config)
     if not config.enabled:
@@ -79,6 +80,12 @@ def main() -> int:
         )
         manifest_path.write_text(json.dumps(updated.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
         primary.copy_file(manifest_path, f"jobs/{args.job_id}/manifest.json")
+        if args.manifest_output:
+            args.manifest_output.parent.mkdir(parents=True, exist_ok=True)
+            args.manifest_output.write_text(
+                manifest_path.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
         print(
             json.dumps(
                 {

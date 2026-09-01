@@ -5,6 +5,7 @@ import {
 } from "./auth";
 import {
   CallbackHttpError,
+  handleMirrorRepair,
   handleProgress,
   handleTerminal,
   verifyActionsHmac
@@ -667,14 +668,16 @@ const worker: ExportedHandler<Env> = {
     }
     if (
       request.method === "POST" &&
-      (path === "/internal/actions/progress" || path === "/internal/actions/callback")
+      (path === "/internal/actions/progress" || path === "/internal/actions/callback" || path === "/internal/actions/mirror-repair")
     ) {
       const body = await request.text();
       try {
         await verifyActionsHmac(request, env, body);
         const result = path.endsWith("/progress")
           ? await handleProgress(env, body)
-          : await handleTerminal(env, body);
+          : path.endsWith("/mirror-repair")
+            ? await handleMirrorRepair(env, body)
+            : await handleTerminal(env, body);
         return json(result);
       } catch (error) {
         if (error instanceof CallbackHttpError) {

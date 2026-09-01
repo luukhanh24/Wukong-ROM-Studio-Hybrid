@@ -25,6 +25,8 @@ jobs:
       WUKONG_DCCLOUD_API_URL: ${{ vars.WUKONG_DCCLOUD_API_URL || '' }}
       WUKONG_DCCLOUD_REFRESH_TOKEN: ${{ secrets.WUKONG_DCCLOUD_REFRESH_TOKEN }}
       WUKONG_DCCLOUD_CLOUDREVE_VERSION: ${{ vars.WUKONG_DCCLOUD_CLOUDREVE_VERSION || '' }}
+      WUKONG_CONTROL_PLANE_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || '' }}
+      WUKONG_ACTIONS_CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,4 +54,23 @@ jobs:
       - name: Repair mirror
         env:
           GITHUB_ACTIONS: "true"
-        run: python3 -m tools.mirror_repair "${{ inputs.job_id }}" --config .wkstudio/secrets/rclone.conf
+        run: |
+          python3 -m tools.mirror_repair "${{ inputs.job_id }}" \
+            --config .wkstudio/secrets/rclone.conf \
+            --manifest-output .wkstudio/repair-manifest.json
+      - name: Sync repaired mirror to control plane
+        if: success()
+        env:
+          API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || '' }}
+          CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$API_URL"
+          test -n "$CALLBACK_SECRET"
+          test -s .wkstudio/repair-manifest.json
+          python3 -m tools.actions_control_plane mirror-repair \
+            --api-url "$API_URL" \
+            --job-id "${{ inputs.job_id }}" \
+            --run-id "${{ github.run_id }}" \
+            --secret "$CALLBACK_SECRET" \
+            --manifest .wkstudio/repair-manifest.json

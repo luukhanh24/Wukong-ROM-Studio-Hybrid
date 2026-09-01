@@ -290,6 +290,30 @@ def terminal_callback(
     )
 
 
+def mirror_repair_callback(
+    api_url: str,
+    *,
+    job_id: str,
+    run_id: int,
+    secret: str,
+    manifest_path: Path,
+) -> dict[str, Any]:
+    manifest = _read_json(manifest_path)
+    if not manifest:
+        raise ValueError("Repaired manifest is required")
+    return _post_signed(
+        api_url,
+        "/internal/actions/mirror-repair",
+        {
+            "jobId": job_id,
+            "runId": int(run_id),
+            "manifest": manifest,
+        },
+        secret,
+        attempts=30,
+    )
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Cloudflare control-plane bridge for GitHub Actions")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -324,6 +348,12 @@ def _parser() -> argparse.ArgumentParser:
     terminal_parser.add_argument("--manifest", type=Path)
     terminal_parser.add_argument("--events", type=Path)
     terminal_parser.add_argument("--pre-executor-failure", action="store_true")
+    repair_parser = subparsers.add_parser("mirror-repair")
+    repair_parser.add_argument("--api-url", required=True)
+    repair_parser.add_argument("--job-id", required=True)
+    repair_parser.add_argument("--run-id", type=int, required=True)
+    repair_parser.add_argument("--secret", default=os.environ.get("WUKONG_ACTIONS_CALLBACK_SECRET", ""))
+    repair_parser.add_argument("--manifest", required=True, type=Path)
     return parser
 
 
@@ -359,6 +389,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             manifest_path=args.manifest,
             events_path=args.events,
             pre_executor_failure=args.pre_executor_failure,
+        )
+    elif args.command == "mirror-repair":
+        mirror_repair_callback(
+            args.api_url,
+            job_id=args.job_id,
+            run_id=args.run_id,
+            secret=args.secret,
+            manifest_path=args.manifest,
         )
     return 0
 

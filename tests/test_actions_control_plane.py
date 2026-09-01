@@ -132,6 +132,34 @@ class ActionsControlPlaneTests(unittest.TestCase):
         )
         self.assertEqual(second_payload["progress"], 0.3)
 
+    def test_mirror_repair_callback_posts_repaired_manifest(self) -> None:
+        manifest = {
+            "job_id": "repair-job",
+            "artifacts": [{
+                "name": "rom.zip",
+                "mirrors": [{"provider": "dccloud", "status": "available"}],
+            }],
+        }
+        with (
+            TemporaryDirectory() as directory,
+            mock.patch.object(actions_control_plane, "_read_json", return_value=manifest),
+            mock.patch.object(actions_control_plane, "_post_signed", return_value={"ok": True}) as post,
+        ):
+            result = actions_control_plane.mirror_repair_callback(
+                "https://worker.example",
+                job_id="repair-job",
+                run_id=77,
+                secret="s" * 32,
+                manifest_path=Path(directory) / "manifest.json",
+            )
+
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(post.call_args.args[0], "https://worker.example")
+        self.assertEqual(post.call_args.args[1], "/internal/actions/mirror-repair")
+        self.assertEqual(post.call_args.args[2]["jobId"], "repair-job")
+        self.assertEqual(post.call_args.args[2]["runId"], 77)
+        self.assertEqual(post.call_args.args[2]["manifest"], manifest)
+
 
 if __name__ == "__main__":
     unittest.main()

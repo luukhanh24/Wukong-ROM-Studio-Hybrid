@@ -337,3 +337,153 @@ export async function handleTerminal(
   const refreshed = await callbackJob(env, jobId);
   return { jobId, status: refreshed.status, terminal: true };
 }
+
+function callbackManifest(payload: JsonObject): JsonObject {
+  const value = payload.manifest;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CallbackHttpError("Mirror repair manifest is required", 400);
+  }
+  return value as JsonObject;
+}
+
+function callbackArtifactMap(manifest: JsonObject): Map<string, JsonObject> {
+  const artifacts = manifest.artifacts;
+  if (!Array.isArray(artifacts)) {
+    throw new CallbackHttpError("Mirror repair manifest artifacts are invalid", 400);
+  }
+  const result = new Map<string, JsonObject>();
+  for (const value of artifacts) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const artifact = value as JsonObject;
+    const name = typeof artifact.name === "string" ? artifact.name.trim() : "";
+    if (name) result.set(name, artifact);
+  }
+  return result;
+}
+
+function repairMirrorValue(value: unknown): JsonObject {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CallbackHttpError("Mirror repair result is invalid", 400);
+  }
+  const source = value as JsonObject;
+  const status = typeof source.status === "string" ? source.status.trim().toLowerCase() : "";
+  if (!["pending", "available", "failed"].includes(status)) {
+    throw new CallbackHttpError("Mirror repair status is invalid", 400);
+  }
+  const uri = typeof source.uri === "string" ? source.uri.trim().slice(0, 4096) : "";
+  const browseUrl = typeof source.browse_url === "string"
+    ? source.browse_url.trim().slice(0, 2048)
+    : typeof source.browseUrl === "string"
+      ? source.browseUrl.trim().slice(0, 2048)
+      : "";
+  const errorCode = typeof source.error_code === "string"
+    ? source.error_code.trim().slice(0, 128)
+    : typeof source.errorCode === "string"
+      ? source.errorCode.trim().slice(0, 128)
+      : "";
+  if (status === "available" && !uri) {
+    throw new CallbackHttpError("Available mirror is missing its URI", 400);
+  }
+  return {
+    provider: "dccloud",
+    status,
+    ...(uri ? { uri } : {}),
+    ...(browseUrl ? { browse_url: browseUrl } : {}),
+    ...(errorCode ? { error_code: errorCode } : {})
+  };
+}
+
+function repairedManifest(row: JobRow, payload: JsonObject, now: string): JsonObject {
+  const current = (() => {
+    try {
+      return JSON.parse(row.manifest_json) as JsonObject;
+    } catch {
+      throw new CallbackHttpError("Stored job manifest is unavailable", 409);
+    }
+  })();
+  const incoming = callbackManifest(payload);
+  const currentArtifacts = callbackArtifactMap(current);
+  const incomingArtifacts = callbackArtifactMap(incoming);
+  const expectedNames = [...currentArtifacts.values()]
+    .filter((artifact) => String(artifact.name ?? "").toLowerCase().endsWith(".zip"))
+    .map((artifact) => String(artifact.name));
+  for (const name of expectedNames) {
+    const replacement = incomingArtifacts.get(name);
+    const mirrors = replacement && Array.isArray(replacement.mirrors) ? replacement.mirrors : [];
+    if (!replacement || !mirrors.some((item) => item && typeof item === "object" && !Array.isArray(item)
+      && String((item as JsonObject).provider ?? "").trim().toLowerCase() === "dccloud")) {
+      throw new CallbackHttpError("Mirror repair manifest does not contain every ZIP artifact", 409);
+    }
+  }
+  const mergedArtifacts = (Array.isArray(current.artifacts) ? current.artifacts : []).map((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    const artifact = { ...(value as JsonObject) };
+    const name = typeof artifact.name === "string" ? artifact.name.trim() : "";
+    const replacement = name ? incomingArtifacts.get(name) : undefined;
+    if (!replacement) return artifact;
+
+    const currentSha = typeof artifact.sha256 === "string" ? artifact.sha256.trim().toLowerCase() : "";
+    const incomingSha = typeof replacement.sha256 === "string" ? replacement.sha256.trim().toLowerCase() : "";
+    if (currentSha && incomingSha && currentSha !== incomingSha) {
+      throw new CallbackHttpError("Mirror repair checksum does not match the job artifact", 409);
+    }
+    const currentSize = Number(artifact.size_bytes ?? artifact.sizeBytes);
+    const incomingSize = Number(replacement.size_bytes ?? replacement.sizeBytes);
+    if (Number.isSafeInteger(currentSize) && Number.isSafeInteger(incomingSize) && currentSize > 0 && incomingSize > 0 && currentSize !== incomingSize) {
+      throw new CallbackHttpError("Mirror repair size does not match the job artifact", 409);
+    }
+    const mirrors = Array.isArray(replacement.mirrors) ? replacement.mirrors : [];
+    const mirror = mirrors.find((item) => item && typeof item === "object" && !Array.isArray(item)
+      && String((item as JsonObject).provider ?? "").trim().toLowerCase() === "dccloud");
+    if (!mirror) return artifact;
+    const existingMirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
+    return {
+      ...artifact,
+      mirrors: [
+        ...existingMirrors.filter((item) => !item || typeof item !== "object" || Array.isArray(item)
+          || String((item as JsonObject).provider ?? "").trim().toLowerCase() !== "dccloud"),
+        repairMirrorValue(mirror)
+      ]
+    };
+  });
+  return { ...current, artifacts: mergedArtifacts, updated_at: now };
+}
+
+export async function handleMirrorRepair(
+  env: Env,
+  body: string
+): Promise<JsonObject> {
+  const payload = bodyObject(JSON.parse(body));
+  const jobId = jobIdFrom(payload);
+  const runId = runIdFrom(payload);
+  const row = await callbackJob(env, jobId);
+  if (!["succeeded", "failed", "cancelled"].includes(row.status)) {
+    throw new CallbackHttpError("Mirror repair is only accepted for terminal jobs", 409);
+  }
+  const payloadHash = await sha256Hex(body);
+  const receiptKey = `${jobId}:mirror-repair:${runId}`;
+  if (await existingReceipt(env, receiptKey, payloadHash)) {
+    return { jobId, status: row.status, mirrorRepair: true, duplicate: true };
+  }
+  const now = new Date().toISOString();
+  const manifest = repairedManifest(row, payload, now);
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO wukong_actions_callback_receipts
+         (receipt_key, job_id, run_id, callback_kind, sequence, payload_hash, received_at)
+         VALUES (?, ?, ?, 'mirror_repair', 0, ?, ?)`
+      ).bind(receiptKey, jobId, runId, payloadHash, now),
+      env.DB.prepare(
+        `UPDATE wukong_jobs SET manifest_json = ?, updated_at = ?
+         WHERE job_id = ? AND status IN ('succeeded', 'failed', 'cancelled')`
+      ).bind(JSON.stringify(manifest), now, jobId)
+    ]);
+  } catch (error) {
+    if (await existingReceipt(env, receiptKey, payloadHash)) {
+      return { jobId, status: row.status, mirrorRepair: true, duplicate: true };
+    }
+    throw error;
+  }
+  return { jobId, status: row.status, mirrorRepair: true };
+}

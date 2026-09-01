@@ -158,6 +158,83 @@ describe("GitHub Actions callbacks", () => {
     ]);
   });
 
+  it("syncs a repaired DC Cloud mirror into the control-plane manifest", async () => {
+    const bindings = env as unknown as Env;
+    const jobId = "mirror-callback-fixture";
+    const subject = "43002";
+    const now = new Date().toISOString();
+    const artifact = {
+      name: "Wukong_Plus_V6.0_fixture.zip",
+      uri: "wukong-gdrive:WukongROM/artifacts/fixture.zip",
+      size_bytes: 123456,
+      sha256: "b".repeat(64),
+      public_url: "https://drive.google.com/file/d/fixture/view",
+      mirrors: [{ provider: "dccloud", status: "failed", error_code: "remote_upload_failed" }]
+    };
+    await bindings.DB.batch([
+      bindings.DB.prepare("DELETE FROM wukong_jobs WHERE job_id = ?").bind(jobId),
+      bindings.DB.prepare(
+        `INSERT INTO wukong_telegram_users
+         (subject, access_status, role, first_seen_at, last_seen_at, build_credits, lifetime_granted)
+         VALUES (?, 'approved', 'user', ?, ?, 1, 1)
+         ON CONFLICT (subject) DO UPDATE SET access_status = 'approved', role = 'user'`
+      ).bind(subject, now, now),
+      bindings.DB.prepare(
+        `INSERT INTO wukong_telegram_access (subject, role) VALUES (?, 'user')
+         ON CONFLICT (subject) DO UPDATE SET role = 'user'`
+      ).bind(subject),
+      bindings.DB.prepare(
+        `INSERT INTO wukong_jobs
+         (job_id, manifest_json, recipe_json, created_at, updated_at, owner_channel,
+          owner_subject, device, status, stage, progress)
+         VALUES (?, ?, '{}', ?, ?, 'telegram', ?, 'PJD110', 'succeeded', 'complete', 1)`
+      ).bind(jobId, JSON.stringify({ job_id: jobId, status: "succeeded", artifacts: [artifact] }), now, now, subject)
+    ]);
+    const body = JSON.stringify({
+      jobId,
+      runId: 99001,
+      manifest: {
+        job_id: jobId,
+        artifacts: [{
+          ...artifact,
+          mirrors: [{
+            provider: "dccloud",
+            status: "available",
+            uri: "https://cloud.dabeecao.org/dav/ROM/artifacts/fixture.zip",
+            browse_url: "https://cloud.dabeecao.org/s/BokhN"
+          }]
+        }]
+      }
+    });
+    const response = await SELF.fetch("https://worker.example/internal/actions/mirror-repair", {
+      method: "POST",
+      headers: await actionsHeaders(body),
+      body
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ jobId, mirrorRepair: true });
+
+    const headers = await tmaHeaders(Number(subject));
+    const detail = await SELF.fetch(`https://worker.example/v1/jobs/${jobId}`, { headers });
+    await expect(detail.json()).resolves.toMatchObject({
+      status: "succeeded",
+      artifacts: [{
+        mirrors: [{
+          provider: "dccloud",
+          status: "available",
+          browse_url: "https://cloud.dabeecao.org/s/BokhN"
+        }]
+      }]
+    });
+    const duplicate = await SELF.fetch("https://worker.example/internal/actions/mirror-repair", {
+      method: "POST",
+      headers: await actionsHeaders(body),
+      body
+    });
+    expect(duplicate.status).toBe(200);
+    await expect(duplicate.json()).resolves.toMatchObject({ duplicate: true });
+  });
+
   it("compensates a pre-executor failure exactly once", async () => {
     const bindings = env as unknown as Env;
     const subject = "43001";
