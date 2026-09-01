@@ -1332,6 +1332,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("jobDetailRequestId", script)
         self.assertIn("function jobHistoryParams", script)
         self.assertIn("/v1/sync?${params.toString()}", script)
+        self.assertIn("const selectedJobId = state.activeJobId", script)
+        self.assertIn("loadJobDetail(selectedJobId)", script)
         self.assertIn("function renderPageButtons", script)
         self.assertIn("setTimeout(reloadJobHistory, 300)", script)
         self.assertIn("const unique = new Map()", script)

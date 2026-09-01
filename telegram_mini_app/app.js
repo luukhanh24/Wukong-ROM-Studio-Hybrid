@@ -4745,7 +4745,23 @@ function scheduleJobsPoll(active, changed = false) {
       : state.jobsUnchangedPolls >= 3
         ? 15000
         : 10000;
-  state.jobsPollTimer = setTimeout(() => loadJobs().catch(() => {}), delay);
+  state.jobsPollTimer = setTimeout(() => {
+    const selectedJobId = state.activeJobId;
+    if (document.body.dataset.view === "jobs" && selectedJobId) {
+      loadJobDetail(selectedJobId)
+        .then(() => {
+          setJobsConnection("jobsConnected");
+          const selectedJob = state.jobs.find((job) => (job.job_id || job.jobId) === selectedJobId);
+          scheduleJobsPoll(Boolean(selectedJob && !terminalJobStatuses.has(selectedJob.status)), false);
+        })
+        .catch(() => {
+          setJobsConnection("jobsOffline", true);
+          scheduleJobsPoll(true, false);
+        });
+      return;
+    }
+    loadJobs().catch(() => {});
+  }, delay);
 }
 
 async function loadJobs({ force = false } = {}) {
