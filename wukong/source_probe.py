@@ -112,6 +112,12 @@ def validate_direct_signed_url_ttl(
 def _open_initial_probe(adapter: HttpSourceAdapter, request: Request, timeout: int) -> Any:
     for attempt in range(1, 4):
         try:
+            if attempt > 1:
+                # Match the downloader's recovery behavior: a fresh adapter
+                # opener avoids reusing a socket whose TLS handshake timed
+                # out. Custom/injected openers remain untouched for tests and
+                # alternate transports.
+                adapter._refresh_attempt_opener()
             return adapter.opener.open(request, timeout=timeout)
         except HTTPError as exc:
             if exc.code in {401, 403} and _looks_like_signed_download(request.full_url):

@@ -696,6 +696,34 @@ class SourceAndStorageContractTests(unittest.TestCase):
             self.assertEqual(request_headers["User-agent"], "okhttp/3.12.12")
             self.assertEqual(request_headers["Userid"], "oplus-ota|16002018")
 
+    def test_http_source_retries_transient_tls_handshake_failures_beyond_three_attempts(self) -> None:
+        download_url = "https://93.184.216.35/rom.zip"
+        payload = b"PK\x03\x04eventual-rom"
+
+        class _FlakyTlsOpener:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def open(self, _request: Request, *, timeout: int) -> io.BytesIO:
+                self.calls += 1
+                if self.calls <= 3:
+                    raise URLError("_ssl.c:1015: The handshake operation timed out")
+                return SourceAndStorageContractTests._HttpResponse(
+                    payload,
+                    url=download_url,
+                    content_type="application/zip",
+                    headers={"Content-Length": str(len(payload))},
+                )
+
+        opener = _FlakyTlsOpener()
+        with tempfile.TemporaryDirectory() as root, patch("wukong.adapters.time.sleep"):
+            result = HttpSourceAdapter(opener=opener).materialize(
+                download_url,
+                Path(root, "rom.zip"),
+            )
+            self.assertEqual(payload, result.path.read_bytes())
+        self.assertEqual(4, opener.calls)
+
     def test_http_source_resolves_stable_daniel_springer_build_page(self) -> None:
         page_url = (
             "https://roms.danielspringer.at/index.php?view=ota&"

@@ -264,6 +264,7 @@ def terminal_callback(
     manifest_path: Path | None,
     events_path: Path | None,
     pre_executor_failure: bool,
+    run_attempt: int = 1,
 ) -> dict[str, Any]:
     manifest = _read_json(manifest_path) if manifest_path else {}
     events = _read_events(events_path) if events_path else []
@@ -272,9 +273,11 @@ def terminal_callback(
         default=0,
     )
     result = workflow_result if workflow_result in {"success", "failure", "cancelled"} else "failure"
+    normalized_attempt = max(1, int(run_attempt))
     payload: dict[str, object] = {
         "jobId": job_id,
         "runId": int(run_id),
+        "runAttempt": normalized_attempt,
         "workflowResult": result,
         "preExecutorFailure": bool(pre_executor_failure),
         "sequence": max(3, last_sequence + 3),
@@ -348,6 +351,12 @@ def _parser() -> argparse.ArgumentParser:
     terminal_parser.add_argument("--manifest", type=Path)
     terminal_parser.add_argument("--events", type=Path)
     terminal_parser.add_argument("--pre-executor-failure", action="store_true")
+    terminal_parser.add_argument(
+        "--run-attempt",
+        type=int,
+        default=1,
+        help="GitHub Actions run attempt used to deduplicate automatic runner retries",
+    )
     repair_parser = subparsers.add_parser("mirror-repair")
     repair_parser.add_argument("--api-url", required=True)
     repair_parser.add_argument("--job-id", required=True)
@@ -389,6 +398,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             manifest_path=args.manifest,
             events_path=args.events,
             pre_executor_failure=args.pre_executor_failure,
+            run_attempt=args.run_attempt,
         )
     elif args.command == "mirror-repair":
         mirror_repair_callback(

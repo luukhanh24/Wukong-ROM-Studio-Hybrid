@@ -12,6 +12,10 @@ import { queueJobTerminalNotificationUpdate } from "./telegram";
 
 type JsonObject = Record<string, unknown>;
 
+// A hosted runner can lose its control channel before it can persist a
+// manifest. Keep that transient failure retryable rather than terminal.
+const MAX_AUTOMATIC_RUNNER_ATTEMPTS = 3;
+
 export class CallbackHttpError extends Error {
   constructor(message: string, readonly status: number) {
     super(message);
@@ -98,6 +102,15 @@ function sequenceValue(value: unknown): number {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 2) {
     throw new CallbackHttpError("Actions callback sequence is invalid", 400);
+  }
+  return parsed;
+}
+
+function runAttemptValue(value: unknown): number {
+  if (value === undefined || value === null || value === "") return 1;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 100) {
+    throw new CallbackHttpError("Actions callback run attempt is invalid", 400);
   }
   return parsed;
 }
@@ -256,6 +269,7 @@ export async function handleTerminal(
     ? payload.workflowResult.trim().toLowerCase()
     : "";
   const status = terminalStatus(result);
+  const runAttempt = runAttemptValue(payload.runAttempt ?? payload.run_attempt);
   const sequence = Number.isSafeInteger(Number(payload.sequence))
     ? Math.max(2, Number(payload.sequence))
     : 2;
@@ -264,7 +278,7 @@ export async function handleTerminal(
     throw new CallbackHttpError("Actions callback run does not match the job", 409);
   }
   const payloadHash = await sha256Hex(body);
-  const receiptKey = `${jobId}:terminal:${runId}:${result}`;
+  const receiptKey = `${jobId}:terminal:${runId}:${runAttempt}:${result}`;
   if (await existingReceipt(env, receiptKey, payloadHash)) {
     return { jobId, status: row.status, terminal: true, duplicate: true };
   }
@@ -272,7 +286,92 @@ export async function handleTerminal(
     return { jobId, status: row.status, terminal: true, outOfOrder: true };
   }
   const now = new Date().toISOString();
+
+  // The callback is sent while the workflow's final notification job is
+  // still running, so GitHub cannot be rerun safely from this request. Keep
+  // the job non-terminal and let the minute recovery pass rerun it after the
+  // failed workflow is fully completed.
+  if (
+    result === "failure" &&
+    payload.preExecutorFailure === true &&
+    runAttempt < MAX_AUTOMATIC_RUNNER_ATTEMPTS
+  ) {
+    let currentManifest: JsonObject = {};
+    try {
+      const parsed = JSON.parse(row.manifest_json);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        currentManifest = parsed as JsonObject;
+      }
+    } catch {
+      currentManifest = {};
+    }
+    const retryManifest: JsonObject = {
+      ...currentManifest,
+      status: "dispatched",
+      stage: "github-actions-retrying",
+      progress: Math.max(Number(row.progress ?? 0), Number(currentManifest.progress ?? 0)),
+      error: null,
+      updated_at: now,
+      finished_at: ""
+    };
+    const eventSequence = Math.max(Number(row.next_event_sequence ?? 2), sequence);
+    try {
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO wukong_actions_callback_receipts
+           (receipt_key, job_id, run_id, callback_kind, sequence, payload_hash, received_at)
+           VALUES (?, ?, ?, 'runner_retry', ?, ?, ?)`
+        ).bind(receiptKey, jobId, runId, sequence, payloadHash, now),
+        env.DB.prepare(
+          `UPDATE wukong_jobs SET
+             manifest_json = ?, github_run_id = COALESCE(github_run_id, ?),
+             status = 'dispatched', stage = 'github-actions-retrying',
+             progress = MAX(progress, ?), updated_at = ?, finished_at = '',
+             next_event_sequence = MAX(next_event_sequence, ?)
+           WHERE job_id = ? AND status NOT IN ('succeeded', 'failed', 'cancelled')`
+        ).bind(
+          JSON.stringify(retryManifest),
+          runId,
+          Number(retryManifest.progress ?? 0),
+          now,
+          eventSequence + 1,
+          jobId
+        ),
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO wukong_job_events
+           (job_id, sequence, timestamp, event_type, payload_json)
+           VALUES (?, ?, ?, 'runner_retry_pending', ?)`
+        ).bind(
+          jobId,
+          eventSequence,
+          now,
+          JSON.stringify({
+            status: "dispatched",
+            stage: "github-actions-retrying",
+            attempt: runAttempt + 1
+          })
+        )
+      ]);
+    } catch (error) {
+      if (await existingReceipt(env, receiptKey, payloadHash)) {
+        const refreshed = await callbackJob(env, jobId);
+        return { jobId, status: refreshed.status, terminal: false, duplicate: true };
+      }
+      throw error;
+    }
+    return {
+      jobId,
+      status: "dispatched",
+      terminal: false,
+      retrying: true,
+      attempt: runAttempt + 1
+    };
+  }
+
   const rawManifest = mergedManifest(row, payload, status, now);
+  if (payload.preExecutorFailure === true && result === "failure" && !rawManifest.error) {
+    rawManifest.error = "GitHub Actions runner failed before the executor started after automatic retries.";
+  }
   const nextEventSequence = sequence + 1;
   const compensationStatements = payload.preExecutorFailure === true
     ? acceptedJobCompensationStatements(

@@ -69,7 +69,7 @@ async function markRecoveredDispatch(
          updated_at = ?
      WHERE job_id = ?
        AND status NOT IN ('succeeded', 'failed', 'cancelled')
-       AND stage IN ('queued', 'github-actions-queued')`
+       AND stage IN ('queued', 'github-actions-queued', 'github-actions-retrying')`
   ).bind(runId, attempts, now, now, row.job_id).run();
 }
 
@@ -78,18 +78,26 @@ async function failStartup(
   row: RecoveryJobRow,
   runId: number | null,
   reason: string,
-  now: string
+  now: string,
+  options: {
+    stage?: "startup_failed" | "runner_failed";
+    code?: "github_actions_startup_failed" | "github_actions_runner_failed";
+    title?: string;
+    detail?: string;
+  } = {}
 ): Promise<void> {
+  const stage = options.stage ?? "startup_failed";
+  const code = options.code ?? "github_actions_startup_failed";
   const sequence = Number(row.next_event_sequence ?? 2);
   const manifest = {
     ...parseManifest(row),
     status: "failed",
-    stage: "startup_failed",
+    stage,
     progress: Number(row.progress ?? 0),
     updated_at: now,
     finished_at: now,
     error: {
-      code: "github_actions_startup_failed",
+      code,
       message: reason
     }
   };
@@ -99,16 +107,17 @@ async function failStartup(
        SET manifest_json = ?,
            github_run_id = COALESCE(github_run_id, ?),
            status = 'failed',
-           stage = 'startup_failed',
+           stage = ?,
            updated_at = ?,
            finished_at = ?,
            next_event_sequence = MAX(next_event_sequence, ?)
        WHERE job_id = ?
          AND status NOT IN ('succeeded', 'failed', 'cancelled')
-         AND stage IN ('queued', 'github-actions-queued')`
+         AND stage IN ('queued', 'github-actions-queued', 'github-actions-retrying')`
     ).bind(
       JSON.stringify(manifest),
       runId,
+      stage,
       now,
       now,
       sequence + 1,
@@ -119,25 +128,25 @@ async function failStartup(
        WHERE job_id = ?
          AND EXISTS (
            SELECT 1 FROM wukong_jobs
-           WHERE job_id = ? AND status = 'failed' AND stage = 'startup_failed'
+           WHERE job_id = ? AND status = 'failed' AND stage = ?
          )`
-    ).bind(row.job_id, row.job_id),
+    ).bind(row.job_id, row.job_id, stage),
     env.DB.prepare(
       `UPDATE wukong_telegram_users
        SET last_job_id = ?, last_job_status = 'failed'
        WHERE subject = ?
          AND EXISTS (
            SELECT 1 FROM wukong_jobs
-           WHERE job_id = ? AND status = 'failed' AND stage = 'startup_failed'
+           WHERE job_id = ? AND status = 'failed' AND stage = ?
          )`
-    ).bind(row.job_id, row.owner_subject, row.job_id),
+    ).bind(row.job_id, row.owner_subject, row.job_id, stage),
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_job_events
        (job_id, sequence, timestamp, event_type, payload_json)
        SELECT ?, ?, ?, 'failed', ?
        WHERE EXISTS (
          SELECT 1 FROM wukong_jobs
-         WHERE job_id = ? AND status = 'failed' AND stage = 'startup_failed'
+         WHERE job_id = ? AND status = 'failed' AND stage = ?
        )`
     ).bind(
       row.job_id,
@@ -145,10 +154,11 @@ async function failStartup(
       now,
       JSON.stringify({
         status: "failed",
-        stage: "startup_failed",
-        code: "github_actions_startup_failed"
+        stage,
+        code
       }),
-      row.job_id
+      row.job_id,
+      stage
     ),
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
@@ -156,7 +166,7 @@ async function failStartup(
        SELECT ?, ?, ?, ?, ?, ?
        WHERE EXISTS (
          SELECT 1 FROM wukong_jobs
-         WHERE job_id = ? AND status = 'failed' AND stage = 'startup_failed'
+         WHERE job_id = ? AND status = 'failed' AND stage = ?
        )`
     ).bind(
       crypto.randomUUID(),
@@ -164,10 +174,10 @@ async function failStartup(
       row.owner_subject,
       JSON.stringify({
         text: [
-          "⚠️ <b>Build không thể khởi động</b>",
+          options.title ?? "⚠️ <b>Build không thể khởi động</b>",
           "",
           `Job: <code>${row.job_id}</code>`,
-          "GitHub Actions không cấp được runner sau nhiều lần thử.",
+          options.detail ?? "GitHub Actions không cấp được runner sau nhiều lần thử.",
           "Lượt build đã được hoàn lại tự động."
         ].join("\n"),
         parse_mode: "HTML",
@@ -175,7 +185,8 @@ async function failStartup(
       }),
       now,
       now,
-      row.job_id
+      row.job_id,
+      stage
     ),
     ...acceptedJobCompensationStatements(
       env,
@@ -183,7 +194,7 @@ async function failStartup(
       reason,
       now,
       "failed",
-      { status: "failed", stage: "startup_failed" }
+      { status: "failed", stage }
     )
   ]);
 }
@@ -192,7 +203,7 @@ export async function recoverPreBootstrapJobs(env: Env): Promise<void> {
   const jobs = await env.DB.prepare(
     `SELECT * FROM wukong_jobs
      WHERE status NOT IN ('succeeded', 'failed', 'cancelled')
-       AND stage IN ('queued', 'github-actions-queued')
+       AND stage IN ('queued', 'github-actions-queued', 'github-actions-retrying')
        AND finished_at = ''
      ORDER BY created_at ASC
      LIMIT 50`
@@ -228,6 +239,35 @@ export async function recoverPreBootstrapJobs(env: Env): Promise<void> {
         timestamp(row.created_at)
       );
       const runAgeMs = nowMs - runActivityAt;
+      if (row.stage === "github-actions-retrying") {
+        // The terminal callback arrives while the notify job is still part of
+        // the workflow. Wait for GitHub to mark that run completed before
+        // asking it to rerun; otherwise the rerun endpoint rejects the call.
+        if (run.status !== "completed") continue;
+        if (["failure", "cancelled", "timed_out", "startup_failure"].includes(run.conclusion)) {
+          if (attempts >= MAX_DISPATCH_ATTEMPTS) {
+            await failStartup(
+              env,
+              row,
+              run.id,
+              "GitHub Actions runner lost communication before the executor started after all retry attempts",
+              now,
+              {
+                stage: "runner_failed",
+                code: "github_actions_runner_failed",
+                title: "⚠️ <b>Build bị gián đoạn trên runner</b>",
+                detail: "GitHub Actions mất kết nối với runner trước khi hoàn tất. Hệ thống đã thử chạy lại tự động nhưng vẫn thất bại."
+              }
+            );
+            continue;
+          }
+          const sinceAttemptMs = nowMs - timestamp(row.dispatch_last_attempt_at || row.updated_at);
+          if (sinceAttemptMs < RETRY_COOLDOWN_MS) continue;
+          await rerunWorkflowRun(env, run.id);
+          await markRecoveredDispatch(env, row, run.id, attempts + 1, now);
+        }
+        continue;
+      }
       if (run.status === "completed" && run.conclusion === "startup_failure") {
         if (attempts >= MAX_DISPATCH_ATTEMPTS) {
           await failStartup(

@@ -33,6 +33,13 @@ MAX_RESOLVER_BYTES = 1024 * 1024
 MAX_CATALOG_PAGE_BYTES = 2 * 1024 * 1024
 DEFAULT_PARALLEL_THRESHOLD_BYTES = 512 * 1024 * 1024
 DEFAULT_MAX_CONNECTIONS = 16
+# OPlus occasionally accepts the resolver connection but stalls during the
+# TLS handshake.  Three 60-second attempts were not enough for a busy edge
+# and left an otherwise valid build permanently failed.  Keep retries bounded
+# while giving the CDN a fresh connection and a little more time per attempt.
+DEFAULT_HTTP_ATTEMPTS = 6
+DEFAULT_HTTP_TIMEOUT_SECONDS = 90
+HTTP_RETRY_BACKOFF_CAP_SECONDS = 30
 OPLUS_RESOLVER_USER_AGENT = "okhttp/3.12.12"
 OPLUS_RESOLVER_USER_ID = "oplus-ota|16002018"
 
@@ -246,8 +253,8 @@ class HttpSourceAdapter:
     def __init__(
         self,
         *,
-        attempts: int = 3,
-        timeout: int = 60,
+        attempts: int = DEFAULT_HTTP_ATTEMPTS,
+        timeout: int = DEFAULT_HTTP_TIMEOUT_SECONDS,
         opener: HttpOpener | None = None,
         opener_factory: HttpOpenerFactory | None = None,
         max_connections: int = DEFAULT_MAX_CONNECTIONS,
@@ -258,6 +265,7 @@ class HttpSourceAdapter:
         default_factory: HttpOpenerFactory = lambda: build_opener(
             _SafeRedirectHandler(), HTTPCookieProcessor(CookieJar())
         )
+        self._uses_default_opener = opener is None
         self.opener = opener or default_factory()
         self.opener_factory = opener_factory or (default_factory if opener is None else None)
         self.max_connections = max(1, min(max_connections, DEFAULT_MAX_CONNECTIONS))
@@ -268,6 +276,11 @@ class HttpSourceAdapter:
         temporary = target.with_suffix(target.suffix + ".partial")
         for attempt in range(1, self.attempts + 1):
             try:
+                # A timed-out TLS socket can remain poisoned inside an
+                # urllib opener.  Recreate only the adapter-owned opener so
+                # one failed edge connection cannot poison the next retry;
+                # injected test/custom openers keep their documented state.
+                self._refresh_attempt_opener()
                 self._download(uri, temporary)
                 os.replace(temporary, target)
                 return _finalize_materialized(target, expected_sha256)
@@ -279,8 +292,12 @@ class HttpSourceAdapter:
             except (HTTPError, URLError, TimeoutError, OSError, SourceError) as exc:
                 if attempt >= self.attempts:
                     raise SourceError(f"ROM download failed after {self.attempts} attempts: {exc}") from exc
-                time.sleep(min(2**attempt, 8))
+                time.sleep(min(2**attempt, HTTP_RETRY_BACKOFF_CAP_SECONDS))
         raise AssertionError("unreachable")
+
+    def _refresh_attempt_opener(self) -> None:
+        if self._uses_default_opener and self.opener_factory is not None:
+            self.opener = self.opener_factory()
 
     def _download(self, uri: str, temporary: Path) -> None:
         validate_http_url(uri, resolve_dns=True)

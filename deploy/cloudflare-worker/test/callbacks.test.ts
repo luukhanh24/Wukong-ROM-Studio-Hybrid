@@ -302,15 +302,16 @@ describe("GitHub Actions callbacks", () => {
     });
     expect(created.status).toBe(201);
     const job = await created.json() as { job_id: string };
-    const terminalBody = JSON.stringify({
-      jobId: job.job_id,
-      runId: 9002,
-      workflowResult: "failure",
-      preExecutorFailure: true,
-      sequence: 3
-    });
-    const terminalHeaders = await actionsHeaders(terminalBody);
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (const runAttempt of [1, 2, 3]) {
+      const terminalBody = JSON.stringify({
+        jobId: job.job_id,
+        runId: 9002,
+        runAttempt,
+        workflowResult: "failure",
+        preExecutorFailure: true,
+        sequence: 3
+      });
+      const terminalHeaders = await actionsHeaders(terminalBody);
       const terminal = await SELF.fetch(
         "https://worker.example/internal/actions/callback",
         {
@@ -320,6 +321,15 @@ describe("GitHub Actions callbacks", () => {
         }
       );
       expect(terminal.status).toBe(200);
+      const duplicate = await SELF.fetch(
+        "https://worker.example/internal/actions/callback",
+        {
+          method: "POST",
+          headers: terminalHeaders,
+          body: terminalBody
+        }
+      );
+      expect(duplicate.status).toBe(200);
     }
 
     const me = await SELF.fetch("https://worker.example/v1/me", { headers });

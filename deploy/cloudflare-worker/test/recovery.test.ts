@@ -175,6 +175,31 @@ describe("pre-bootstrap GitHub Actions recovery", () => {
     expect(Number(locks?.count)).toBe(2);
   });
 
+  it("reruns a runner communication failure deferred by the terminal callback", async () => {
+    await seedPreBootstrapJob(1);
+    const bindings = env as unknown as Env;
+    await bindings.DB.prepare(
+      `UPDATE wukong_jobs
+       SET status = 'dispatched', stage = 'github-actions-retrying',
+           github_run_id = 99101
+       WHERE job_id = ?`
+    ).bind(JOB_ID).run();
+    mockStartupFailure();
+
+    await recoverPreBootstrapJobs(env as unknown as Env);
+
+    const job = await bindings.DB.prepare(
+      `SELECT status, stage, github_run_id, dispatch_attempts
+       FROM wukong_jobs WHERE job_id = ?`
+    ).bind(JOB_ID).first<Record<string, unknown>>();
+    expect(job).toMatchObject({
+      status: "dispatched",
+      stage: "github-actions-queued",
+      github_run_id: 99101,
+      dispatch_attempts: 2
+    });
+  });
+
   it("fails, compensates and notifies exactly once after retries are exhausted", async () => {
     await seedPreBootstrapJob(3);
     mockStartupFailure();

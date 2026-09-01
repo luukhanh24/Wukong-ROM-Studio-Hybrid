@@ -160,6 +160,27 @@ class ActionsControlPlaneTests(unittest.TestCase):
         self.assertEqual(post.call_args.args[2]["runId"], 77)
         self.assertEqual(post.call_args.args[2]["manifest"], manifest)
 
+    def test_terminal_callback_carries_run_attempt_for_retry_deduplication(self) -> None:
+        with (
+            TemporaryDirectory() as directory,
+            mock.patch.object(actions_control_plane, "_read_json", return_value={}),
+            mock.patch.object(actions_control_plane, "_read_events", return_value=[]),
+            mock.patch.object(actions_control_plane, "_post_signed", return_value={"ok": True}) as post,
+        ):
+            actions_control_plane.terminal_callback(
+                "https://worker.example",
+                job_id="runner-retry-job",
+                run_id=123,
+                run_attempt=2,
+                secret="s" * 32,
+                workflow_result="failure",
+                manifest_path=Path(directory) / "manifest.json",
+                events_path=Path(directory) / "events.jsonl",
+                pre_executor_failure=True,
+            )
+
+        self.assertEqual(post.call_args.args[2]["runAttempt"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -388,6 +388,7 @@ jobs:
           CALLBACK_SECRET: ${{ secrets.WUKONG_ACTIONS_CALLBACK_SECRET }}
           WUKONG_JOB_ID: ${{ inputs.job_id }}
           WUKONG_RUN_ID: ${{ github.run_id }}
+          WUKONG_RUN_ATTEMPT: ${{ github.run_attempt }}
           ROUTE_RESULT: ${{ needs.route.result }}
           RUNNER_KIND: ${{ needs.route.outputs.runner_kind }}
           HOSTED_RESULT: ${{ needs.hosted.result }}
@@ -428,6 +429,7 @@ jobs:
             --api-url "$api_url"
             --job-id "$WUKONG_JOB_ID"
             --run-id "$WUKONG_RUN_ID"
+            --run-attempt "$WUKONG_RUN_ATTEMPT"
             --secret "$CALLBACK_SECRET"
             --workflow-result "$workflow_result"
           )
