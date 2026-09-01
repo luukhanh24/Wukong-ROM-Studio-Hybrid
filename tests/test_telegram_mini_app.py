@@ -319,13 +319,22 @@ window.addEventListener('load', () => {{
     setTimeout(customizeMod, 100);
   }}
   if ({str(self.click_other_job).lower()}) {{
+    let jobSelectionStarted = false;
+    let syncRequestsAfterSelection = 0;
+    const fetchBeforeJobSelection = window.fetch.bind(window);
+    window.fetch = async (...args) => {{
+      if (jobSelectionStarted && String(args[0]).includes('/v1/sync')) syncRequestsAfterSelection += 1;
+      return fetchBeforeJobSelection(...args);
+    }};
     const selectArchivedJob = () => {{
       const tab = document.querySelector('[data-job-filter="succeeded"]');
       if (!tab) {{ setTimeout(selectArchivedJob, 50); return; }}
       if (tab.getAttribute('aria-selected') !== 'true') tab.click();
       const card = document.querySelector('.job-history-card');
       if (!card || !card.textContent.includes('ARCHIVED_16.0.8.300(CN01)')) {{ setTimeout(selectArchivedJob, 50); return; }}
+      jobSelectionStarted = true;
       card.click();
+      setTimeout(() => {{ document.body.dataset.jobDetailSyncCalls = String(syncRequestsAfterSelection); }}, 500);
     }};
     setTimeout(selectArchivedJob, 300);
   }}
@@ -2183,6 +2192,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("ARCHIVED_16.0.8.300(CN01)", dom)
         self.assertIn('class="job-history-card selected"', dom)
         self.assertIn("ColorOS_16.0.8", dom)
+        self.assertIn('data-job-detail-sync-calls="0"', dom)
         self.assertGreater(screenshot_size, 10_000)
 
     def test_admin_opens_user_job_on_separate_page_without_changing_own_job(self) -> None:

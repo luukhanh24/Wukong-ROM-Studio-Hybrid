@@ -4271,16 +4271,16 @@ async function loadAdminJobDetail() {
 }
 
 function openJob(job) {
-  state.activeJobId = job.job_id || job.jobId;
+  const jobId = job.job_id || job.jobId;
+  state.activeJobId = jobId;
   localStorage.setItem("wukong-active-job", state.activeJobId);
   ++state.jobDetailRequestId;
   state.activeEvents = [];
   state.activeEventsJobId = "";
   state.jobEventsHasMore = false;
   state.jobHistoryFilter = job.status === "succeeded" ? "succeeded" : terminalJobStatuses.has(job.status) ? "failed" : "active";
-  state.jobHistoryPage = 1;
   renderActiveJob(job, []); renderJobHistory();
-  loadJobs({ force: true }).catch((error) => toast(error.message, true));
+  loadJobDetail(jobId).catch((error) => toast(error.message, true));
 }
 
 function renderJobParameters(job, root, reader) {
@@ -4710,16 +4710,14 @@ async function loadJobDetail(jobId) {
   const after = sameJob
     ? state.activeEvents.reduce((maximum, event) => Math.max(maximum, Number(event.sequence || 0)), 0)
     : 0;
-  const params = jobHistoryParams({ jobId, after });
-  const payload = await apiRequest(`/v1/sync?${params.toString()}`);
+  const encodedJobId = encodeURIComponent(jobId);
+  const [job, eventPayload] = await Promise.all([
+    apiRequest(`/v1/jobs/${encodedJobId}`),
+    apiRequest(`/v1/jobs/${encodedJobId}/events?after=${after}`)
+  ]);
   if (requestId !== state.jobDetailRequestId || state.activeJobId !== jobId) return;
-  state.jobs = Array.isArray(payload.jobs) ? payload.jobs : state.jobs;
-  applyJobHistoryPayload(payload);
-  const job = payload.activeJob
-    || state.jobs.find((item) => (item.job_id || item.jobId) === jobId)
-    || null;
   if (!job || (job.job_id || job.jobId) !== jobId) throw new Error(t("jobUnavailable"));
-  const incoming = Array.isArray(payload.events) ? payload.events : [];
+  const incoming = Array.isArray(eventPayload?.events) ? eventPayload.events : [];
   state.jobEventsHasMore = incoming.length >= 500;
   const merged = sameJob ? [...state.activeEvents, ...incoming] : incoming;
   const unique = new Map();
