@@ -3989,18 +3989,36 @@ async function repairDcCloudMirror(jobId, button) {
   }
 }
 
+async function dcCloudDownloadUrl(jobId, artifactIndex) {
+  if (!jobId || !Number.isInteger(artifactIndex)) return "";
+  const payload = await apiRequest(
+    `/v1/jobs/${encodeURIComponent(jobId)}/artifacts/${artifactIndex}/dccloud-download`
+  );
+  const url = artifactCloudUrl({ publicUrl: payload?.downloadUrl });
+  if (!url) throw new Error(t("artifactLinkUnavailable"));
+  return url;
+}
+
 async function downloadDcCloudMirror(jobId, artifactIndex, button) {
   if (!jobId || !Number.isInteger(artifactIndex) || !button) return;
   button.disabled = true;
   try {
-    const payload = await apiRequest(
-      `/v1/jobs/${encodeURIComponent(jobId)}/artifacts/${artifactIndex}/dccloud-download`
-    );
-    const url = artifactCloudUrl({ publicUrl: payload?.downloadUrl });
-    if (!url) throw new Error(t("artifactLinkUnavailable"));
-    openArtifactUrl(url);
+    openArtifactUrl(await dcCloudDownloadUrl(jobId, artifactIndex));
   } catch (error) {
     toast(error?.message || t("artifactLinkUnavailable"), true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyDcCloudMirrorLink(jobId, artifactIndex, button) {
+  if (!jobId || !Number.isInteger(artifactIndex) || !button) return;
+  button.disabled = true;
+  try {
+    await copyText(await dcCloudDownloadUrl(jobId, artifactIndex));
+    toast(t("artifactLinkCopied"));
+  } catch (error) {
+    toast(error?.message || t("clipboardDenied"), true);
   } finally {
     button.disabled = false;
   }
@@ -4082,7 +4100,13 @@ function renderArtifacts(job) {
         downloadMirror.textContent = t("downloadArtifactCloud", { provider: "DC Cloud" });
         downloadMirror.setAttribute("aria-label", `${downloadMirror.textContent}: ${artifact.name || "Artifact"}`);
         downloadMirror.addEventListener("click", () => downloadDcCloudMirror(job.job_id || job.jobId, index, downloadMirror));
-        mirrorActions.append(downloadMirror);
+        const copyMirror = document.createElement("button");
+        copyMirror.type = "button";
+        copyMirror.className = "artifact-copy";
+        copyMirror.textContent = t("copyArtifactLink");
+        copyMirror.setAttribute("aria-label", `${copyMirror.textContent}: ${artifact.name || "Artifact"}`);
+        copyMirror.addEventListener("click", () => copyDcCloudMirrorLink(job.job_id || job.jobId, index, copyMirror));
+        mirrorActions.append(downloadMirror, copyMirror);
         card.append(mirrorActions);
       }
       if (
