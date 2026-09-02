@@ -36,15 +36,30 @@ def audit_page(page, *, reduced: bool, axe: bool) -> dict[str, object]:
             const target = node.matches('input[type="checkbox"], input[type="radio"]')
               ? (node.closest('label') || node) : node;
             const box = target.getBoundingClientRect();
-            return box.width < 44 || box.height < 44;
-          }).map((node) => node.id || node.textContent.trim().slice(0, 40));
+            return Math.max(box.width, target.offsetWidth) < 44 || Math.max(box.height, target.offsetHeight) < 44;
+          }).map((node) => {
+            const target = node.matches('input[type="checkbox"], input[type="radio"]')
+              ? (node.closest('label') || node) : node;
+            const box = target.getBoundingClientRect();
+            return `${node.id || node.textContent.trim().slice(0, 40)}:${Math.round(box.width)}x${Math.round(box.height)}`;
+          });
           const longRunning = [...document.querySelectorAll('*')].filter((node) => {
             const style = getComputedStyle(node);
             return style.animationName !== 'none' && parseFloat(style.animationDuration) > (reduced ? .08 : 0);
           }).map((node) => node.id || node.className).slice(0, 10);
+          const mobileFormZoomRisks = innerWidth <= 860
+            ? visible.filter((node) => node.matches('input:not([type="checkbox"]):not([type="radio"]), select, textarea')
+              && parseFloat(getComputedStyle(node).fontSize) < 16)
+              .map((node) => `${node.id || node.tagName}:${getComputedStyle(node).fontSize}`)
+            : [];
+          const mastheadHeight = Math.round(document.querySelector('.masthead')?.getBoundingClientRect().height || 0);
+          const dockHeight = Math.round(document.querySelector('.bottom-nav:not([hidden])')?.getBoundingClientRect().height || 0);
           return {
             overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
             small,
+            mobileFormZoomRisks,
+            mastheadHeight,
+            dockHeight,
             scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
             longRunning,
             axeReady: Boolean(axe && window.axe)
@@ -57,6 +72,12 @@ def audit_page(page, *, reduced: bool, axe: bool) -> dict[str, object]:
         raise AssertionError("horizontal overflow")
     if result["small"]:
         raise AssertionError(f"controls below 44px: {result['small']}")
+    if result["mobileFormZoomRisks"]:
+        raise AssertionError(f"mobile form controls can trigger WebView zoom: {result['mobileFormZoomRisks']}")
+    if page.viewport_size["width"] <= 860 and result["mastheadHeight"] > 72:
+        raise AssertionError(f"mobile masthead expanded to {result['mastheadHeight']}px")
+    if page.viewport_size["width"] <= 860 and result["dockHeight"] > 66:
+        raise AssertionError(f"mobile dock expanded to {result['dockHeight']}px")
     if reduced and result["scrollBehavior"] != "auto":
         raise AssertionError("reduced motion kept smooth scrolling")
     if axe and result["axeReady"]:

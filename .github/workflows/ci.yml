@@ -62,11 +62,12 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check playwright
           python -m playwright install --with-deps chromium
-      - name: Serve the static Mini App preview
+      - name: Build and serve the production-shaped Mini App preview
         shell: bash
         run: |
           set -euo pipefail
-          python -m http.server 8789 --directory telegram_mini_app >"$RUNNER_TEMP/mini-app-http.log" 2>&1 &
+          python -m tools.build_vercel_mini_app
+          python -m http.server 8789 --directory .vercel-static >"$RUNNER_TEMP/mini-app-http.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           for attempt in $(seq 1 30); do
