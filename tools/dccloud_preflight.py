@@ -80,6 +80,11 @@ def _verify_anonymous_share(
         if not (200 <= int(response.status) < 300):
             raise SystemExit(f"DC Cloud public share API returned HTTP {response.status}")
         payload = json.load(response)
+    if isinstance(payload, dict) and payload.get("code") == 40058:
+        raise SystemExit(
+            "DC Cloud public share was not found; recreate the public share "
+            f"for /{expected_root.strip('/')} and update WUKONG_DCCLOUD_SHARE_URL"
+        )
     data = payload.get("data") if isinstance(payload, dict) else None
     parent = data.get("parent") if isinstance(data, dict) else None
     root_name = parent.get("name") if isinstance(parent, dict) else None

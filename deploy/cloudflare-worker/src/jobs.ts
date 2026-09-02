@@ -347,12 +347,23 @@ function cloudreveShareUri(env: Env, mirrorUri: string): { endpoint: string; uri
   if (parts.length !== 2 || parts[0] !== "s" || !/^[A-Za-z0-9_-]{1,128}$/.test(parts[1] ?? "")) {
     throw new JobHttpError("DC Cloud share link is invalid", 503, "dccloud_unconfigured");
   }
-  const prefix = "cloudreve://my/";
   const normalized = mirrorUri.replaceAll("\\", "/");
-  if (!normalized.toLowerCase().startsWith(prefix)) {
+  let path = "";
+  const nativePrefix = "cloudreve://my/";
+  if (normalized.toLowerCase().startsWith(nativePrefix)) {
+    // Native Cloudreve uploads persist this URI form.
+    path = normalized.slice(nativePrefix.length);
+  } else {
+    // WebDAV and multipart uploads use the rclone remote URI form, for
+    // example: wukong-dccloud:WukongROM/ROM/artifacts/PJD110/rom.zip.
+    // The remote name is intentionally ignored; the configured share token
+    // is the authority used for public URL resolution.
+    const rclone = normalized.match(/^[A-Za-z0-9][A-Za-z0-9_.-]*:(.+)$/);
+    if (rclone?.[1]) path = rclone[1].replace(/^\/+/, "");
+  }
+  if (!path) {
     throw new JobHttpError("DC Cloud artifact URI is invalid", 409, "dccloud_uri_invalid");
   }
-  const path = normalized.slice(prefix.length);
   const root = env.WUKONG_DCCLOUD_ROOT.trim().replace(/^\/+|\/+$/g, "");
   const rootPrefix = root ? `${root}/` : "";
   const nestedMarker = root ? `/${root}/` : "";
@@ -427,10 +438,27 @@ export async function dcCloudArtifactDownload(
   } catch {
     throw new JobHttpError("DC Cloud download URL could not be created", 502, "dccloud_download_failed");
   }
+  const payload = await response.json().catch(() => null) as JsonObject | null;
+  const cloudreveCode = Number(payload?.code ?? -1);
+  const cloudreveMessage = typeof payload?.msg === "string" ? payload.msg : "";
+  // Cloudreve reports a deleted/expired share as an application error while
+  // keeping the HTTP status at 200. Surface this as a configuration problem
+  // so the Mini App can tell the operator to recreate the share instead of
+  // showing the misleading generic download error.
+  if (
+    cloudreveCode === 40058
+    || /share(?:\s+link)?\s+(?:is\s+)?not\s+found/i.test(cloudreveMessage)
+  ) {
+    const configuredRoot = env.WUKONG_DCCLOUD_ROOT.trim().replace(/^\/+|\/+$/g, "") || "ROM";
+    throw new JobHttpError(
+      `DC Cloud share link is missing or expired. Recreate the /${configuredRoot} share and update WUKONG_DCCLOUD_SHARE_URL.`,
+      503,
+      "dccloud_share_not_found"
+    );
+  }
   if (!response.ok) {
     throw new JobHttpError("DC Cloud download URL could not be created", 502, "dccloud_download_failed");
   }
-  const payload = await response.json().catch(() => null) as JsonObject | null;
   const data = payload?.data && typeof payload.data === "object" && !Array.isArray(payload.data)
     ? payload.data as JsonObject
     : null;
