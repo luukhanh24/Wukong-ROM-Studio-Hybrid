@@ -1,10 +1,9 @@
 # Mini App module boundaries
 
-The Mini App stays vanilla JavaScript and uses native ES modules. The current
-release keeps the legacy feature implementation in `app.js` for runtime
-compatibility while extracting shared services behind a composition seam;
-feature-by-feature extraction can therefore happen without changing API or
-local-storage contracts.
+The Mini App stays vanilla JavaScript and uses native ES modules. `app.js` is
+the composition root: it only starts `modules/runtime.js`, which preserves the
+existing runtime and domain contracts while the feature implementation is
+extracted incrementally behind the shared lifecycle seam.
 
 - `feedback.js` owns toast timing and opt-in notification haptics; automatic
   status, polling, and reconnect messages stay silent unless a caller passes
@@ -21,8 +20,8 @@ local-storage contracts.
 When a feature is extracted, it receives the shared context (`state`, `api`,
 `t`, `telegram`, `router`, `feedback`, `dom`, and `actions`) and exposes
 `bind`, `render`, `enter`, and `leave`. `leave` must cancel timers, observers,
-and in-flight requests.
+and in-flight requests. `runtime.js` is intentionally the compatibility
+boundary for legacy domain functions until each feature can move them without
+changing API, local-storage, or signed-session behavior.
 The Vercel build copies this directory and adds a release query to every local
-JS import so Telegram WebView caches cannot mix releases. The legacy domain
-functions remain in `app.js` until each adapter can move them without changing
-API, local-storage, or signed-session behavior.
+JS import so Telegram WebView caches cannot mix releases.

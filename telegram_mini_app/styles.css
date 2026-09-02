@@ -1,13 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* CSS authority order. The production bundle keeps this single request while
- * feature rules below remain grouped by the same token/reset/base/component
- * vocabulary for future mechanical extraction. */
+/* CSS authority order. The production bundle keeps this as one request while
+ * ownership stays explicit across tokens, reset, base, components, features,
+ * responsive, themes, motion, and accessibility layers. */
 @layer tokens, reset, base, components, features, responsive, themes, motion, a11y;
 
-/* The legacy stylesheet remains a coherent base layer while tokens and reset
- * rules are already separated. Feature-specific rules below are extracted
- * mechanically without changing their runtime cascade. */
 @layer tokens {
 :root {
   color-scheme: light;
@@ -171,6 +168,9 @@ h2 { letter-spacing: -.015em; }
 .maintenance-status i{width:8px;height:8px;border-radius:50%;background:var(--sun);box-shadow:0 0 0 4px color-mix(in srgb,var(--sun) 18%,transparent)}
 .maintenance-status span{color:var(--muted);font-size:12px}
 
+}
+
+@layer components {
 #recipe-form { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 16px; align-items: start; }
 .dossier-section { position: relative; grid-column: 1; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); box-shadow: none; }
 .dossier-section::before, .build-options::before, .delivery-section::before { display: none; }
@@ -915,6 +915,9 @@ body.page-hidden .switches label[data-state="running"] i { animation-play-state:
 .user-audit{display:grid;gap:7px;max-height:260px;overflow:auto}.user-audit article{padding:9px;border:1px solid var(--line);background:var(--surface-soft)}.user-audit article:not(.user-job-entry) strong,.user-audit article:not(.user-job-entry) small{display:block}.user-audit article:not(.user-job-entry) strong{font-size:10px}.user-audit article:not(.user-job-entry) small{margin-top:4px;color:var(--muted);font:500 10px/1.35 "JetBrains Mono",monospace}
 @media(max-width:720px){.quota-chip{display:flex!important}.connection{display:none}.access-profile{grid-template-columns:1fr}.user-admin{padding:14px}.user-admin>header{align-items:stretch;flex-direction:column}.user-admin-controls{grid-template-columns:1fr}.user-table-head{display:none}.user-row{grid-template-columns:1fr auto;gap:10px;margin-top:9px;border:1px solid var(--line);border-radius:var(--radius-md)}.user-row>span:nth-child(2),.user-row>span:nth-child(3),.user-row>span:nth-child(4){grid-column:1}.user-row .user-open{grid-column:2;grid-row:1}.user-table{overflow:visible;border:0}.user-detail-grid{grid-template-columns:1fr 1fr}}
 
+}
+
+@layer features {
 /* Mobile-first glass navigation, profile and system settings */
 :root {
   --masthead-scroll:0;
@@ -1353,10 +1356,10 @@ body.page-hidden .switches label[data-state="running"] i { animation-play-state:
 
 }
 
-/* Layered authority for the extracted component and feature seams. The
- * legacy base remains intentionally unchanged; these small layer contracts
- * make future extraction safe and keep the production bundle one request. */
-@layer components {
+/* Layered authority for the extracted component and feature seams. These
+ * contracts keep the production bundle to one request while preserving
+ * explicit ownership for touch, state, theme, motion, and a11y rules. */
+@layer a11y {
   .primary.compact,
   .secondary.compact,
   .job-controls button,
