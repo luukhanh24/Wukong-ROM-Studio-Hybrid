@@ -2,6 +2,7 @@ let TelegramApp = window.Telegram && window.Telegram.WebApp;
 const configuredMiniApiEndpoint = document.querySelector('meta[name="wukong-mini-api-endpoint"]')?.content?.trim() || "";
 const miniApiEndpoint = configuredMiniApiEndpoint.startsWith("__") ? "" : configuredMiniApiEndpoint.replace(/\/$/, "");
 const telegramBotUsername = (document.querySelector('meta[name="wukong-telegram-bot"]')?.content?.trim().replace(/^@/, "") || "");
+const publicRomCatalogEndpoint = "https://roms.danielspringer.at/api/ota.php";
 
 function validSignedLaunchToken(token) {
   const value = String(token || "");
@@ -386,7 +387,7 @@ Object.assign(translations.vi, {
   romCatalogHint: "Chọn thiết bị và khu vực. Chọn bản ROM để phân tích trong Studio.",
   romDeviceChoose: "Chọn thiết bị", romDeviceSearch: "Tìm tên máy hoặc mã model",
   romDevicesLoading: "Đang tải danh sách thiết bị…", romDevicesError: "Chưa tải được danh sách thiết bị. Hãy bấm Tải lại danh sách.",
-  romDevicesRetry: "Tải lại danh sách", romDevicesEmpty: "Không có thiết bị phù hợp.", romDevicesCount: "{count} thiết bị",
+  romDevicesRetry: "Tải lại danh sách", romDevicesEmpty: "Không có thiết bị phù hợp.", romDevicesCount: "{count} thiết bị", romDevicesPublic: "Danh sách OTA công khai · {count} thiết bị", romDevicesLocal: "Danh sách thiết bị build · {count} thiết bị",
   romDeviceClear: "Bỏ chọn thiết bị",
   romVersionFilter: "Phiên bản", romChooseDeviceFirst: "Chọn thiết bị trước", romVersionsOrder: "Phiên bản mới nhất xếp trước",
   romCopyLink: "Copy link ROM", romLinkCopied: "Đã sao chép link ROM gốc.", romResolve: "Resolve", romResolving: "Đang resolve…",
@@ -441,7 +442,7 @@ Object.assign(translations.en, {
   romCatalogHint: "Choose a device and region, then select a release to analyze in Studio.",
   romDeviceChoose: "Choose a device", romDeviceSearch: "Search device name or model",
   romDevicesLoading: "Loading devices…", romDevicesError: "Could not load devices. Use Reload devices to retry.",
-  romDevicesRetry: "Reload devices", romDevicesEmpty: "No matching devices.", romDevicesCount: "{count} devices",
+  romDevicesRetry: "Reload devices", romDevicesEmpty: "No matching devices.", romDevicesCount: "{count} devices", romDevicesPublic: "Public OTA list · {count} devices", romDevicesLocal: "Build device list · {count} devices",
   romDeviceClear: "Clear device selection",
   romVersionFilter: "Version", romChooseDeviceFirst: "Choose a device first", romVersionsOrder: "Newest versions first",
   romCopyLink: "Copy ROM link", romLinkCopied: "Original ROM link copied.", romResolve: "Resolve", romResolving: "Resolving…",
@@ -597,6 +598,8 @@ const state = {
   romCatalogRequestId: 0,
   romDevices: [],
   romDevicesStatus: "idle",
+  romDevicesSource: "remote",
+  romDevicesError: "",
   romResolved: null,
   romResolveController: null,
   romCatalogTruncated: false,
@@ -2724,6 +2727,110 @@ async function updateMaintenance() {
   }
 }
 
+const romDeviceBrands = new Set(["oneplus", "oppo", "realme"]);
+const romDeviceWords = { OP: "OnePlus", PRO: "Pro", ULTRA: "Ultra", ACE: "Ace", FIND: "Find", RENO: "Reno", NORD: "Nord", PAD: "Pad", OPEN: "Open", TURBO: "Turbo", LITE: "Lite", RACING: "Racing", GO: "Go", REALME: "Realme" };
+
+function normalizeRomDevice(device, queryKey = "device") {
+  if (!device || typeof device !== "object") return null;
+  const id = String(device.id ?? "").trim().slice(0, 128);
+  const label = String(device.label ?? "").trim().slice(0, 256);
+  const brand = String(device.brand ?? "").trim();
+  if (!id || !label || !romDeviceBrands.has(brand.toLocaleLowerCase())) return null;
+  const regions = (Array.isArray(device.regions) ? device.regions : [])
+    .map((region) => {
+      if (!region || typeof region !== "object") return null;
+      const code = String(region.code ?? "").trim().toUpperCase().slice(0, 32);
+      if (!code) return null;
+      const models = [...new Set((Array.isArray(region.models) ? region.models : [])
+        .map((model) => String(model ?? "").trim().slice(0, 128)).filter(Boolean))];
+      return { code, models };
+    }).filter(Boolean);
+  return { id, label, brand, queryKey: queryKey === "model" ? "model" : "device", regions };
+}
+
+function romReleaseRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  for (const key of ["data", "releases", "results"]) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
+}
+
+function romDevicesFromReleases(rows) {
+  const devices = new Map();
+  rows.forEach((row) => {
+    if (!row || typeof row !== "object") return;
+    const id = String(row.device ?? "").trim().slice(0, 128);
+    if (!id || !/^(OP\s|OnePlus\s|OPPO\s|Realme\s)/i.test(id)) return;
+    const key = id.toLocaleUpperCase();
+    if (!devices.has(key)) {
+      const label = id.split(/\s+/).map((word) => romDeviceWords[word.toLocaleUpperCase()] || word).join(" ");
+      const brand = /^(OnePlus|OPPO|Realme)\b/i.exec(label)?.[1] || "Other";
+      if (!romDeviceBrands.has(brand.toLocaleLowerCase())) return;
+      devices.set(key, { id, label, brand, regions: new Map() });
+    }
+    const device = devices.get(key);
+    const code = String(row.region ?? "").trim().toUpperCase().slice(0, 32);
+    const model = String(row.model ?? "").trim().slice(0, 128);
+    if (!code) return;
+    if (!device.regions.has(code)) device.regions.set(code, new Set());
+    if (model) device.regions.get(code).add(model);
+  });
+  return [...devices.values()]
+    .sort((a, b) => a.brand.localeCompare(b.brand) || a.label.localeCompare(b.label, "en", { numeric: true }))
+    .map((device) => ({ ...device, regions: [...device.regions.entries()]
+      .sort(([a], [b]) => a.localeCompare(b)).map(([code, models]) => ({ code, models: [...models].sort() })) }));
+}
+
+function localRomDevices() {
+  const devices = Array.isArray(state.catalog?.devices) ? state.catalog.devices : [];
+  return devices.map((item) => {
+    const product = String(item?.product ?? "").trim();
+    const name = String(item?.name ?? "").trim();
+    if (!product || !name) return null;
+    const brand = /^OPPO\b/i.test(name) ? "OPPO" : /^Realme\b/i.test(name) ? "Realme" : "OnePlus";
+    return normalizeRomDevice({ id: product, label: `${name} · ${product}`, brand }, "model");
+  }).filter(Boolean);
+}
+
+async function fetchPublicRomCatalog(params) {
+  const publicParams = new URLSearchParams(params);
+  if (publicParams.get("latest") === "0") publicParams.delete("latest");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(`${publicRomCatalogEndpoint}?${publicParams}`, {
+      headers: { Accept: "application/json" }, cache: "no-store", signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    return {
+      releases: romReleaseRows(payload).map((release) => ({
+        id: String(release?.id ?? "").trim(), device: String(release?.device ?? "").trim(),
+        region: String(release?.region ?? "").trim().toUpperCase(), model: String(release?.model ?? "").trim(),
+        version: String(release?.version ?? "").trim(), otaVersion: String(release?.ota_version ?? "").trim(),
+        buildTimestamp: String(release?.build_timestamp ?? "").trim(), securityPatch: String(release?.security_patch ?? "").trim(),
+        md5: String(release?.md5 ?? "").trim(), sizeBytes: Number.isFinite(Number(release?.size)) ? Number(release.size) : null,
+        publishedAt: String(release?.published ?? "").trim(), versionCode: String(release?.version_code ?? "").trim(),
+        sourceUrl: String(release?.source_url ?? "").trim(), changelogUrl: String(release?.changelog_url ?? "").trim(),
+        latest: release?.is_latest === true || release?.is_latest === 1 || release?.is_latest === "1"
+      })).filter((release) => release.id && release.sourceUrl),
+      truncated: false
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchPublicRomDevices() {
+  const params = new URLSearchParams({ latest: "1" });
+  const response = await fetchPublicRomCatalog(params);
+  const devices = romDevicesFromReleases(response.releases);
+  if (!devices.length) throw new Error("Public device catalog is empty");
+  return devices;
+}
+
 function renderRomDevices() {
   const selected = state.romDevices.find((device) => device.id === $("#rom-device-filter").value);
   $("#rom-device-label").textContent = selected?.label || t("romDeviceChoose");
@@ -2739,8 +2846,13 @@ function renderRomDevices() {
   const searchKey = (value) => String(value).toLocaleLowerCase().replace(/[\s_-]+/g, "");
   const query = searchKey($("#rom-device-search").value);
   const devices = state.romDevices.filter((device) => [device.id, device.label,
-    ...device.regions.flatMap((region) => region.models)].some((value) => searchKey(value).includes(query)));
-  $("#rom-device-status").textContent = devices.length ? t("romDevicesCount", { count: devices.length }) : t("romDevicesEmpty");
+    ...(Array.isArray(device.regions) ? device.regions : []).flatMap((region) => region.models || [])]
+    .some((value) => searchKey(value).includes(query)));
+  const statusKey = state.romDevicesSource === "public" ? "romDevicesPublic"
+    : state.romDevicesSource === "local" ? "romDevicesLocal" : "romDevicesCount";
+  $("#rom-device-status").textContent = devices.length
+    ? t(statusKey, { count: query ? devices.length : state.romDevices.length })
+    : t("romDevicesEmpty");
   const clear = document.createElement("button");
   clear.type = "button";
   clear.className = "rom-device-clear";
@@ -2764,7 +2876,7 @@ function renderRomDevices() {
       const label = document.createElement("span");
       label.textContent = device.label;
       const regions = document.createElement("small");
-      regions.textContent = device.regions.map((region) => region.code).join(" · ");
+      regions.textContent = (Array.isArray(device.regions) ? device.regions : []).map((region) => region.code).join(" · ");
       button.append(label, regions);
       button.addEventListener("click", () => chooseRomDevice(device));
       target.append(button);
@@ -2773,16 +2885,40 @@ function renderRomDevices() {
 }
 
 async function loadRomDevices() {
-  if (!privateApiAvailable() || ["loading", "ready"].includes(state.romDevicesStatus)) return;
+  if (["loading", "ready"].includes(state.romDevicesStatus)) return;
   state.romDevicesStatus = "loading";
+  state.romDevicesError = "";
   renderRomDevices();
   try {
+    // The Worker remains the preferred source because it records the search
+    // activity and applies the same normalization as the rest of the API.
+    // A catalog read is also safe to recover from the public, read-only OTA
+    // endpoint when the private edge route is temporarily unavailable.
+    if (!privateApiAvailable()) throw new Error(t("telegramOnly"));
     const payload = await apiRequest("/v1/rom-catalog/devices");
     if (!Array.isArray(payload.devices)) throw new Error("Invalid device catalog");
-    state.romDevices = payload.devices.filter((device) => ["oneplus", "oppo", "realme"].includes(String(device.brand).toLowerCase()));
+    const devices = payload.devices.map((device) => normalizeRomDevice(device)).filter(Boolean);
+    if (!devices.length) throw new Error("Empty device catalog");
+    state.romDevices = devices;
+    state.romDevicesSource = "remote";
     state.romDevicesStatus = "ready";
-  } catch (_) {
-    state.romDevicesStatus = "error";
+  } catch (apiError) {
+    state.romDevicesError = apiError?.message || t("romDevicesError");
+    try {
+      state.romDevices = await fetchPublicRomDevices();
+      state.romDevicesSource = "public";
+      state.romDevicesStatus = "ready";
+    } catch (publicError) {
+      const local = localRomDevices();
+      if (local.length) {
+        state.romDevices = local;
+        state.romDevicesSource = "local";
+        state.romDevicesStatus = "ready";
+      } else {
+        state.romDevicesStatus = "error";
+      }
+      state.romDevicesError = publicError?.message || state.romDevicesError;
+    }
   }
   renderRomDevices();
 }
@@ -2790,7 +2926,8 @@ async function loadRomDevices() {
 function chooseRomDevice(device) {
   $("#rom-device-filter").value = device?.id || "";
   const region = $("#rom-region-filter");
-  const codes = device ? device.regions.map((entry) => entry.code) : ["CN", "EU", "GLO", "IN", "NA"];
+  const codes = device && Array.isArray(device.regions) && device.regions.length
+    ? device.regions.map((entry) => entry.code) : ["CN", "EU", "GLO", "IN", "NA"];
   region.replaceChildren(new Option(t("romAllRegions"), ""), ...codes.map((code) => new Option(code, code)));
   region.options[0].dataset.i18n = "romAllRegions";
   $("#rom-device-picker").open = false;
@@ -2980,8 +3117,10 @@ async function searchRomCatalog() {
     $("#rom-device-search").focus();
     return;
   }
+  const selectedDevice = state.romDevices.find((device) => device.id === filters.device);
   Object.entries(filters).forEach(([key, value]) => {
-    if (value) params.set(key, value);
+    if (!value) return;
+    params.set(key === "device" && selectedDevice?.queryKey === "model" ? "model" : key, value);
   });
   button.disabled = true;
   const requestId = ++state.romCatalogRequestId;
@@ -2990,7 +3129,16 @@ async function searchRomCatalog() {
   renderRomVersions(false);
   renderRomCatalogResults();
   try {
-    const payload = await apiRequest(`/v1/rom-catalog?${params.toString()}`);
+    let payload;
+    try {
+      payload = await apiRequest(`/v1/rom-catalog?${params.toString()}`);
+    } catch (apiError) {
+      try {
+        payload = await fetchPublicRomCatalog(params);
+      } catch (_) {
+        throw apiError;
+      }
+    }
     if (requestId !== state.romCatalogRequestId) return;
     state.romCatalogReleases = Array.isArray(payload.releases) ? payload.releases : [];
     state.romCatalogStatus = "ready";
