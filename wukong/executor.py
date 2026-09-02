@@ -624,7 +624,11 @@ class LocalJobExecutor:
                 uri=available_mirror.uri,
                 sha256=mirrored_record.sha256,
                 size_bytes=mirrored_record.size_bytes,
-                public_url=available_mirror.browse_url,
+                # The mirror record only carries a folder share URL.  Treating
+                # it as the artifact URL made Drive-failure notifications point
+                # users at the wrong resource.  The DC Cloud file URL is
+                # resolved just-in-time by the Mini App/control plane.
+                public_url=None,
                 mirrors=mirrored_record.mirrors,
             )
         # The terminal callback must be emitted as soon as the primary Drive

@@ -214,7 +214,8 @@ class ArtifactMirrorTests(unittest.TestCase):
         )
         manifest = JobManifest("job", Identity("test", "1", "user"), "digest", artifacts=[record])
         artifact = public_job_payload(manifest)["artifacts"][0]
-        self.assertEqual({"provider": "dccloud", "status": "available", "browseUrl": "https://cloud.example/share"}, artifact["mirrors"][0])
+        self.assertEqual({"provider": "dccloud", "status": "available"}, artifact["mirrors"][0])
+        self.assertNotIn("cloud.example/share", json.dumps(artifact))
         self.assertNotIn("wukong-dccloud", json.dumps(artifact))
         self.assertNotIn("secret", json.dumps(artifact))
 

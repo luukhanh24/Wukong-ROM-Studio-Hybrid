@@ -183,11 +183,14 @@ class GitHubActionsUI:
                 for mirror in artifact.mirrors:
                     if mirror.provider.casefold() != "dccloud":
                         continue
-                    browse = mirror.browse_url if mirror.status == "available" else None
-                    if browse and str(browse).startswith(("https://", "http://")):
-                        mirror_links.append(f"[Mở / Open]({browse})")
-                    else:
-                        mirror_links.append(mirror.status)
+                    # DC Cloud's browse_url is a folder share, never a file
+                    # download. Keep the report link-free; the Mini App
+                    # resolves the uploaded ROM file when requested.
+                    mirror_links.append(
+                        "available (open Mini App)"
+                        if mirror.status == "available"
+                        else mirror.status
+                    )
                 lines.append(
                     f"| `{artifact.name}` | {artifact.size_bytes:,} B | `{artifact.sha256}` | {linked} | {', '.join(mirror_links) or '—'} |"
                 )

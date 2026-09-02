@@ -162,7 +162,8 @@ class ExecutorArtifactPublishTests(unittest.TestCase):
             )
 
         self.assertEqual("cloudreve://my/WukongROM/ROM/rom.zip", record.uri)
-        self.assertEqual("https://cloud.example/share", record.public_url)
+        self.assertIsNone(record.public_url)
+        self.assertNotIn("cloud.example/share", str(record.public_url))
         self.assertEqual("available", record.mirrors[0].status)
         store.append_event.assert_any_call(
             "job",

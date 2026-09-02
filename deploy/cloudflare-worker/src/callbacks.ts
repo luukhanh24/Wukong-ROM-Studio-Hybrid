@@ -384,6 +384,7 @@ export async function handleTerminal(
     : [];
   const automaticRepair = automaticMirrorRepairStatement(env, jobId, status, rawManifest, now);
   const manifest = automaticRepair ? markMirrorsRepairing(rawManifest) : rawManifest;
+  const notificationPayload = await terminalTelegramNotification(env, row, status, manifest);
   try {
     await env.DB.batch([
       env.DB.prepare(
@@ -427,7 +428,7 @@ export async function handleTerminal(
         crypto.randomUUID(),
         `job-terminal:${jobId}`,
         row.owner_subject,
-        JSON.stringify(terminalTelegramNotification(env, row, status, manifest)),
+        JSON.stringify(notificationPayload),
         now,
         now
       ),
@@ -578,7 +579,7 @@ export async function handleMirrorRepair(
     env,
     jobId,
     row.owner_subject,
-    terminalTelegramNotification(env, row, row.status, manifest)
+    await terminalTelegramNotification(env, row, row.status, manifest)
   );
   try {
     await env.DB.batch([

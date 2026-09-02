@@ -7,6 +7,11 @@ import {
 } from "./state";
 
 const TELEGRAM_LAUNCH_TOKEN_MAX_AGE_SECONDS = 60 * 60;
+// Telegram terminal messages can remain in a chat for a while.  The ticket
+// only authorizes resolving the DC Cloud URI (the resulting URL is still
+// short-lived), so keep it valid long enough for a user to open an older
+// notification without making it permanent.
+const DCCLOUD_DOWNLOAD_TICKET_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 export interface AuthenticatedRequest {
   subject: string;
@@ -141,6 +146,67 @@ export async function validateArtifactDownloadTicket(
     throw authError("Artifact download ticket is invalid or expired");
   }
   return parts[1]!;
+}
+
+/**
+ * Issue a public, narrowly-scoped ticket for resolving one DC Cloud file.
+ * The artifact index is part of the signed payload so a ticket cannot be
+ * moved to another artifact in the same job.
+ */
+export async function issueDcCloudArtifactDownloadTicket(
+  jobId: string,
+  artifactIndex: number,
+  botToken: string,
+  now = Math.floor(Date.now() / 1000)
+): Promise<string> {
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/.test(jobId)
+    || !Number.isSafeInteger(artifactIndex)
+    || artifactIndex < 0
+    || !botToken
+  ) {
+    throw new Error("DC Cloud artifact download ticket is invalid");
+  }
+  const issuedAt = Math.floor(now);
+  const expiresAt = issuedAt + DCCLOUD_DOWNLOAD_TICKET_MAX_AGE_SECONDS;
+  const payload = `v1.${artifactIndex}.${expiresAt}`;
+  const key = await hmacSha256(bytes("WukongMiniAppLaunch\0"), botToken);
+  const signature = await hmacHex(key, `dccloud-download\0${jobId}\0${payload}`);
+  return `${payload}.${signature}`;
+}
+
+/** Validate a public DC Cloud ticket and return its signed artifact index. */
+export async function validateDcCloudArtifactDownloadTicket(
+  jobId: string,
+  ticket: string,
+  botToken: string
+): Promise<number> {
+  const parts = ticket.split(".");
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/.test(jobId)
+    || parts.length !== 4
+    || parts[0] !== "v1"
+    || !/^[0-9]+$/.test(parts[1] ?? "")
+    || !/^[0-9]+$/.test(parts[2] ?? "")
+    || !/^[0-9a-f]{64}$/i.test(parts[3] ?? "")
+  ) {
+    throw authError("DC Cloud artifact download ticket is invalid");
+  }
+  const artifactIndex = Number(parts[1]);
+  const expiresAt = Number(parts[2]);
+  if (!Number.isSafeInteger(artifactIndex) || !Number.isSafeInteger(expiresAt)) {
+    throw authError("DC Cloud artifact download ticket is invalid");
+  }
+  const payload = parts.slice(0, 3).join(".");
+  const key = await hmacSha256(bytes("WukongMiniAppLaunch\0"), botToken);
+  const expected = await hmacHex(key, `dccloud-download\0${jobId}\0${payload}`);
+  if (
+    !constantTimeHexEqual((parts[3] ?? "").toLowerCase(), expected)
+    || expiresAt < Math.floor(Date.now() / 1000)
+  ) {
+    throw authError("DC Cloud artifact download ticket is invalid or expired");
+  }
+  return artifactIndex;
 }
 
 export async function authenticate(request: Request, env: Env): Promise<AuthenticatedRequest> {

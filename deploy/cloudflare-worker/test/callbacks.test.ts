@@ -247,8 +247,7 @@ describe("GitHub Actions callbacks", () => {
       artifacts: [{
         mirrors: [{
           provider: "dccloud",
-          status: "available",
-          browse_url: "https://cloud.dabeecao.org/s/BokhN"
+          status: "available"
         }]
       }]
     });
@@ -262,10 +261,14 @@ describe("GitHub Actions callbacks", () => {
       reply_markup: { inline_keyboard: Array<Array<Record<string, unknown>>> };
     };
     expect(repairedPayload.text).toContain("DC Cloud mirror  <i>sẵn sàng</i>");
-    expect(repairedPayload.reply_markup.inline_keyboard).toContainEqual([{
-      text: "Tải Plus · 120.56 KiB (DC Cloud)",
-      url: "https://cloud.dabeecao.org/s/BokhN"
-    }]);
+    const dcCloudButton = repairedPayload.reply_markup.inline_keyboard
+      .flat()
+      .find((button) => String(button.text).includes("(DC Cloud)"));
+    expect(dcCloudButton).toMatchObject({ text: "Tải Plus · 120.56 KiB (DC Cloud)" });
+    expect(String(dcCloudButton?.url)).toMatch(
+      /^https:\/\/wukong-control-plane\.wukong-rom-studio-api\.workers\.dev\/v1\/jobs\/mirror-callback-fixture\/artifacts\/0\/dccloud-download\?ticket=v1\.0\.[0-9]+\.[0-9a-f]{64}$/
+    );
+    expect(String(dcCloudButton?.url)).not.toContain("/s/BokhN");
     const duplicate = await SELF.fetch("https://worker.example/internal/actions/mirror-repair", {
       method: "POST",
       headers: await actionsHeaders(body),

@@ -289,6 +289,19 @@ export function publicJob(row: JobRow, env: Env, includeCreator = false): JsonOb
     delete artifact.uri;
     delete artifact.public_url;
     delete artifact.publicUrl;
+    // A DC Cloud browse URL is a folder share, not the ROM file.  It must
+    // never leave the control plane; clients resolve the file through the
+    // authenticated DC Cloud endpoint instead.
+    if (Array.isArray(artifact.mirrors)) {
+      artifact.mirrors = artifact.mirrors.map((value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+        const mirror = { ...(value as JsonObject) };
+        delete mirror.uri;
+        delete mirror.browse_url;
+        delete mirror.browseUrl;
+        return mirror;
+      });
+    }
     return {
       ...artifact,
       edition: artifactEdition(artifact.name, index + 1, build.preset, build.editionLabels ?? build.edition_labels),
@@ -370,6 +383,17 @@ function cloudreveShareUri(env: Env, mirrorUri: string): { endpoint: string; uri
   };
 }
 
+function isDcCloudFolderShareUrl(env: Env, value: string): boolean {
+  try {
+    const share = new URL(env.WUKONG_DCCLOUD_SHARE_URL.trim());
+    const candidate = new URL(value);
+    return candidate.origin === share.origin
+      && /^\/s\/[A-Za-z0-9_-]{1,128}\/?$/.test(candidate.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export async function dcCloudArtifactDownload(
   env: Env,
   row: JobRow,
@@ -415,7 +439,11 @@ export async function dcCloudArtifactDownload(
     ? (urls[0] as JsonObject).url
     : "";
   const downloadUrl = directArtifactUrl(url, env);
-  if (Number(payload?.code ?? -1) !== 0 || !downloadUrl) {
+  if (
+    Number(payload?.code ?? -1) !== 0
+    || !downloadUrl
+    || isDcCloudFolderShareUrl(env, downloadUrl)
+  ) {
     throw new JobHttpError("DC Cloud download URL could not be created", 502, "dccloud_download_failed");
   }
   const expires = typeof data?.expires === "string" ? data.expires : "";
@@ -1167,6 +1195,7 @@ export async function cancelJob(
     updated_at: now,
     finished_at: now
   };
+  const notificationPayload = await terminalTelegramNotification(env, row, "cancelled", manifest);
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE wukong_jobs SET manifest_json = ?, status = 'cancelled',
@@ -1192,7 +1221,7 @@ export async function cancelJob(
       crypto.randomUUID(),
       `job-terminal:${jobId}`,
       row.owner_subject,
-      JSON.stringify(terminalTelegramNotification(env, row, "cancelled", manifest)),
+      JSON.stringify(notificationPayload),
       now,
       now
     )
