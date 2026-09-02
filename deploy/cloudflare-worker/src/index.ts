@@ -1,7 +1,8 @@
 import {
   authenticate,
   type AuthenticatedRequest,
-  validateArtifactDownloadTicket
+  validateArtifactDownloadTicket,
+  validateDcCloudArtifactDownloadTicket
 } from "./auth";
 import {
   CallbackHttpError,
@@ -764,6 +765,44 @@ const worker: ExportedHandler<Env> = {
       } catch (error) {
         return json({
           error: error instanceof Error ? error.message : "Artifact download ticket is invalid"
+        }, 403);
+      }
+    }
+    // Telegram terminal messages use a signed, public ticket for DC Cloud.
+    // Keep this branch ahead of the authenticated Mini App route below: the
+    // ticket is the only credential needed, and it is scoped to one job and
+    // artifact index.  Never redirect to the configured folder share URL.
+    const ticketDcCloudDownload = path.match(
+      /^\/v1\/jobs\/([A-Za-z0-9-]{1,64})\/artifacts\/([0-9]+)\/dccloud-download$/
+    );
+    if (ticketDcCloudDownload && request.method === "GET" && ticket) {
+      try {
+        const artifactIndex = await validateDcCloudArtifactDownloadTicket(
+          ticketDcCloudDownload[1]!,
+          ticket,
+          env.WUKONG_TELEGRAM_BOT_TOKEN
+        );
+        if (artifactIndex !== Number(ticketDcCloudDownload[2])) {
+          return json({ error: "DC Cloud artifact download ticket is invalid" }, 403);
+        }
+        const row = await env.DB.prepare("SELECT * FROM wukong_jobs WHERE job_id = ?")
+          .bind(ticketDcCloudDownload[1]!)
+          .first<import("./jobs").JobRow>();
+        if (!row) return json({ error: "DC Cloud artifact is not available" }, 404);
+        const resolved = await dcCloudArtifactDownload(env, row, artifactIndex);
+        return new Response(null, {
+          status: 302,
+          headers: {
+            "Cache-Control": "private, no-store",
+            Location: String(resolved.downloadUrl)
+          }
+        });
+      } catch (error) {
+        if (error instanceof JobHttpError) {
+          return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
+        }
+        return json({
+          error: error instanceof Error ? error.message : "DC Cloud artifact download ticket is invalid"
         }, 403);
       }
     }

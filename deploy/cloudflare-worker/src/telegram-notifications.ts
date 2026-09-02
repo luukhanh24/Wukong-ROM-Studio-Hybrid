@@ -2,6 +2,7 @@ import type { JobRow } from "./jobs";
 import { artifactEdition, presetEditionLabel } from "./artifact-metadata";
 import { friendlyDeviceName } from "./catalog";
 import { directArtifactUrl } from "./public-links";
+import { issueDcCloudArtifactDownloadTicket } from "./auth";
 
 type JsonObject = Record<string, unknown>;
 
@@ -70,12 +71,48 @@ function boundedHtml(lines: string[], limit = 4096): string {
   return output.join("\n");
 }
 
-export function terminalTelegramNotification(
+async function dcCloudDownloadLink(
+  env: Env,
+  jobId: string,
+  artifactIndex: number
+): Promise<string> {
+  let api: URL;
+  try {
+    api = new URL(env.WUKONG_PUBLIC_API_URL.trim());
+  } catch {
+    return "";
+  }
+  if (
+    api.protocol !== "https:"
+    || !api.hostname
+    || api.username
+    || api.password
+    || api.search
+    || api.hash
+  ) return "";
+  try {
+    const ticket = await issueDcCloudArtifactDownloadTicket(
+      jobId,
+      artifactIndex,
+      env.WUKONG_TELEGRAM_BOT_TOKEN
+    );
+    const link = new URL(
+      `/v1/jobs/${encodeURIComponent(jobId)}/artifacts/${artifactIndex}/dccloud-download`,
+      api
+    );
+    link.searchParams.set("ticket", ticket);
+    return link.toString();
+  } catch {
+    return "";
+  }
+}
+
+export async function terminalTelegramNotification(
   env: Env,
   row: JobRow,
   status: string,
   manifest: JsonObject
-): JsonObject {
+): Promise<JsonObject> {
   const recipe = parseObject(row.recipe_json);
   const source = object(recipe.source);
   const metadata = {
@@ -125,7 +162,7 @@ export function terminalTelegramNotification(
   const keyboard: JsonObject[][] = [];
   const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts.slice(0, 8) : [];
   if (artifacts.length) lines.push("", `<b>ARTIFACT · ${artifacts.length}</b>`);
-  artifacts.forEach((value, offset) => {
+  for (const [offset, value] of artifacts.entries()) {
     const artifact = object(value);
     const name = String(artifact.name ?? "").trim();
     const edition = artifactEdition(name, offset + 1, build.preset, build.editionLabels ?? build.edition_labels);
@@ -138,11 +175,14 @@ export function terminalTelegramNotification(
     const url = directArtifactUrl(artifact.public_url ?? artifact.publicUrl, env);
     if (url) keyboard.push([{ text: `Tải ${edition} · ${size}`, url }]);
     const mirrors = Array.isArray(artifact.mirrors) ? artifact.mirrors : [];
-    mirrors.forEach((value) => {
+    for (const value of mirrors) {
       const mirror = object(value);
-      if (String(mirror.provider ?? "").trim().toLowerCase() !== "dccloud") return;
+      if (String(mirror.provider ?? "").trim().toLowerCase() !== "dccloud") continue;
       const status = String(mirror.status ?? "").trim().toLowerCase();
-      const mirrorUrl = directArtifactUrl(mirror.browse_url ?? mirror.browseUrl, env);
+      const mirrorUri = typeof mirror.uri === "string" ? mirror.uri.trim() : "";
+      const mirrorUrl = status === "available" && mirrorUri
+        ? await dcCloudDownloadLink(env, row.job_id, offset)
+        : "";
       if (status === "available" && mirrorUrl) {
         lines.push("DC Cloud mirror  <i>sẵn sàng</i>");
         keyboard.push([{ text: `Tải ${edition} · ${size} (DC Cloud)`, url: mirrorUrl }]);
@@ -151,10 +191,12 @@ export function terminalTelegramNotification(
       } else if (status === "failed") {
         lines.push("DC Cloud mirror  <i>chưa sẵn sàng</i>");
       } else {
-        lines.push("DC Cloud mirror  <i>đang upload</i>");
+        lines.push(status === "available"
+          ? "DC Cloud mirror  <i>sẵn sàng · mở Mini App để tải</i>"
+          : "DC Cloud mirror  <i>đang upload</i>");
       }
-    });
-  });
+    }
+  }
   if (env.WUKONG_TELEGRAM_WEB_APP_URL.startsWith("https://")) {
     keyboard.push([{
       text: "Mở Wukong Mini App",

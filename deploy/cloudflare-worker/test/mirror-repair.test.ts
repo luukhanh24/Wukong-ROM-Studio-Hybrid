@@ -1,5 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { issueDcCloudArtifactDownloadTicket } from "../src/auth";
 import { tmaHeaders } from "./helpers";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -117,6 +118,65 @@ describe("DC Cloud mirror repair endpoint", () => {
       provider: "dccloud",
       expires: "2026-09-01T12:00:00+07:00"
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves a signed public ticket to the uploaded file, never the folder share", async () => {
+    const bindings = env as unknown as Env;
+    const now = new Date().toISOString();
+    const jobId = "mirror-public-ticket";
+    const name = "Wukong_Plus_V6.0_ticket.zip";
+    await bindings.DB.prepare(
+      `INSERT INTO wukong_jobs
+       (job_id, manifest_json, recipe_json, created_at, updated_at,
+       owner_channel, owner_subject, device, status, stage, progress)
+       VALUES (?, ?, '{}', ?, ?, 'windows', 'local', 'PJD110', 'succeeded', 'complete', 1)`
+    ).bind(jobId, JSON.stringify({
+      job_id: jobId,
+      status: "succeeded",
+      artifacts: [{
+        name,
+        mirrors: [{
+          provider: "dccloud",
+          status: "available",
+          uri: `cloudreve://my/WukongROM/ROM/artifacts/PJD110/${name}`,
+          browse_url: "https://cloud.dabeecao.org/s/BokhN"
+        }]
+      }]
+    }), now, now).run();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      expect(String(input)).toBe("https://cloud.dabeecao.org/api/v4/file/url");
+      return Response.json({
+        code: 0,
+        data: { urls: [{ url: "https://downloads.example/rom.zip?sig=file" }] }
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const ticket = await issueDcCloudArtifactDownloadTicket(
+      jobId,
+      0,
+      bindings.WUKONG_TELEGRAM_BOT_TOKEN
+    );
+    const response = await SELF.fetch(
+      `https://worker.example/v1/jobs/${jobId}/artifacts/0/dccloud-download?ticket=${encodeURIComponent(ticket)}`,
+      { redirect: "manual" }
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe("https://downloads.example/rom.zip?sig=file");
+    expect(response.headers.get("Location")).not.toContain("/s/BokhN");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const expired = await issueDcCloudArtifactDownloadTicket(
+      jobId,
+      0,
+      bindings.WUKONG_TELEGRAM_BOT_TOKEN,
+      Math.floor(Date.now() / 1000) - 2 * 24 * 60 * 60
+    );
+    const rejected = await SELF.fetch(
+      `https://worker.example/v1/jobs/${jobId}/artifacts/0/dccloud-download?ticket=${encodeURIComponent(expired)}`,
+      { redirect: "manual" }
+    );
+    expect(rejected.status).toBe(403);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

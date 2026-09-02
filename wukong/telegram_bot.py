@@ -1347,10 +1347,11 @@ class TelegramBotController:
         for mirror in getattr(artifact, "mirrors", []) or []:
             if getattr(mirror, "provider", "").casefold() != "dccloud":
                 continue
-            browse_url = public_artifact_url(getattr(mirror, "browse_url", ""))
             status = getattr(mirror, "status", "pending")
-            if browse_url and status == "available":
-                return f"\nDC Cloud mirror: {browse_url}"
+            # browse_url is deliberately a folder share (and therefore not a
+            # downloadable ROM link). Never put it in a Telegram message.
+            if status == "available":
+                return "\nDC Cloud mirror: sẵn sàng (mở Mini App để tải)"
             if status == "repairing":
                 return "\nDC Cloud mirror: đang repair…"
             if status == "failed":

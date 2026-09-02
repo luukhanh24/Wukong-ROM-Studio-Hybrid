@@ -419,16 +419,10 @@ def public_job_payload(
                         status = str(mirror.get("status") or "pending").strip().casefold()
                         if not provider or status not in {"pending", "available", "failed", "repairing"}:
                             continue
-                        browse_url = public_artifact_url(
-                            mirror.get("browse_url") or mirror.get("browseUrl")
-                        )
-                        public_mirrors.append(
-                            {
-                                "provider": provider,
-                                "status": status,
-                                "browseUrl": browse_url,
-                            }
-                        )
+                        # Do not expose the configured DC Cloud folder share.
+                        # The Mini App resolves a file-scoped, authenticated
+                        # download URL through /dccloud-download instead.
+                        public_mirrors.append({"provider": provider, "status": status})
                     artifact["mirrors"] = public_mirrors
     if recipe:
         payload["recipe"] = {
@@ -1777,13 +1771,12 @@ class TelegramJobNotifier:
                 for mirror in artifact.mirrors:
                     if getattr(mirror, "provider", "").casefold() != "dccloud":
                         continue
-                    mirror_url = public_artifact_url(getattr(mirror, "browse_url", ""))
-                    if getattr(mirror, "status", "") == "available" and mirror_url:
+                    status = str(getattr(mirror, "status", "") or "").casefold()
+                    if status == "available":
                         lines.append("DC Cloud mirror  <i>sẵn sàng</i>")
-                        keyboard.append([{"text": "DC Cloud mirror", "url": mirror_url}])
-                    elif getattr(mirror, "status", "") == "repairing":
+                    elif status == "repairing":
                         lines.append("DC Cloud mirror  <i>đang repair…</i>")
-                    elif getattr(mirror, "status", "") == "failed":
+                    elif status == "failed":
                         lines.append("DC Cloud mirror  <i>chưa sẵn sàng</i>")
                     else:
                         lines.append("DC Cloud mirror  <i>đang upload</i>")
