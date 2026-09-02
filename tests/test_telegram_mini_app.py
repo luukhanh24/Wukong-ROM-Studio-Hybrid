@@ -19,17 +19,6 @@ from wukong.mod_release_versions import default_mod_release_version
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
-def _mini_app_script() -> str:
-    """Return the composition root plus runtime for static contract checks."""
-    return "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (
-            ROOT / "telegram_mini_app" / "app.js",
-            ROOT / "telegram_mini_app" / "modules" / "runtime.js",
-        )
-    )
-
 OPLUS_TEST_URI = (
     "https://component-ota-cn.allawntech.com/downloadCheck?"
     "c=fixture-component&p=fixture-product&d=fixture-device&g=fixture-group&"
@@ -671,11 +660,6 @@ window.addEventListener('load', () => {{
                 "application/javascript; charset=utf-8",
             )
             return
-        if path.startswith("/modules/"):
-            module = ROOT / "telegram_mini_app" / path.lstrip("/")
-            if module.is_file() and module.suffix == ".js":
-                self._send(module.read_bytes(), "application/javascript; charset=utf-8")
-                return
         if path.startswith("/assets/"):
             asset = ROOT / "telegram_mini_app" / path.lstrip("/")
             if asset.is_file():
@@ -1299,12 +1283,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
     def test_static_app_exposes_bilingual_build_and_job_contract(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
-        script = _mini_app_script()
-        styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
-        entry = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn('import "./modules/runtime.js"', entry)
-        self.assertLess(len(entry), 500)
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         for element_id in (
             "recipe-form",
@@ -1364,31 +1343,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("event-group", script)
         self.assertIn("activeEventsJobId", script)
         self.assertIn("jobDetailRequestId", script)
-        self.assertIn("adminUserDetailController", script)
-        self.assertIn("adminUserActivityController", script)
-        self.assertIn("adminAuditController", script)
-        self.assertIn("adminUserJobsController", script)
-        self.assertIn("batchRequestController", script)
-        self.assertIn("featureRegistry?.render", script)
         self.assertIn("function jobHistoryParams", script)
         self.assertIn("/v1/sync?${params.toString()}", script)
         self.assertIn("const selectedJobId = state.activeJobId", script)
         self.assertIn("loadJobDetail(selectedJobId)", script)
         self.assertIn("function renderPageButtons", script)
-        self.assertIn('id="cancel-job-dialog"', html)
-        self.assertIn('id="cancel-job-confirm"', html)
-        self.assertIn("history.pushState", script)
-        self.assertIn("function back()", script)
-        self.assertIn('window.addEventListener("popstate"', script)
-        self.assertIn("TelegramApp?.BackButton", script)
-        self.assertIn("window.visualViewport", script)
-        self.assertIn("bindRovingTablist", script)
-        self.assertIn("transform:scaleX(var(--upload-progress", styles)
-        self.assertIn("transform: scaleX(var(--job-progress", styles)
-        self.assertIn("restoreSubviewRoute", script)
-        self.assertIn('telegramId: String(state.selectedAdminUserId || "")', script)
-        self.assertIn("romCatalogRetryAction", script)
-        self.assertIn("@layer tokens, reset, base, components, features, responsive, themes, motion, a11y", styles)
         self.assertIn("setTimeout(reloadJobHistory, 300)", script)
         self.assertIn("const unique = new Map()", script)
         self.assertNotIn("githubRunLink", script)
@@ -1402,7 +1361,7 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_mini_app_maps_windows_operating_surfaces_without_saas_chrome(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         for surface in ("build", "jobs", "catalog", "system"):
             self.assertIn(f'id="{surface}"', html)
@@ -1463,7 +1422,7 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_mini_app_exposes_branded_liquid_profile_theme_and_cache_safety(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         bottom_nav = re.search(r'<nav class="bottom-nav".*?</nav>', html, re.DOTALL)
         self.assertIsNotNone(bottom_nav)
@@ -1546,7 +1505,7 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_maintenance_gate_and_admin_control_are_wired_to_the_public_api(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn('id="maintenance-gate"', html)
         self.assertIn('id="maintenance-toggle"', html)
@@ -1557,7 +1516,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
     def test_rom_catalog_selection_uses_the_existing_source_probe_flow(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn('id="open-rom-catalog"', html)
         self.assertIn('id="rom-catalog-results"', html)
@@ -1616,7 +1575,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("New User", dom)
         self.assertIn(':root[data-color-scheme="dark"] .user-dialog', styles)
         self.assertIn(':root[data-color-scheme="dark"] .confirm-dialog', styles)
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         self.assertNotIn("window.prompt", script)
         self.assertNotIn("window.confirm", script)
         self.assertGreater(screenshot_size, 10_000)
@@ -1653,7 +1612,7 @@ class TelegramMiniAppTests(unittest.TestCase):
     def test_mobile_surface_is_distilled_and_maintenance_is_admin_only(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         dom, _ = _render_mini_app_in_chrome(api_enabled=True, initial_view="system")
 
         self.assertNotIn('data-i18n="buildIntro"', html)
@@ -1676,7 +1635,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('backdrop-filter:blur(10px) saturate(1.5) contrast(1.08)', styles)
         self.assertIn('--dock-foreground: #171b22', styles)
         self.assertIn('--dock-foreground: #f5f7fb', styles)
-        self.assertIn('bottom:calc(132px + var(--safe-bottom))', styles)
+        self.assertIn('bottom:calc(132px + env(safe-area-inset-bottom))', styles)
         self.assertIn('.bottom-nav button:not(.dock-profile) { top:7px; height:56px; min-height:56px;', styles)
         self.assertIn("const bodyTop = 32;", script)
         self.assertIn("const capRadius = Math.min(42", script)
@@ -1738,7 +1697,7 @@ class TelegramMiniAppTests(unittest.TestCase):
             api_enabled=True,
             exercise_dock_header=True,
         )
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn('data-active-dock-tab="jobs"', dom)
         self.assertIn('data-masthead-progress="', dom)
@@ -1756,7 +1715,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
     def test_build_surface_keeps_build_workflow_separate_from_catalog_and_system(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         self.assertNotIn("Build từ Telegram.", html)
         self.assertNotIn("Build from Telegram.", script)
@@ -1820,7 +1779,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         )
         self.assertNotIn("/v1/jobs/fixture-job/download", dom)
         self.assertNotIn("onrender.com", dom)
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         self.assertIn('if (!copied) throw new Error("Clipboard copy failed")', script)
         self.assertGreater(screenshot_size, 10_000)
 
@@ -1887,7 +1846,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
     def test_smart_source_recognizes_unresolved_ota_without_exposing_signed_url(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
 
         for element_id in (
@@ -1908,7 +1867,6 @@ class TelegramMiniAppTests(unittest.TestCase):
             "source-md5",
             "source-last-modified",
             "source-deep-inspection",
-            "toggle-source-facts",
         ):
             self.assertIn(f'id="{element_id}"', html)
         self.assertIn("downloadcheck", script.casefold())
@@ -1934,8 +1892,6 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("sourceProbeController?.abort()", script)
         self.assertIn("110000", script)
         self.assertIn("metadataCompleteness", script)
-        self.assertIn("source-fact-secondary", html)
-        self.assertIn("updateSourceFactsDisclosure", script)
         self.assertIn("copySourceMetadata", script)
         self.assertIn("apiUnavailableMessage", script)
         self.assertIn("checklistApiPending", script)
@@ -2174,7 +2130,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("2 lần mở", dom)
 
     def test_smart_source_uses_server_probe_instead_of_cross_origin_browser_fetch(self) -> None:
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn("probeSourceViaBackend", script)
         self.assertNotIn("fetch(uri", script)
@@ -2192,7 +2148,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertNotIn("deploy-pages", workflow)
 
     def test_default_debloat_list_is_embedded_for_recipe_parity(self) -> None:
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         config = json.loads((ROOT / "config" / "debloat.json").read_text(encoding="utf-8"))
 
         self.assertIn("defaultDebloatPaths", script)
@@ -2344,7 +2300,7 @@ class TelegramMiniAppTests(unittest.TestCase):
 
     def test_admin_batch_build_and_persistent_release_surfaces_are_separate_and_wired(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
-        script = _mini_app_script()
+        script = (ROOT / "telegram_mini_app" / "app.js").read_text(encoding="utf-8")
         styles = (ROOT / "telegram_mini_app" / "styles.css").read_text(encoding="utf-8")
         self.assertIn('id="catalog-release-admin" hidden', html)
         self.assertIn('id="save-admin-release"', html)

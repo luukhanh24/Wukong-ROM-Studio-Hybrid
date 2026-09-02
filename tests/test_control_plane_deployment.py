@@ -236,35 +236,8 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
             ).read_text(encoding="utf-8"),
             (output / "WukongStudio.svg").read_text(encoding="utf-8"),
         )
-        self.assertTrue((output / "modules" / "feedback.js").is_file())
-        self.assertTrue((output / "modules" / "a11y.js").is_file())
-        self.assertTrue((output / "modules" / "motion.js").is_file())
-        self.assertTrue((output / "modules" / "feature-registry.js").is_file())
-        for feature in ("build", "source", "jobs", "catalog", "profile", "admin"):
-            self.assertTrue((output / "modules" / "features" / f"{feature}.js").is_file())
-        bundled_app = (output / "app.js").read_text(encoding="utf-8")
-        bundled_runtime = (output / "modules" / "runtime.js").read_text(encoding="utf-8")
-        self.assertIn('./modules/runtime.js?v=privacy-test', bundled_app)
-        self.assertIn('./feedback.js?v=privacy-test', bundled_runtime)
-        self.assertIn('./a11y.js?v=privacy-test', bundled_runtime)
-        self.assertIn('./motion.js?v=privacy-test', bundled_runtime)
-        self.assertIn('./feature-registry.js?v=privacy-test', bundled_runtime)
-        self.assertIn('./features/build.js?v=privacy-test', bundled_runtime)
-        bundled_index = (output / "index.html").read_text(encoding="utf-8")
-        self.assertIn('./fflate.js?v=privacy-test', bundled_index)
         self.assertIn('"outputDirectory": ".vercel-static"', vercel)
         self.assertIn("X-Robots-Tag", vercel)
-
-    def test_ci_includes_mini_app_runtime_accessibility_gate(self) -> None:
-        workflow = (Path(__file__).parents[1] / ".github/workflows/ci.yml").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("mini-app-runtime:", workflow)
-        self.assertIn("python -m playwright install --with-deps chromium", workflow)
-        self.assertIn(
-            "python tools/mini_app_ui_smoke.py --authenticated-fixture --axe",
-            workflow,
-        )
 
     def test_vercel_git_integration_defaults_to_cloudflare_worker(self) -> None:
         self.assertEqual(PRODUCTION_API_ORIGIN, configured_api_origin({}))

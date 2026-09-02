@@ -45,40 +45,6 @@ jobs:
       - name: Run Python contract and regression tests
         run: python -m unittest discover -s tests -v
 
-  mini-app-runtime:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-          cache: pip
-      - name: Install Mini App smoke dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check playwright
-          python -m playwright install --with-deps chromium
-      - name: Build and serve the production-shaped Mini App preview
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m tools.build_vercel_mini_app
-          python -m http.server 8789 --directory .vercel-static >"$RUNNER_TEMP/mini-app-http.log" 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid"' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error http://127.0.0.1:8789/index.html >/dev/null; then
-              break
-            fi
-            test "$attempt" -lt 30
-            sleep 1
-          done
-          python tools/mini_app_ui_smoke.py --authenticated-fixture --axe
-
   desktop:
     runs-on: windows-2025
     steps:

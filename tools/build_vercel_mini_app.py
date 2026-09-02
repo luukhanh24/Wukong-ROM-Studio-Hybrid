@@ -18,7 +18,6 @@ ASSET_NAMES = (
     "fflate.LICENSE.txt",
     "WukongStudio.svg",
 )
-MODULE_DIR = "modules"
 
 PRODUCTION_API_ORIGIN = "https://wukong-control-plane.wukong-rom-studio-api.workers.dev"
 
@@ -43,18 +42,6 @@ def configured_api_origin(environ: Mapping[str, str] = os.environ) -> str:
     return environ.get("WUKONG_TELEGRAM_MINI_APP_API_URL", "").strip() or PRODUCTION_API_ORIGIN
 
 
-def _version_module_imports(path: Path, release: str) -> None:
-    """Stamp local ES-module imports so WebViews do not mix old/new releases."""
-    source = path.read_text(encoding="utf-8")
-    stamped = re.sub(
-        r'((?:from\s*|import\s*)["\'])(\./[^"\']+?\.js)(["\'])',
-        rf"\1\2?v={release}\3",
-        source,
-    )
-    if stamped != source:
-        path.write_text(stamped, encoding="utf-8", newline="\n")
-
-
 def build_site(
     repository_root: Path,
     output: Path,
@@ -68,22 +55,12 @@ def build_site(
     source = root / "telegram_mini_app"
     for name in ASSET_NAMES:
         shutil.copyfile(source / name, destination / name)
-    modules_source = source / MODULE_DIR
-    modules_destination = destination / MODULE_DIR
-    if modules_source.is_dir():
-        shutil.copytree(modules_source, modules_destination, dirs_exist_ok=True)
     safe_release = quote(release.strip() or "production", safe="-._")
-    for module_path in destination.glob("*.js"):
-        _version_module_imports(module_path, safe_release)
-    if modules_destination.is_dir():
-        for module_path in modules_destination.rglob("*.js"):
-            _version_module_imports(module_path, safe_release)
     index_path = destination / "index.html"
     index = index_path.read_text(encoding="utf-8")
     index = index.replace("__WUKONG_TELEGRAM_MINI_APP_API_URL__", _api_origin(api_url))
     index = re.sub(r"\./styles\.css(?:\?v=[^\"']+)?", f"./styles.css?v={safe_release}", index)
     index = re.sub(r"\./app\.js(?:\?v=[^\"']+)?", f"./app.js?v={safe_release}", index)
-    index = re.sub(r"\./fflate\.js(?:\?v=[^\"']+)?", f"./fflate.js?v={safe_release}", index)
     index_path.write_text(index, encoding="utf-8", newline="\n")
     export_catalog(
         root / "content-packs" / "index.json",
