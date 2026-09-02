@@ -121,6 +121,89 @@ describe("DC Cloud mirror repair endpoint", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("resolves the rclone/WebDAV mirror URI emitted by multipart uploads", async () => {
+    const bindings = env as unknown as Env;
+    const now = new Date().toISOString();
+    const jobId = "mirror-rclone-uri-fixture";
+    const name = "Wukong_Lite_V6.0_fixture.zip";
+    await bindings.DB.prepare(
+      `INSERT INTO wukong_jobs
+       (job_id, manifest_json, recipe_json, created_at, updated_at,
+        owner_channel, owner_subject, device, status, stage, progress)
+       VALUES (?, ?, '{}', ?, ?, 'windows', 'local', 'PJD110', 'succeeded', 'complete', 1)`
+    ).bind(jobId, JSON.stringify({
+      job_id: jobId,
+      status: "succeeded",
+      artifacts: [{
+        name,
+        mirrors: [{
+          provider: "dccloud",
+          status: "available",
+          uri: `wukong-dccloud:WukongROM/ROM/artifacts/PJD110/${name}`,
+          browse_url: "https://cloud.dabeecao.org/s/BokhN"
+        }]
+      }]
+    }), now, now).run();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("https://cloud.dabeecao.org/api/v4/file/url");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        uris: [`cloudreve://BokhN@share/artifacts/PJD110/${encodeURIComponent(name)}`]
+      });
+      return Response.json({
+        code: 0,
+        data: { urls: [{ url: "https://downloads.example/rclone-rom.zip?sig=file" }] }
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await SELF.fetch(
+      `https://worker.example/v1/jobs/${jobId}/artifacts/0/dccloud-download`,
+      { headers: await tmaHeaders(1678823419) }
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      downloadUrl: "https://downloads.example/rclone-rom.zip?sig=file",
+      provider: "dccloud"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a deleted DC Cloud share instead of a generic download failure", async () => {
+    const bindings = env as unknown as Env;
+    const now = new Date().toISOString();
+    const jobId = "mirror-deleted-share-fixture";
+    const name = "Wukong_Lite_V6.0_deleted-share.zip";
+    await bindings.DB.prepare("DELETE FROM wukong_jobs WHERE job_id = ?").bind(jobId).run();
+    await bindings.DB.prepare(
+      `INSERT INTO wukong_jobs
+       (job_id, manifest_json, recipe_json, created_at, updated_at,
+        owner_channel, owner_subject, device, status, stage, progress)
+       VALUES (?, ?, '{}', ?, ?, 'windows', 'local', 'PJD110', 'succeeded', 'complete', 1)`
+    ).bind(jobId, JSON.stringify({
+      job_id: jobId,
+      status: "succeeded",
+      artifacts: [{
+        name,
+        mirrors: [{
+          provider: "dccloud",
+          status: "available",
+          uri: `wukong-dccloud:WukongROM/ROM/artifacts/PJD110/${name}`
+        }]
+      }]
+    }), now, now).run();
+    const fetchMock = vi.fn(async () => Response.json({ code: 40058, msg: "Share not found" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await SELF.fetch(
+      `https://worker.example/v1/jobs/${jobId}/artifacts/0/dccloud-download`,
+      { headers: await tmaHeaders(1678823419) }
+    );
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "DC Cloud share link is missing or expired. Recreate the /ROM share and update WUKONG_DCCLOUD_SHARE_URL.",
+      code: "dccloud_share_not_found"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("resolves a signed public ticket to the uploaded file, never the folder share", async () => {
     const bindings = env as unknown as Env;
     const now = new Date().toISOString();

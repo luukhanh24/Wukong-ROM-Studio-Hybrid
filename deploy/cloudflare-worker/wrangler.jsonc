@@ -20,7 +20,7 @@
     "WUKONG_GOOGLE_DRIVE_FOLDER_ID": "1uTt-4ECmUhpJeSc8FoBLknn8HJ9e6YNv",
     "WUKONG_PUBLIC_API_URL": "https://wukong-control-plane.wukong-rom-studio-api.workers.dev",
     "WUKONG_SOURCE_TRANSPORT_URL": "https://wukong-rom-studio.vercel.app/api/source-transport",
-    "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.dabeecao.org/s/BokhN",
+    "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.dabeecao.org/s/oyZf7",
     "WUKONG_DCCLOUD_ROOT": "ROM"
   },
   "d1_databases": [
@@ -49,7 +49,7 @@
         "WUKONG_GOOGLE_DRIVE_FOLDER_ID": "1uTt-4ECmUhpJeSc8FoBLknn8HJ9e6YNv",
         "WUKONG_PUBLIC_API_URL": "https://wukong-control-plane-staging.wukong-rom-studio-api.workers.dev",
         "WUKONG_SOURCE_TRANSPORT_URL": "https://wukong-rom-studio.vercel.app/api/source-transport",
-        "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.dabeecao.org/s/BokhN",
+        "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.dabeecao.org/s/oyZf7",
         "WUKONG_DCCLOUD_ROOT": "ROM"
       },
       "d1_databases": [
@@ -75,7 +75,7 @@
         "WUKONG_GOOGLE_DRIVE_FOLDER_ID": "1uTt-4ECmUhpJeSc8FoBLknn8HJ9e6YNv",
         "WUKONG_PUBLIC_API_URL": "https://wukong-control-plane.wukong-rom-studio-api.workers.dev",
         "WUKONG_SOURCE_TRANSPORT_URL": "https://wukong-rom-studio.vercel.app/api/source-transport",
-        "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.dabeecao.org/s/BokhN",
+        "WUKONG_DCCLOUD_SHARE_URL": "https://cloud.dabeecao.org/s/oyZf7",
         "WUKONG_DCCLOUD_ROOT": "ROM"
       },
       "d1_databases": [

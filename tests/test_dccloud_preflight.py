@@ -104,6 +104,13 @@ class DCloudPreflightTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "write permissions"):
             _verify_anonymous_share("https://cloud.example/s/abc", "ROM")
 
+    @mock.patch("tools.dccloud_preflight.urlopen")
+    def test_deleted_share_is_reported_as_actionable_configuration_error(self, open_url: mock.Mock) -> None:
+        open_url.return_value = _json_response({"code": 40058, "msg": "Share not found"})
+
+        with self.assertRaisesRegex(SystemExit, "public share was not found.*update WUKONG_DCCLOUD_SHARE_URL"):
+            _verify_anonymous_share("https://cloud.example/s/abc", "ROM")
+
     def test_multipart_canary_round_trips_and_cleans_remote_folders(self) -> None:
         objects: dict[str, bytes] = {}
         purged: list[str] = []
