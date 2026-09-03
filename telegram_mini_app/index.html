@@ -299,9 +299,6 @@
   <dialog class="confirm-dialog" id="cache-clear-dialog" aria-labelledby="cache-clear-title" aria-describedby="cache-clear-message">
     <form method="dialog"><div class="confirm-mark" aria-hidden="true">!</div><h2 id="cache-clear-title" data-i18n="clearCacheConfirmTitle">Xóa cache dùng chung?</h2><p id="cache-clear-message" data-i18n="clearCacheConfirmMessage">Chỉ quản trị viên được phép thực hiện. Toàn bộ stage cache dùng chung sẽ bị xóa và các job sau có thể cần tải, xử lý lại dữ liệu.</p><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="danger-confirm" id="cache-clear-confirm" value="default" type="button" data-i18n="confirmClearCache">Xóa cache</button></footer></form>
   </dialog>
-  <dialog class="confirm-dialog" id="confirm-action-dialog" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-message">
-    <form method="dialog" id="confirm-action-form"><div class="confirm-mark" aria-hidden="true">!</div><h2 id="confirm-action-title" data-i18n="cancelJobTitle">Hủy job này?</h2><p id="confirm-action-message" data-i18n="cancelJobMessage">Job sẽ dừng ngay tại bước hiện tại. Tiến độ đã hoàn thành được giữ lại và có thể tiếp tục từ checkpoint.</p><footer><button value="cancel" data-i18n="cancelDialog">Hủy</button><button class="danger-confirm" id="confirm-action-yes" value="confirm" type="submit" data-i18n="cancelJobConfirm">Hủy job</button></footer></form>
-  </dialog>
   <script src="./fflate.js"></script>
   <script src="./app.js" type="module"></script>
 </body>
