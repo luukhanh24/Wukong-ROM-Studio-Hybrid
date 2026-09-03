@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T16:55:09.596872Z",
+  "generatedAt": "2026-09-03T16:33:03.022284Z",
   "packs": [
     {
       "archive": {
@@ -62,9 +62,9 @@
     },
     {
       "archive": {
-        "md5": "73d285cc2537d28c5e7aa7245bddb69a",
-        "sha256": "040aba883a2657e2f47b02144f1f1a14f2e6554b1e87eb83f29a5bd2b07dd59d",
-        "sizeBytes": 31907116,
+        "md5": "63ed4263542749351caf9eeb4c896ceb",
+        "sha256": "a2c03fe466cd0c247ff41fecc63917b43839938fd66877ed5de7fed2492e793a",
+        "sizeBytes": 31907084,
         "uri": "wukong-gdrive:WukongROM/content-packs/Flash_script/common.tar.zst"
       },
       "files": [
@@ -75,13 +75,13 @@
         },
         {
           "path": "META-INF/com/google/android/update-binary",
-          "sha256": "85327d9871853fc7cb33d796362747cfeb2ca621aa2cd4f29e7f51ff63b9a4bd",
-          "sizeBytes": 5623
+          "sha256": "1c702afe7186afdc6f008462ec1776023dc93da2ff42946702332cd8fc7f09d0",
+          "sizeBytes": 5481
         },
         {
           "path": "META-INF/com/google/android/updater-script",
-          "sha256": "ce73b804d4fdc57f08758d92e5919ebbe34c6b40793b8b5b707defda1ff816a7",
-          "sizeBytes": 11
+          "sha256": "30429ff2966e67ef9f14f5f85a12b98de497d27fb4103fcdac83647be8a5196d",
+          "sizeBytes": 10
         },
         {
           "path": "Wukong_Flashing_Tool_Linux.sh",
@@ -306,7 +306,7 @@
       ],
       "id": "Flash_script/common",
       "remote": "wukong-gdrive:WukongROM/content-packs/Flash_script/common",
-      "sizeBytes": 79364100,
+      "sizeBytes": 79363957,
       "target": "Flash_script"
     },
     {
