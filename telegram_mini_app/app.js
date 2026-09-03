@@ -1007,12 +1007,25 @@ function bindLiquidBottomTabs() {
   let lastTime = 0;
   let dragged = false;
   let velocity = 0;
+  let pressedButton = null;
 
   nav.addEventListener("click", (event) => {
-    if (!state.liquidSuppressClick) return;
-    state.liquidSuppressClick = false;
+    const targetButton = event.target?.closest?.("button[data-nav]") || pressedButton;
+    if (state.liquidSuppressClick) {
+      state.liquidSuppressClick = false;
+      pressedButton = null;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    // Pointer capture retargets the synthetic click to the nav container.
+    // Preserve the button pressed at pointerdown so a normal click still
+    // navigates; dragging remains handled by the liquid snap logic below.
+    if (!targetButton) return;
+    pressedButton = null;
     event.preventDefault();
     event.stopImmediatePropagation();
+    navigate(targetButton.dataset.nav);
   }, true);
   nav.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 && event.pointerType !== "touch") return;
@@ -1023,6 +1036,7 @@ function bindLiquidBottomTabs() {
     startPosition = state.liquidPosition;
     dragged = false;
     velocity = 0;
+    pressedButton = event.target?.closest?.("button[data-nav]") || null;
     nav.classList.add("is-pressed");
     nav.setPointerCapture?.(pointerId);
     setLiquidPosition(startPosition, 0, true);
