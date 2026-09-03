@@ -218,7 +218,7 @@ Object.assign(translations.vi, {
   noJobsTitle: "Chưa có job", noJobsMessage: "Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.", newBuild: "Tạo build đầu tiên", buildCreated: "Đã tạo job và bắt đầu theo dõi trong Mini App.",
   activeJob: "JOB ĐANG CHẠY", eventTimeline: "Nhật ký trực tiếp", eventsPreview: "{visible} thẻ / {total} cập nhật", uploadUpdates: "{count} lần cập nhật đã gộp", uploadTransferred: "Đã tải", uploadSpeed: "Tốc độ", uploadEta: "Còn lại", uploadComplete: "Hoàn tất", viewFullLog: "Xem toàn bộ nhật ký", hideFullLog: "Thu gọn nhật ký", fullLogTitle: "Toàn bộ nhật ký build", eventRunning: "Đang thực hiện", eventSucceeded: "Đã hoàn tất", eventFailed: "Thất bại", eventSteps: "bước", eventDetails: "Thông số chi tiết", finishBuild: "Hoàn tất cấu hình build", artifactsReady: "Artifact & link tải", noEvents: "Chưa có sự kiện mới.", noArtifacts: "Artifact sẽ xuất hiện sau khi build và upload hoàn tất.",
   retryJob: "Chạy lại", openActionsLog: "Mở log GitHub Actions", elapsed: "Thời gian", createdAt: "Khởi tạo", modConfiguration: "Cấu hình", autoSelected: "Đã tự chọn thiết bị {device} từ metadata ROM.", apiRequired: "Mini App API chưa được cấu hình. Hãy liên hệ quản trị viên.", requestFailed: "Không thể kết nối Mini App API.",
-  openArtifactCloud: "Mở trên {provider}", downloadArtifactCloud: "Tải xuống từ {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror đang upload…", dcCloudMirrorFailed: "DC Cloud mirror chưa sẵn sàng", dcCloudMirrorRepairing: "DC Cloud mirror đang repair…"
+  openArtifactCloud: "Mở trên {provider}", downloadArtifactCloud: "Tải xuống từ {provider}", copyArtifactLink: "Sao chép link tải", artifactLinkCopied: "Đã sao chép link tải.", artifactLinkUnavailable: "Link cloud chưa sẵn sàng.", dcCloudShareMissing: "Link chia sẻ DC Cloud đã bị xóa hoặc hết hạn. Hãy tạo lại share cho /ROM rồi cập nhật cấu hình.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror đang upload…", dcCloudMirrorFailed: "DC Cloud mirror chưa sẵn sàng", dcCloudMirrorRepairing: "DC Cloud mirror đang repair…"
 });
 
 Object.assign(translations.en, {
@@ -366,7 +366,7 @@ Object.assign(translations.en, {
   noJobsTitle: "No jobs yet", noJobsMessage: "Create a build configuration; its progress and result will remain here.", newBuild: "Create first build", buildCreated: "Job created and now tracked inside the Mini App.",
   activeJob: "ACTIVE JOB", eventTimeline: "Live event log", eventsPreview: "{visible} cards / {total} updates", uploadUpdates: "{count} updates collapsed", uploadTransferred: "Transferred", uploadSpeed: "Speed", uploadEta: "Remaining", uploadComplete: "Complete", viewFullLog: "View full log", hideFullLog: "Collapse log", fullLogTitle: "Complete build log", eventRunning: "In progress", eventSucceeded: "Completed", eventFailed: "Failed", eventSteps: "steps", eventDetails: "Detailed data", finishBuild: "Complete build configuration", artifactsReady: "Artifacts & downloads", noEvents: "No new events yet.", noArtifacts: "Artifacts appear after the build and upload finish.",
   retryJob: "Retry", openActionsLog: "Open GitHub Actions log", elapsed: "Elapsed", createdAt: "Created", modConfiguration: "Configuration", autoSelected: "Device {device} was selected from ROM metadata.", apiRequired: "The Mini App API is not configured. Contact the administrator.", requestFailed: "Could not reach the Mini App API.",
-  openArtifactCloud: "Open in {provider}", downloadArtifactCloud: "Download from {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror is uploading…", dcCloudMirrorFailed: "DC Cloud mirror is not ready", dcCloudMirrorRepairing: "DC Cloud mirror is being repaired…"
+  openArtifactCloud: "Open in {provider}", downloadArtifactCloud: "Download from {provider}", copyArtifactLink: "Copy download link", artifactLinkCopied: "Download link copied.", artifactLinkUnavailable: "The cloud link is not ready yet.", dcCloudShareMissing: "The DC Cloud share link was deleted or expired. Recreate the /ROM share and update the configuration.", dcCloudMirror: "DC Cloud mirror", dcCloudMirrorPending: "DC Cloud mirror is uploading…", dcCloudMirrorFailed: "DC Cloud mirror is not ready", dcCloudMirrorRepairing: "DC Cloud mirror is being repaired…"
 });
 
 Object.assign(translations.vi, {
@@ -537,6 +537,35 @@ Object.assign(translations.en, {
   jobModPlaceholder: "ColorOS_16.0.10"
 });
 
+Object.assign(translations.vi, {
+  cancelJobTitle: "Hủy job này?",
+  cancelJobMessage: "Job sẽ dừng ngay tại bước hiện tại. Tiến độ đã hoàn thành được giữ lại và có thể tiếp tục từ checkpoint.",
+  cancelJobConfirm: "Hủy job",
+  cancelJobDone: "Đã gửi yêu cầu hủy job.",
+  batchReleaseAuto: "Theo nền MOD",
+  batchAwaitingSource: "Đang chờ tìm ROM nguồn",
+  batchLogSummary: "Log job · {count} sự kiện",
+  batchSummaryCount: "{count} cấu hình",
+  batchErrorNeedsDevice: "Hãy chọn ít nhất một thiết bị, một nền MOD và một bản {lite}/{plus}.",
+  batchCreatedToast: "Đã tạo {count} cấu hình batch build.",
+  batchProgressToast: "Batch đã được tạo; chưa tải được tiến độ: {error}",
+  sessionDiagHashSuffix: " (từ hash)"
+});
+Object.assign(translations.en, {
+  cancelJobTitle: "Cancel this job?",
+  cancelJobMessage: "The job stops at its current step. Completed progress is kept and can be resumed from the checkpoint.",
+  cancelJobConfirm: "Cancel job",
+  cancelJobDone: "Cancel request sent.",
+  batchReleaseAuto: "Follow MOD base",
+  batchAwaitingSource: "Waiting for source ROM lookup",
+  batchLogSummary: "Job log · {count} events",
+  batchSummaryCount: "{count} configurations",
+  batchErrorNeedsDevice: "Pick at least one device, one MOD base and one {lite}/{plus} preset.",
+  batchCreatedToast: "Created {count} batch build configurations.",
+  batchProgressToast: "Batch created; could not load progress: {error}",
+  sessionDiagHashSuffix: " (from hash)"
+});
+
 const state = {
   language: localStorage.getItem("wukong-language") || "vi",
   theme: localStorage.getItem("wukong-theme") || "system",
@@ -665,7 +694,7 @@ function toast(message, error = false) {
   node.classList.toggle("error", error);
   node.classList.add("visible");
   clearTimeout(state.toastTimer);
-  state.toastTimer = setTimeout(() => node.classList.remove("visible"), 3600);
+  state.toastTimer = setTimeout(() => node.classList.remove("visible"), error ? 7000 : 3600);
   if (TelegramApp?.HapticFeedback) TelegramApp.HapticFeedback.notificationOccurred(error ? "error" : "success");
 }
 
@@ -845,7 +874,9 @@ async function apiRequest(path, options = {}) {
     }
     const message = payload.code === "build_concurrency_limit"
       ? t("buildConcurrencyLimit")
-      : payload.error || `HTTP ${response.status}`;
+      : payload.code === "dccloud_share_not_found"
+        ? t("dcCloudShareMissing")
+        : payload.error || `HTTP ${response.status}`;
     const error = new Error(message);
     error.code = payload.code || "";
     error.status = response.status;
@@ -977,7 +1008,11 @@ function navigate(name, smooth = true) {
     bottomNav?.classList.add("is-shifting");
     setTimeout(() => bottomNav?.classList.remove("is-shifting"), 520);
   }
-  history.replaceState(null, "", `#${name}`);
+  if (location.hash.slice(1) !== name) history.pushState({ view: name }, "", `#${name}`);
+  const backButton = TelegramApp?.BackButton;
+  if (backButton && TelegramApp?.isVersionAtLeast?.("6.1")) {
+    if (name === "build") backButton.hide?.(); else backButton.show?.();
+  }
   window.scrollTo({ top: 0, behavior: smooth && !prefersReducedMotion() ? "smooth" : "auto" });
   updateDispatchFab();
   if (name === "jobs") loadJobs({ force: true }).catch(() => {});
@@ -986,6 +1021,20 @@ function navigate(name, smooth = true) {
   if (name === "system" && state.me?.role === "admin") {
     loadAdminUsers().catch(() => {});
     if (!$("#admin-batch-page").hidden) loadLatestBatch().catch(() => {});
+  }
+}
+
+function bindNavigationHistory() {
+  window.addEventListener("popstate", () => {
+    const view = location.hash.slice(1) || "build";
+    if (document.getElementById(view)) navigate(view, false);
+  });
+  const backButton = TelegramApp?.BackButton;
+  if (backButton && TelegramApp?.isVersionAtLeast?.("6.1")) {
+    backButton.onClick(() => {
+      if (history.state?.view) history.back();
+      else navigate("build", true);
+    });
   }
 }
 
@@ -2159,7 +2208,7 @@ function updateBatchSummary() {
   const count = batchSelections("#batch-devices").length * modVersions.length;
   const editions = [$("#batch-lite").checked ? presetLabel("lite") : "", $("#batch-plus").checked ? presetLabel("plus") : ""].filter(Boolean).join(" + ");
   const releases = [...new Set(modVersions.map(value => state.catalog?.modReleaseVersions?.[value]).filter(Boolean))].join(" + ");
-  $("#batch-summary").textContent = `${count} cấu hình${editions ? ` · ${editions}` : ""}${releases ? ` · ${releases}` : ""}`;
+  $("#batch-summary").textContent = [t("batchSummaryCount", { count }), editions, releases].filter(Boolean).join(" · ");
 }
 
 function renderBatchChoices() {
@@ -2197,17 +2246,17 @@ function closeBatchBuildPage() {
 function batchReleaseSummary(payload) {
   return payload.releaseVersion
     || [...new Set(Object.values(payload.releaseVersions || {}).filter(Boolean))].join(" + ")
-    || "Theo nền MOD";
+    || t("batchReleaseAuto");
 }
 
 function renderBatch(payload) {
-  $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${(payload.items || []).length} cấu hình`;
+  $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${t("batchSummaryCount", { count: (payload.items || []).length })}`;
   $("#batch-items").replaceChildren(...(payload.items || []).map(item => {
     const row = document.createElement("article"); const head = document.createElement("div"); const title = document.createElement("strong"); title.textContent = `${item.device} · ${item.modVersion}${item.releaseVersion ? ` · ${item.releaseVersion}` : ""}`;
     const status = document.createElement("span"); status.textContent = `${item.status}${item.stage ? ` · ${item.stage}` : ""} · ${Math.round(Number(item.progress || 0) * 100)}%`; head.append(title, status);
-    const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || "Đang chờ tìm ROM nguồn"; row.append(head, detail);
+    const detail = document.createElement("small"); detail.textContent = item.error || item.sourceVersion || t("batchAwaitingSource"); row.append(head, detail);
     if (Array.isArray(item.jobEvents) && item.jobEvents.length) {
-      const log = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = `Log job · ${item.jobEvents.length} sự kiện`;
+      const log = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = t("batchLogSummary", { count: item.jobEvents.length });
       const lines = document.createElement("div"); lines.className = "batch-job-log";
       lines.append(...item.jobEvents.slice().reverse().map(event => {
         const line = document.createElement("p"); const time = document.createElement("time"); time.textContent = formatDate(event.timestamp);
@@ -2248,7 +2297,7 @@ async function loadLatestBatch() {
 async function startBatchBuild() {
   const devices = batchSelections("#batch-devices"), modVersions = batchSelections("#batch-mod-versions");
   const editions = [$("#batch-lite").checked ? "lite" : "", $("#batch-plus").checked ? "plus" : ""].filter(Boolean);
-  if (!devices.length || !modVersions.length || !editions.length) throw new Error(`Hãy chọn ít nhất một thiết bị, một nền MOD và một bản ${presetLabel("lite")}/${presetLabel("plus")}.`);
+  if (!devices.length || !modVersions.length || !editions.length) throw new Error(t("batchErrorNeedsDevice", { lite: presetLabel("lite"), plus: presetLabel("plus") }));
   const button = $("#start-batch-build"); button.disabled = true;
   try {
     const body = JSON.stringify({ devices, modVersions, editions });
@@ -2263,9 +2312,9 @@ async function startBatchBuild() {
     localStorage.setItem("wukong-active-batch", state.activeBatchId);
     pending.batchId = payload.batchId;
     localStorage.setItem("wukong-batch-request", JSON.stringify(pending));
-    $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${payload.itemCount} cấu hình`;
-    toast(`Đã tạo ${payload.itemCount} cấu hình batch build.`);
-    loadBatch().catch(error => toast(`Batch đã được tạo; chưa tải được tiến độ: ${error.message}`, true));
+    $("#batch-status").textContent = `${batchReleaseSummary(payload)} · ${payload.status} · ${t("batchSummaryCount", { count: payload.itemCount })}`;
+    toast(t("batchCreatedToast", { count: payload.itemCount }));
+    loadBatch().catch(error => toast(t("batchProgressToast", { error: error.message }), true));
   } finally { button.disabled = false; }
 }
 
@@ -4098,7 +4147,7 @@ function renderUploadProgressCard(event) {
   const track = document.createElement("div"); track.className = "event-upload-track";
   track.setAttribute("role", "progressbar");
   track.setAttribute("aria-valuemin", "0"); track.setAttribute("aria-valuemax", "100"); track.setAttribute("aria-valuenow", String(snapshot.percent));
-  const fill = document.createElement("i"); fill.style.width = `${snapshot.percent}%`; fill.setAttribute("aria-hidden", "true");
+  const fill = document.createElement("i"); fill.style.setProperty("--upload-progress", String(snapshot.percent / 100)); fill.setAttribute("aria-hidden", "true");
   track.append(fill);
   const metrics = document.createElement("div"); metrics.className = "event-upload-metrics";
   const metric = (label, value) => {
@@ -4470,7 +4519,22 @@ function jobAction(label, action, job, danger = false) {
   const button = document.createElement("button"); button.type = "button"; button.textContent = label;
   button.dataset.jobFocus = `job-action-${action}`;
   if (danger) button.classList.add("danger");
-  button.addEventListener("click", () => runJobAction(action, job.job_id || job.jobId).catch((error) => toast(error.message, true)));
+  button.addEventListener("click", () => {
+    const run = () => runJobAction(action, job.job_id || job.jobId)
+      .then(() => { if (action === "cancel") toast(t("cancelJobDone")); })
+      .catch((error) => toast(error.message, true));
+    if (action !== "cancel") { run(); return; }
+    const dialog = $("#confirm-action-dialog");
+    const form = $("#confirm-action-form");
+    if (!dialog || !form || typeof dialog.showModal !== "function") { run(); return; }
+    let settled = false;
+    dialog.addEventListener("close", () => {
+      if (settled) return;
+      settled = true;
+      if (form.returnValue === "confirm") run();
+    }, { once: true });
+    dialog.showModal();
+  });
   return button;
 }
 
@@ -4639,7 +4703,7 @@ function renderActiveJob(job, events, inspection = null) {
   const stage = document.createElement("strong"); stage.textContent = job.stage || statusLabel(job.status);
   const percentage = document.createElement("b"); percentage.textContent = `${jobProgress(job)}%`;
   progressCopy.append(stage, percentage);
-  const track = document.createElement("div"); const fill = document.createElement("i"); fill.style.width = `${jobProgress(job)}%`; track.append(fill);
+  const track = document.createElement("div"); const fill = document.createElement("i"); fill.style.setProperty("--job-progress", String(jobProgress(job) / 100)); track.append(fill);
   progress.append(progressCopy, track);
   const build = job.recipe?.build || {};
   const context = document.createElement("section"); context.className = "job-context";
@@ -5449,6 +5513,23 @@ function bindEvents() {
     state.jobHistoryPage = 1;
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
   }));
+  const jobFilterButtons = () => $$("[data-job-filter]");
+  $$("[data-job-filter]").forEach((button) => button.addEventListener("keydown", (event) => {
+    const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const all = jobFilterButtons();
+    const index = all.indexOf(button);
+    if (index < 0) return;
+    const next = event.key === "ArrowLeft" ? (index - 1 + all.length) % all.length
+      : event.key === "ArrowRight" ? (index + 1) % all.length
+      : event.key === "Home" ? 0
+      : all.length - 1;
+    const target = all[next];
+    if (!target || target === button) return;
+    target.click();
+    target.focus();
+  }));
   const reloadJobHistory = () => {
     state.jobHistoryPage = 1;
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
@@ -5530,7 +5611,7 @@ function renderSessionDiagnostics() {
   const fallback = !rawDirect ? effectiveInitData() : "";
   const chars = String(effectiveInitData() || "").length;
   if (!chars) { node.textContent = t("sessionDiagNoData"); return; }
-  const via = fallback ? " (từ hash)" : "";
+  const via = fallback ? t("sessionDiagHashSuffix") : "";
   node.textContent = t("sessionDiagOk", { platform: (TelegramApp?.platform || "?") + via, chars });
 }
 
@@ -5565,6 +5646,17 @@ function ensureAutomaticTelegramConnection() {
 function startMiniApp() {
   applyTheme(state.theme);
   bindEvents();
+  bindNavigationHistory();
+  window.addEventListener("error", (event) => {
+    if (event?.error instanceof DOMException && event.error.name === "AbortError") return;
+    console.error(event.error || event.message);
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    if (event?.reason instanceof DOMException && event.reason.name === "AbortError") return;
+    console.error(event.reason);
+  });
+  window.addEventListener("offline", () => setJobsConnection("jobsOffline", true));
+  window.addEventListener("online", () => setJobsConnection("jobsConnected"));
   updateMastheadScroll();
   scheduleGreeting();
   restoreSourceDraft();
