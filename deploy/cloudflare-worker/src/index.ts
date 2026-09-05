@@ -1,3 +1,4 @@
+import { syncJobs } from "./sync";
 import {
   authenticate,
   type AuthenticatedRequest,
@@ -102,6 +103,12 @@ import { drainAutomaticMirrorRepairOutbox } from "./mirror-repair-outbox";
 const RELEASE_SHA = /^[0-9a-f]{40}$/;
 
 function json(payload: unknown, status = 200, headers?: HeadersInit): Response {
+  if (status >= 400 && payload && typeof payload === "object") {
+    const values = payload as Record<string, unknown>;
+    const requestId = crypto.randomUUID();
+    payload = { ...values, requestId, retryable: values.code !== "maintenance_mode" && [429, 502, 503, 504].includes(status), retryAfterMs: status === 429 ? 1000 : 0 };
+    headers = { ...headers, "X-Request-Id": requestId };
+  }
   const response = Response.json(payload, {
     status,
     headers: {
@@ -261,53 +268,15 @@ async function routeWithIdentity(
     }
   }
   if (path === "/v1/sync" && request.method === "GET") {
-    const params = new URL(request.url).searchParams;
-    let history = null;
     try {
-      history = params.has("page") ? await listJobHistory(env, auth, params) : null;
+      return json(await syncJobs(env, auth, new URL(request.url).searchParams));
     } catch (error) {
-      if (error instanceof JobHttpError) {
-        return json({ error: error.message, ...(error.code ? { code: error.code } : {}) }, error.status);
-      }
-      throw error;
+      if (error instanceof JobHttpError) return json({ error: error.message, code: error.code }, error.status);
+      console.error("Job synchronization failed", error instanceof Error ? error.name : "unknown");
+      return json({ error: "Job synchronization is temporarily unavailable", code: "sync_unavailable" }, 503);
     }
-    const jobs = history?.jobs ?? await listJobs(env, auth);
-    const selectionJobs = history ? await listJobs(env, auth) : jobs;
-    const selectedId = params.get("jobId") || String(
-      selectionJobs.find((job) => !["succeeded", "failed", "cancelled"].includes(String(job.status)))?.job_id
-      ?? selectionJobs[0]?.job_id
-      ?? ""
-    );
-    let activeJob: Record<string, unknown> | null = null;
-    let events: Record<string, unknown>[] = [];
-    if (selectedId) {
-      try {
-        const row = await inspectJob(env, auth, selectedId);
-        activeJob = publicJob(row, env, auth.role === "admin");
-        const after = /^[0-9]+$/.test(params.get("after") ?? "")
-          ? Number(params.get("after"))
-          : 0;
-        events = await jobEvents(env, auth, selectedId, after);
-      } catch {
-        activeJob = null;
-      }
-    }
-    return json({
-      user: await profile(env, auth.subject),
-      maintenance: await maintenanceState(env),
-      jobs,
-      ...(history ? {
-        page: history.page,
-        pageSize: history.pageSize,
-        total: history.total,
-        totalPages: history.totalPages,
-        statusCounts: history.statusCounts
-      } : {}),
-      activeJob,
-      events,
-      serverTime: new Date().toISOString()
-    });
   }
+
   if (path === "/v1/diagnostics" && request.method === "GET") {
     return json({
       system: { status: "ready", stateBackend: "d1", release: env.WUKONG_RELEASE_SHA },

@@ -1025,7 +1025,7 @@ export async function listJobHistory(
   const filters = historyFilters(params);
   const common = historyClauses(auth, filters, subject, false);
   const filtered = historyClauses(auth, filters, subject, true);
-  const statusCounts = await env.DB.prepare(
+  const countsStatement = env.DB.prepare(
     `SELECT
        COALESCE(SUM(CASE WHEN j.status NOT IN ('succeeded', 'failed', 'cancelled') THEN 1 ELSE 0 END), 0) AS active,
        COALESCE(SUM(CASE WHEN j.status = 'succeeded' THEN 1 ELSE 0 END), 0) AS succeeded,
@@ -1033,13 +1033,16 @@ export async function listJobHistory(
      FROM wukong_jobs j LEFT JOIN wukong_telegram_users u
        ON j.owner_channel = 'telegram' AND u.subject = j.owner_subject
      ${common.sql}`
-  ).bind(...common.bindings).first<{ active: number; succeeded: number; failed: number }>();
-  const totalResult = await env.DB.prepare(
+  ).bind(...common.bindings);
+  const totalStatement = env.DB.prepare(
     `SELECT COUNT(*) AS total
      FROM wukong_jobs j LEFT JOIN wukong_telegram_users u
        ON j.owner_channel = 'telegram' AND u.subject = j.owner_subject
      ${filtered.sql}`
-  ).bind(...filtered.bindings).first<{ total: number }>();
+  ).bind(...filtered.bindings);
+  const [countsResult, totalsResult] = await env.DB.batch([countsStatement, totalStatement]);
+  const statusCounts = countsResult!.results[0] as { active: number; succeeded: number; failed: number } | undefined;
+  const totalResult = totalsResult!.results[0] as { total: number } | undefined;
   const total = Number(totalResult?.total ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / JOB_HISTORY_PAGE_SIZE));
   const page = Math.min(filters.page, totalPages);
@@ -1164,13 +1167,33 @@ export async function jobEvents(
   jobId: string,
   after: number
 ): Promise<JsonObject[]> {
-  await inspectJob(env, auth, jobId);
+  const row = await inspectJob(env, auth, jobId);
+  return (await readJobEventPage(env, row, after)).events;
+}
+
+/** Caller must obtain the row through inspectJob/selectJob before reading. */
+export async function readJobEventPage(env: Env, job: JobRow, after: number, before = 0) {
   const result = await env.DB.prepare(
     `SELECT sequence, timestamp, event_type, payload_json
-     FROM wukong_job_events WHERE job_id = ? AND sequence > ?
-     ORDER BY sequence ASC LIMIT 500`
-  ).bind(jobId, after).all<Record<string, unknown>>();
-  return result.results.map((row) => publicJobEvent(row, env, jobId));
+     FROM wukong_job_events WHERE job_id = ? AND sequence ${before ? "<" : ">"} ?
+     ORDER BY sequence ${before ? "DESC" : "ASC"} LIMIT 501`
+  ).bind(job.job_id, before || after).all<Record<string, unknown>>();
+  const rows = result.results.slice(0, 500);
+  if (before) rows.reverse();
+  const events = rows.map(row => publicJobEvent(row, env, job.job_id));
+  return { events, eventsHasMore: before ? true : result.results.length > 500,
+    nextEventSequence: events.length ? Number(events.at(-1)!.sequence) : after };
+}
+
+/** Select one visible active job, falling back to the most recent history. */
+export async function selectJob(env: Env, auth: AuthenticatedRequest): Promise<JobRow | null> {
+  const where = auth.role === "admin" ? "1=1" : "j.owner_channel = 'telegram' AND j.owner_subject = ?";
+  const bindings = auth.role === "admin" ? [] : [auth.subject];
+  const active = await env.DB.prepare(`${JOB_WITH_CREATOR} WHERE ${where}
+    AND j.status NOT IN ('succeeded','failed','cancelled') ORDER BY j.created_at DESC, j.job_id DESC LIMIT 1`)
+    .bind(...bindings).first<JobRow>();
+  return active ?? env.DB.prepare(`${JOB_WITH_CREATOR} WHERE ${where}
+    ORDER BY j.created_at DESC, j.job_id DESC LIMIT 1`).bind(...bindings).first<JobRow>();
 }
 
 export function publicJobEvent(row: Record<string, unknown>, env: Env, jobId: string): JsonObject {
@@ -1231,26 +1254,30 @@ export async function cancelJob(
        next_event_sequence = ? WHERE job_id = ?
        AND status NOT IN ('succeeded', 'failed', 'cancelled')`
     ).bind(JSON.stringify(manifest), now, now, sequence + 1, jobId),
-    env.DB.prepare("DELETE FROM wukong_build_locks WHERE job_id = ?").bind(jobId),
+    env.DB.prepare(
+      "DELETE FROM wukong_build_locks WHERE job_id = ? AND EXISTS (SELECT 1 FROM wukong_jobs WHERE job_id = ? AND status = 'cancelled' AND updated_at = ?)"
+    ).bind(jobId, jobId, now),
     env.DB.prepare(
       `UPDATE wukong_telegram_users SET last_job_id = ?, last_job_status = 'cancelled'
-       WHERE subject = ?`
-    ).bind(jobId, row.owner_subject),
+       WHERE subject = ? AND EXISTS (SELECT 1 FROM wukong_jobs WHERE job_id = ? AND status = 'cancelled' AND updated_at = ?)`
+    ).bind(jobId, row.owner_subject, jobId, now),
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_job_events
        (job_id, sequence, timestamp, event_type, payload_json)
-       VALUES (?, ?, ?, 'cancelled', '{}')`
-    ).bind(jobId, sequence, now),
+       SELECT ?, ?, ?, 'cancelled', '{}' WHERE EXISTS (SELECT 1 FROM wukong_jobs WHERE job_id = ? AND status = 'cancelled' AND updated_at = ?)`
+    ).bind(jobId, sequence, now, jobId, now),
     env.DB.prepare(
       `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
        (notification_id, dedupe_key, chat_id, payload_json, available_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
+       SELECT ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM wukong_jobs WHERE job_id = ? AND status = 'cancelled' AND updated_at = ?)`
     ).bind(
       crypto.randomUUID(),
       `job-terminal:${jobId}`,
       row.owner_subject,
       JSON.stringify(notificationPayload),
       now,
+      now,
+      jobId,
       now
     )
   ]);

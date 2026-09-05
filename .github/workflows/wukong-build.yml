@@ -114,6 +114,7 @@ jobs:
       recipe_digest: ${{ steps.route.outputs.recipe_digest }}
       recipe_ref: ${{ steps.route.outputs.recipe_ref }}
       mod_version: ${{ steps.route.outputs.mod_version }}
+      task: ${{ steps.route.outputs.task }}
     steps:
       - name: "01.1 · Lấy mã điều phối / Checkout orchestrator"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -205,6 +206,7 @@ jobs:
           print(f"runner_kind={data['runner']['kind']}")
           print(f"recipe_digest={data['recipeDigest']}")
           recipe = json.load(open('.wkstudio/recipe.json', encoding='utf-8'))
+          print(f"task={recipe['task']}")
           print(f"mod_version={recipe['build']['modVersion']}")
           PY
           {
@@ -266,8 +268,18 @@ jobs:
         with:
           path: bin/Linux
           key: wukong-linux-tools-${{ runner.os }}-${{ hashFiles('tools/linux-x86_64.json', 'tools/bootstrap_linux.py') }}
+      - name: Compute selected content fingerprint
+        id: content-fingerprint
+        if: needs.route.outputs.task == 'build'
+        shell: bash
+        env:
+          SELECTED_MOD_VERSION: ${{ needs.route.outputs.mod_version }}
+        run: |
+          key="$(python3 -m tools.content_cache_key "$SELECTED_MOD_VERSION")"
+          printf 'key=%s\n' "$key" >> "$GITHUB_OUTPUT"
       - name: "04 · Khôi phục content cache / Restore shared content"
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: needs.route.outputs.task == 'build'
         with:
           path: |
             MOD
@@ -276,7 +288,7 @@ jobs:
             copy-image
             OFX
             TWRP
-          key: wukong-content-${{ needs.route.outputs.mod_version }}-${{ hashFiles('content-packs/index.json') }}
+          key: ${{ steps.content-fingerprint.outputs.key }}
       - name: "04.1 · Kiểm tra dung lượng runner / Verify runner disk split"
         shell: bash
         run: >-

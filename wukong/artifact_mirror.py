@@ -7,6 +7,8 @@ configuration, so local Windows runs remain completely unchanged.
 
 from __future__ import annotations
 
+from .artifacts import PreparedArtifact
+
 import os
 import re
 import time
@@ -197,6 +199,7 @@ class ArtifactMirrorPublisher:
         relative_root: str | None = None,
         relative_path: str | None = None,
         progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactMirrorRecord:
         browse_url = self.config.share_url or None
         if not self.config.enabled:
@@ -224,6 +227,7 @@ class ArtifactMirrorPublisher:
                     relative_path=final_path,
                     staging_key=job_id,
                     progress_callback=progress_callback,
+                    **({"prepared": prepared} if prepared is not None and isinstance(storage, (RcloneStorageAdapter, CloudreveStorageAdapter, RcloneSplitStorageAdapter)) else {}),
                 )
                 return ArtifactMirrorRecord(
                     provider="dccloud",

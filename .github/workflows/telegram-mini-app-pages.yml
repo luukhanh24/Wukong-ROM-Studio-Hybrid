@@ -70,6 +70,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npm ci --prefix telegram_mini_app
+          npm test --prefix telegram_mini_app
           python -m tools.build_vercel_mini_app
           legacy_github_owner='luukhan''h24'
           legacy_cloudflare_handle='luuxuank''hanh98'
@@ -100,7 +102,7 @@ jobs:
           for _ in {1..24}; do
             if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${GITHUB_SHA}")" \
               && grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
-              && grep -Fq "app.js?v=${GITHUB_SHA}" <<< "$page"; then
+              && grep -Fq "content=\"${GITHUB_SHA}\"" <<< "$page"; then
               exit 0
             fi
             sleep 5

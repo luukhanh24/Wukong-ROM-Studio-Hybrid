@@ -58,8 +58,12 @@ export function automaticMirrorRepairStatement(
   return env.DB.prepare(
     `INSERT OR IGNORE INTO wukong_mirror_repair_outbox
      (job_id, state, attempts, available_at, created_at)
-     VALUES (?, 'pending', 0, ?, ?)`
-  ).bind(jobId, now, now);
+     SELECT ?, 'pending', 0, ?, ?
+     WHERE EXISTS (
+       SELECT 1 FROM wukong_jobs
+       WHERE job_id = ? AND status = ? AND updated_at = ?
+     )`
+  ).bind(jobId, now, now, jobId, jobStatus, now);
 }
 
 export async function drainAutomaticMirrorRepairOutbox(

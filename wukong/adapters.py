@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .artifacts import PreparedArtifact, prepare_artifact
+
 import hashlib
 import io
 import json
@@ -1511,11 +1513,12 @@ class RcloneStorageAdapter:
         build: str,
         relative_root: str | None = None,
         progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactRecord:
         artifact = artifact.resolve()
         if not artifact.is_file():
             raise FileNotFoundError(artifact)
-        digest = sha256_file(artifact)
+        digest = prepare_artifact(artifact, prepared, hasher=sha256_file).sha256
         record = {
             "schemaVersion": 1,
             "name": artifact.name,
@@ -1547,6 +1550,7 @@ class RcloneStorageAdapter:
         relative_path: str,
         staging_key: str,
         progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactRecord:
         """Publish an artifact atomically without asking the backend for a link.
 
@@ -1568,7 +1572,7 @@ class RcloneStorageAdapter:
             or ".." in PurePosixPath(staging).parts
         ):
             raise ValueError("Mirror path is empty or contains path traversal")
-        digest = sha256_file(artifact)
+        digest = prepare_artifact(artifact, prepared, hasher=sha256_file).sha256
         size_bytes = artifact.stat().st_size
         final_uri = self.remote_uri(normalized)
         metadata_uri = final_uri + ".metadata.json"

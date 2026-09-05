@@ -227,7 +227,8 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("legacy_cloudflare_handle", workflow)
         self.assertNotIn("github.com", combined)
         self.assertNotIn("github.io", combined)
-        self.assertNotIn("./assets/", combined)
+        self.assertIn("./assets/app-", combined)
+        self.assertTrue((output / "asset-manifest.json").exists())
         self.assertEqual(
             (
                 Path(__file__).parents[1]

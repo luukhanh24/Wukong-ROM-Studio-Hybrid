@@ -58,8 +58,9 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: |
-          python -m pip install -r requirements.txt -r deploy/control-plane/requirements.txt
+          python -m pip install -r requirements.txt -r requirements-test.txt -r deploy/control-plane/requirements.txt
           npm ci --prefix deploy/cloudflare-worker
+          npm ci --prefix telegram_mini_app
       - name: Run Worker and migration contracts
         run: |
           npm run check --prefix deploy/cloudflare-worker

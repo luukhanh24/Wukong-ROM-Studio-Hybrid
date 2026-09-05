@@ -4785,7 +4785,7 @@ def _run_build_step(
 ) -> dict[str, Any]:
     label = STEP_LABELS[step]
     message = f"{phase} - {label}" if phase else ""
-    started = time.time()
+    started = time.monotonic()
     started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     running_payload = {
         "type": "step",
@@ -4823,7 +4823,7 @@ def _run_build_step(
                 "details": {
                     "startedAt": started_at,
                     "finishedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                    "durationSeconds": round(time.time() - started, 3),
+                    "durationSeconds": round(time.monotonic() - started, 3),
                     "phase": phase,
                 },
             }
@@ -4835,7 +4835,7 @@ def _run_build_step(
         **details,
         "startedAt": started_at,
         "finishedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "durationSeconds": round(time.time() - started, 3),
+        "durationSeconds": round(time.monotonic() - started, 3),
         "phase": phase,
     }
     result = StepResult(step=step, status="success", message=message, details=details)

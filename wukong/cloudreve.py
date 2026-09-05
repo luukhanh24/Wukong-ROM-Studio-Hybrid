@@ -6,6 +6,8 @@ to the local bootstrap tool and never runs in GitHub Actions.
 
 from __future__ import annotations
 
+from .artifacts import PreparedArtifact, prepare_artifact
+
 import hashlib
 import json
 import mimetypes
@@ -432,6 +434,7 @@ class CloudreveStorageAdapter:
         relative_path: str,
         staging_key: str,
         progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactRecord:
         artifact = artifact.resolve()
         if not artifact.is_file():
@@ -439,7 +442,7 @@ class CloudreveStorageAdapter:
         staging_key = staging_key.replace("\\", "/").strip("/")
         if not staging_key or ".." in PurePosixPath(staging_key).parts:
             raise ValueError("Mirror staging path is invalid")
-        digest = _sha256_file(artifact)
+        digest = prepare_artifact(artifact, prepared, hasher=_sha256_file).sha256
         size = artifact.stat().st_size
         final_uri = self._uri(relative_path)
         metadata_uri = final_uri + ".metadata.json"

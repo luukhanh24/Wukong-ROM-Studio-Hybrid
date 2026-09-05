@@ -70,7 +70,7 @@ describe("Telegram Mini App authentication", () => {
       }
     });
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toEqual({
+    await expect(response.json()).resolves.toMatchObject({
       error: "This Mini App origin is not allowed"
     });
   });

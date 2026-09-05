@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .artifacts import PreparedArtifact, prepare_artifact
+
 import json
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
@@ -30,6 +32,7 @@ class RcloneSplitStorageAdapter:
         relative_path: str,
         staging_key: str,
         progress_callback: Callable[[Mapping[str, object]], None] | None = None,
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactRecord:
         artifact = artifact.resolve()
         if not artifact.is_file():
@@ -40,7 +43,7 @@ class RcloneSplitStorageAdapter:
         staging_key = staging_key.replace("\\", "/").strip("/")
         if not staging_key or ".." in PurePosixPath(staging_key).parts:
             raise ValueError("Mirror staging key is empty or contains path traversal")
-        digest = sha256_file(artifact)
+        digest = prepare_artifact(artifact, prepared, hasher=sha256_file).sha256
         size = artifact.stat().st_size
         folder = normalized + ".parts"
         staging_folder = f"_staging/{staging_key}/{artifact.name}.parts"

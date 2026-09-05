@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .actions_ui import GitHubActionsUI
+from .artifacts import PreparedArtifact, prepare_artifact
 from .adapters import RcloneStorageAdapter, SourceIntegrityError, sha256_file, source_adapter_for
 from .artifact_mirror import ArtifactMirrorPublisher, DCloudMirrorConfig, attach_mirror
 from .cloud_sync import CloudJobSync
@@ -263,7 +264,9 @@ class LocalJobExecutor:
             storage = self.storage_factory(recipe.storage.remote)
             self._push_cloud_manifest(job_id, storage)
             adapter = source_adapter_for(recipe.source.kind, config_path=self.rclone_config)
+            download_started = time.monotonic()
             source = adapter.materialize(recipe.source.uri, source_target, recipe.source.sha256)
+            self.store.append_event(job_id, "metric", stage="materialize_source", durationSeconds=round(time.monotonic() - download_started, 3), bytesProcessed=source.size_bytes)
             if recipe.source.size_bytes is not None and source.size_bytes != recipe.source.size_bytes:
                 source.path.unlink(missing_ok=True)
                 raise SourceIntegrityError(
@@ -440,6 +443,7 @@ class LocalJobExecutor:
                             }:
                                 raise RuntimeError("Cloud checkpoints disabled by WUKONG_DISABLE_CLOUD_CHECKPOINTS")
                             relative_checkpoint = f"checkpoints/{job_id}/{stage}"
+                            checkpoint_started = time.monotonic()
                             checkpoint = sync_checkpoint_tree(
                                 storage,
                                 build_workspace,
@@ -450,6 +454,8 @@ class LocalJobExecutor:
                             checkpoint = f"local:{build_workspace}"
                         from .models import utc_now
 
+                        if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
+                            self.store.append_event(job_id, "metric", stage="checkpoint", sourceStage=stage, durationSeconds=round(time.monotonic() - checkpoint_started, 3))
                         self.store.update(job_id, checkpoint=checkpoint, checkpoint_at=utc_now())
                         self.store.append_event(job_id, "checkpoint", checkpoint=checkpoint, stage=stage)
                         self._push_cloud_progress(job_id, storage)
@@ -488,6 +494,10 @@ class LocalJobExecutor:
             last_upload_push = 0.0
             last_upload_event = 0.0
             for output_index, output in enumerate(outputs):
+                checksum_started = time.monotonic()
+                prepared = prepare_artifact(output, hasher=sha256_file)
+                self.store.append_event(job_id, "metric", stage="checksum", durationSeconds=round(time.monotonic() - checksum_started, 3), bytesProcessed=prepared.size_bytes, cacheHit=False)
+                upload_started = time.monotonic()
                 if recipe.storage.publish_artifact:
                     def report_upload(values: Mapping[str, object], *, current: Path = output) -> None:
                         nonlocal last_upload_event, last_upload_push
@@ -529,6 +539,7 @@ class LocalJobExecutor:
                                 build=artifact_build,
                                 relative_root=recipe.storage.artifact_root,
                                 progress_callback=report_upload,
+                                prepared=prepared,
                             )
                             if isinstance(storage, RcloneStorageAdapter)
                             else storage.publish_artifact(
@@ -537,7 +548,9 @@ class LocalJobExecutor:
                                 build=recipe.build.mod_version,
                             )
                         ),
+                        prepared=prepared,
                     )
+                    self.store.append_event(job_id, "metric", stage="publish", durationSeconds=round(time.monotonic() - upload_started, 3), bytesProcessed=prepared.size_bytes)
                     records.append(record)
                     self.store.append_event(
                         job_id,
@@ -557,8 +570,8 @@ class LocalJobExecutor:
                         ArtifactRecord(
                             name=output.name,
                             uri=str(output),
-                            sha256=sha256_file(output),
-                            size_bytes=output.stat().st_size,
+                            sha256=prepared.sha256,
+                            size_bytes=prepared.size_bytes,
                         )
                     )
             return self._succeed(job_id, records)
@@ -588,12 +601,14 @@ class LocalJobExecutor:
         build: str,
         relative_root: str | None,
         publish_primary: Callable[[], ArtifactRecord],
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactRecord:
+        prepared = prepare_artifact(artifact, prepared, hasher=sha256_file)
         local_record = ArtifactRecord(
             name=artifact.name,
             uri=str(artifact),
-            sha256=sha256_file(artifact),
-            size_bytes=artifact.stat().st_size,
+            sha256=prepared.sha256,
+            size_bytes=prepared.size_bytes,
         )
         mirrored_record = self._mirror_artifact(
             job_id,
@@ -602,6 +617,7 @@ class LocalJobExecutor:
             device,
             build,
             relative_root,
+            prepared=prepared,
         )
         try:
             primary_record = publish_primary()
@@ -653,6 +669,7 @@ class LocalJobExecutor:
         device: str,
         build: str,
         relative_root: str | None,
+        prepared: PreparedArtifact | None = None,
     ) -> ArtifactRecord:
         # The secondary store is intentionally limited to distributable ROM
         # ZIPs; sources, checkpoints and arbitrary publish-task files stay on
@@ -677,6 +694,7 @@ class LocalJobExecutor:
             build=build,
             relative_root=relative_root,
             progress_callback=report_mirror,
+            **({"prepared": prepared} if isinstance(self.mirror_publisher, ArtifactMirrorPublisher) else {}),
         )
         if mirror.status == "failed":
             self.store.append_event(

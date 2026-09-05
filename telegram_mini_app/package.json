@@ -1,0 +1,10 @@
+{
+  "name": "@wukong/mini-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": { "esbuild": "0.25.12" }
+}

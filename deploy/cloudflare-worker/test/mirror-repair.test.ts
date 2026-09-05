@@ -197,7 +197,7 @@ describe("DC Cloud mirror repair endpoint", () => {
       { headers: await tmaHeaders(1678823419) }
     );
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({
+    await expect(response.json()).resolves.toMatchObject({
       error: "DC Cloud share link is missing or expired. Recreate the /ROM share and update WUKONG_DCCLOUD_SHARE_URL.",
       code: "dccloud_share_not_found"
     });

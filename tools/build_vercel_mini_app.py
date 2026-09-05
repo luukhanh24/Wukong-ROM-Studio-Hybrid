@@ -1,23 +1,18 @@
 from __future__ import annotations
 
 import os
-import re
 import shutil
+import subprocess
+from html import escape
 from collections.abc import Mapping
 from pathlib import Path
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 from tools.export_mini_app_catalog import export_catalog
 
 
-ASSET_NAMES = (
-    "index.html",
-    "styles.css",
-    "app.js",
-    "fflate.js",
-    "fflate.LICENSE.txt",
-    "WukongStudio.svg",
-)
+ASSET_NAMES = ("WukongStudio.svg",)
+
 
 PRODUCTION_API_ORIGIN = "https://wukong-control-plane.wukong-rom-studio-api.workers.dev"
 
@@ -55,12 +50,21 @@ def build_site(
     source = root / "telegram_mini_app"
     for name in ASSET_NAMES:
         shutil.copyfile(source / name, destination / name)
-    safe_release = quote(release.strip() or "production", safe="-._")
+    node = shutil.which("node")
+    if not node:
+        raise RuntimeError("Node.js is required to build the Mini App")
+    subprocess.run([node, str(source / "build.mjs"), str(destination)], cwd=root, check=True)
+    # Build metadata contains source paths and is a local measurement artifact.
+    (destination / "bundle-meta.json").unlink(missing_ok=True)
+    licenses = destination / "licenses"
+    licenses.mkdir(exist_ok=True)
+    for license_path in (source / "assets" / "fonts").glob("*.LICENSE.txt"):
+        shutil.copyfile(license_path, licenses / license_path.name)
+    shutil.copyfile(source / "fflate.LICENSE.txt", licenses / "fflate.LICENSE.txt")
     index_path = destination / "index.html"
     index = index_path.read_text(encoding="utf-8")
     index = index.replace("__WUKONG_TELEGRAM_MINI_APP_API_URL__", _api_origin(api_url))
-    index = re.sub(r"\./styles\.css(?:\?v=[^\"']+)?", f"./styles.css?v={safe_release}", index)
-    index = re.sub(r"\./app\.js(?:\?v=[^\"']+)?", f"./app.js?v={safe_release}", index)
+    index = index.replace("</head>", f'<meta name="wukong-release" content="{escape(release, quote=True)}"></head>')
     index_path.write_text(index, encoding="utf-8", newline="\n")
     export_catalog(
         root / "content-packs" / "index.json",

@@ -1,0 +1,98 @@
+/* Studio: source → configuration → review. Wukong identity stays shared. */
+:root {
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, monospace;
+  --text-body: 15px;
+  --text-label: 12px;
+  --target-size: 44px;
+  --safe-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--telegram-safe-bottom, 0px));
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--telegram-safe-top, 0px));
+  --dock-reserve: calc(120px + var(--safe-bottom));
+  --action-reserve: 70px;
+}
+html { scroll-padding-top: calc(90px + var(--safe-top)); scroll-padding-bottom: calc(var(--dock-reserve) + var(--action-reserve)); }
+body { font-size: var(--text-body); min-height: var(--viewport-height, 100dvh); }
+body, button, input, select, textarea { font-family: var(--font-body); }
+button, summary, select, .source-input-head button, .selection-bar button, .job-controls button, .release-version-controls button, .theme-picker button, .language-switch button { min-height: var(--target-size); }
+button, .bottom-nav button { min-width: var(--target-size); }
+input, textarea, select { font-size: 16px; }
+small, .field > span, .field > small, .source-facts dt, .source-facts dd, .readiness-checklist small, .bottom-nav button span, .runtime-strip small, .dispatch-docket header, .job-history-card small { font-size: var(--text-label); }
+button:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.masthead { padding-top: var(--safe-top); backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface); }
+main { padding-bottom: calc(var(--dock-reserve) + var(--action-reserve)); }
+.view-heading { margin-bottom: 20px; }
+.view-heading h1 { letter-spacing: -.025em; text-wrap: balance; }
+.runtime-strip { gap: 18px; margin: 0 0 24px; padding: 12px 0; border: 0; border-block: 1px solid var(--line); background: transparent; }
+.runtime-strip > div { padding: 0; border: 0; }
+.runtime-strip strong { font-size: 13px; }
+.dossier-section { border: 0; border-top: 1px solid var(--line); box-shadow: none; border-radius: 0; padding: 24px 0; background: transparent; }
+.section-heading { margin-bottom: 20px; }
+.section-heading h2, .dispatch-docket h2 { font-size: 21px; letter-spacing: -.02em; }
+.section-heading p { font-size: 14px; max-width: 65ch; color: var(--muted); }
+.source-input-head { align-items: center; gap: 8px; }
+.source-state { background: var(--surface); border: 0; border-radius: 12px; padding: 16px; }
+.source-state-mark { display: none; }
+.source-state-copy strong { font-size: 16px; }
+.source-state-copy p { font-size: 14px; line-height: 1.5; }
+.source-facts { margin: 0; border: 0; }
+.source-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px 24px; padding: 20px 0; }
+.source-summary > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 0; border: 0; background: none; }
+.source-summary dd { font-family: var(--font-body); font-size: 15px; font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+.metadata-details, .build-advanced { border-block: 1px solid var(--line); }
+.metadata-details summary, .build-advanced > summary { display: list-item; padding: 12px 4px; color: var(--ink); font-size: 14px; cursor: pointer; }
+.metadata-details .source-facts { padding-bottom: 16px; }
+.metadata-details .source-facts-head { border: 0; background: transparent; }
+.field-grid.three { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.config-summary { font-size: 14px; color: var(--muted); margin: 20px 0 12px; font-variant-numeric: tabular-nums; }
+.advanced-content { display: grid; gap: 20px; padding: 16px 0; }
+.advanced-content > .field { max-width: 380px; }
+.advanced-content .selection-bar { margin: 0; flex-wrap: wrap; }
+.advanced-content .advanced { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.delivery-section { padding: 0; }
+.delivery-section h3 { font-size: 16px; margin: 12px 0; }
+.dispatch-docket { border: 0; border-radius: 12px; padding: 24px; background: var(--surface); box-shadow: none; }
+.dispatch-docket h2 { margin: 0 0 20px; }
+.dispatch-docket > strong { font-size: 16px; overflow-wrap: anywhere; }
+.dispatch-docket > p, .session-recovery p { font-size: 14px; line-height: 1.55; }
+.session-recovery { padding: 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-raised); }
+.session-recovery button { width: 100%; }
+.job-technical { border-block: 1px solid var(--line); margin: 16px 0; }
+.job-technical > summary { cursor: pointer; padding: 12px 0; font-size: 14px; }
+.job-technical .job-facts, .job-technical .job-context { border: 0; background: transparent; padding-inline: 0; }
+.job-sync-time { display: block; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.job-events { max-height: 540px; overflow: auto; overflow-anchor: none; overscroll-behavior: contain; }
+.job-events article { content-visibility: auto; contain-intrinsic-size: auto 76px; }
+.job-controls { flex-wrap: wrap; }
+.job-status { font-size: 12px; }
+.bottom-nav { bottom: var(--safe-bottom); }
+.dispatch-fab { bottom: calc(var(--dock-reserve) + 4px); backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; border-radius: 12px; background: var(--surface-raised); box-shadow: var(--shadow-float); }
+[data-keyboard="true"] .dispatch-fab, [data-keyboard="true"] .bottom-nav { visibility: hidden; pointer-events: none; }
+[data-keyboard="true"] main { padding-bottom: 32px; }
+@media (min-width:861px) {
+  #recipe-form { grid-template-columns: minmax(0,1fr) 330px; gap: 0 40px; }
+  .dispatch-docket { grid-column: 2; grid-row: 1 / span 3; top: 88px; }
+  .dispatch-fab { display: none !important; }
+  main { padding-bottom: var(--dock-reserve); }
+}
+@media (max-width:860px) {
+  main { padding-inline: max(16px, var(--telegram-safe-left, 0px)); }
+  .runtime-strip { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .runtime-strip > div { flex: 1 1 110px; }
+  .runtime-strip small { display: none; }
+  .dispatch-docket { padding: 20px; }
+  .source-state { display: flex; flex-wrap: wrap; }
+  .source-state-copy { flex: 1 1 190px; }
+  .source-state .probe-button { flex: 1 0 100%; }
+  .release-version-controls { flex-wrap: wrap; }
+  .release-version-controls input { min-width: 100px; width: 100%; }
+  .release-version-controls button { width: 100%; }
+}
+@media (max-width:360px) {
+  main { padding-inline: 12px; }
+  .source-input-head { flex-wrap: wrap; }
+  .source-input-head > div { width: 100%; justify-content: space-between; }
+  .field-grid.three { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion:reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

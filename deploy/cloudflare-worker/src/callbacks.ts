@@ -379,12 +379,18 @@ export async function handleTerminal(
       row,
       "GitHub Actions failed before the executor started",
       now,
-      status
+      status,
+      { status, stage: String(rawManifest.stage ?? status) }
     )
     : [];
   const automaticRepair = automaticMirrorRepairStatement(env, jobId, status, rawManifest, now);
   const manifest = automaticRepair ? markMirrorsRepairing(rawManifest) : rawManifest;
   const notificationPayload = await terminalTelegramNotification(env, row, status, manifest);
+  // Every side effect below is guarded by the timestamped state transition.
+  // D1 serializes batches, so a concurrent cancel/terminal callback that did
+  // not win the conditional UPDATE cannot mutate the user or enqueue a second
+  // terminal notification.
+  const transitionWhere = "EXISTS (SELECT 1 FROM wukong_jobs WHERE job_id = ? AND status = ? AND updated_at = ?)";
   try {
     await env.DB.batch([
       env.DB.prepare(
@@ -409,27 +415,30 @@ export async function handleTerminal(
         nextEventSequence,
         jobId
       ),
-      env.DB.prepare("DELETE FROM wukong_build_locks WHERE job_id = ?").bind(jobId),
+      env.DB.prepare(`DELETE FROM wukong_build_locks WHERE job_id = ? AND ${transitionWhere}`).bind(jobId, jobId, status, now),
       env.DB.prepare(
         `UPDATE wukong_telegram_users
          SET last_job_id = ?, last_job_status = ?
-         WHERE subject = ?`
-      ).bind(jobId, status, row.owner_subject),
+         WHERE subject = ? AND ${transitionWhere}`
+      ).bind(jobId, status, row.owner_subject, jobId, status, now),
       env.DB.prepare(
         `INSERT OR IGNORE INTO wukong_job_events
          (job_id, sequence, timestamp, event_type, payload_json)
-         VALUES (?, ?, ?, ?, ?)`
-      ).bind(jobId, sequence, now, status, JSON.stringify({ status })),
+         SELECT ?, ?, ?, ?, ? WHERE ${transitionWhere}`
+      ).bind(jobId, sequence, now, status, JSON.stringify({ status }), jobId, status, now),
       env.DB.prepare(
         `INSERT OR IGNORE INTO wukong_telegram_notification_outbox
          (notification_id, dedupe_key, chat_id, payload_json, available_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
+         SELECT ?, ?, ?, ?, ?, ? WHERE ${transitionWhere}`
       ).bind(
         crypto.randomUUID(),
         `job-terminal:${jobId}`,
         row.owner_subject,
         JSON.stringify(notificationPayload),
         now,
+        now,
+        jobId,
+        status,
         now
       ),
       ...(automaticRepair ? [automaticRepair] : []),
