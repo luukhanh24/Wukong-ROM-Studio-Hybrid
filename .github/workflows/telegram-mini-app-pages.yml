@@ -78,7 +78,7 @@ jobs:
           repository_name="${GITHUB_REPOSITORY#*/}"
           ! grep -R -Ei \
             "github\.com|github\.io|${GITHUB_REPOSITORY_OWNER}|${repository_name}|${legacy_github_owner}|${legacy_cloudflare_handle}|DATABASE_URL|github_pat_" \
-            .vercel-static
+            .vercel-static --exclude-dir=licenses
       - name: Deploy bundle to Vercel
         if: steps.deployment-mode.outputs.mode == 'cli'
         id: deploy
