@@ -134,7 +134,7 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("VERCEL_TOKEN", vercel_workflow)
         self.assertIn("args=(vercel deploy . --yes --force --archive=tgz)", vercel_workflow)
         self.assertIn("args+=(--target preview)", vercel_workflow)
-        self.assertIn('vercel inspect "$domain" --json --token "$VERCEL_TOKEN"', vercel_workflow)
+        self.assertIn('vercel inspect "$domain" --json --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"', vercel_workflow)
         self.assertIn('grep -Fq \'"readyState": "READY"\' <<< "$page"', vercel_workflow)
         self.assertIn('grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" .vercel-static/index.html', vercel_workflow)
         self.assertIn('for attempt in {1..24}; do', vercel_workflow)

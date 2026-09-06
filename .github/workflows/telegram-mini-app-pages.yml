@@ -117,7 +117,7 @@ jobs:
             if [[ "$TARGET" == preview ]]; then
               response_file="$(mktemp)"
               error_file="$(mktemp)"
-              vercel inspect "$domain" --json --token "$VERCEL_TOKEN" >"$response_file" 2>"$error_file" || true
+              vercel inspect "$domain" --json --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN" >"$response_file" 2>"$error_file" || true
               page="$(cat "$response_file")"
               rm -f "$response_file"
               rm -f "$error_file"
