@@ -273,3 +273,51 @@ class MiniAppUpgradeTests(unittest.TestCase):
             })
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
+
+    def test_restored_header_dock_and_studio_structure(self):
+        def exercise_mobile(page):
+            result = page.evaluate("""() => {
+                const masthead = document.querySelector('.masthead');
+                const dock = document.querySelector('.bottom-nav');
+                const sourceFacts = document.querySelectorAll('#source-facts > dl.source-facts:not(.source-summary) > div').length;
+                return {
+                    mastheadPaddingTop: getComputedStyle(masthead).paddingTop,
+                    mastheadPaddingBottom: getComputedStyle(masthead).paddingBottom,
+                    dockBottom: getComputedStyle(dock).bottom,
+                    dockSlots: dock.querySelectorAll('[data-slot]').length,
+                    profileSlot: dock.querySelector('#dock-profile')?.dataset.slot,
+                    sourceFacts,
+                    sourceSummaryHidden: getComputedStyle(document.querySelector('.source-summary')).display,
+                    deliveryHeading: Boolean(document.querySelector('.delivery-section > .section-heading')),
+                    buildAdvancedHidden: document.querySelector('#build-advanced')?.hidden,
+                };
+            }""")
+            self.assertEqual(result["mastheadPaddingTop"], "7px")
+            self.assertEqual(result["mastheadPaddingBottom"], "7px")
+            self.assertEqual(result["dockBottom"], "10px")
+            self.assertEqual(result["dockSlots"], 5)
+            self.assertEqual(result["profileSlot"], "2")
+            self.assertEqual(result["sourceFacts"], 15)
+            self.assertEqual(result["sourceSummaryHidden"], "none")
+            self.assertTrue(result["deliveryHeading"])
+            self.assertTrue(result["buildAdvancedHidden"])
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
+
+        def exercise_desktop(page):
+            result = page.evaluate("""() => {
+                const masthead = document.querySelector('.masthead');
+                const dock = document.querySelector('.bottom-nav');
+                return {
+                    mastheadPaddingTop: getComputedStyle(masthead).paddingTop,
+                    mastheadPaddingBottom: getComputedStyle(masthead).paddingBottom,
+                    dockBottom: getComputedStyle(dock).bottom,
+                    buildColumns: getComputedStyle(document.querySelector('#build-options .field-grid.three')).gridTemplateColumns,
+                };
+            }""")
+            self.assertEqual(result["mastheadPaddingTop"], "8px")
+            self.assertEqual(result["mastheadPaddingBottom"], "8px")
+            self.assertEqual(result["dockBottom"], "14px")
+            self.assertEqual(len(result["buildColumns"].split()), 3)
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
