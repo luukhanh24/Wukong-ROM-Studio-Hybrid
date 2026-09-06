@@ -618,7 +618,7 @@ async function loadAdminJobDetail() {
     if (status.textContent !== message) status.textContent = message;
     status.classList.add("error");
   } finally {
-    if (state.adminJobView === view && requestId === view.requestId && !document.hidden) {
+    if (state.adminJobView === view && requestId === view.requestId && !document.hidden && navigator.onLine !== false) {
       const delay = !jobShouldPoll(view.job) || view.unchangedPolls >= 6 ? 30000 : view.unchangedPolls >= 3 ? 15000 : 10000;
       view.timer = setTimeout(loadAdminJobDetail, delay);
     }
@@ -1125,7 +1125,7 @@ async function loadJobDetail(jobId) {
 
 function scheduleJobsPoll(active, changed = false) {
   clearTimeout(state.jobsPollTimer);
-  if (document.hidden || !privateApiAvailable() || state.adminJobView) return;
+  if (!pollingAllowed() || !privateApiAvailable() || state.adminJobView) return;
   if (changed) state.jobsUnchangedPolls = 0;
   else state.jobsUnchangedPolls += 1;
   const delay = !active
@@ -1136,6 +1136,7 @@ function scheduleJobsPoll(active, changed = false) {
         ? 15000
         : 10000;
   state.jobsPollTimer = setTimeout(() => {
+    if (!pollingAllowed() || state.adminJobView) return;
     const selectedJobId = state.activeJobId;
     if (document.body.dataset.view === "jobs" && selectedJobId) {
       loadJobDetail(selectedJobId)
@@ -1146,6 +1147,7 @@ function scheduleJobsPoll(active, changed = false) {
           scheduleJobsPoll(jobShouldPoll(selectedJob), false);
         })
         .catch(() => {
+          if (!pollingAllowed()) return;
           setJobsConnection("jobsOffline", true);
           scheduleJobsPoll(true, false);
         });
@@ -1156,7 +1158,7 @@ function scheduleJobsPoll(active, changed = false) {
 }
 
 async function loadJobs({ force = false } = {}) {
-  if (document.hidden) return;
+  if (!pollingAllowed()) return;
   if (state.adminJobView) return;
   if (state.jobsLoading && !force) return;
   requestScopes.cancel("jobDetail");
@@ -1238,7 +1240,7 @@ async function loadJobs({ force = false } = {}) {
     setJobsConnection("jobsConnected");
     scheduleJobsPoll(jobShouldPoll(activeJob || running), changed);
   } catch (error) {
-    if (error.name === "AbortError" || historyRequestId !== state.jobHistoryRequestId) return;
+    if (error.name === "AbortError" || !pollingAllowed() || historyRequestId !== state.jobHistoryRequestId) return;
     setJobsConnection("jobsOffline", true); scheduleJobsPoll(true, false); throw error;
   } finally {
     if (historyRequestId === state.jobHistoryRequestId) {
@@ -1248,6 +1250,10 @@ async function loadJobs({ force = false } = {}) {
       renderJobHistory();
     }
   }
+}
+
+function pollingAllowed() {
+  return !document.hidden && navigator.onLine !== false;
 }
 
 async function runJobAction(action, jobId) {

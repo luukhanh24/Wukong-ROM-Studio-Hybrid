@@ -66,6 +66,62 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, page_action=exercise)
 
+    def test_offline_during_detail_request_does_not_rearm_polling(self):
+        def exercise(page):
+            result = page.evaluate("""async () => {
+                const { state } = await import('/modules/state.js');
+                const { loadJobDetail } = await import('/modules/jobs.js');
+                const jobId = state.jobs[0]?.job_id || state.jobs[0]?.jobId || 'fixture-job';
+                state.activeJobId = jobId;
+                const original = window.fetch;
+                let release;
+                const pending = new Promise(resolve => { release = resolve; });
+                window.fetch = async (url, init) => String(url).includes('/v1/sync?') ? pending : original(url, init);
+                const request = loadJobDetail(jobId).catch(() => {});
+                await new Promise(resolve => setTimeout(resolve, 30));
+                Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+                window.dispatchEvent(new Event('offline'));
+                const immediately = state.jobsPollTimer;
+                release(new Response(JSON.stringify({ activeJob: null, events: [] }), { status: 200, headers: {'content-type':'application/json'} }));
+                await request;
+                await new Promise(resolve => setTimeout(resolve, 30));
+                const afterAbort = state.jobsPollTimer;
+                Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+                window.fetch = original;
+                return { immediately, afterAbort };
+            }""")
+            self.assertIsNone(result["immediately"])
+            self.assertIsNone(result["afterAbort"])
+
+        _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, initial_view="jobs", page_action=exercise)
+
+    def test_confirmed_job_is_visible_when_profile_refresh_fails(self):
+        def exercise(page):
+            result = page.evaluate("""async () => {
+                const { state } = await import('/modules/state.js');
+                const { submitRecipe } = await import('/modules/build.js');
+                const recipe = JSON.stringify({schemaVersion: 1, task: 'build', device:'PJD110', source:{kind:'https',uri:'https://example.com/rom.zip'},build:{preset:'plus'}});
+                localStorage.setItem('wukong-submit-request', JSON.stringify({subject:String(state.me.telegramId), recipe, key:'confirmed-build-key'}));
+                const original = window.fetch;
+                let profileAttempts = 0;
+                window.fetch = async (url, init) => {
+                    if (String(url).endsWith('/v1/jobs') && init?.method === 'POST') return Response.json({job_id:'confirmed-created-job', status:'queued'});
+                    if (String(url).endsWith('/v1/me')) { profileAttempts += 1; throw new TypeError('profile refresh unavailable'); }
+                    return original(url, init);
+                };
+                let error = '';
+                try { await submitRecipe(); } catch (cause) { error = String(cause?.message || cause); }
+                window.fetch = original;
+                return {profileAttempts, error, view:document.body.dataset.view, activeJobId:state.activeJobId, pending:localStorage.getItem('wukong-submit-request')};
+            }""")
+            self.assertEqual(result["profileAttempts"], 3)
+            self.assertEqual(result["error"], "")
+            self.assertEqual(result["view"], "jobs")
+            self.assertEqual(result["activeJobId"], "confirmed-created-job")
+            self.assertIsNone(result["pending"])
+
+        _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
+
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
         for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
             with self.subTest(width=width, height=height):

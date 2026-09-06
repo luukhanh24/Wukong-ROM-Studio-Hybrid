@@ -522,10 +522,16 @@ async function submitRecipe() {
   }
   state.activeJobId = job.job_id || job.jobId;
   localStorage.setItem("wukong-active-job", state.activeJobId);
+  // Reflect the confirmed job before ancillary cleanup. A profile refresh or
+  // draft deletion failure must never hide a successful submission.
+  state.submitUncertain = false;
+  renderSubmitRecovery();
+  toast(t("buildCreated"));
+  navigate("jobs");
+  await loadJobs({ force: true }).catch(() => {});
   resetJobDraft();
   await apiRequest("/v1/drafts/source", { method: "DELETE" }).catch(() => {});
-  await loadSession({ countOpen: false });
-  toast(t("buildCreated")); navigate("jobs"); await loadJobs({ force: true });
+  await loadSession({ countOpen: false }).catch(() => {});
 }
 
 export { selectedMods, defaultMods, modCategory, modCategoryLabel, selectionMark, renderMods, renderPipelineSteps, renderCatalog, filterMods, updateTelegramState, updatePipelineCount, setMods, runnerLabel, updateDeliveryStates, setDeliveryState, updateChecklistItem, updateSummary, positiveInteger, sourceSpec, selectedReleaseVersion, selectedBaseModVersion, selectedModVersion, currentEditionLabels, presetLabel, presetEntries, renderPresetLabels, renderCustomPresetLabelEditor, applyCustomPresetLabelForJob, isSafePresetLabel, renderReleaseVersion, saveReleaseVersion, sameStringList, normalizedDebloatPaths, renderDebloatSummary, openDebloatEditor, closeDebloatEditor, saveDebloatPaths, resetJobDraft, buildRecipe, restorePendingSubmission, renderSubmitRecovery, submitRecipe };

@@ -323,7 +323,7 @@ function adminAuditArticle(event) {
 function scheduleAdminUserActivityPoll() {
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
-  if (document.hidden || state.me?.role !== "admin" || !state.selectedAdminUserId || state.adminJobView) return;
+  if (document.hidden || navigator.onLine === false || state.me?.role !== "admin" || !state.selectedAdminUserId || state.adminJobView) return;
   state.adminUserPollTimer = setTimeout(refreshAdminUserActivity, 10000);
 }
 
@@ -331,7 +331,7 @@ async function refreshAdminUserActivity() {
   const telegramId = state.selectedAdminUserId;
   clearTimeout(state.adminUserPollTimer);
   state.adminUserPollTimer = null;
-  if (!telegramId || document.hidden || state.adminJobView) return;
+  if (!telegramId || document.hidden || navigator.onLine === false || state.adminJobView) return;
   const signal = requestScopes.start("adminActivity");
   try {
     const collected = [];
@@ -372,7 +372,7 @@ async function refreshAdminUserActivity() {
   } catch (_) {
     // Keep the current snapshot and retry without interrupting the admin.
   } finally {
-    if (!signal.aborted && state.selectedAdminUserId === telegramId) scheduleAdminUserActivityPoll();
+    if (!signal.aborted && document.hidden === false && navigator.onLine !== false && state.selectedAdminUserId === telegramId) scheduleAdminUserActivityPoll();
   }
 }
 

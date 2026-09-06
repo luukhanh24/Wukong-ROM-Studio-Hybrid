@@ -259,7 +259,7 @@ function pauseWorkspacePolling() {
 }
 
 function resumeWorkspacePolling() {
-  if (document.hidden || !privateApiAvailable()) return;
+  if (document.hidden || navigator.onLine === false || !privateApiAvailable()) return;
   if (state.adminJobView) loadAdminJobDetail();
   else {
     loadJobs({ force: true }).catch(() => {});
@@ -270,7 +270,7 @@ function resumeWorkspacePolling() {
 }
 
 function reconnectWorkspace() {
-  if (document.hidden) return;
+  if (document.hidden || navigator.onLine === false) return;
   scheduleGreeting();
   ensureAutomaticTelegramConnection();
   loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace({ refresh: true })).catch(() => setJobsConnection("jobsOffline", true));
