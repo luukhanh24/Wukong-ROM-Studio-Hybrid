@@ -116,7 +116,7 @@ function renderBatch(payload) {
 }
 
 async function loadBatch() {
-  if (document.hidden || !state.activeBatchId || state.me?.role !== "admin" || $("#admin-batch-page").hidden) return;
+  if (!workspacePollingAllowed() || !state.activeBatchId || state.me?.role !== "admin" || $("#admin-batch-page").hidden) return;
   clearTimeout(state.batchPollTimer);
   const signal = requestScopes.start("batch");
   let finished = false;
@@ -126,13 +126,14 @@ async function loadBatch() {
     renderBatch(payload);
     finished = ["succeeded", "partial", "failed", "cancelled"].includes(payload.status);
   } finally {
-    if (!signal.aborted && !document.hidden && !finished) {
+    if (!signal.aborted && workspacePollingAllowed() && !finished) {
       state.batchPollTimer = setTimeout(() => loadBatch().catch(() => {}), 10000);
     }
   }
 }
 
 async function loadLatestBatch() {
+  if (!workspacePollingAllowed()) return;
   if (state.activeBatchId) return loadBatch();
   const payload = await apiRequest("/v1/admin/batch-builds");
   const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
@@ -246,7 +247,7 @@ function renderAdminUsers() {
 }
 
 async function loadAdminUsers({ reset = false } = {}) {
-  if (state.me?.role !== "admin" || document.hidden) return;
+  if (state.me?.role !== "admin" || !workspacePollingAllowed() || document.body.dataset.view !== "system") return;
   const signal = requestScopes.start("adminUsers");
   clearTimeout(state.adminUsersPollTimer);
   if (reset) state.adminUsersOffset = 0;
@@ -272,7 +273,7 @@ async function loadAdminUsers({ reset = false } = {}) {
     if (!requestScopes.isCurrent("adminUsers", signal)) return;
     state.adminUsersLoading = false;
     clearTimeout(state.adminUsersPollTimer);
-    if (!document.hidden && state.me?.role === "admin" && document.body.dataset.view === "system") {
+    if (workspacePollingAllowed() && state.me?.role === "admin" && document.body.dataset.view === "system") {
       state.adminUsersPollTimer = setTimeout(() => loadAdminUsers().catch(() => {}), 10000);
     }
   }

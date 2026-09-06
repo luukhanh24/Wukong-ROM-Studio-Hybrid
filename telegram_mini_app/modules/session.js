@@ -181,13 +181,13 @@ function storedPairing() {
 
 async function pollTelegramPairing(pairing) {
   clearTimeout(state.pairingPollTimer);
-  if (document.hidden || !pairing?.pairId || !pairing?.pairSecret || miniApiAvailable()) return;
+  if (!workspacePollingAllowed() || !pairing?.pairId || !pairing?.pairSecret || miniApiAvailable()) return;
   const signal = requestScopes.start("pairing");
   const { payload, status } = await publicApiRequest("/v1/session/pair/status", {
     method: "POST",
     signal, body: JSON.stringify({ pairId: pairing.pairId, pairSecret: pairing.pairSecret })
   });
-  if (signal.aborted || document.hidden) return;
+  if (signal.aborted || !workspacePollingAllowed()) return;
   if (status === 200 && setSignedTelegramLaunchToken(payload.launchToken)) {
     try { sessionStorage.removeItem("wukong-telegram-pairing"); } catch (_) {}
     state.pairingInFlight = false;
@@ -208,7 +208,8 @@ async function pollTelegramPairing(pairing) {
   const delay = pairingBackoff[Math.min(state.pairingPollAttempt, pairingBackoff.length - 1)];
   state.pairingPollAttempt += 1;
   state.pairingPollTimer = setTimeout(() => {
-    pollTelegramPairing(pairing).catch(() => {
+    pollTelegramPairing(pairing).catch((error) => {
+      if (error.name === "AbortError" || !workspacePollingAllowed()) return;
       state.pairingInFlight = false;
       updateSummary();
       toast(t("pairingFailed"), true);
@@ -232,6 +233,7 @@ async function connectTelegramSession() {
     } catch (_) { window.open(pairing.botLink, "_blank", "noopener"); }
     await pollTelegramPairing(pairing);
   } catch (error) {
+    if (error.name === "AbortError" || !workspacePollingAllowed()) return;
     state.pairingInFlight = false;
     updateSummary();
     toast(error.message || t("pairingFailed"), true);
@@ -265,7 +267,7 @@ function resumeWorkspacePolling() {
   if (!workspacePollingAllowed() || !privateApiAvailable()) return;
   if (state.adminJobView) loadAdminJobDetail();
   else {
-    loadJobs({ force: true }).catch(() => {});
+    if (document.body.dataset.view === "jobs") loadJobs({ force: true }).catch(() => {});
     if (state.selectedAdminUserId) refreshAdminUserActivity();
     else if (document.body.dataset.view === "system" && state.me?.role === "admin") loadAdminUsers().catch(() => {});
   }
@@ -327,7 +329,7 @@ function renderAccessGate() {
     state.sourceProbeController?.abort();
     $$("dialog[open]").forEach((dialog) => dialog.close());
     clearTimeout(state.maintenancePollTimer);
-    if (!document.hidden) state.maintenancePollTimer = setTimeout(() => {
+    if (workspacePollingAllowed()) state.maintenancePollTimer = setTimeout(() => {
       loadSession({ countOpen: false }).catch(() => renderAccessGate());
     }, 30000);
     return;
