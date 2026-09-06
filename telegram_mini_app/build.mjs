@@ -1,10 +1,17 @@
 import { build } from 'esbuild';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const outdir = path.resolve(process.argv[2] || path.join(root, 'dist'));
+if (outdir === root) throw new Error('Output directory cannot be the Mini App source directory');
+await Promise.all([
+  rm(path.join(outdir, 'assets'), { recursive: true, force: true }),
+  rm(path.join(outdir, 'index.html'), { force: true }),
+  rm(path.join(outdir, 'bundle-meta.json'), { force: true }),
+  rm(path.join(outdir, 'asset-manifest.json'), { force: true }),
+]);
 await mkdir(outdir, { recursive: true });
 const result = await build({
   absWorkingDir: root,

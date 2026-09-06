@@ -101,3 +101,20 @@ Motion is 120–200 ms with the existing ease curve. Reduced motion limits trans
 Required viewports are 320 × 720, 390 × 844, 768 × 1024, 1280 × 800 and 844 × 390. Studio, Jobs, Library, System/Admin and Profile are checked in Vietnamese and English, light and dark, reduced motion, loading/error/empty states and with long data. Exact `innerWidth`, no horizontal overflow, visible focus, 44 px hit targets, mobile 16 px inputs and unobscured keyboard interactions are release gates.
 
 Initial JavaScript may not grow by more than five percent. CSS gzip may grow by at most 15 KB, local WOFF2 assets remain below 200 KB total, and admin/ZIP code stays lazy. Local interaction p95 remains below 200 ms under the established Chromium 4× CPU profile.
+
+## Implementation evidence — 2026-09-06
+
+The shipped source now follows this specification across Studio, Jobs, Library, System/Admin and Profile. Desktop navigation is part of the masthead; the liquid dock is the five-slot mobile navigator. Studio uses a compact three-cell runtime strip, a four-fact ROM summary, disclosed technical metadata and disclosed advanced build controls. Profile is a solid card and no longer renders the Telegram photo as a blurred page background.
+
+Reference captures from the authenticated deterministic fixture:
+
+| Screen | 390 × 844 | 1280 × 800 |
+|---|---|---|
+| Studio | [mobile](screenshots/mods-center-style/build-390.png) | [desktop](screenshots/mods-center-style/build-1280.png) |
+| Jobs | [mobile](screenshots/mods-center-style/jobs-390.png) | [desktop](screenshots/mods-center-style/jobs-1280.png) |
+| Library | [mobile](screenshots/mods-center-style/catalog-390.png) | [desktop](screenshots/mods-center-style/catalog-1280.png) |
+| System | [mobile](screenshots/mods-center-style/system-390.png) | [desktop](screenshots/mods-center-style/system-1280.png) |
+| Admin | [mobile](screenshots/mods-center-style/admin-390.png) | [desktop](screenshots/mods-center-style/admin-1280.png) |
+| Profile | [mobile](screenshots/mods-center-style/profile-390.png) | [desktop](screenshots/mods-center-style/profile-1280.png) |
+
+The same esbuild version and gzip level measured `8dededd` against this candidate. Initial static JavaScript changed from 211,385 raw / 60,849 gzip bytes to 185,540 raw / 56,094 gzip bytes, a 7.8% reduction. CSS changed from 109,578 raw / 19,062 gzip bytes to 117,074 raw / 20,564 gzip bytes, an increase of 1,502 gzip bytes. Geist Sans and Geist Mono total 141,020 bytes. The clean build contains nine versioned assets; admin, ZIP metadata and fflate remain separate lazy chunks.
