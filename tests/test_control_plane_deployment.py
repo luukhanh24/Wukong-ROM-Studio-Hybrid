@@ -194,6 +194,9 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         workflow = (
             Path(__file__).parents[1] / ".github/workflows/cloudflare-control-plane.yml"
         ).read_text(encoding="utf-8")
+        vercel_workflow = (
+            Path(__file__).parents[1] / ".github/workflows/telegram-mini-app-pages.yml"
+        ).read_text(encoding="utf-8")
 
         gate = workflow.index(
             "Require verified read-only migration before production deployment"
@@ -208,6 +211,10 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
             workflow.index("- name: Deploy Vercel bundle after production health"),
         )
         self.assertIn("Verify matching Vercel source transport after frontend promotion", workflow)
+        self.assertIn('npm test --prefix telegram_mini_app', workflow)
+        self.assertIn('tests.test_mini_app_upgrade', workflow)
+        self.assertIn('--field release_sha="$WUKONG_RELEASE_SHA"', workflow)
+        self.assertIn('inputs.release_sha || github.sha', vercel_workflow)
 
     def test_vercel_static_bundle_contains_no_personal_github_identity(self) -> None:
         output = self.root / "vercel-static"
