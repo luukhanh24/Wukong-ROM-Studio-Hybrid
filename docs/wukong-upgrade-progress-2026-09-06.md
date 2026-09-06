@@ -14,7 +14,7 @@ This document records implementation evidence for the approved upgrade plan. A g
 | C3 | Implemented and tested | `1a87d5c`, `2c31bc0`; terminal stages emit metrics without fabricating missing duration/bytes; artifact checksum fallback remains. | Real runner metrics across cold/warm builds. |
 | C4 | Harness implemented | `tools/build_benchmark.py` records cold/warm runs, stage JSON metrics, medians and assumptions. | One fixed ROM/recipe/runner, three cold and three warm runs plus ZIP/partition/metadata validation. |
 | D1 | Tested locally | Worker check: 21 files/100 tests plus 8 transport tests; frontend 5 Node tests and build; relevant Python regression suite passed. | Full repository CI after final release commit. |
-| D2–D3 | Partially configured | Existing workflows have protected environments, exact-release health checks, Worker-before-production-frontend cutover path, and rollback-safe independent artifacts. | Verify environment approvals, disable any Vercel Git auto-deploy still enabled, run staging canary for 24 hours, and rehearse independent rollback. |
+| D2–D3 | Partially configured | `5ce2c8a` makes Vercel production promotion manual CLI-only, removes Git Integration fallback, and verifies the promoted frontend after Worker health; workflows retain protected environments and exact-release checks. | Verify environment approvals, run staging canary for 24 hours, and rehearse independent rollback. |
 
 ## Current release state
 
