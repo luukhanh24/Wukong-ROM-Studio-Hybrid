@@ -227,3 +227,49 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     self.assertTrue(result["form"])
 
                 _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=height, page_action=exercise)
+
+    def test_restored_studio_geometry_matches_reference_card_layout(self):
+        def exercise_mobile(page):
+            result = page.evaluate("""() => {
+                const main = document.querySelector('main');
+                const runtime = document.querySelector('.runtime-strip');
+                const source = document.querySelector('.source-section');
+                return {
+                    mainPaddingLeft: getComputedStyle(main).paddingLeft,
+                    runtimeWidth: runtime.getBoundingClientRect().width,
+                    runtimeHeight: runtime.getBoundingClientRect().height,
+                    runtimeRows: runtime.children.length,
+                    sourceX: source.getBoundingClientRect().x,
+                };
+            }""")
+            self.assertEqual(result, {
+                "mainPaddingLeft": "10px",
+                "runtimeWidth": 370,
+                "runtimeHeight": 186,
+                "runtimeRows": 3,
+                "sourceX": 10,
+            })
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
+
+        def exercise_desktop(page):
+            result = page.evaluate("""() => {
+                const form = document.querySelector('#recipe-form');
+                const source = document.querySelector('.source-section');
+                const docket = document.querySelector('.dispatch-docket');
+                const style = getComputedStyle(form);
+                return {
+                    columns: style.gridTemplateColumns,
+                    columnGap: style.columnGap,
+                    sourceWidth: source.getBoundingClientRect().width,
+                    docketX: docket.getBoundingClientRect().x,
+                };
+            }""")
+            self.assertEqual(result, {
+                "columns": "888px 320px",
+                "columnGap": "16px",
+                "sourceWidth": 888,
+                "docketX": 932,
+            })
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
