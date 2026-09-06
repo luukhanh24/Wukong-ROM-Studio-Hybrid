@@ -18,10 +18,18 @@ This document records implementation evidence for the approved upgrade plan. A g
 
 ## Current release state
 
-- Local implementation commits: `943e49c`, `1a87d5c`, `2c31bc0`, `8bc3a81`, `5ce2c8a`, `3bb1720`, `86f862a`, `c085cd6`, `aeda192`, `c56e899`, `9040f44`, `0943074`, `a6778fd`, `667f893`, `d0b81a4`, `8ed1afc`, `1ccdd26`, `fc169b8`, `4c49adf`, `dce680d`, `35b6f64`, `1a7adce`, `60a1714`, `3a1c185`, `c96c992`, `f4f133f`, `a0c0b70`, `1ef6ce3`, `c1830a6`, `524bcaa`, `176972d`, `acfcf77`, `85a175f`, `cf37e0e`, `15118f1`, `e6b9658`, `650d388`; Render fallback pinning, upload metrics, polling handoff, isolated CI gates, executor content-root fingerprinting, reference studio geometry, protected-preview deployment gates, same-size artifact invalidation and legacy Studio restoration are committed and pushed to `main`.
+- The Mods Center redesign is committed through `be7b921b8fc46851a4ec670778f917c5e35c1452` and pushed to `main`.
 - No database migration was added.
 - Production evidence: Vercel workflow `34021694295`, deployment `9UKFDNpV2zhVvCn6HeSKZJbxPfKA`, canonical URL `https://wukong-rom-studio.vercel.app`, release marker `650d388fd173d6690dea802e7615efc74e517c2d`, API `https://wukong-control-plane.wukong-rom-studio-api.workers.dev`, and direct production HTML/CSS smoke status 200. Worker production version and Telegram device acceptance still need to be captured.
 - Until the external rows above are completed, the upgrade is **not fully accepted**.
+
+## Mods Center style preview
+
+- Commits `67bbfcd` through `be7b921` implement the white/black/lavender token system, local Geist fonts, compact Studio, desktop masthead, five-slot liquid dock on desktop and mobile, responsive Jobs/Library, solid Profile and shared system/admin surfaces.
+- Automated evidence: Worker check 21 files/103 tests plus 8 transport tests; Mini App Node tests 5/5; Mini App build 9 assets; required Python regression command 95/95; final Mini App upgrade/Telegram suite 71/71, followed by focused review regressions for contrast, release visibility, full-width Library action, exact viewport geometry and greeting lifecycle.
+- Bundle evidence after a clean build: `python tools/mini_app_bundle_budget.py --baseline 8dededd` reports 336,297 → 185,565 raw bytes and 87,864 → 56,100 gzip bytes; admin, ZIP metadata and fflate remain deferred chunks.
+- Preview deployment: GitHub Actions run `34032092693`, job `101483374893`, exact release `be7b921b8fc46851a4ec670778f917c5e35c1452`, protected Vercel URL `https://wukong-rom-studio-e1wom2o4i-wukong-rom-studio.vercel.app`.
+- Production has not been promoted from this preview. Telegram Android/iOS keyboard and safe-area checks, 24-hour admin canary, local interaction p95 and independent rollback rehearsal remain pending; this redesign is **not fully accepted** until those gates complete.
 
 ## Latest restoration release
 
