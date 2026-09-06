@@ -1,7 +1,8 @@
 # Wukong Mini App — monochrome interface specification
 
-Status: implementation source of truth  
-Reference density: `8dededd`  
+Status: implementation source of truth
+
+Reference density: `8dededd`
 Visual references: [Mods Center](https://modscenter.org/), [Modules](https://modscenter.org/modules), [Patcher](https://modscenter.org/patcher)
 
 ## Direction
@@ -64,11 +65,11 @@ Selectors are changed in their owning file. New catch-all override blocks at the
 
 ### Header and navigation
 
-Desktop uses a 64 px header: wordmark and page breadcrumb at left, the four workspace destinations in the center, and connection/language/profile controls at right. The active destination uses strong text and a short lavender underline. Mobile uses a 56–60 px header with the wordmark, a single-line greeting and language control; the dock owns navigation.
+Desktop uses a 64 px header: wordmark and page breadcrumb at left, the four workspace destinations in the center, and connection/language/profile controls at right. The active destination uses strong text and a short lavender underline. The five-slot dock remains available as the persistent direct navigator on both desktop and mobile; mobile uses a 56–60 px header with the wordmark, a single-line greeting and language control.
 
 ### Liquid dock
 
-Mobile keeps five equal slots with the avatar in slot three. The dock remains 68–72 px high and retains the moving liquid lens, blur, glow and haptics. Its glass becomes neutral white/black and its chromatic illumination becomes lavender. Animations pause when the page is hidden and collapse under reduced-motion preferences.
+The dock keeps five equal slots with the avatar in slot three on desktop and mobile. It remains 68–72 px high and retains the moving liquid lens, blur, glow and haptics. Its glass becomes neutral white/black and its chromatic illumination becomes lavender. Animations pause when the page is hidden and collapse under reduced-motion preferences.
 
 ### Studio
 
@@ -104,7 +105,7 @@ Initial JavaScript may not grow by more than five percent. CSS gzip may grow by 
 
 ## Implementation evidence — 2026-09-06
 
-The shipped source now follows this specification across Studio, Jobs, Library, System/Admin and Profile. Desktop navigation is part of the masthead; the liquid dock is the five-slot mobile navigator. Studio uses a compact three-cell runtime strip, a four-fact ROM summary, disclosed technical metadata and disclosed advanced build controls. Profile is a solid card and no longer renders the Telegram photo as a blurred page background.
+The shipped source now follows this specification across Studio, Jobs, Library, System/Admin and Profile. Desktop navigation is part of the masthead; the liquid dock is the five-slot navigator on desktop and mobile. Studio uses a compact three-cell runtime strip, a four-fact ROM summary, disclosed technical metadata and disclosed advanced build controls. Profile is a solid card and no longer renders the Telegram photo as a blurred page background.
 
 Reference captures from the authenticated deterministic fixture:
 
@@ -117,4 +118,4 @@ Reference captures from the authenticated deterministic fixture:
 | Admin | [mobile](screenshots/mods-center-style/admin-390.png) | [desktop](screenshots/mods-center-style/admin-1280.png) |
 | Profile | [mobile](screenshots/mods-center-style/profile-390.png) | [desktop](screenshots/mods-center-style/profile-1280.png) |
 
-The same esbuild version and gzip level measured `8dededd` against this candidate. Initial static JavaScript changed from 211,385 raw / 60,849 gzip bytes to 185,540 raw / 56,094 gzip bytes, a 7.8% reduction. CSS changed from 109,578 raw / 19,062 gzip bytes to 117,074 raw / 20,564 gzip bytes, an increase of 1,502 gzip bytes. Geist Sans and Geist Mono total 141,020 bytes. The clean build contains nine versioned assets; admin, ZIP metadata and fflate remain separate lazy chunks.
+The repository budget tool measured the first-party static import closure with `python tools/mini_app_bundle_budget.py --baseline 8dededd`. Initial JavaScript changed from 336,297 raw / 87,864 gzip bytes to 185,540 raw / 56,094 gzip bytes: reductions of 44.8% raw and 36.2% gzip. CSS changed from 109,578 raw / 19,062 gzip bytes to 117,074 raw / 20,564 gzip bytes, an increase of 1,502 gzip bytes. Geist Sans and Geist Mono total 141,020 bytes. The clean build contains nine versioned assets; admin, ZIP metadata and fflate remain separate lazy chunks.

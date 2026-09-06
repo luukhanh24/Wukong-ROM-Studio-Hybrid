@@ -229,7 +229,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
         _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)
 
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
-        for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
+        for width, height in [(320, 720), (390, 844), (768, 1024), (1280, 800), (844, 390)]:
             with self.subTest(width=width, height=height):
                 def exercise(page):
                     result = page.evaluate("""() => ({
@@ -244,7 +244,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     self.assertEqual(result["width"], width)
                     self.assertLessEqual(result["documentWidth"], width)
                     if width > 860:
-                        self.assertEqual(result["dock"], "none")
+                        self.assertEqual(result["dock"], "grid")
                         self.assertNotEqual(result["desktopNav"], "none")
                     else:
                         self.assertNotEqual(result["dock"], "none")
@@ -351,7 +351,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
             }""")
             self.assertEqual(result["mastheadPaddingTop"], "8px")
             self.assertEqual(result["mastheadPaddingBottom"], "8px")
-            self.assertEqual(result["dockDisplay"], "none")
+            self.assertEqual(result["dockDisplay"], "grid")
             self.assertNotEqual(result["desktopNavDisplay"], "none")
             self.assertTrue(result["headerProfileVisible"])
             self.assertEqual(len(result["buildColumns"].split()), 3)

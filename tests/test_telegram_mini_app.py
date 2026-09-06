@@ -2340,6 +2340,89 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-batch-mods-cleared="0"', dom)
         self.assertIn('data-batch-release-input-absent="true"', dom)
 
+    def test_lavender_controls_have_dark_text_and_desktop_keeps_five_slot_dock(self) -> None:
+        def capture_styles(page) -> None:
+            page.evaluate("""() => {
+                const paste = getComputedStyle(document.querySelector('#paste-source'));
+                const dock = document.querySelector('.bottom-nav');
+                const dockStyle = getComputedStyle(dock);
+                const releaseInput = document.querySelector('#mod-release-version-input');
+                const releaseButton = document.querySelector('#save-mod-release-version');
+                document.body.dataset.pasteColor = paste.color;
+                document.body.dataset.pasteBackground = paste.backgroundColor;
+                document.body.dataset.desktopDockDisplay = dockStyle.display;
+                document.body.dataset.desktopDockSlots = String(dock.querySelectorAll(':scope > button').length);
+                document.body.dataset.releaseVisible = String(releaseInput.getClientRects().length > 0);
+                document.body.dataset.releaseButtonHeight = String(Math.round(releaseButton.getBoundingClientRect().height));
+                document.body.dataset.languageButtonHeight = String(Math.round(document.querySelector('.language-button').getBoundingClientRect().height));
+                document.body.dataset.headerProfileHeight = String(Math.round(document.querySelector('#header-profile').getBoundingClientRect().height));
+            }""")
+
+        dom, _ = _render_mini_app_in_chrome(
+            api_enabled=True,
+            window_width=1280,
+            window_height=800,
+            page_action=capture_styles,
+        )
+
+        self.assertIn('data-paste-color="rgb(10, 10, 10)"', dom)
+        self.assertIn('data-paste-background="rgb(167, 178, 247)"', dom)
+        self.assertIn('data-desktop-dock-display="grid"', dom)
+        self.assertIn('data-desktop-dock-slots="5"', dom)
+        self.assertIn('data-release-visible="true"', dom)
+        self.assertIn('data-release-button-height="44"', dom)
+        self.assertIn('data-language-button-height="44"', dom)
+        self.assertIn('data-header-profile-height="44"', dom)
+
+    def test_library_card_primary_action_spans_the_full_card_width(self) -> None:
+        def capture_card(page) -> None:
+            result = page.evaluate("""() => {
+                const actions = document.querySelector('.rom-release-actions');
+                const analyze = actions?.querySelector('[data-rom-action="analyze"]');
+                const device = document.querySelector('.rom-device-options button');
+                device?.setAttribute('aria-pressed', 'true');
+                return actions && analyze ? {
+                    actions: Math.round(actions.getBoundingClientRect().width),
+                    analyze: Math.round(analyze.getBoundingClientRect().width),
+                    selectedDeviceColor: device ? getComputedStyle(device).color : '',
+                } : null;
+            }""")
+            self.assertIsNotNone(result)
+            self.assertEqual(result["actions"], result["analyze"])
+            self.assertEqual(result["selectedDeviceColor"], "rgb(89, 103, 187)")
+
+        _render_mini_app_in_chrome(
+            api_enabled=True,
+            initial_view="catalog",
+            library_scenario="populated",
+            window_width=1280,
+            window_height=800,
+            page_action=capture_card,
+        )
+
+    def test_admin_lavender_labels_use_the_strong_accessible_tone(self) -> None:
+        def capture_admin_tones(page) -> None:
+            result = page.evaluate("""() => {
+                const fixture = document.createElement('div');
+                fixture.innerHTML = '<section class="catalog-release-admin"><header><small>Release</small></header></section><div class="batch-items"><article><span>Running</span><details><summary>Logs</summary></details></article></div>';
+                document.body.append(fixture);
+                const colors = {
+                    heading: getComputedStyle(fixture.querySelector('header small')).color,
+                    state: getComputedStyle(fixture.querySelector('.batch-items article span')).color,
+                    summary: getComputedStyle(fixture.querySelector('summary')).color,
+                };
+                fixture.remove();
+                return colors;
+            }""")
+            self.assertEqual(set(result.values()), {"rgb(89, 103, 187)"})
+
+        _render_mini_app_in_chrome(
+            api_enabled=True,
+            window_width=1280,
+            window_height=800,
+            page_action=capture_admin_tones,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

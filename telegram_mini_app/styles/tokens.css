@@ -31,6 +31,7 @@
   --dock-lens-bg: linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,.38)),rgba(167,178,247,.18);
   --dock-foreground: #0a0a0a;
   --shadow-sm: 0 4px 14px rgba(10,10,10,.04);
+  --shadow-soft: var(--shadow-sm);
   --shadow-md: 0 12px 32px rgba(10,10,10,.09);
   --shadow-float: 0 16px 42px rgba(10,10,10,.14);
   --radius-sm: 8px;
