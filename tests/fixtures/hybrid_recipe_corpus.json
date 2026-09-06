@@ -1,0 +1,49 @@
+[
+  {
+    "name": "build-plus",
+    "valid": true,
+    "recipe": {
+      "schemaVersion": 1,
+      "task": "build",
+      "device": "PKG110",
+      "source": {"kind": "https", "uri": "https://example.com/rom.zip"},
+      "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10", "modReleaseVersion": "V6.0", "mods": ["Core"]},
+      "execution": {"target": "github-auto"},
+      "storage": {"remote": "wukong-gdrive", "publishArtifact": true}
+    },
+    "expect": {"task": "build", "device": "PKG110", "preset": "plus", "modVersion": "ColorOS_16.0.10", "release": "V6.0"}
+  },
+  {
+    "name": "source-mirror",
+    "valid": true,
+    "recipe": {
+      "schemaVersion": 1,
+      "task": "source_mirror",
+      "device": "PJD110",
+      "source": {"kind": "rclone", "uri": "wukong-gdrive:WukongROM/sources/PJD110.zip"},
+      "build": {"preset": "lite", "modVersion": "ColorOS_16.0.10"},
+      "execution": {"target": "github-auto"}
+    },
+    "expect": {"task": "source_mirror", "device": "PJD110", "preset": "lite", "modVersion": "ColorOS_16.0.10", "release": "V6.0"}
+  },
+  {
+    "name": "invalid-schema",
+    "valid": false,
+    "recipe": {"schemaVersion": 2, "task": "build", "device": "PKG110", "source": {"kind": "https", "uri": "https://example.com/rom.zip"}, "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10"}, "execution": {"target": "github-auto"}}
+  },
+  {
+    "name": "invalid-preset",
+    "valid": false,
+    "recipe": {"schemaVersion": 1, "task": "build", "device": "PKG110", "source": {"kind": "https", "uri": "https://example.com/rom.zip"}, "build": {"preset": "turbo", "modVersion": "ColorOS_16.0.10"}, "execution": {"target": "github-auto"}}
+  },
+  {
+    "name": "invalid-source",
+    "valid": false,
+    "recipe": {"schemaVersion": 1, "task": "build", "device": "PKG110", "source": {"kind": "ftp", "uri": "ftp://example.com/rom.zip"}, "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10"}, "execution": {"target": "github-auto"}}
+  },
+  {
+    "name": "invalid-release",
+    "valid": false,
+    "recipe": {"schemaVersion": 1, "task": "build", "device": "PKG110", "source": {"kind": "https", "uri": "https://example.com/rom.zip"}, "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10", "modReleaseVersion": "bad/name"}, "execution": {"target": "github-auto"}}
+  }
+]

@@ -24,7 +24,7 @@ from wukong.executor import (
     sync_checkpoint_tree,
     source_target_for,
 )
-from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus
+from wukong.models import ArtifactRecord, BuildRecipe, Identity, JobStatus, RecipeValidationError
 from wukong.orchestrator import FileJobStore, HybridOrchestrator, InMemoryJobStore, JobStore
 from wukong.routing import RunnerInventory
 from wukong.security import validate_recipe_access
@@ -57,6 +57,24 @@ class _FixtureStorage:
 
 
 class HybridChannelParityContractTests(unittest.TestCase):
+    def test_shared_recipe_corpus_matches_python_contract(self) -> None:
+        corpus_path = Path(__file__).parent / "fixtures" / "hybrid_recipe_corpus.json"
+        corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+        for case in corpus:
+            with self.subTest(case=case["name"]):
+                if not case["valid"]:
+                    with self.assertRaises(RecipeValidationError):
+                        BuildRecipe.from_dict(case["recipe"])
+                    continue
+                recipe = BuildRecipe.from_dict(case["recipe"])
+                build = recipe.build
+                expected = case["expect"]
+                self.assertEqual(expected["task"], recipe.task)
+                self.assertEqual(expected["device"], recipe.device)
+                self.assertEqual(expected["preset"], build.preset)
+                self.assertEqual(expected["modVersion"], build.mod_version)
+                self.assertEqual(expected["release"], build.mod_release_version)
+
     def test_extract_checkpoint_contains_only_resume_inputs(self) -> None:
         self.assertEqual(
             (
@@ -314,8 +332,8 @@ class HybridChannelParityContractTests(unittest.TestCase):
 
             def legacy_build(_job_id, _spec, workspace, callback):
                 workspace.mkdir(parents=True, exist_ok=True)
-                callback({"type": "step", "step": "extract_payload", "status": "success"})
-                callback({"type": "step", "step": "unpack_partitions", "status": "success"})
+                callback({"type": "step", "step": "extract_payload", "status": "success", "details": {"durationSeconds": 0.25, "cacheHit": True, "cacheBytes": 12}})
+                callback({"type": "step", "step": "unpack_partitions", "status": "success", "details": {"durationSeconds": 0.5, "bytesProcessed": 24, "cacheHit": False}})
                 output = workspace / "artifact.zip"
                 output.write_bytes(b"artifact")
                 return {"outputZip": str(output)}
@@ -337,6 +355,9 @@ class HybridChannelParityContractTests(unittest.TestCase):
             self.assertEqual(storage.attempts, 1)
             warnings = [event for event in store.events(manifest.job_id) if event.type == "warning"]
             self.assertTrue(any("remaining checkpoints are disabled" in event.payload["warning"] for event in warnings))
+            metrics = [event for event in store.events(manifest.job_id) if event.type == "metric"]
+            self.assertTrue(any(event.payload.get("stage") == "extract_payload" and event.payload.get("cacheState") == "hit" for event in metrics))
+            self.assertTrue(any(event.payload.get("stage") == "unpack_partitions" and event.payload.get("bytesProcessed") == 24 for event in metrics))
 
     def test_failed_checkpoint_restore_continues_with_clean_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -21,31 +21,38 @@ def _percentile(values: list[float], percentile: float) -> float:
     return ordered[index]
 
 
-def _one_request(url: str, index: int) -> tuple[int, float, str]:
+def _one_request(url: str, index: int, headers: dict[str, str] | None = None) -> tuple[int, float, str, int, int | None]:
     started = time.perf_counter()
+    request_url = url.format(index=index)
+    if "{index}" not in url and request_url.rstrip("/").endswith(url.rstrip("/")):
+        request_url = f"{url.rstrip('/')}/healthz?load={index}"
     request = urllib.request.Request(
-        f"{url.rstrip('/')}/healthz?load={index}",
-        headers={"User-Agent": "wukong-cloudflare-load-smoke/1.0"},
+        request_url,
+        headers={"User-Agent": "wukong-cloudflare-load-smoke/1.0", **(headers or {})},
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            body = response.read(4096).decode("utf-8", errors="replace")
-            return response.status, time.perf_counter() - started, body
+            raw = response.read()
+            body = raw[:4096].decode("utf-8", errors="replace")
+            rows = response.headers.get("X-D1-Rows-Read")
+            return response.status, time.perf_counter() - started, body, len(raw), int(rows) if rows and rows.isdigit() else None
     except urllib.error.HTTPError as exc:
-        body = exc.read(4096).decode("utf-8", errors="replace")
-        return exc.code, time.perf_counter() - started, body
+        raw = exc.read(4096)
+        return exc.code, time.perf_counter() - started, raw.decode("utf-8", errors="replace"), len(raw), None
     except OSError as exc:
-        return 0, time.perf_counter() - started, str(exc)
+        return 0, time.perf_counter() - started, str(exc), 0, None
 
 
-def run_load(url: str, *, requests: int, concurrency: int) -> dict[str, Any]:
+def run_load(url: str, *, requests: int, concurrency: int, headers: dict[str, str] | None = None) -> dict[str, Any]:
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as pool:
-        results = list(pool.map(lambda index: _one_request(url, index), range(requests)))
-    statuses = [status for status, _duration, _body in results]
-    durations = [duration * 1000 for _status, duration, _body in results]
+        results = list(pool.map(lambda index: _one_request(url, index, headers), range(requests)))
+    statuses = [status for status, _duration, _body, _bytes, _rows in results]
+    durations = [duration * 1000 for _status, duration, _body, _bytes, _rows in results]
+    payloads = [size for _status, _duration, _body, size, _rows in results]
+    rows = [row for _status, _duration, _body, _bytes, row in results if row is not None]
     failures = [
         {"status": status, "body": body[:240]}
-        for status, _duration, body in results
+        for status, _duration, body, _bytes, _rows in results
         if status < 200 or status >= 300 or "Error 1102" in body
     ]
     if failures:
@@ -63,7 +70,42 @@ def run_load(url: str, *, requests: int, concurrency: int) -> dict[str, Any]:
             "p95": round(_percentile(durations, 0.95), 3),
             "p99": round(_percentile(durations, 0.99), 3),
         },
+        "payloadBytes": {
+            "mean": round(statistics.fmean(payloads), 3),
+            "p50": round(_percentile([float(value) for value in payloads], 0.50), 3),
+            "p95": round(_percentile([float(value) for value in payloads], 0.95), 3),
+        },
+        "d1RowsRead": {
+            "samples": len(rows),
+            "mean": round(statistics.fmean(rows), 3) if rows else None,
+            "p95": round(_percentile([float(value) for value in rows], 0.95), 3) if rows else None,
+        },
     }
+
+
+def run_endpoint_load(
+    url: str,
+    path: str,
+    *,
+    requests: int,
+    concurrency: int,
+    authorization: str = "",
+) -> dict[str, Any]:
+    """Load one endpoint, preserving the original health-smoke URL contract."""
+    endpoint = path.lstrip("/")
+    base = url.rstrip("/")
+    request_url = f"{base}/{endpoint}"
+    if "{index}" not in request_url:
+        request_url += ("&" if "?" in request_url else "?") + "load={index}"
+    headers = {"Accept": "application/json"}
+    if authorization:
+        headers["Authorization"] = authorization
+    return run_load(
+        request_url,
+        requests=requests,
+        concurrency=concurrency,
+        headers=headers,
+    )
 
 
 def _analytics_query(
@@ -178,6 +220,17 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--requests", type=int, default=2000)
     parser.add_argument("--concurrency", type=int, default=100)
     parser.add_argument("--maximum-cpu-p95-ms", type=float, default=8.0)
+    parser.add_argument(
+        "--path",
+        action="append",
+        dest="paths",
+        help="Endpoint path to exercise; repeat for sync/history. Defaults to /healthz.",
+    )
+    parser.add_argument(
+        "--authorization",
+        default=os.environ.get("WUKONG_AUTHORIZATION", ""),
+        help="Authorization header (for example 'tma ...' or 'wla ...'); never put credentials in source.",
+    )
     parser.add_argument("--account-id", default=os.environ.get("CLOUDFLARE_ACCOUNT_ID", ""))
     parser.add_argument("--api-token", default=os.environ.get("CLOUDFLARE_API_TOKEN", ""))
     return parser
@@ -188,11 +241,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not args.account_id or not args.api_token:
         raise SystemExit("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required")
     started = datetime.now(tz=timezone.utc)
-    load = run_load(
-        args.url,
-        requests=max(1, args.requests),
-        concurrency=max(1, args.concurrency),
-    )
+    paths = args.paths or ["/healthz"]
+    loads = {
+        path: run_endpoint_load(
+            args.url,
+            path,
+            requests=max(1, args.requests),
+            concurrency=max(1, args.concurrency),
+            authorization=args.authorization,
+        )
+        for path in paths
+    }
     analytics = wait_for_cpu_metrics(
         account_id=args.account_id,
         api_token=args.api_token,
@@ -200,7 +259,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         start=started,
         maximum_p95_ms=args.maximum_cpu_p95_ms,
     )
-    print(json.dumps({"load": load, "analytics": analytics}, indent=2, sort_keys=True))
+    payload = {"loads": loads, "analytics": analytics}
+    if len(loads) == 1:
+        payload["load"] = next(iter(loads.values()))
+    print(json.dumps(payload, indent=2, sort_keys=True))
     return 0
 
 

@@ -346,4 +346,36 @@ describe("GitHub Actions callbacks", () => {
     ).bind(job.job_id).first<{ count: number }>();
     expect(Number(compensation?.count)).toBe(1);
   });
+
+  it("ignores a terminal callback that arrives after cancellation", async () => {
+    const subject = "1678823419";
+    const headers = {
+      ...(await tmaHeaders(Number(subject))),
+      "Content-Type": "application/json",
+      "Idempotency-Key": "late-callback-after-cancel"
+    };
+    const created = await SELF.fetch("https://worker.example/v1/jobs", {
+      method: "POST", headers, body: JSON.stringify({ ...recipe, device: "PJD112" })
+    });
+    expect(created.status).toBe(201);
+    const job = await created.json() as { job_id: string };
+    const cancelled = await SELF.fetch(`https://worker.example/v1/jobs/${job.job_id}/cancel`, {
+      method: "POST", headers
+    });
+    expect(cancelled.status).toBe(200);
+
+    const callbackBody = JSON.stringify({
+      jobId: job.job_id,
+      runId: 91003,
+      workflowResult: "success",
+      sequence: 99,
+      manifest: { status: "succeeded", stage: "complete", progress: 1, artifacts: [] }
+    });
+    const callback = await SELF.fetch("https://worker.example/internal/actions/callback", {
+      method: "POST", headers: await actionsHeaders(callbackBody), body: callbackBody
+    });
+    expect(callback.status).toBe(200);
+    const detail = await SELF.fetch(`https://worker.example/v1/jobs/${job.job_id}`, { headers });
+    await expect(detail.json()).resolves.toMatchObject({ status: "cancelled" });
+  });
 });

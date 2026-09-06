@@ -397,6 +397,18 @@ class LocalJobExecutor:
                 self.store.append_event(job_id, event_type, **event)
                 self.actions_ui.event(event)
                 status = str(event.get("status") or "")
+                details = event.get("details")
+                if event_type == "step" and status in {"success", "failed"} and isinstance(details, Mapping):
+                    metric: dict[str, object] = {
+                        "stage": stage,
+                        "durationSeconds": float(details.get("durationSeconds") or 0),
+                        "cacheState": "hit" if details.get("cacheHit") is True else "miss" if details.get("cacheHit") is False else "not-applicable",
+                    }
+                    for key in ("bytesProcessed", "inputBytes", "outputBytes", "cacheBytes"):
+                        value = details.get(key)
+                        if isinstance(value, (int, float)) and value >= 0:
+                            metric[key] = value
+                    self.store.append_event(job_id, "metric", **metric)
                 terminalish = status in {"success", "failed"} or event_type in {
                     "error",
                     "warning",
