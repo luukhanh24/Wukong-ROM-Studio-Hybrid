@@ -476,10 +476,12 @@ function renderEvents(events, expanded = false) {
   const section = document.createElement("section"); section.className = "job-events";
   if (expanded) section.classList.add("expanded");
   const rawPreviewEvents = events.slice(-8);
-  const visibleEvents = expanded ? events : compactLiveEvents(rawPreviewEvents);
+  // Keep the current DOM window bounded even when a legacy response contains
+  // a very large event array. Older pages remain reachable through cursors.
+  const visibleEvents = expanded ? events.slice(-500) : compactLiveEvents(rawPreviewEvents);
   const heading = document.createElement("div"); heading.className = "job-events-heading";
   const title = document.createElement("h3"); title.textContent = expanded ? t("fullLogTitle") : t("eventTimeline");
-  const count = document.createElement("span"); count.textContent = t("eventsPreview", { visible: expanded ? events.length : visibleEvents.length, total: events.length });
+  const count = document.createElement("span"); count.textContent = t("eventsPreview", { visible: visibleEvents.length, total: events.length });
   heading.append(title, count); section.append(heading);
   const list = document.createElement("ol");
   if (!events.length) {

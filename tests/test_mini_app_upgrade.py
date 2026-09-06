@@ -169,6 +169,25 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
 
+    def test_expanded_log_dom_is_bounded_to_current_window(self):
+        def exercise(page):
+            result = page.evaluate("""async () => {
+                const { renderEvents } = await import('/modules/jobs.js');
+                const events = Array.from({length: 10001}, (_, index) => ({
+                    sequence: index + 1, type: 'step', step: 'inspect_rom', status: 'success',
+                    timestamp: '2026-09-06T00:00:00.000Z', message: `event-${index}`
+                }));
+                const section = renderEvents(events, true);
+                const rows = section.querySelectorAll('ol > li:not(.event-group)').length;
+                const total = section.querySelector('.job-events-heading span')?.textContent || '';
+                return {rows, total};
+            }""")
+            self.assertLessEqual(result["rows"], 500)
+            self.assertIn("500", result["total"])
+            self.assertIn("10001", result["total"])
+
+        _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
+
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
         for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
             with self.subTest(width=width, height=height):
