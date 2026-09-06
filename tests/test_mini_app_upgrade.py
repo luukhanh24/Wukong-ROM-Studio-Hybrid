@@ -206,6 +206,28 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
 
+    def test_monochrome_design_tokens_and_local_geist_fonts(self):
+        def exercise(page):
+            result = page.evaluate("""() => {
+                const root = getComputedStyle(document.documentElement);
+                const body = getComputedStyle(document.body);
+                const label = getComputedStyle(document.querySelector('.build-options .field > span'));
+                return {
+                    canvas: root.getPropertyValue('--canvas').trim(),
+                    ink: root.getPropertyValue('--ink').trim(),
+                    accent: root.getPropertyValue('--accent').trim(),
+                    family: body.fontFamily,
+                    labelSize: label.fontSize,
+                };
+            }""")
+            self.assertEqual(result["canvas"], "#fafafa")
+            self.assertEqual(result["ink"], "#0a0a0a")
+            self.assertEqual(result["accent"], "#a7b2f7")
+            self.assertIn("Geist Sans", result["family"])
+            self.assertIn(result["labelSize"], {"11px", "12px"})
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)
+
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
         for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
             with self.subTest(width=width, height=height):

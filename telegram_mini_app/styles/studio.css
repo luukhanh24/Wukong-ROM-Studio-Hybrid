@@ -1,8 +1,6 @@
 /* Studio: source → configuration → review. Wukong identity stays shared. */
 :root {
-  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-data: "JetBrains Mono", ui-monospace, monospace;
-  --text-body: 16px;
+  --text-body: 15px;
   --text-label: 12px;
   --target-size: 44px;
   --safe-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--telegram-safe-bottom, 0px));
@@ -91,7 +89,7 @@ main { padding-bottom: 128px; }
   /* The three build selectors become a thumb-friendly vertical stack on phones. */
   .build-options .field-grid,
   .build-options .field-grid.three { grid-template-columns: 1fr; gap: 13px; }
-  .build-options .field-grid.three .field > span { margin-bottom: 6px; font-size: 9px; }
+  .build-options .field-grid.three .field > span { margin-bottom: 6px; font-size: 11px; }
   .runtime-strip { grid-template-columns: 1fr; margin-bottom: 16px; }
   .runtime-strip > div { min-height: 52px; border-right: 0; border-bottom: 1px solid var(--line); }
   .runtime-strip > div:last-child { border-bottom: 0; }

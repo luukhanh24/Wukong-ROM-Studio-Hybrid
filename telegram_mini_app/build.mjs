@@ -15,14 +15,19 @@ const result = await build({
   assetNames: 'assets/[name]-[hash]', loader: { '.woff2': 'file' },
 });
 const entries = {};
+const bundledAssets = {};
 for (const [file, meta] of Object.entries(result.metafile.outputs)) {
   if (meta.entryPoint === 'app.js' || meta.entryPoint === 'styles.css') {
     entries[meta.entryPoint] = path.relative(outdir, path.resolve(root, file)).replaceAll('\\', '/');
+  }
+  for (const input of Object.keys(meta.inputs || {})) {
+    bundledAssets[input] = path.relative(outdir, path.resolve(root, file)).replaceAll('\\', '/');
   }
 }
 if (!entries['app.js'] || !entries['styles.css']) throw new Error('Missing application bundle');
 let html = await readFile(path.join(root, 'index.html'), 'utf8');
 for (const [source, destination] of Object.entries(entries)) html = html.replace(`./${source}`, `./${destination}`);
+for (const [source, destination] of Object.entries(bundledAssets)) html = html.replaceAll(`./${source}`, `./${destination}`);
 await writeFile(path.join(outdir, 'index.html'), html);
 await writeFile(path.join(outdir, 'bundle-meta.json'), JSON.stringify(result.metafile, null, 2));
 await writeFile(path.join(outdir, 'asset-manifest.json'), JSON.stringify(entries, null, 2));
