@@ -405,3 +405,26 @@ class MiniAppUpgradeTests(unittest.TestCase):
             self.assertEqual(result["filterColumn"], "1")
 
         _render_mini_app_in_chrome(api_enabled=True, initial_view="catalog", window_width=1280, window_height=800, page_action=exercise_desktop)
+
+    def test_profile_uses_solid_surface_without_full_screen_blur(self):
+        def exercise(page):
+            page.click('#dock-profile')
+            result = page.evaluate("""() => {
+                const scene = document.querySelector('#profile-scene');
+                const backdrop = document.querySelector('.profile-scene-backdrop');
+                const highlight = document.querySelector('.profile-highlight');
+                return {
+                    sceneColor: getComputedStyle(scene).color,
+                    sceneBackground: getComputedStyle(scene).backgroundColor,
+                    backdropDisplay: getComputedStyle(backdrop).display,
+                    highlightBlur: getComputedStyle(highlight).backdropFilter,
+                    overflow: document.documentElement.scrollWidth > innerWidth,
+                };
+            }""")
+            self.assertEqual(result["sceneColor"], "rgb(10, 10, 10)")
+            self.assertEqual(result["sceneBackground"], "rgb(255, 255, 255)")
+            self.assertEqual(result["backdropDisplay"], "none")
+            self.assertIn(result["highlightBlur"], ("none", ""))
+            self.assertFalse(result["overflow"])
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)

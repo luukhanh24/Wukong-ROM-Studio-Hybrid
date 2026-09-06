@@ -83,6 +83,7 @@ main { padding-bottom: 128px; }
 .bottom-nav { bottom: var(--safe-bottom); }
 .primary { border-color:var(--ink); color:var(--canvas); background:var(--ink); }
 .primary:hover { border-color:color-mix(in srgb,var(--ink) 82%,var(--muted)); background:color-mix(in srgb,var(--ink) 82%,var(--muted)); }
+.task-tabs input:checked + span { color:var(--ink); background:var(--accent); }
 .dispatch-fab { right: max(14px,var(--telegram-safe-right,0px)); bottom: calc(92px + var(--safe-bottom)); left: max(14px,var(--telegram-safe-left,0px)); width: auto; min-width: 0; height: 44px; padding: 0 16px; border: 1px solid var(--ink); border-radius: var(--radius-md); color: var(--canvas); background: var(--ink); box-shadow: 0 8px 24px color-mix(in srgb,var(--ink) 16%,transparent); -webkit-backdrop-filter:none; backdrop-filter:none; }
 [data-keyboard="true"] .dispatch-fab, [data-keyboard="true"] .bottom-nav { visibility: hidden; pointer-events: none; }
 [data-keyboard="true"] main { padding-bottom: 32px; }
@@ -131,6 +132,8 @@ main { padding-bottom: 128px; }
   .job-history-tabs { margin-top:10px; }
   .rom-catalog-results[aria-busy="true"]:empty { grid-template-columns:1fr; }
   .rom-catalog-results[aria-busy="true"]:empty::after { display:none; }
+  .toast { top:auto; right:12px; bottom:calc(100px + var(--safe-bottom)); max-width:calc(100vw - 24px); }
+  body[data-view="build"] .toast { bottom:calc(148px + var(--safe-bottom)); }
   .source-state { grid-template-columns: 34px minmax(0, 1fr); }
   .source-state .probe-button { grid-column: 1 / -1; width: 100%; }
   .release-version-controls { flex-wrap: wrap; }
