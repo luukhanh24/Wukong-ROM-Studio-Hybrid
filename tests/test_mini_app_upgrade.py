@@ -270,13 +270,11 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     sourceX: source.getBoundingClientRect().x,
                 };
             }""")
-            self.assertEqual(result, {
-                "mainPaddingLeft": "10px",
-                "runtimeWidth": 370,
-                "runtimeHeight": 186,
-                "runtimeRows": 3,
-                "sourceX": 10,
-            })
+            self.assertEqual(result["mainPaddingLeft"], "10px")
+            self.assertEqual(result["runtimeWidth"], 370)
+            self.assertLessEqual(result["runtimeHeight"], 90)
+            self.assertEqual(result["runtimeRows"], 3)
+            self.assertEqual(result["sourceX"], 10)
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
 
@@ -307,7 +305,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
             result = page.evaluate("""() => {
                 const masthead = document.querySelector('.masthead');
                 const dock = document.querySelector('.bottom-nav');
-                const sourceFacts = document.querySelectorAll('#source-facts > dl.source-facts:not(.source-summary) > div').length;
+                const sourceFacts = document.querySelectorAll('#source-facts .metadata-details > dl.source-facts > div').length;
                 return {
                     mastheadPaddingTop: getComputedStyle(masthead).paddingTop,
                     mastheadPaddingBottom: getComputedStyle(masthead).paddingBottom,
@@ -316,8 +314,10 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     profileSlot: dock.querySelector('#dock-profile')?.dataset.slot,
                     sourceFacts,
                     sourceSummaryHidden: getComputedStyle(document.querySelector('.source-summary')).display,
+                    sourceSummaryValues: [...document.querySelectorAll('.source-summary dd')].map((node) => node.textContent.trim()),
                     deliveryHeading: Boolean(document.querySelector('.delivery-section > .section-heading')),
                     buildAdvancedHidden: document.querySelector('#build-advanced')?.hidden,
+                    buildAdvancedOpen: document.querySelector('#build-advanced')?.open,
                 };
             }""")
             self.assertEqual(result["mastheadPaddingTop"], "7px")
@@ -326,9 +326,11 @@ class MiniAppUpgradeTests(unittest.TestCase):
             self.assertEqual(result["dockSlots"], 5)
             self.assertEqual(result["profileSlot"], "2")
             self.assertEqual(result["sourceFacts"], 15)
-            self.assertEqual(result["sourceSummaryHidden"], "none")
+            self.assertEqual(result["sourceSummaryHidden"], "grid")
+            self.assertTrue(all(value not in ("", "—", "···") for value in result["sourceSummaryValues"]))
             self.assertTrue(result["deliveryHeading"])
-            self.assertTrue(result["buildAdvancedHidden"])
+            self.assertFalse(result["buildAdvancedHidden"])
+            self.assertFalse(result["buildAdvancedOpen"])
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
 
@@ -370,7 +372,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
                         return {columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, gap: getComputedStyle(grid).rowGap, fields};
                     }""")
                     self.assertEqual(result["columns"], 1)
-                    self.assertEqual(result["gap"], "13px")
+                    self.assertEqual(result["gap"], "10px")
                     self.assertEqual(len({field["x"] for field in result["fields"]}), 1)
                     self.assertGreaterEqual(min(field["height"] for field in result["fields"]), 44)
                     self.assertLessEqual(max(field["height"] for field in result["fields"]), 48)
