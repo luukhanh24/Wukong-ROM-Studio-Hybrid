@@ -71,6 +71,7 @@ function renderBatchChoices() {
 function openBatchBuildPage() {
   if (state.me?.role !== "admin") return;
   clearTimeout(state.adminUsersPollTimer); state.adminUsersPollTimer = null;
+  clearTimeout(state.adminUserPollTimer); state.adminUserPollTimer = null;
   requestScopes.cancel("adminUsers");
   requestScopes.cancel("adminActivity");
   requestScopes.cancel("adminUser");
@@ -144,15 +145,17 @@ async function loadLatestBatch() {
   if (!workspacePollingAllowed()) return;
   if (state.activeBatchId) return loadBatch();
   const signal = requestScopes.start("batch");
+  let handedOff = false;
   try {
     const payload = await apiRequest("/v1/admin/batch-builds", { signal });
     if (signal.aborted || !workspacePollingAllowed() || $("#admin-batch-page").hidden) return;
     const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
     if (!latest?.batchId) return;
     state.activeBatchId = latest.batchId;
+    handedOff = true;
     return loadBatch();
   } finally {
-    if (signal.aborted || !workspacePollingAllowed() || $("#admin-batch-page").hidden) {
+    if (!handedOff && (signal.aborted || !workspacePollingAllowed() || $("#admin-batch-page").hidden)) {
       requestScopes.cancel("batch");
     }
   }
