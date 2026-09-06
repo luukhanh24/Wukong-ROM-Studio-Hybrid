@@ -88,6 +88,13 @@ main { padding-bottom: 128px; }
   main { padding-left: max(14px, var(--telegram-safe-left, 0px)); padding-right: max(14px, var(--telegram-safe-right, 0px)); padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
   .masthead { padding-top: max(7px, var(--safe-top)); padding-bottom: 7px; }
   .dossier-section { margin-bottom: 12px; padding: 15px; }
+  /* The three build selectors become a thumb-friendly vertical stack on phones. */
+  .build-options .field-grid,
+  .build-options .field-grid.three { grid-template-columns: 1fr; gap: 16px; }
+  .build-options .section-heading h2 { font-size: clamp(20px, 5vw, 26px); }
+  .build-options .section-heading p { font-size: clamp(12px, 3vw, 16px); }
+  .build-options .field-grid.three .field select { min-height: 64px; padding: 14px 16px; border-radius: 8px; font-size: clamp(16px, 3.4vw, 20px); }
+  .build-options .field-grid.three .field > span { margin-bottom: 8px; font-size: clamp(12px, 3vw, 16px); }
   .runtime-strip { grid-template-columns: 1fr; margin-bottom: 16px; }
   .runtime-strip > div { min-height: 52px; border-right: 0; border-bottom: 1px solid var(--line); }
   .runtime-strip > div:last-child { border-bottom: 0; }

@@ -321,3 +321,22 @@ class MiniAppUpgradeTests(unittest.TestCase):
             self.assertEqual(len(result["buildColumns"].split()), 3)
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
+
+    def test_mobile_build_configuration_fields_stack_with_large_touch_targets(self):
+        for width in (390, 768):
+            with self.subTest(width=width):
+                def exercise(page):
+                    result = page.evaluate("""() => {
+                        const grid = document.querySelector('#build-options .field-grid.three');
+                        const fields = [...grid.children].map((field) => {
+                            const box = field.getBoundingClientRect();
+                            const control = field.querySelector('select');
+                            return {x: Math.round(box.x), width: Math.round(box.width), height: Math.round(control.getBoundingClientRect().height)};
+                        });
+                        return {columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, fields};
+                    }""")
+                    self.assertEqual(result["columns"], 1)
+                    self.assertEqual(len({field["x"] for field in result["fields"]}), 1)
+                    self.assertGreaterEqual(min(field["height"] for field in result["fields"]), 64)
+
+                _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=900, page_action=exercise)
