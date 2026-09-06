@@ -23,10 +23,14 @@ public blueprint. Production refuses to start without `DATABASE_URL`, and
 `/healthz` must report `"stateBackend":"postgresql"` before the Telegram Mini
 App is switched to the new origin.
 
-Vercel deployments need only the public API origin in
-`WUKONG_TELEGRAM_MINI_APP_API_URL`. Connecting Vercel to a private GitHub
-repository does not publish the repository identity in the generated bundle.
-The CI privacy test scans the output for personal GitHub references.
+Vercel deployments use the public API origin in
+`WUKONG_TELEGRAM_MINI_APP_API_URL` plus the CI-only secrets
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID`. The production
+frontend workflow is manual (`workflow_dispatch`) and CLI-only; Vercel Git
+Integration auto-deploy is disabled so a frontend cannot promote before the
+Worker health gate. Connecting Vercel to a private GitHub repository does not
+publish the repository identity in the generated bundle. The CI privacy test
+scans the output for personal GitHub references.
 
 ## Optional self-hosted VPS
 
