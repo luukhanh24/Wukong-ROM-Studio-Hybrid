@@ -65,13 +65,16 @@ jobs:
         run: |
           npm run check --prefix deploy/cloudflare-worker
           npm test --prefix telegram_mini_app
-          python -m unittest \
-            tests.test_d1_migration \
-            tests.test_telegram_mini_api \
-            tests.test_telegram_mini_app \
-            tests.test_mini_app_upgrade \
-            tests.test_hybrid_channel_parity \
-            tests.test_control_plane_deployment
+          # Keep browser fixture globals and filesystem test doubles isolated
+          # from the hybrid executor suite. Each process still runs the same
+          # required regression modules, while preventing state leakage from
+          # long-lived HTTP/Playwright fixtures on the hosted runner.
+          python -m unittest tests.test_d1_migration
+          python -m unittest tests.test_telegram_mini_api
+          python -m unittest tests.test_telegram_mini_app
+          python -m unittest tests.test_mini_app_upgrade
+          python -m unittest tests.test_hybrid_channel_parity
+          python -m unittest tests.test_control_plane_deployment
 
   deploy:
     name: Deploy ${{ inputs.target || 'staging' }} Worker
