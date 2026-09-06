@@ -266,7 +266,14 @@ class LocalJobExecutor:
             adapter = source_adapter_for(recipe.source.kind, config_path=self.rclone_config)
             download_started = time.monotonic()
             source = adapter.materialize(recipe.source.uri, source_target, recipe.source.sha256)
-            self.store.append_event(job_id, "metric", stage="materialize_source", durationSeconds=round(time.monotonic() - download_started, 3), bytesProcessed=source.size_bytes)
+            self.store.append_event(
+                job_id,
+                "metric",
+                stage="materialize_source",
+                durationSeconds=round(time.monotonic() - download_started, 3),
+                bytesProcessed=source.size_bytes,
+                cacheState="not-applicable",
+            )
             if recipe.source.size_bytes is not None and source.size_bytes != recipe.source.size_bytes:
                 source.path.unlink(missing_ok=True)
                 raise SourceIntegrityError(
@@ -398,7 +405,8 @@ class LocalJobExecutor:
                 self.actions_ui.event(event)
                 status = str(event.get("status") or "")
                 details = event.get("details")
-                if event_type == "step" and status in {"success", "failed"} and isinstance(details, Mapping):
+                if event_type == "step" and status in {"success", "failed"}:
+                    details = details if isinstance(details, Mapping) else {}
                     metric: dict[str, object] = {
                         "stage": stage,
                         "cacheState": "hit" if details.get("cacheHit") is True else "miss" if details.get("cacheHit") is False else "not-applicable",
@@ -469,7 +477,14 @@ class LocalJobExecutor:
                         from .models import utc_now
 
                         if os.environ.get("GITHUB_ACTIONS", "").casefold() == "true":
-                            self.store.append_event(job_id, "metric", stage="checkpoint", sourceStage=stage, durationSeconds=round(time.monotonic() - checkpoint_started, 3))
+                            self.store.append_event(
+                                job_id,
+                                "metric",
+                                stage="checkpoint",
+                                sourceStage=stage,
+                                durationSeconds=round(time.monotonic() - checkpoint_started, 3),
+                                cacheState="not-applicable",
+                            )
                         self.store.update(job_id, checkpoint=checkpoint, checkpoint_at=utc_now())
                         self.store.append_event(job_id, "checkpoint", checkpoint=checkpoint, stage=stage)
                         self._push_cloud_progress(job_id, storage)
@@ -510,7 +525,15 @@ class LocalJobExecutor:
             for output_index, output in enumerate(outputs):
                 checksum_started = time.monotonic()
                 prepared = prepare_artifact(output, hasher=sha256_file)
-                self.store.append_event(job_id, "metric", stage="checksum", durationSeconds=round(time.monotonic() - checksum_started, 3), bytesProcessed=prepared.size_bytes, cacheHit=False)
+                self.store.append_event(
+                    job_id,
+                    "metric",
+                    stage="checksum",
+                    durationSeconds=round(time.monotonic() - checksum_started, 3),
+                    bytesProcessed=prepared.size_bytes,
+                    cacheHit=False,
+                    cacheState="miss",
+                )
                 upload_started = time.monotonic()
                 if recipe.storage.publish_artifact:
                     def report_upload(values: Mapping[str, object], *, current: Path = output) -> None:
@@ -564,7 +587,14 @@ class LocalJobExecutor:
                         ),
                         prepared=prepared,
                     )
-                    self.store.append_event(job_id, "metric", stage="publish", durationSeconds=round(time.monotonic() - upload_started, 3), bytesProcessed=prepared.size_bytes)
+                    self.store.append_event(
+                        job_id,
+                        "metric",
+                        stage="publish",
+                        durationSeconds=round(time.monotonic() - upload_started, 3),
+                        bytesProcessed=prepared.size_bytes,
+                        cacheState="not-applicable",
+                    )
                     records.append(record)
                     self.store.append_event(
                         job_id,
