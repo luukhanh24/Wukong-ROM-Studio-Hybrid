@@ -24,8 +24,9 @@ dispatches jobs, and shows their history.
 
 The service discovers its generated `https://*.onrender.com` URL at runtime,
 registers the Telegram webhook, writes the verified API origin to the GitHub
-repository variable `WUKONG_TELEGRAM_MINI_APP_API_URL`, and triggers a fresh
-GitHub Pages deployment. The fallback workflow **Bind Render Free Control
+repository variable `WUKONG_TELEGRAM_MINI_APP_API_URL`, and triggers the
+private Vercel deployment workflow pinned to the verified release SHA. The
+fallback workflow **Bind Render Free Control
 Plane** can perform the last binding step manually if the GitHub token lacks
 permission to update repository variables.
 

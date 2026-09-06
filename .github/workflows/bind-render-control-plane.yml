@@ -48,7 +48,8 @@ jobs:
                 gh variable set WUKONG_TELEGRAM_MINI_APP_API_URL \
                   --repo "$GITHUB_REPOSITORY" --body "$api_url"
                 gh workflow run telegram-mini-app-pages.yml \
-                  --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_SHA"
+                  --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" \
+                  --field release_sha="$GITHUB_SHA"
                 echo "Verified and bound Render API: $api_url"
                 exit 0
               fi

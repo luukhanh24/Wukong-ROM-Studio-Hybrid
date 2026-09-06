@@ -282,7 +282,7 @@ jobs:
           for _ in {1..20}; do
             run_id="$(gh run list --repo "$GITHUB_REPOSITORY" \
               --workflow telegram-mini-app-pages.yml \
-              --branch "$GITHUB_REF_NAME" --event workflow_dispatch --limit 20 \
+              --branch "$GITHUB_REF_NAME" --commit "$WUKONG_RELEASE_SHA" --event workflow_dispatch --limit 20 \
               --json databaseId,headSha \
               --jq ".[] | select(.headSha == \"$WUKONG_RELEASE_SHA\") | .databaseId" | head -n1)"
             [[ -n "$run_id" ]] && break

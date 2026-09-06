@@ -272,6 +272,9 @@ class HybridChannelParityContractTests(unittest.TestCase):
             )
             self.assertNotIn("workers.dev", artifact["public_url"])
             self.assertNotIn("onrender.com", artifact["public_url"])
+            events = [json.loads(line) for line in events_path.read_text(encoding="utf-8").splitlines()]
+            metrics = [event for event in events if event.get("type") == "metric"]
+            self.assertTrue(any(event.get("stage") == "upload" and event.get("cacheState") == "not-applicable" for event in metrics))
 
     def test_actions_checkpoint_failure_does_not_stop_or_repeat_build(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

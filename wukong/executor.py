@@ -317,12 +317,22 @@ class LocalJobExecutor:
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
+                upload_started = time.monotonic()
                 record = storage.store_source(source.path, device=recipe.device, digest=source.sha256)
+                self.store.append_event(
+                    job_id,
+                    "metric",
+                    stage="upload",
+                    durationSeconds=round(time.monotonic() - upload_started, 3),
+                    bytesProcessed=source.size_bytes,
+                    cacheState="not-applicable",
+                )
                 return self._succeed(job_id, [record])
             if recipe.task == "artifact_publish":
                 self.store.update(job_id, status=JobStatus.UPLOADING, stage="upload", progress=0.8)
                 self._push_cloud_progress(job_id, storage)
                 self.actions_ui.begin("upload")
+                upload_started = time.monotonic()
                 record = self._publish_artifact_with_mirror(
                     job_id,
                     source.path,
@@ -334,6 +344,14 @@ class LocalJobExecutor:
                         device=recipe.device,
                         build="published",
                     ),
+                )
+                self.store.append_event(
+                    job_id,
+                    "metric",
+                    stage="upload",
+                    durationSeconds=round(time.monotonic() - upload_started, 3),
+                    bytesProcessed=source.size_bytes,
+                    cacheState="not-applicable",
                 )
                 return self._succeed(job_id, [record])
 
@@ -585,6 +603,14 @@ class LocalJobExecutor:
                             )
                         ),
                         prepared=prepared,
+                    )
+                    self.store.append_event(
+                        job_id,
+                        "metric",
+                        stage="upload",
+                        durationSeconds=round(time.monotonic() - upload_started, 3),
+                        bytesProcessed=prepared.size_bytes,
+                        cacheState="not-applicable",
                     )
                     self.store.append_event(
                         job_id,

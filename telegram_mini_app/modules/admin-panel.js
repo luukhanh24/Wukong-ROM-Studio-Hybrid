@@ -70,6 +70,10 @@ function renderBatchChoices() {
 
 function openBatchBuildPage() {
   if (state.me?.role !== "admin") return;
+  clearTimeout(state.adminUsersPollTimer); state.adminUsersPollTimer = null;
+  requestScopes.cancel("adminUsers");
+  requestScopes.cancel("adminActivity");
+  requestScopes.cancel("adminUser");
   renderBatchChoices();
   $("#system").classList.add("admin-batch-open"); $("#admin-batch-page").hidden = false;
   window.scrollTo({ top: 0, behavior: "instant" }); $("#admin-batch-back").focus({ preventScroll: true });
@@ -80,6 +84,9 @@ function closeBatchBuildPage() {
   clearTimeout(state.batchPollTimer); state.batchPollTimer = null;
   requestScopes.cancel("batch");
   $("#system").classList.remove("admin-batch-open"); $("#admin-batch-page").hidden = true;
+  if (workspacePollingAllowed() && state.me?.role === "admin" && document.body.dataset.view === "system") {
+    loadAdminUsers().catch(() => {});
+  }
 }
 
 function batchReleaseSummary(payload) {
@@ -136,11 +143,19 @@ async function loadBatch() {
 async function loadLatestBatch() {
   if (!workspacePollingAllowed()) return;
   if (state.activeBatchId) return loadBatch();
-  const payload = await apiRequest("/v1/admin/batch-builds");
-  const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
-  if (!latest?.batchId) return;
-  state.activeBatchId = latest.batchId;
-  return loadBatch();
+  const signal = requestScopes.start("batch");
+  try {
+    const payload = await apiRequest("/v1/admin/batch-builds", { signal });
+    if (signal.aborted || !workspacePollingAllowed() || $("#admin-batch-page").hidden) return;
+    const latest = Array.isArray(payload.batches) ? payload.batches[0] : null;
+    if (!latest?.batchId) return;
+    state.activeBatchId = latest.batchId;
+    return loadBatch();
+  } finally {
+    if (signal.aborted || !workspacePollingAllowed() || $("#admin-batch-page").hidden) {
+      requestScopes.cancel("batch");
+    }
+  }
 }
 
 async function startBatchBuild() {
@@ -248,7 +263,7 @@ function renderAdminUsers() {
 }
 
 async function loadAdminUsers({ reset = false } = {}) {
-  if (state.me?.role !== "admin" || !workspacePollingAllowed() || document.body.dataset.view !== "system") return;
+  if (state.me?.role !== "admin" || !workspacePollingAllowed() || document.body.dataset.view !== "system" || $("#admin-batch-page")?.hidden !== true) return;
   const signal = requestScopes.start("adminUsers");
   clearTimeout(state.adminUsersPollTimer);
   if (reset) state.adminUsersOffset = 0;
@@ -274,7 +289,7 @@ async function loadAdminUsers({ reset = false } = {}) {
     if (!requestScopes.isCurrent("adminUsers", signal)) return;
     state.adminUsersLoading = false;
     clearTimeout(state.adminUsersPollTimer);
-    if (workspacePollingAllowed() && state.me?.role === "admin" && document.body.dataset.view === "system") {
+    if (workspacePollingAllowed() && state.me?.role === "admin" && document.body.dataset.view === "system" && $("#admin-batch-page")?.hidden === true) {
       state.adminUsersPollTimer = setTimeout(() => loadAdminUsers().catch(() => {}), 10000);
     }
   }

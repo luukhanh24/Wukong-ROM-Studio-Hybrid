@@ -88,11 +88,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow run telegram-mini-app-pages.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
+          gh workflow run telegram-mini-app-pages.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" \
+            --field release_sha="$GITHUB_SHA"
           run_id=""
           for _ in {1..12}; do
             run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow telegram-mini-app-pages.yml \
-              --branch "$GITHUB_REF_NAME" --event workflow_dispatch --limit 10 \
+              --branch "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --event workflow_dispatch --limit 10 \
               --json databaseId,headSha --jq ".[] | select(.headSha == \"$GITHUB_SHA\") | .databaseId" | head -n1)"
             [[ -n "$run_id" ]] && break
             sleep 5

@@ -216,6 +216,15 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn('--field release_sha="$WUKONG_RELEASE_SHA"', workflow)
         self.assertIn('inputs.release_sha || github.sha', vercel_workflow)
 
+        legacy_render = (
+            Path(__file__).parents[1] / ".github/workflows/control-plane-production.yml"
+        ).read_text(encoding="utf-8")
+        render_binding = (
+            Path(__file__).parents[1] / ".github/workflows/bind-render-control-plane.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn('--field release_sha="$GITHUB_SHA"', legacy_render)
+        self.assertIn('--field release_sha="$GITHUB_SHA"', render_binding)
+
     def test_vercel_static_bundle_contains_no_personal_github_identity(self) -> None:
         output = self.root / "vercel-static"
 

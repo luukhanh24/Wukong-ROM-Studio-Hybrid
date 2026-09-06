@@ -41,7 +41,10 @@ class RenderOriginBinderTests(unittest.TestCase):
             http.post.call_args_list[0].kwargs["json"]["value"],
         )
         self.assertIn("telegram-mini-app-pages.yml/dispatches", http.post.call_args_list[1].args[0])
-        self.assertEqual({"ref": "main"}, http.post.call_args_list[1].kwargs["json"])
+        self.assertEqual(
+            {"ref": "main", "inputs": {"release_sha": self.binding().release_sha}},
+            http.post.call_args_list[1].kwargs["json"],
+        )
 
     def test_updates_changed_variable_before_dispatch(self) -> None:
         http = Mock()
@@ -77,7 +80,7 @@ class RenderOriginBinderTests(unittest.TestCase):
             status_code=200,
             text=(
                 self.binding().api_url
-                + f'<script src="app.js?v={self.binding().release_sha}"></script>'
+                + f'<meta name="wukong-release" content="{self.binding().release_sha}">'
             ),
         )
         http.get.side_effect = [current, page]

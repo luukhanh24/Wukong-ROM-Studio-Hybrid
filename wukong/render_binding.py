@@ -84,7 +84,7 @@ class RenderOriginBinder:
             try:
                 self.bind_once()
                 print(
-                    f"Bound Render control plane to GitHub Pages: {self.binding.api_url.rstrip('/')}",
+                    f"Bound Render control plane to Vercel: {self.binding.api_url.rstrip('/')}",
                     flush=True,
                 )
                 return True
@@ -143,7 +143,10 @@ class RenderOriginBinder:
             dispatched = self.http.post(
                 f"{base}/actions/workflows/{self.PAGES_WORKFLOW}/dispatches",
                 headers=headers,
-                json={"ref": self.binding.branch},
+                json={
+                    "ref": self.binding.branch,
+                    "inputs": {"release_sha": self.binding.release_sha},
+                },
                 timeout=20,
             )
         except (requests.RequestException, ValueError) as exc:
@@ -171,5 +174,8 @@ class RenderOriginBinder:
         content = response.text
         return (
             self.binding.api_url.rstrip("/") in content
-            and f"app.js?v={self.binding.release_sha}" in content
+            and (
+                f'name="wukong-release" content="{self.binding.release_sha}"' in content
+                or f"app.js?v={self.binding.release_sha}" in content
+            )
         )
