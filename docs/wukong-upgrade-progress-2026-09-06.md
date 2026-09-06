@@ -30,3 +30,9 @@ This document records implementation evidence for the approved upgrade plan. A g
 - CI evidence: main CI `34021228027` passed all seven jobs; Control Plane staging workflow `34021228034` passed contracts and staging deployment.
 - Production evidence: Vercel workflow `34021694295` passed; Vercel deployment `9UKFDNpV2zhVvCn6HeSKZJbxPfKA` was promoted to `https://wukong-rom-studio.vercel.app`. Direct HTML returned 200 with release marker `650d388fd173d6690dea802e7615efc74e517c2d`; the referenced CSS contained the restored masthead, three-column Studio grid and desktop dock position markers.
 - External Telegram Android/iOS keyboard and safe-area acceptance, 24-hour admin canary and independent rollback rehearsal remain pending; the upgrade is **not fully accepted** until those rows are completed.
+
+## Mobile configuration polish
+
+- Commit `0ab92f8cd4afeccfce6a60fe5f00a6ccc64038e6` fixes the mobile cascade that was overriding `.field-grid.three`: the Studio configuration selectors now stack vertically at mobile widths, use 64px touch-friendly controls, fluid heading/label sizing, and 16px spacing while the desktop three-column layout remains unchanged.
+- Evidence: regression test `test_mobile_build_configuration_fields_stack_with_large_touch_targets` passes at 390px and 768px; full Mini App upgrade suite passes 11/11; Node tests pass 5/5; production bundle builds 11 assets. Fixture screenshots at 390px and 563px match the requested stacked configuration card.
+- Deployment: CI `34022359038` and Control Plane `34022359042` passed; Vercel production workflow `34022751041` passed and promoted deployment `4CtEMaL6Zqgr7yqcvkMxqe9VcdJ4` to `https://wukong-rom-studio.vercel.app`. Direct production HTML returned release marker `0ab92f8cd4afeccfce6a60fe5f00a6ccc64038e6`; hashed CSS contains the mobile stack and 64px select rules.
