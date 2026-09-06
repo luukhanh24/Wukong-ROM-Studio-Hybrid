@@ -3,4 +3,5 @@
 @import "./styles/components.css";
 @import "./styles/screens.css";
 @import "./styles/dock.css";
+@import "./styles/accessibility.css";
 @import "./styles/studio.css";

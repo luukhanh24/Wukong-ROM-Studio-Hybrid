@@ -1,0 +1,51 @@
+/* Shared interaction policy. Component-specific controls keep their own visual styling. */
+.source-input-head > label,
+.field > span,
+.source-facts dt,
+.readiness-checklist small,
+.source-state-copy > small {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.source-input-head button,
+.source-facts-head button,
+.probe-button,
+.release-version-editor input,
+.release-version-editor button,
+.release-version-controls button,
+.session-recovery button,
+.job-controls button,
+.job-controls a,
+.job-artifacts .job-artifact-actions button,
+.job-page-buttons button,
+.user-pagination button,
+.user-dialog header > button,
+.user-dialog footer button,
+.user-detail-actions button,
+.task-tabs span,
+.steps span {
+  min-height: var(--target-size);
+}
+
+.job-page-buttons button {
+  min-width: var(--target-size);
+}
+
+.source-input-head button,
+.source-facts-head button,
+.probe-button,
+.release-version-editor button,
+.job-controls button,
+.job-controls a,
+.user-detail-actions button {
+  font-size: 12px;
+}
+
+.source-input-head > div {
+  flex-wrap: wrap;
+}
+
+.safe-area-right {
+  padding-right: var(--telegram-safe-right, 0px);
+}
