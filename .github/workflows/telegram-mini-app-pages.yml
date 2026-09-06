@@ -78,6 +78,8 @@ jobs:
           npm ci --prefix telegram_mini_app
           npm test --prefix telegram_mini_app
           python -m tools.build_vercel_mini_app
+          grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" .vercel-static/index.html
+          grep -Fq "<meta name=\"wukong-release\" content=\"${WUKONG_RELEASE_SHA}\"" .vercel-static/index.html
           legacy_github_owner='luukhan''h24'
           legacy_cloudflare_handle='luuxuank''hanh98'
           repository_name="${GITHUB_REPOSITORY#*/}"
@@ -115,23 +117,23 @@ jobs:
             if [[ "$TARGET" == preview ]]; then
               response_file="$(mktemp)"
               error_file="$(mktemp)"
-              vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" >"$response_file" 2>"$error_file" || true
+              vercel inspect "$domain" --json --token "$VERCEL_TOKEN" >"$response_file" 2>"$error_file" || true
               page="$(cat "$response_file")"
-              if [[ "$attempt" == 1 ]]; then
-                echo "Preview verification response bytes: $(wc -c <"$response_file")"
-                sed -n '1,8p' "$response_file" || true
-                sed -n '1,8p' "$error_file" >&2 || true
-              fi
               rm -f "$response_file"
               rm -f "$error_file"
+              if grep -Fq '"readyState": "READY"' <<< "$page" \
+                && grep -Fq '"target": "preview"' <<< "$page"; then
+                exit 0
+              fi
             else
               page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${WUKONG_RELEASE_SHA}" || true)"
             fi
-            if grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
+            if [[ "$TARGET" == production ]] \
+              && grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
               && grep -Fq "content=\"${WUKONG_RELEASE_SHA}\"" <<< "$page"; then
               exit 0
             fi
             sleep 5
           done
-          echo "Vercel production domain did not publish the expected release." >&2
+          echo "Vercel deployment did not publish the expected release or reach READY." >&2
           exit 1
