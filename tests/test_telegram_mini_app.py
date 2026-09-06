@@ -1437,7 +1437,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertEqual(["0", "1", "2", "3", "4"], re.findall(r'data-slot="([^"]+)"', dock))
         self.assertIn('id="dock-profile"', dock)
         self.assertIn('data-nav="profile"', dock)
-        self.assertNotIn('id="header-profile"', html)
+        self.assertIn('id="header-profile"', html)
         self.assertIn('src="./WukongStudio.svg"', html)
         self.assertEqual(
             (ROOT / "desktop" / "WukongStudio.App" / "Assets" / "WukongStudio.svg").read_text(encoding="utf-8"),

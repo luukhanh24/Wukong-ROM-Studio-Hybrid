@@ -371,6 +371,7 @@ function renderAccessGate() {
 function renderAccount() {
   const profile = state.me;
   renderProfileTrigger($("#dock-profile"), profile);
+  renderProfileTrigger($("#header-profile"), profile);
   renderProfileView();
   renderGreeting();
   scheduleGreeting();

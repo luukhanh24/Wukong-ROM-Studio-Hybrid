@@ -35,11 +35,18 @@
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
   <header class="masthead">
-    <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><img src="./WukongStudio.svg" width="38" height="38" alt=""><span><strong>WUKONG</strong><small>ROM STUDIO</small></span></a>
+    <div class="masthead-brand">
+      <a class="wordmark" href="#build" aria-label="Wukong ROM Studio"><img src="./WukongStudio.svg" width="38" height="38" alt=""><span><strong>WUKONG</strong><small>ROM STUDIO</small></span></a>
+      <span class="page-context" aria-hidden="true"><i>/</i><span data-page="build" data-i18n="navBuild">Studio</span><span data-page="jobs" data-i18n="navJobs">Jobs</span><span data-page="catalog" data-i18n="navCatalog">Thư viện</span><span data-page="system" data-i18n="navSystem">Hệ thống</span><span data-page="profile" data-i18n="navProfile">Hồ sơ</span></span>
+    </div>
+    <nav class="contents-rail" aria-label="Mini App navigation">
+      <button class="active" data-nav="build"><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><span data-i18n="navCatalog">Thư viện</span></button><button data-nav="system"><span data-i18n="navSystem">Hệ thống</span></button>
+    </nav>
     <div class="masthead-meta">
       <span class="greeting-carousel" id="greeting-carousel" hidden aria-live="polite"><span class="greeting-mark" id="greeting-mark" aria-hidden="true"></span><span class="greeting-copy"><small id="greeting-kicker">WUKONG</small><span class="greeting-message-viewport"><strong id="greeting-message">—</strong></span></span></span>
       <span class="connection" id="telegram-state"><i></i><span data-i18n="previewMode">PREVIEW MODE</span></span>
       <button id="language" class="language-button" type="button">VI / EN</button>
+      <button id="header-profile" class="header-profile" type="button" data-nav="profile" data-i18n-aria="openProfile" aria-label="Mở hồ sơ" hidden><span>WK</span></button>
     </div>
   </header>
 
@@ -69,10 +76,6 @@
       <button id="refresh-maintenance" class="primary compact" type="button" data-i18n="maintenanceRefresh">Kiểm tra lại</button>
     </article>
   </section>
-
-  <nav class="contents-rail" aria-label="Mini App navigation">
-    <button class="active" data-nav="build"><svg class="nav-icon" aria-hidden="true"><use href="#nav-studio"/></svg><span data-i18n="navBuild">Studio</span></button><button data-nav="jobs"><svg class="nav-icon" aria-hidden="true"><use href="#nav-jobs"/></svg><span data-i18n="navJobs">Jobs</span></button><button data-nav="catalog"><svg class="nav-icon" aria-hidden="true"><use href="#nav-catalog"/></svg><span data-i18n="navCatalog">Thư viện</span></button><button data-nav="system"><svg class="nav-icon" aria-hidden="true"><use href="#nav-system"/></svg><span data-i18n="navSystem">Hệ thống</span></button>
-  </nav>
 
   <main>
     <section class="view active" id="build" aria-labelledby="build-title">

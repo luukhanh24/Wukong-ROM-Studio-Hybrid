@@ -235,6 +235,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     result = page.evaluate("""() => ({
                         width:innerWidth, documentWidth:document.documentElement.scrollWidth,
                         dock:getComputedStyle(document.querySelector('.bottom-nav')).display,
+                        desktopNav:getComputedStyle(document.querySelector('.contents-rail')).display,
                         positions:document.querySelectorAll('.bottom-nav [data-nav]').length,
                         advanced:document.querySelector('#build-advanced').open,
                         facts:document.querySelectorAll('.source-summary dd').length,
@@ -242,7 +243,12 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     })""")
                     self.assertEqual(result["width"], width)
                     self.assertLessEqual(result["documentWidth"], width)
-                    self.assertNotEqual(result["dock"], "none")
+                    if width > 860:
+                        self.assertEqual(result["dock"], "none")
+                        self.assertNotEqual(result["desktopNav"], "none")
+                    else:
+                        self.assertNotEqual(result["dock"], "none")
+                        self.assertEqual(result["desktopNav"], "none")
                     self.assertEqual(result["positions"], 5)
                     self.assertEqual(result["facts"], 4)
                     self.assertFalse(result["advanced"])
@@ -330,16 +336,22 @@ class MiniAppUpgradeTests(unittest.TestCase):
             result = page.evaluate("""() => {
                 const masthead = document.querySelector('.masthead');
                 const dock = document.querySelector('.bottom-nav');
+                const desktopNav = document.querySelector('.contents-rail');
+                const headerProfile = document.querySelector('#header-profile');
                 return {
                     mastheadPaddingTop: getComputedStyle(masthead).paddingTop,
                     mastheadPaddingBottom: getComputedStyle(masthead).paddingBottom,
-                    dockBottom: getComputedStyle(dock).bottom,
+                    dockDisplay: getComputedStyle(dock).display,
+                    desktopNavDisplay: getComputedStyle(desktopNav).display,
+                    headerProfileVisible: headerProfile.getClientRects().length > 0,
                     buildColumns: getComputedStyle(document.querySelector('#build-options .field-grid.three')).gridTemplateColumns,
                 };
             }""")
             self.assertEqual(result["mastheadPaddingTop"], "8px")
             self.assertEqual(result["mastheadPaddingBottom"], "8px")
-            self.assertEqual(result["dockBottom"], "14px")
+            self.assertEqual(result["dockDisplay"], "none")
+            self.assertNotEqual(result["desktopNavDisplay"], "none")
+            self.assertTrue(result["headerProfileVisible"])
             self.assertEqual(len(result["buildColumns"].split()), 3)
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
