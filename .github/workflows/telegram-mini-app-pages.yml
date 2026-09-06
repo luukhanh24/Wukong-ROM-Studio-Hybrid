@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           args=(vercel deploy . --yes --force --archive=tgz)
-          [[ "$TARGET" == preview ]] && args+=(--target preview)
+          [[ "$TARGET" == preview ]] && args+=(--target preview --skip-domain)
           [[ "$TARGET" == production ]] && args+=(--prod)
           deployment_url="$("${args[@]}" \
             --build-env "WUKONG_TELEGRAM_MINI_APP_API_URL=$WUKONG_TELEGRAM_MINI_APP_API_URL" \
