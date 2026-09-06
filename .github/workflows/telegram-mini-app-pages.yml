@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           args=(vercel deploy . --yes --force --archive=tgz)
-          [[ "$TARGET" == preview ]] && args+=(--target preview --skip-domain)
+          [[ "$TARGET" == preview ]] && args+=(--target preview)
           [[ "$TARGET" == production ]] && args+=(--prod)
           deployment_url="$("${args[@]}" \
             --build-env "WUKONG_TELEGRAM_MINI_APP_API_URL=$WUKONG_TELEGRAM_MINI_APP_API_URL" \
@@ -104,14 +104,20 @@ jobs:
           echo "target=$TARGET" >> "$GITHUB_OUTPUT"
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
       - name: Verify deployed preview or production domain
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           domain='${{ steps.deploy.outputs.deployment_url }}'
           [[ "$TARGET" == production ]] && domain='https://wukong-rom-studio.vercel.app'
           for _ in {1..24}; do
-            if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${WUKONG_RELEASE_SHA}")" \
-              && grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
+            if [[ "$TARGET" == preview ]]; then
+              page="$(vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" 2>/dev/null || true)"
+            else
+              page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${WUKONG_RELEASE_SHA}" || true)"
+            fi
+            if grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \
               && grep -Fq "content=\"${WUKONG_RELEASE_SHA}\"" <<< "$page"; then
               exit 0
             fi
