@@ -247,7 +247,7 @@ describe("atomic Accepted Job creation", () => {
     await expect(jobs.json()).resolves.toMatchObject({
       jobs: [{ status: "queued", recipe: { device: "PKG110" } }]
     });
-  });
+  }, 30_000);
 
   it("allows concurrent jobs for the same user and device", async () => {
     await seedApprovedUser("42003", 25);

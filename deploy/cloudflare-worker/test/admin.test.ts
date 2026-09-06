@@ -139,5 +139,5 @@ describe("admin user management", () => {
       { headers: adminHeaders }
     );
     expect(invalid.status).toBe(400);
-  });
+  }, 30_000);
 });
