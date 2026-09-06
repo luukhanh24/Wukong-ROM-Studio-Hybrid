@@ -132,7 +132,7 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("telegram-mini-app-pages.yml", workflow)
         self.assertNotIn("WUKONG_VPS_SSH_KEY", workflow)
         self.assertIn("VERCEL_TOKEN", vercel_workflow)
-        self.assertIn("args=(vercel deploy --yes --archive=tgz)", vercel_workflow)
+        self.assertIn("args=(vercel deploy . --yes --force --archive=tgz)", vercel_workflow)
         self.assertIn("args+=(--prod)", vercel_workflow)
         self.assertIn("workflow_dispatch:", vercel_workflow)
         self.assertNotIn("git-integration", vercel_workflow)
