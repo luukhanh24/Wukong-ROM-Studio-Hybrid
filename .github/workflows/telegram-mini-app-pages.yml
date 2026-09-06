@@ -111,13 +111,13 @@ jobs:
           set -euo pipefail
           domain='${{ steps.deploy.outputs.deployment_url }}'
           [[ "$TARGET" == production ]] && domain='https://wukong-rom-studio.vercel.app'
-          for _ in {1..24}; do
+          for attempt in {1..24}; do
             if [[ "$TARGET" == preview ]]; then
               response_file="$(mktemp)"
               error_file="$(mktemp)"
               vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" >"$response_file" 2>"$error_file" || true
               page="$(cat "$response_file")"
-              if [[ "$_" == 1 ]]; then
+              if [[ "$attempt" == 1 ]]; then
                 echo "Preview verification response bytes: $(wc -c <"$response_file")"
                 sed -n '1,8p' "$response_file" || true
                 sed -n '1,8p' "$error_file" >&2 || true
