@@ -18,7 +18,7 @@ This document records implementation evidence for the approved upgrade plan. A g
 
 ## Current release state
 
-- Local implementation commits: `943e49c`, `1a87d5c`, `2c31bc0`, `8bc3a81`, `5ce2c8a`, `3bb1720`, `86f862a`, `c085cd6`, `aeda192`, `c56e899`, `9040f44`, `0943074`, `a6778fd`, `667f893`, `d0b81a4`; Render fallback pinning, upload metrics, and the final batch polling handoff fix are committed. CI and external deployment evidence remain separate from local implementation evidence.
+- Local implementation commits: `943e49c`, `1a87d5c`, `2c31bc0`, `8bc3a81`, `5ce2c8a`, `3bb1720`, `86f862a`, `c085cd6`, `aeda192`, `c56e899`, `9040f44`, `0943074`, `a6778fd`, `667f893`, `d0b81a4`, `8ed1afc`, `1ccdd26`, `fc169b8`; Render fallback pinning, upload metrics, polling handoff, isolated CI gates, and executor content-root fingerprinting are committed. CI and external deployment evidence remain separate from local implementation evidence.
 - No database migration was added.
 - Production evidence must be recorded separately with the Worker version, frontend deployment ID, health/release response, and post-deploy smoke results.
 - Until the external rows above are completed, the upgrade is **not fully accepted**.
