@@ -1418,11 +1418,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--liquid-press", styles)
         self.assertIn("chromatic", (ROOT / "DESIGN.md").read_text(encoding="utf-8"))
         self.assertIn("prefersReducedMotion", script)
-        self.assertIn('"IBM Plex Sans"', styles)
-        self.assertIn('"JetBrains Mono"', styles)
+        self.assertIn('"Geist Sans"', styles)
+        self.assertIn('"Geist Mono"', styles)
         self.assertIn("--accent:", styles)
         self.assertIn("--success:", styles)
-        self.assertIn("--radius-sm: 4px", styles)
+        self.assertIn("--radius-sm: 8px", styles)
         self.assertIn("repeat(var(--dock-slot-count),minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
 
@@ -1450,7 +1450,10 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-theme-value="system"', html)
         self.assertIn('data-theme-value="light"', html)
         self.assertIn('data-theme-value="dark"', html)
-        self.assertNotIn("./assets/", html)
+        self.assertEqual(
+            re.findall(r'href="(\./assets/[^"]+)"', html),
+            ["./assets/fonts/geist-sans-variable.woff2"],
+        )
         self.assertNotIn("ROM STUDIO / HYBRID", html)
         self.assertIn("wukong-theme", script)
         self.assertIn("renderProfileView", script)
