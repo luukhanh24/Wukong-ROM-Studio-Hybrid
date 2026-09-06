@@ -201,6 +201,9 @@ function bindEvents() {
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
   }));
   const reloadJobHistory = () => {
+    const activeFilters = ["job-history-search", "job-history-preset", "job-history-mod", "job-history-from", "job-history-to"]
+      .filter((id) => String($("#" + id)?.value || "").trim()).length;
+    if ($("#job-filter-count")) $("#job-filter-count").textContent = String(activeFilters);
     state.jobHistoryPage = 1;
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
   };

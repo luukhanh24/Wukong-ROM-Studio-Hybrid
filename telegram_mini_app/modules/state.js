@@ -512,8 +512,10 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, { requestTimedOut: "Yêu cầu quá thời gian chờ. Hãy thử lại.", confirmingJob: "Đang xác nhận job. Dùng nút Xác nhận lại để kiểm tra cùng yêu cầu; cấu hình đã gửi được giữ nguyên.", confirmAgain: "Xác nhận lại", metadataDetails: "Thông tin chi tiết", advancedBuild: "Tùy chọn nâng cao", latestUpdate: "Cập nhật gần nhất", previousEvents: "Trang nhật ký trước", nextEvents: "Trang nhật ký tiếp", logPage: "Trang nhật ký {page}" });
+Object.assign(translations.vi, { jobFilters: "Bộ lọc" });
 
 Object.assign(translations.en, { requestTimedOut: "The request timed out. Please retry.", confirmingJob: "Confirming your job. Use Confirm again to check the same request; the submitted configuration is preserved.", confirmAgain: "Confirm again", metadataDetails: "Technical details", advancedBuild: "Advanced options", latestUpdate: "Last updated", previousEvents: "Previous log page", nextEvents: "Next log page", logPage: "Log page {page}" });
+Object.assign(translations.en, { jobFilters: "Filters" });
 
 const state = {
   language: localStorage.getItem("wukong-language") || "vi",

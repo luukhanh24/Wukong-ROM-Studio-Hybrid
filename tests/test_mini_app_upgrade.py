@@ -378,3 +378,30 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     self.assertLessEqual(max(field["height"] for field in result["fields"]), 48)
 
                 _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=900, page_action=exercise)
+
+    def test_jobs_filters_collapse_on_mobile_and_catalog_uses_desktop_rail(self):
+        def exercise_mobile(page):
+            result = page.evaluate("""() => ({
+                panelOpen: document.querySelector('#job-filter-panel').open,
+                formVisible: document.querySelector('#job-history-filters').getClientRects().length > 0,
+                summaryDisplay: getComputedStyle(document.querySelector('#job-filter-panel > summary')).display,
+            })""")
+            self.assertFalse(result["panelOpen"])
+            self.assertFalse(result["formVisible"])
+            self.assertNotEqual(result["summaryDisplay"], "none")
+
+        _render_mini_app_in_chrome(api_enabled=True, initial_view="jobs", window_width=390, window_height=844, page_action=exercise_mobile)
+
+        def exercise_desktop(page):
+            result = page.evaluate("""() => ({
+                formDisplay: getComputedStyle(document.querySelector('#job-history-filters')).display,
+                summaryDisplay: getComputedStyle(document.querySelector('#job-filter-panel > summary')).display,
+                catalogColumns: getComputedStyle(document.querySelector('#rom-catalog-panel')).gridTemplateColumns,
+                filterColumn: getComputedStyle(document.querySelector('#rom-catalog-form')).gridColumnStart,
+            })""")
+            self.assertEqual(result["formDisplay"], "grid")
+            self.assertEqual(result["summaryDisplay"], "none")
+            self.assertEqual(len(result["catalogColumns"].split()), 2)
+            self.assertEqual(result["filterColumn"], "1")
+
+        _render_mini_app_in_chrome(api_enabled=True, initial_view="catalog", window_width=1280, window_height=800, page_action=exercise_desktop)

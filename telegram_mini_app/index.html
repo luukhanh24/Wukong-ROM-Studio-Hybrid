@@ -176,6 +176,7 @@
           <button type="button" role="tab" aria-selected="false" data-job-filter="succeeded"><span data-i18n="jobTabSucceeded">Hoàn tất</span><b id="job-count-succeeded">0</b></button>
           <button type="button" role="tab" aria-selected="false" data-job-filter="failed"><span data-i18n="jobTabFailed">Lỗi / hủy</span><b id="job-count-failed">0</b></button>
         </div>
+        <details class="job-filter-panel" id="job-filter-panel"><summary><span data-i18n="jobFilters">Bộ lọc</span><b id="job-filter-count">0</b></summary>
         <form class="job-history-filters" id="job-history-filters">
           <label class="field job-history-search"><span data-i18n="jobSearch">Tìm lịch sử job</span><input id="job-history-search" type="search" maxlength="128" autocomplete="off" data-i18n-placeholder="jobSearchPlaceholder" placeholder="Job ID / thiết bị / phiên bản / user"></label>
           <label class="field"><span data-i18n="jobPresetFilter">Preset</span><select id="job-history-preset"><option value="" data-i18n="allJobs">Tất cả</option><option value="lite">Lite</option><option value="plus">Plus</option><option value="both">Lite + Plus</option><option value="custom">Custom</option></select></label>
@@ -184,6 +185,7 @@
           <label class="field"><span data-i18n="jobDateTo">Đến ngày</span><input id="job-history-to" type="date"></label>
           <button class="secondary compact" id="clear-job-history-filters" type="reset" data-i18n="clearJobFilters">Xóa bộ lọc</button>
         </form>
+        </details>
         <div class="job-history" id="job-history"></div>
         <div class="job-history-pagination" id="job-history-pagination" hidden><span id="job-history-page-summary"></span><nav class="job-page-buttons" id="job-page-buttons" aria-label="Job history pages"></nav></div>
         <div class="job-empty" id="job-empty" hidden><strong data-i18n="noJobsTitle">Chưa có job</strong><p data-i18n="noJobsMessage">Tạo một cấu hình build; job sẽ được lưu và theo dõi tại đây.</p><button class="primary compact" type="button" data-nav="build" data-i18n="newBuild">Tạo build đầu tiên</button></div>

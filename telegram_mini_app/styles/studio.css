@@ -73,6 +73,13 @@ main { padding-bottom: 128px; }
 .job-events article { content-visibility: auto; contain-intrinsic-size: auto 76px; }
 .job-controls { flex-wrap: wrap; }
 .job-status { font-size: 12px; }
+.job-filter-panel { margin-top:10px; }
+.job-filter-panel > summary { display:none; }
+.job-filter-panel > .job-history-filters { margin-top:0; }
+.rom-catalog-results[aria-busy="true"]:empty { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; min-height:180px; border:0; }
+.rom-catalog-results[aria-busy="true"]:empty::before,
+.rom-catalog-results[aria-busy="true"]:empty::after { content:""; display:block; min-height:180px; border:1px solid var(--line); border-radius:var(--radius-lg); background:linear-gradient(100deg,var(--surface-soft) 30%,var(--surface-raised) 45%,var(--surface-soft) 60%); background-size:220% 100%; animation:catalog-skeleton 1.25s linear infinite; }
+@keyframes catalog-skeleton { to { background-position:-220% 0; } }
 .bottom-nav { bottom: var(--safe-bottom); }
 .primary { border-color:var(--ink); color:var(--canvas); background:var(--ink); }
 .primary:hover { border-color:color-mix(in srgb,var(--ink) 82%,var(--muted)); background:color-mix(in srgb,var(--ink) 82%,var(--muted)); }
@@ -85,6 +92,21 @@ main { padding-bottom: 128px; }
   .dispatch-fab { display: none !important; }
   main { padding-bottom: 48px; }
   .bottom-nav { bottom: max(14px, env(safe-area-inset-bottom)); }
+  .job-filter-panel > .job-history-filters { display:grid !important; }
+  .job-history { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .job-history-divider,.job-filter-empty { grid-column:1 / -1; }
+  .job-history-card { min-height:132px; padding:16px; }
+  .rom-catalog-panel { display:grid; grid-template-columns:minmax(220px,260px) minmax(0,1fr); column-gap:28px; align-items:start; }
+  .rom-catalog-panel > header { grid-column:1 / -1; }
+  .rom-catalog-filters { grid-column:1; grid-row:2 / span 3; display:grid; grid-template-columns:1fr; padding-right:24px; border-right:1px solid var(--line); }
+  .rom-device-field { grid-column:1; }
+  .rom-results-heading { grid-column:2; grid-row:2; margin-top:0; }
+  .rom-catalog-results { grid-column:2; grid-row:3; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; border:0; }
+  .rom-release { grid-template-columns:1fr; align-content:space-between; min-height:196px; padding:18px; border:1px solid var(--line); border-radius:var(--radius-lg); background:var(--surface); }
+  .rom-release-actions { align-self:end; }
+  .rom-release-actions button { flex:1 1 auto; }
+  .rom-catalog-note { grid-column:2; grid-row:4; }
+  .rom-catalog-empty,.rom-resolved-result,.rom-resolve-error { grid-column:1 / -1; }
 }
 @media (max-width:860px) {
   main { padding-left: max(14px, var(--telegram-safe-left, 0px)); padding-right: max(14px, var(--telegram-safe-right, 0px)); padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
@@ -101,6 +123,14 @@ main { padding-bottom: 128px; }
   .runtime-jobs-link { min-height:44px; padding:2px 0; }
   .runtime-strip small { display: block; }
   .dispatch-docket { padding: 16px; }
+  .job-filter-panel { margin-top:10px; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface-soft); }
+  .job-filter-panel > summary { display:flex; min-height:44px; align-items:center; justify-content:space-between; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:650; }
+  .job-filter-panel > summary b { display:grid; min-width:24px; height:24px; place-items:center; border-radius:999px; color:var(--accent-strong); background:var(--accent-soft); font:700 10px/1 var(--font-data); }
+  .job-filter-panel > .job-history-filters { grid-template-columns:1fr; margin:0; border:0; border-top:1px solid var(--line); border-radius:0 0 var(--radius-md) var(--radius-md); }
+  .job-filter-panel:not([open]) > .job-history-filters { display:none; }
+  .job-history-tabs { margin-top:10px; }
+  .rom-catalog-results[aria-busy="true"]:empty { grid-template-columns:1fr; }
+  .rom-catalog-results[aria-busy="true"]:empty::after { display:none; }
   .source-state { grid-template-columns: 34px minmax(0, 1fr); }
   .source-state .probe-button { grid-column: 1 / -1; width: 100%; }
   .release-version-controls { flex-wrap: wrap; }
