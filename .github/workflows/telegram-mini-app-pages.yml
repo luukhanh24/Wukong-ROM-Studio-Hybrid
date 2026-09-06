@@ -3,6 +3,17 @@ name: Telegram Mini App · Vercel
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: "Vercel deployment target"
+        required: true
+        type: choice
+        options: [preview, production]
+        default: preview
+      api_url:
+        description: "API origin for the candidate (leave empty for the target default)"
+        required: false
+        type: string
+        default: ""
       release_sha:
         description: "Exact commit SHA to build and promote"
         required: false
@@ -17,7 +28,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-control-plane.wukong-rom-studio-api.workers.dev' }}
+  TARGET: ${{ inputs.target || 'preview' }}
+  WUKONG_TELEGRAM_MINI_APP_API_URL: ${{ inputs.api_url || (inputs.target == 'preview' && vars.WUKONG_CLOUDFLARE_STAGING_URL) || vars.WUKONG_TELEGRAM_MINI_APP_API_URL || 'https://wukong-control-plane.wukong-rom-studio-api.workers.dev' }}
   WUKONG_RELEASE_SHA: ${{ inputs.release_sha || github.sha }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -27,7 +39,7 @@ jobs:
     name: Build and deploy private Mini App
     runs-on: ubuntu-24.04
     environment:
-      name: vercel-production
+      name: vercel-${{ inputs.target || 'preview' }}
       url: https://wukong-rom-studio.vercel.app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -81,17 +93,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --yes --prod --archive=tgz \
+          args=(vercel deploy --yes --archive=tgz)
+          [[ "$TARGET" == production ]] && args+=(--prod)
+          deployment_url="$("${args[@]}" \
             --build-env "WUKONG_TELEGRAM_MINI_APP_API_URL=$WUKONG_TELEGRAM_MINI_APP_API_URL" \
             --build-env "WUKONG_RELEASE_SHA=$WUKONG_RELEASE_SHA" \
             --token "$VERCEL_TOKEN")"
           [[ "$deployment_url" == https://* ]]
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
-      - name: Verify stable production domain
+      - name: Verify deployed preview or production domain
         shell: bash
         run: |
           set -euo pipefail
-          domain='https://wukong-rom-studio.vercel.app'
+          domain='${{ steps.deploy.outputs.deployment_url }}'
+          [[ "$TARGET" == production ]] && domain='https://wukong-rom-studio.vercel.app'
           for _ in {1..24}; do
             if page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${WUKONG_RELEASE_SHA}")" \
               && grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" <<< "$page" \

@@ -214,8 +214,11 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn('npm test --prefix telegram_mini_app', workflow)
         self.assertIn('tests.test_mini_app_upgrade', workflow)
         self.assertIn('--ref "$GITHUB_REF_NAME"', workflow)
+        self.assertIn('--field target=production', workflow)
         self.assertIn('--field release_sha="$WUKONG_RELEASE_SHA"', workflow)
         self.assertIn('inputs.release_sha || github.sha', vercel_workflow)
+        self.assertIn('options: [preview, production]', vercel_workflow)
+        self.assertIn('[[ "$TARGET" == production ]] && args+=(--prod)', vercel_workflow)
 
         legacy_render = (
             Path(__file__).parents[1] / ".github/workflows/control-plane-production.yml"
