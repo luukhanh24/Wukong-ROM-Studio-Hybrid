@@ -428,3 +428,53 @@ class MiniAppUpgradeTests(unittest.TestCase):
             self.assertFalse(result["overflow"])
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)
+
+    def test_desktop_dock_does_not_cover_build_cta_at_intermediate_widths(self):
+        for width in (861, 900, 1024, 1100):
+            with self.subTest(width=width):
+                def exercise(page):
+                    result = page.evaluate("""() => {
+                        const dock = document.querySelector('.bottom-nav').getBoundingClientRect();
+                        const cta = document.querySelector('#submit-recipe').getBoundingClientRect();
+                        const intersects = dock.left < cta.right && dock.right > cta.left && dock.top < cta.bottom && dock.bottom > cta.top;
+                        return {intersects, mainPaddingBottom:getComputedStyle(document.querySelector('main')).paddingBottom};
+                    }""")
+                    self.assertFalse(result["intersects"])
+                    self.assertEqual(result["mainPaddingBottom"], "124px")
+
+                _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=800, page_action=exercise)
+
+    def test_mobile_type_scale_and_jobs_filter_hitbox_match_tokens(self):
+        def exercise_mobile(page):
+            result = page.evaluate("""() => ({
+                body:getComputedStyle(document.body).fontSize,
+                runtime:getComputedStyle(document.querySelector('.runtime-strip small')).fontSize,
+            })""")
+            self.assertEqual(result["body"], "14px")
+            self.assertEqual(result["runtime"], "11px")
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
+
+        def exercise_jobs(page):
+            height = page.eval_on_selector('#job-history-filters button', 'node => Math.round(node.getBoundingClientRect().height)')
+            self.assertGreaterEqual(height, 44)
+
+        _render_mini_app_in_chrome(api_enabled=True, initial_view="jobs", window_width=1280, window_height=800, page_action=exercise_jobs)
+
+    def test_visibility_handler_stops_and_restarts_greeting_timer(self):
+        def exercise(page):
+            result = page.evaluate("""async () => {
+                const { state } = await import('/modules/state.js');
+                const runningBefore = Boolean(state.greetingTimer);
+                Object.defineProperty(document, 'hidden', { configurable:true, value:true });
+                document.dispatchEvent(new Event('visibilitychange'));
+                const stoppedWhileHidden = state.greetingTimer === 0;
+                Object.defineProperty(document, 'hidden', { configurable:true, value:false });
+                document.dispatchEvent(new Event('visibilitychange'));
+                return {runningBefore, stoppedWhileHidden, restarted: Boolean(state.greetingTimer)};
+            }""")
+            self.assertTrue(result["runningBefore"])
+            self.assertTrue(result["stoppedWhileHidden"])
+            self.assertTrue(result["restarted"])
+
+        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)

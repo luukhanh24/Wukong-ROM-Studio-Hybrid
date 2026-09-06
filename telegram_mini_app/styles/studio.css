@@ -1,6 +1,6 @@
 /* Studio: source → configuration → review. Wukong identity stays shared. */
 :root {
-  --text-body: 15px;
+  --text-body: 14px;
   --text-label: 12px;
   --target-size: 44px;
   --safe-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--telegram-safe-bottom, 0px));
@@ -23,7 +23,7 @@ main { padding-bottom: 128px; }
 .runtime-strip > div { padding: 11px 15px; border-right: 1px solid var(--line); }
 .runtime-strip > div:last-child { border-right: 0; }
 .runtime-strip strong { font-size: 12px; }
-.runtime-strip small { font-size: 9px; line-height: 1; }
+.runtime-strip small { font-size: 11px; line-height: 1; }
 .dossier-section { border: 1px solid var(--line); border-top-width: 1px; box-shadow: none; border-radius: 12px; padding: 22px; background: var(--surface-raised); }
 .section-heading { margin-bottom: 17px; }
 .section-heading h2, .dispatch-docket h2 { font-size: 18px; letter-spacing: -.015em; }
@@ -78,10 +78,11 @@ main { padding-bottom: 128px; }
 [data-keyboard="true"] .dispatch-fab, [data-keyboard="true"] .bottom-nav { visibility: hidden; pointer-events: none; }
 [data-keyboard="true"] main { padding-bottom: 32px; }
 @media (min-width:861px) {
+  :root { --text-body:15px; }
   #recipe-form { grid-template-columns: minmax(0,1fr) 320px; gap: 0 16px; }
   .dispatch-docket { grid-column: 2; grid-row: 1 / span 3; top: 130px; }
   .dispatch-fab { display: none !important; }
-  main { padding-bottom: 48px; }
+  main { padding-bottom: 124px; }
   .bottom-nav { bottom: max(14px, env(safe-area-inset-bottom)); }
   .job-filter-panel > .job-history-filters { display:grid !important; }
   .job-history { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }

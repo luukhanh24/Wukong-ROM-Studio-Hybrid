@@ -243,7 +243,11 @@ function bindEvents() {
       await loadAdminUsers({ reset: true });
     } catch (error) { toast(error.message, true); }
   });
-  document.addEventListener("visibilitychange", () => document.hidden ? pauseWorkspacePolling() : scheduleWorkspaceReconnect());
+  document.addEventListener("visibilitychange", () => {
+    scheduleGreeting();
+    if (document.hidden) pauseWorkspacePolling();
+    else scheduleWorkspaceReconnect();
+  });
   window.addEventListener("offline", () => { pauseWorkspacePolling(); setJobsConnection("jobsOffline", true); });
   window.addEventListener("online", scheduleWorkspaceReconnect);
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));

@@ -96,6 +96,7 @@ function renderGreeting() {
 
 function scheduleGreeting() {
   clearInterval(state.greetingTimer);
+  state.greetingTimer = 0;
   if (prefersReducedMotion() || document.hidden) return;
   state.greetingTimer = window.setInterval(() => {
     state.greetingIndex = (state.greetingIndex + 1) % greetingMessages().length;

@@ -228,7 +228,7 @@
     position:fixed;
     right:auto;
     bottom:14px;
-    left:50%;
+    left:calc((100vw - 336px)/2);
     z-index:60;
     display:grid;
     grid-template-columns:repeat(var(--dock-slot-count),minmax(0,1fr));
