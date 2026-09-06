@@ -1,4 +1,4 @@
-import { $, $$, completenessSourceFactIds, miniApiEndpoint, requiredSourceFactIds, runtime, sourceFactDefinitions, state, t } from "./state.js";
+import { $, completenessSourceFactIds, miniApiEndpoint, requiredSourceFactIds, runtime, sourceFactDefinitions, state, t } from "./state.js";
 import { toast } from "./shell.js";
 import { apiRequest, effectiveInitData, effectiveInitDataUnsafe, miniApiAvailable, presentMissingApi } from "./session.js";
 import { scheduleSourceProbe } from "./catalog.js";
@@ -45,11 +45,6 @@ function setSourceFact(id, value) {
   node.textContent = text || "—";
   node.dataset.empty = text && text !== "—" ? "false" : "true";
   node.title = text && text !== "—" ? text : "";
-  $$(`[data-summary-for="${id}"]`).forEach((summary) => {
-    summary.textContent = node.textContent;
-    summary.dataset.empty = node.dataset.empty;
-    summary.title = node.title;
-  });
 }
 
 function updateMetadataCompleteness() {

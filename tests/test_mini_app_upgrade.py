@@ -206,36 +206,13 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
 
-    def test_monochrome_design_tokens_and_local_geist_fonts(self):
-        def exercise(page):
-            result = page.evaluate("""() => {
-                const root = getComputedStyle(document.documentElement);
-                const body = getComputedStyle(document.body);
-                const label = getComputedStyle(document.querySelector('.build-options .field > span'));
-                return {
-                    canvas: root.getPropertyValue('--canvas').trim(),
-                    ink: root.getPropertyValue('--ink').trim(),
-                    accent: root.getPropertyValue('--accent').trim(),
-                    family: body.fontFamily,
-                    labelSize: label.fontSize,
-                };
-            }""")
-            self.assertEqual(result["canvas"], "#fafafa")
-            self.assertEqual(result["ink"], "#0a0a0a")
-            self.assertEqual(result["accent"], "#a7b2f7")
-            self.assertIn("Geist Sans", result["family"])
-            self.assertIn(result["labelSize"], {"11px", "12px"})
-
-        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)
-
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
-        for width, height in [(320, 720), (390, 844), (768, 1024), (1280, 800), (844, 390)]:
+        for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
             with self.subTest(width=width, height=height):
                 def exercise(page):
                     result = page.evaluate("""() => ({
                         width:innerWidth, documentWidth:document.documentElement.scrollWidth,
                         dock:getComputedStyle(document.querySelector('.bottom-nav')).display,
-                        desktopNav:getComputedStyle(document.querySelector('.contents-rail')).display,
                         positions:document.querySelectorAll('.bottom-nav [data-nav]').length,
                         advanced:document.querySelector('#build-advanced').open,
                         facts:document.querySelectorAll('.source-summary dd').length,
@@ -243,12 +220,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     })""")
                     self.assertEqual(result["width"], width)
                     self.assertLessEqual(result["documentWidth"], width)
-                    if width > 860:
-                        self.assertEqual(result["dock"], "grid")
-                        self.assertNotEqual(result["desktopNav"], "none")
-                    else:
-                        self.assertNotEqual(result["dock"], "none")
-                        self.assertEqual(result["desktopNav"], "none")
+                    self.assertNotEqual(result["dock"], "none")
                     self.assertEqual(result["positions"], 5)
                     self.assertEqual(result["facts"], 4)
                     self.assertFalse(result["advanced"])
@@ -270,11 +242,13 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     sourceX: source.getBoundingClientRect().x,
                 };
             }""")
-            self.assertEqual(result["mainPaddingLeft"], "10px")
-            self.assertEqual(result["runtimeWidth"], 370)
-            self.assertLessEqual(result["runtimeHeight"], 90)
-            self.assertEqual(result["runtimeRows"], 3)
-            self.assertEqual(result["sourceX"], 10)
+            self.assertEqual(result, {
+                "mainPaddingLeft": "10px",
+                "runtimeWidth": 370,
+                "runtimeHeight": 186,
+                "runtimeRows": 3,
+                "sourceX": 10,
+            })
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
 
@@ -305,7 +279,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
             result = page.evaluate("""() => {
                 const masthead = document.querySelector('.masthead');
                 const dock = document.querySelector('.bottom-nav');
-                const sourceFacts = document.querySelectorAll('#source-facts .metadata-details > dl.source-facts > div').length;
+                const sourceFacts = document.querySelectorAll('#source-facts > dl.source-facts:not(.source-summary) > div').length;
                 return {
                     mastheadPaddingTop: getComputedStyle(masthead).paddingTop,
                     mastheadPaddingBottom: getComputedStyle(masthead).paddingBottom,
@@ -314,10 +288,8 @@ class MiniAppUpgradeTests(unittest.TestCase):
                     profileSlot: dock.querySelector('#dock-profile')?.dataset.slot,
                     sourceFacts,
                     sourceSummaryHidden: getComputedStyle(document.querySelector('.source-summary')).display,
-                    sourceSummaryValues: [...document.querySelectorAll('.source-summary dd')].map((node) => node.textContent.trim()),
                     deliveryHeading: Boolean(document.querySelector('.delivery-section > .section-heading')),
                     buildAdvancedHidden: document.querySelector('#build-advanced')?.hidden,
-                    buildAdvancedOpen: document.querySelector('#build-advanced')?.open,
                 };
             }""")
             self.assertEqual(result["mastheadPaddingTop"], "7px")
@@ -326,11 +298,9 @@ class MiniAppUpgradeTests(unittest.TestCase):
             self.assertEqual(result["dockSlots"], 5)
             self.assertEqual(result["profileSlot"], "2")
             self.assertEqual(result["sourceFacts"], 15)
-            self.assertEqual(result["sourceSummaryHidden"], "grid")
-            self.assertTrue(all(value not in ("", "—", "···") for value in result["sourceSummaryValues"]))
+            self.assertEqual(result["sourceSummaryHidden"], "none")
             self.assertTrue(result["deliveryHeading"])
-            self.assertFalse(result["buildAdvancedHidden"])
-            self.assertFalse(result["buildAdvancedOpen"])
+            self.assertTrue(result["buildAdvancedHidden"])
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
 
@@ -338,22 +308,16 @@ class MiniAppUpgradeTests(unittest.TestCase):
             result = page.evaluate("""() => {
                 const masthead = document.querySelector('.masthead');
                 const dock = document.querySelector('.bottom-nav');
-                const desktopNav = document.querySelector('.contents-rail');
-                const headerProfile = document.querySelector('#header-profile');
                 return {
                     mastheadPaddingTop: getComputedStyle(masthead).paddingTop,
                     mastheadPaddingBottom: getComputedStyle(masthead).paddingBottom,
-                    dockDisplay: getComputedStyle(dock).display,
-                    desktopNavDisplay: getComputedStyle(desktopNav).display,
-                    headerProfileVisible: headerProfile.getClientRects().length > 0,
+                    dockBottom: getComputedStyle(dock).bottom,
                     buildColumns: getComputedStyle(document.querySelector('#build-options .field-grid.three')).gridTemplateColumns,
                 };
             }""")
             self.assertEqual(result["mastheadPaddingTop"], "8px")
             self.assertEqual(result["mastheadPaddingBottom"], "8px")
-            self.assertEqual(result["dockDisplay"], "grid")
-            self.assertNotEqual(result["desktopNavDisplay"], "none")
-            self.assertTrue(result["headerProfileVisible"])
+            self.assertEqual(result["dockBottom"], "14px")
             self.assertEqual(len(result["buildColumns"].split()), 3)
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
@@ -372,109 +336,9 @@ class MiniAppUpgradeTests(unittest.TestCase):
                         return {columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, gap: getComputedStyle(grid).rowGap, fields};
                     }""")
                     self.assertEqual(result["columns"], 1)
-                    self.assertEqual(result["gap"], "10px")
+                    self.assertEqual(result["gap"], "13px")
                     self.assertEqual(len({field["x"] for field in result["fields"]}), 1)
                     self.assertGreaterEqual(min(field["height"] for field in result["fields"]), 44)
                     self.assertLessEqual(max(field["height"] for field in result["fields"]), 48)
 
                 _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=900, page_action=exercise)
-
-    def test_jobs_filters_collapse_on_mobile_and_catalog_uses_desktop_rail(self):
-        def exercise_mobile(page):
-            result = page.evaluate("""() => ({
-                panelOpen: document.querySelector('#job-filter-panel').open,
-                formVisible: document.querySelector('#job-history-filters').getClientRects().length > 0,
-                summaryDisplay: getComputedStyle(document.querySelector('#job-filter-panel > summary')).display,
-            })""")
-            self.assertFalse(result["panelOpen"])
-            self.assertFalse(result["formVisible"])
-            self.assertNotEqual(result["summaryDisplay"], "none")
-
-        _render_mini_app_in_chrome(api_enabled=True, initial_view="jobs", window_width=390, window_height=844, page_action=exercise_mobile)
-
-        def exercise_desktop(page):
-            result = page.evaluate("""() => ({
-                formDisplay: getComputedStyle(document.querySelector('#job-history-filters')).display,
-                summaryDisplay: getComputedStyle(document.querySelector('#job-filter-panel > summary')).display,
-                catalogColumns: getComputedStyle(document.querySelector('#rom-catalog-panel')).gridTemplateColumns,
-                filterColumn: getComputedStyle(document.querySelector('#rom-catalog-form')).gridColumnStart,
-            })""")
-            self.assertEqual(result["formDisplay"], "grid")
-            self.assertEqual(result["summaryDisplay"], "none")
-            self.assertEqual(len(result["catalogColumns"].split()), 2)
-            self.assertEqual(result["filterColumn"], "1")
-
-        _render_mini_app_in_chrome(api_enabled=True, initial_view="catalog", window_width=1280, window_height=800, page_action=exercise_desktop)
-
-    def test_profile_uses_solid_surface_without_full_screen_blur(self):
-        def exercise(page):
-            page.click('#dock-profile')
-            result = page.evaluate("""() => {
-                const scene = document.querySelector('#profile-scene');
-                const backdrop = document.querySelector('.profile-scene-backdrop');
-                const highlight = document.querySelector('.profile-highlight');
-                return {
-                    sceneColor: getComputedStyle(scene).color,
-                    sceneBackground: getComputedStyle(scene).backgroundColor,
-                    backdropDisplay: getComputedStyle(backdrop).display,
-                    highlightBlur: getComputedStyle(highlight).backdropFilter,
-                    overflow: document.documentElement.scrollWidth > innerWidth,
-                };
-            }""")
-            self.assertEqual(result["sceneColor"], "rgb(10, 10, 10)")
-            self.assertEqual(result["sceneBackground"], "rgb(255, 255, 255)")
-            self.assertEqual(result["backdropDisplay"], "none")
-            self.assertIn(result["highlightBlur"], ("none", ""))
-            self.assertFalse(result["overflow"])
-
-        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)
-
-    def test_desktop_dock_does_not_cover_build_cta_at_intermediate_widths(self):
-        for width in (861, 900, 1024, 1100):
-            with self.subTest(width=width):
-                def exercise(page):
-                    result = page.evaluate("""() => {
-                        const dock = document.querySelector('.bottom-nav').getBoundingClientRect();
-                        const cta = document.querySelector('#submit-recipe').getBoundingClientRect();
-                        const intersects = dock.left < cta.right && dock.right > cta.left && dock.top < cta.bottom && dock.bottom > cta.top;
-                        return {intersects, mainPaddingBottom:getComputedStyle(document.querySelector('main')).paddingBottom};
-                    }""")
-                    self.assertFalse(result["intersects"])
-                    self.assertEqual(result["mainPaddingBottom"], "124px")
-
-                _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=800, page_action=exercise)
-
-    def test_mobile_type_scale_and_jobs_filter_hitbox_match_tokens(self):
-        def exercise_mobile(page):
-            result = page.evaluate("""() => ({
-                body:getComputedStyle(document.body).fontSize,
-                runtime:getComputedStyle(document.querySelector('.runtime-strip small')).fontSize,
-            })""")
-            self.assertEqual(result["body"], "14px")
-            self.assertEqual(result["runtime"], "11px")
-
-        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise_mobile)
-
-        def exercise_jobs(page):
-            height = page.eval_on_selector('#job-history-filters button', 'node => Math.round(node.getBoundingClientRect().height)')
-            self.assertGreaterEqual(height, 44)
-
-        _render_mini_app_in_chrome(api_enabled=True, initial_view="jobs", window_width=1280, window_height=800, page_action=exercise_jobs)
-
-    def test_visibility_handler_stops_and_restarts_greeting_timer(self):
-        def exercise(page):
-            result = page.evaluate("""async () => {
-                const { state } = await import('/modules/state.js');
-                const runningBefore = Boolean(state.greetingTimer);
-                Object.defineProperty(document, 'hidden', { configurable:true, value:true });
-                document.dispatchEvent(new Event('visibilitychange'));
-                const stoppedWhileHidden = state.greetingTimer === 0;
-                Object.defineProperty(document, 'hidden', { configurable:true, value:false });
-                document.dispatchEvent(new Event('visibilitychange'));
-                return {runningBefore, stoppedWhileHidden, restarted: Boolean(state.greetingTimer)};
-            }""")
-            self.assertTrue(result["runningBefore"])
-            self.assertTrue(result["stoppedWhileHidden"])
-            self.assertTrue(result["restarted"])
-
-        _render_mini_app_in_chrome(api_enabled=True, window_width=390, window_height=844, page_action=exercise)

@@ -1418,11 +1418,11 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("--liquid-press", styles)
         self.assertIn("chromatic", (ROOT / "DESIGN.md").read_text(encoding="utf-8"))
         self.assertIn("prefersReducedMotion", script)
-        self.assertIn('"Geist Sans"', styles)
-        self.assertIn('"Geist Mono"', styles)
+        self.assertIn('"IBM Plex Sans"', styles)
+        self.assertIn('"JetBrains Mono"', styles)
         self.assertIn("--accent:", styles)
         self.assertIn("--success:", styles)
-        self.assertIn("--radius-sm: 8px", styles)
+        self.assertIn("--radius-sm: 4px", styles)
         self.assertIn("repeat(var(--dock-slot-count),minmax(0,1fr))", styles)
         self.assertIn(".source-input-field, .source-input-head { min-width: 0; }", styles)
 
@@ -1437,7 +1437,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertEqual(["0", "1", "2", "3", "4"], re.findall(r'data-slot="([^"]+)"', dock))
         self.assertIn('id="dock-profile"', dock)
         self.assertIn('data-nav="profile"', dock)
-        self.assertIn('id="header-profile"', html)
+        self.assertNotIn('id="header-profile"', html)
         self.assertIn('src="./WukongStudio.svg"', html)
         self.assertEqual(
             (ROOT / "desktop" / "WukongStudio.App" / "Assets" / "WukongStudio.svg").read_text(encoding="utf-8"),
@@ -1450,10 +1450,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-theme-value="system"', html)
         self.assertIn('data-theme-value="light"', html)
         self.assertIn('data-theme-value="dark"', html)
-        self.assertEqual(
-            re.findall(r'href="(\./assets/[^"]+)"', html),
-            ["./assets/fonts/geist-sans-variable.woff2"],
-        )
+        self.assertNotIn("./assets/", html)
         self.assertNotIn("ROM STUDIO / HYBRID", html)
         self.assertIn("wukong-theme", script)
         self.assertIn("renderProfileView", script)
@@ -1614,10 +1611,10 @@ class TelegramMiniAppTests(unittest.TestCase):
             click_admin_action=True,
         )
 
-        self.assertIn('data-batch-launch-color="rgb(250, 250, 250)"', dom)
-        self.assertIn('data-batch-launch-background="rgb(10, 10, 10)"', dom)
-        self.assertIn('data-admin-action-confirm-color="rgb(250, 250, 250)"', dom)
-        self.assertIn('data-admin-action-confirm-background="rgb(10, 10, 10)"', dom)
+        self.assertIn('data-batch-launch-color="rgb(255, 255, 255)"', dom)
+        self.assertIn('data-batch-launch-background="rgb(49, 95, 158)"', dom)
+        self.assertIn('data-admin-action-confirm-color="rgb(255, 255, 255)"', dom)
+        self.assertIn('data-admin-action-confirm-background="rgb(49, 95, 158)"', dom)
 
     def test_mobile_surface_is_distilled_and_maintenance_is_admin_only(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -1643,9 +1640,9 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("updateDockShellPath", script)
         self.assertIn('background:var(--dock-glass-bg)', styles)
         self.assertIn('backdrop-filter:blur(10px) saturate(1.5) contrast(1.08)', styles)
-        self.assertIn('--dock-foreground: #0a0a0a', styles)
-        self.assertIn('--dock-foreground: #fafafa', styles)
-        self.assertIn('bottom: calc(92px + var(--safe-bottom))', styles)
+        self.assertIn('--dock-foreground: #171b22', styles)
+        self.assertIn('--dock-foreground: #f5f7fb', styles)
+        self.assertIn('bottom:calc(132px + env(safe-area-inset-bottom))', styles)
         self.assertIn('.bottom-nav button:not(.dock-profile) { top:7px; height:56px; min-height:56px;', styles)
         self.assertIn("const bodyTop = 32;", script)
         self.assertIn("const capRadius = Math.min(42", script)
@@ -1687,7 +1684,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-selected-theme-mode="system"', dom)
         self.assertIn('data-system-theme-after-telegram-change="dark"', dom)
         self.assertRegex(dom, r'<html[^>]*data-theme="system"[^>]*data-color-scheme="dark"')
-        self.assertRegex(dom, r'<body[^>]*data-telegram-header-color="#141414"')
+        self.assertRegex(dom, r'<body[^>]*data-telegram-header-color="#1d2025"')
 
     def test_cache_clear_requires_dialog_confirmation_and_submits_once(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(
@@ -2339,89 +2336,6 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-batch-mods-selected="2"', dom)
         self.assertIn('data-batch-mods-cleared="0"', dom)
         self.assertIn('data-batch-release-input-absent="true"', dom)
-
-    def test_lavender_controls_have_dark_text_and_desktop_keeps_five_slot_dock(self) -> None:
-        def capture_styles(page) -> None:
-            page.evaluate("""() => {
-                const paste = getComputedStyle(document.querySelector('#paste-source'));
-                const dock = document.querySelector('.bottom-nav');
-                const dockStyle = getComputedStyle(dock);
-                const releaseInput = document.querySelector('#mod-release-version-input');
-                const releaseButton = document.querySelector('#save-mod-release-version');
-                document.body.dataset.pasteColor = paste.color;
-                document.body.dataset.pasteBackground = paste.backgroundColor;
-                document.body.dataset.desktopDockDisplay = dockStyle.display;
-                document.body.dataset.desktopDockSlots = String(dock.querySelectorAll(':scope > button').length);
-                document.body.dataset.releaseVisible = String(releaseInput.getClientRects().length > 0);
-                document.body.dataset.releaseButtonHeight = String(Math.round(releaseButton.getBoundingClientRect().height));
-                document.body.dataset.languageButtonHeight = String(Math.round(document.querySelector('.language-button').getBoundingClientRect().height));
-                document.body.dataset.headerProfileHeight = String(Math.round(document.querySelector('#header-profile').getBoundingClientRect().height));
-            }""")
-
-        dom, _ = _render_mini_app_in_chrome(
-            api_enabled=True,
-            window_width=1280,
-            window_height=800,
-            page_action=capture_styles,
-        )
-
-        self.assertIn('data-paste-color="rgb(10, 10, 10)"', dom)
-        self.assertIn('data-paste-background="rgb(167, 178, 247)"', dom)
-        self.assertIn('data-desktop-dock-display="grid"', dom)
-        self.assertIn('data-desktop-dock-slots="5"', dom)
-        self.assertIn('data-release-visible="true"', dom)
-        self.assertIn('data-release-button-height="44"', dom)
-        self.assertIn('data-language-button-height="44"', dom)
-        self.assertIn('data-header-profile-height="44"', dom)
-
-    def test_library_card_primary_action_spans_the_full_card_width(self) -> None:
-        def capture_card(page) -> None:
-            result = page.evaluate("""() => {
-                const actions = document.querySelector('.rom-release-actions');
-                const analyze = actions?.querySelector('[data-rom-action="analyze"]');
-                const device = document.querySelector('.rom-device-options button');
-                device?.setAttribute('aria-pressed', 'true');
-                return actions && analyze ? {
-                    actions: Math.round(actions.getBoundingClientRect().width),
-                    analyze: Math.round(analyze.getBoundingClientRect().width),
-                    selectedDeviceColor: device ? getComputedStyle(device).color : '',
-                } : null;
-            }""")
-            self.assertIsNotNone(result)
-            self.assertEqual(result["actions"], result["analyze"])
-            self.assertEqual(result["selectedDeviceColor"], "rgb(89, 103, 187)")
-
-        _render_mini_app_in_chrome(
-            api_enabled=True,
-            initial_view="catalog",
-            library_scenario="populated",
-            window_width=1280,
-            window_height=800,
-            page_action=capture_card,
-        )
-
-    def test_admin_lavender_labels_use_the_strong_accessible_tone(self) -> None:
-        def capture_admin_tones(page) -> None:
-            result = page.evaluate("""() => {
-                const fixture = document.createElement('div');
-                fixture.innerHTML = '<section class="catalog-release-admin"><header><small>Release</small></header></section><div class="batch-items"><article><span>Running</span><details><summary>Logs</summary></details></article></div>';
-                document.body.append(fixture);
-                const colors = {
-                    heading: getComputedStyle(fixture.querySelector('header small')).color,
-                    state: getComputedStyle(fixture.querySelector('.batch-items article span')).color,
-                    summary: getComputedStyle(fixture.querySelector('summary')).color,
-                };
-                fixture.remove();
-                return colors;
-            }""")
-            self.assertEqual(set(result.values()), {"rgb(89, 103, 187)"})
-
-        _render_mini_app_in_chrome(
-            api_enabled=True,
-            window_width=1280,
-            window_height=800,
-            page_action=capture_admin_tones,
-        )
 
 
 if __name__ == "__main__":

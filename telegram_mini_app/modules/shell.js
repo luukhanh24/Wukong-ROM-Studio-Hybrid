@@ -201,9 +201,6 @@ function bindEvents() {
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
   }));
   const reloadJobHistory = () => {
-    const activeFilters = ["job-history-search", "job-history-preset", "job-history-mod", "job-history-from", "job-history-to"]
-      .filter((id) => String($("#" + id)?.value || "").trim()).length;
-    if ($("#job-filter-count")) $("#job-filter-count").textContent = String(activeFilters);
     state.jobHistoryPage = 1;
     loadJobs({ force: true }).catch((error) => toast(error.message, true));
   };
@@ -243,11 +240,7 @@ function bindEvents() {
       await loadAdminUsers({ reset: true });
     } catch (error) { toast(error.message, true); }
   });
-  document.addEventListener("visibilitychange", () => {
-    scheduleGreeting();
-    if (document.hidden) pauseWorkspacePolling();
-    else scheduleWorkspaceReconnect();
-  });
+  document.addEventListener("visibilitychange", () => document.hidden ? pauseWorkspacePolling() : scheduleWorkspaceReconnect());
   window.addEventListener("offline", () => { pauseWorkspacePolling(); setJobsConnection("jobsOffline", true); });
   window.addEventListener("online", scheduleWorkspaceReconnect);
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));

@@ -29,7 +29,7 @@ function applyTheme(theme = state.theme, persist = false) {
   const resolved = resolvedTheme();
   document.documentElement.dataset.theme = state.theme;
   document.documentElement.dataset.colorScheme = resolved;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "dark" ? "#0a0a0a" : "#fafafa");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "dark" ? "#17191d" : "#f3f1eb");
   $$("[data-theme-value]").forEach((button) => {
     const active = button.dataset.themeValue === state.theme;
     button.classList.toggle("active", active);
@@ -37,8 +37,8 @@ function applyTheme(theme = state.theme, persist = false) {
   });
   if (persist) localStorage.setItem("wukong-theme", state.theme);
   try {
-    runtime.TelegramApp?.setHeaderColor?.(resolved === "dark" ? "#141414" : "#ffffff");
-    runtime.TelegramApp?.setBackgroundColor?.(resolved === "dark" ? "#0a0a0a" : "#fafafa");
+    runtime.TelegramApp?.setHeaderColor?.(resolved === "dark" ? "#1d2025" : "#f8f7f2");
+    runtime.TelegramApp?.setBackgroundColor?.(resolved === "dark" ? "#17191d" : "#f3f1eb");
   } catch (_) {}
 }
 
@@ -96,7 +96,6 @@ function renderGreeting() {
 
 function scheduleGreeting() {
   clearInterval(state.greetingTimer);
-  state.greetingTimer = 0;
   if (prefersReducedMotion() || document.hidden) return;
   state.greetingTimer = window.setInterval(() => {
     state.greetingIndex = (state.greetingIndex + 1) % greetingMessages().length;
@@ -111,8 +110,8 @@ function updateMastheadScroll() {
     const root = document.documentElement.style;
     root.setProperty("--masthead-scroll", progress.toFixed(3));
     root.setProperty("--masthead-height", `${Math.round((window.innerWidth <= 860 ? 60 : 64) - progress * 6)}px`);
-    root.setProperty("--masthead-surface-mix", `${Math.round(94 + progress * 6)}%`);
-    root.setProperty("--masthead-backdrop-blur", `${Math.round(progress * 10)}px`);
+    root.setProperty("--masthead-surface-mix", `${Math.round(3 + progress * 5)}%`);
+    root.setProperty("--masthead-backdrop-blur", `${Math.round(3 + progress * 5)}px`);
     root.setProperty("--masthead-greeting-opacity", String(1 - progress * .18));
     root.setProperty("--masthead-greeting-offset", `${(-progress * 2).toFixed(2)}px`);
     document.body.classList.toggle("masthead-compact", progress > .82);
@@ -208,7 +207,7 @@ function navigate(name, smooth = true) {
     closeAdminUserPage({ restoreFocus: false, scroll: false });
   }
   $$(".view").forEach((node) => node.classList.toggle("active", node.id === name));
-  $$(".bottom-nav [data-nav], .contents-rail [data-nav], .masthead-meta [data-nav]").forEach((node) => {
+  $$(".bottom-nav [data-nav], .contents-rail [data-nav]").forEach((node) => {
     const active = node.dataset.nav === name;
     node.classList.toggle("active", active);
     if (active) node.setAttribute("aria-current", "page"); else node.removeAttribute("aria-current");

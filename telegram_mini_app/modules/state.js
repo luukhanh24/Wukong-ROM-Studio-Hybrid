@@ -89,7 +89,7 @@ const translations = {
     refreshJob: "Làm mới", events: "Nhật ký", artifact: "Artifact", resume: "Tiếp tục", cancel: "Hủy job",
     systemTitle: "Trạng thái dịch vụ", systemIntro: "Telegram, runner, Drive và content-pack trong một màn hình.", runDiagnostics: "Chạy chẩn đoán",
     authenticated: "Đã xác thực phiên hiện tại", keyboardConnected: "Kết nối qua nút Telegram · danh tính được xác nhận khi gửi", runnerChecked: "Runner được kiểm tra khi submit", driveChecked: "Quyền truy cập được kiểm tra trước upload",
-    navBuild: "Build", navJobs: "Jobs", navCatalog: "Catalog", navSystem: "Hệ thống", navProfile: "Hồ sơ", selected: "đã chọn", catalogReady: "{mods} MOD · {versions} bộ nội dung sẵn sàng",
+    navBuild: "Build", navJobs: "Jobs", navCatalog: "Catalog", navSystem: "Hệ thống", selected: "đã chọn", catalogReady: "{mods} MOD · {versions} bộ nội dung sẵn sàng",
     catalogFailed: "Không tải được catalog. Hãy thử mở lại Mini App.", invalidUrl: "Nhập URL HTTP/HTTPS hoặc đường dẫn rclone hợp lệ.",
     invalidSize: "Dung lượng ROM phải là số nguyên dương.", invalidWorkspace: "Ước lượng workspace phải là số nguyên dương.", jobRequired: "Hãy nhập Job ID.", payloadLarge: "Recipe vượt giới hạn 4096 byte. Hãy giảm MOD hoặc đường dẫn debloat.", buildConcurrencyLimit: "Hệ thống đã đạt giới hạn build đồng thời. Hãy chờ một job hoàn tất rồi thử lại.",
     sent: "Đã gửi yêu cầu sang bot Telegram.", telegramOnly: "Phiên Telegram chưa được kết nối. Hãy bấm Kết nối Telegram để tiếp tục.", noMods: "Bộ nội dung này chưa có MOD sẵn sàng.",
@@ -115,7 +115,7 @@ const translations = {
     refreshJob: "Refresh", events: "Events", artifact: "Artifact", resume: "Resume", cancel: "Cancel job",
     systemTitle: "Service status", systemIntro: "Telegram, runners, Drive and content packs in one place.", runDiagnostics: "Run diagnostics",
     authenticated: "Current session authenticated", keyboardConnected: "Connected through the Telegram button · identity is confirmed on send", runnerChecked: "Runner availability checked on submit", driveChecked: "Access verified before upload",
-    navBuild: "Build", navJobs: "Jobs", navCatalog: "Catalog", navSystem: "System", navProfile: "Profile", selected: "selected", catalogReady: "{mods} MODs · {versions} content packs ready",
+    navBuild: "Build", navJobs: "Jobs", navCatalog: "Catalog", navSystem: "System", selected: "selected", catalogReady: "{mods} MODs · {versions} content packs ready",
     catalogFailed: "Catalog could not be loaded. Reopen the Mini App and try again.", invalidUrl: "Enter a valid HTTP/HTTPS URL or rclone reference.",
     invalidSize: "ROM size must be a positive integer.", invalidWorkspace: "Workspace estimate must be a positive integer.", jobRequired: "Enter a Job ID.", payloadLarge: "Recipe exceeds Telegram's 4096-byte limit. Reduce MODs or debloat paths.", buildConcurrencyLimit: "The system has reached its concurrent build limit. Wait for one job to finish and try again.",
     sent: "Request sent to the Telegram bot.", telegramOnly: "The Telegram session is not connected. Press Connect Telegram to continue.", noMods: "No ready MODs are available in this content pack.",
@@ -512,10 +512,8 @@ Object.assign(translations.en, {
 });
 
 Object.assign(translations.vi, { requestTimedOut: "Yêu cầu quá thời gian chờ. Hãy thử lại.", confirmingJob: "Đang xác nhận job. Dùng nút Xác nhận lại để kiểm tra cùng yêu cầu; cấu hình đã gửi được giữ nguyên.", confirmAgain: "Xác nhận lại", metadataDetails: "Thông tin chi tiết", advancedBuild: "Tùy chọn nâng cao", latestUpdate: "Cập nhật gần nhất", previousEvents: "Trang nhật ký trước", nextEvents: "Trang nhật ký tiếp", logPage: "Trang nhật ký {page}" });
-Object.assign(translations.vi, { jobFilters: "Bộ lọc" });
 
 Object.assign(translations.en, { requestTimedOut: "The request timed out. Please retry.", confirmingJob: "Confirming your job. Use Confirm again to check the same request; the submitted configuration is preserved.", confirmAgain: "Confirm again", metadataDetails: "Technical details", advancedBuild: "Advanced options", latestUpdate: "Last updated", previousEvents: "Previous log page", nextEvents: "Next log page", logPage: "Log page {page}" });
-Object.assign(translations.en, { jobFilters: "Filters" });
 
 const state = {
   language: localStorage.getItem("wukong-language") || "vi",

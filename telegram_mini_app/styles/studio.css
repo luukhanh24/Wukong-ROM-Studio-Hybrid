@@ -1,6 +1,8 @@
 /* Studio: source → configuration → review. Wukong identity stays shared. */
 :root {
-  --text-body: 14px;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, monospace;
+  --text-body: 16px;
   --text-label: 12px;
   --target-size: 44px;
   --safe-bottom: max(10px, env(safe-area-inset-bottom, 0px), var(--telegram-safe-bottom, 0px));
@@ -16,6 +18,13 @@ button, .bottom-nav button { min-width: var(--target-size); }
 input, textarea, select { font-size: 16px; }
 small, .field > span, .field > small, .source-facts dt, .source-facts dd, .readiness-checklist small, .bottom-nav button span, .runtime-strip small, .dispatch-docket header, .job-history-card small { font-size: var(--text-label); }
 button:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.masthead {
+  padding-top: max(8px, var(--safe-top));
+  padding-bottom: 8px;
+  background: color-mix(in srgb, var(--surface-raised) var(--masthead-surface-mix), transparent);
+  -webkit-backdrop-filter: blur(var(--masthead-backdrop-blur)) saturate(calc(1.08 + var(--masthead-scroll) * .28));
+  backdrop-filter: blur(var(--masthead-backdrop-blur)) saturate(calc(1.08 + var(--masthead-scroll) * .28));
+}
 main { padding-bottom: 128px; }
 .view-heading { margin-bottom: 20px; }
 .view-heading h1 { letter-spacing: -.025em; text-wrap: balance; }
@@ -23,7 +32,7 @@ main { padding-bottom: 128px; }
 .runtime-strip > div { padding: 11px 15px; border-right: 1px solid var(--line); }
 .runtime-strip > div:last-child { border-right: 0; }
 .runtime-strip strong { font-size: 12px; }
-.runtime-strip small { font-size: 11px; line-height: 1; }
+.runtime-strip small { font-size: 9px; line-height: 1; }
 .dossier-section { border: 1px solid var(--line); border-top-width: 1px; box-shadow: none; border-radius: 12px; padding: 22px; background: var(--surface-raised); }
 .section-heading { margin-bottom: 17px; }
 .section-heading h2, .dispatch-docket h2 { font-size: 18px; letter-spacing: -.015em; }
@@ -33,10 +42,8 @@ main { padding-bottom: 128px; }
 .source-state-mark { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface-raised); }
 .source-state-copy strong { font-size: 13px; }
 .source-state-copy p { font-size: 11px; line-height: 1.4; }
-.probe-button { border-color:var(--line-strong); color:var(--ink); background:var(--surface-raised); }
-.probe-button:hover { border-color:var(--ink); color:var(--canvas); background:var(--ink); }
 .source-facts { margin: 0; border: 0; }
-.source-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0; padding: 0; border-top: 1px solid var(--line); }
+.source-summary { display: none !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0; padding: 0; border-top: 1px solid var(--line); }
 .source-summary > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 11px 13px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: none; }
 .source-summary > div:nth-child(2n) { border-right: 0; }
 .source-summary > div:nth-last-child(-n+2) { border-bottom: 0; }
@@ -47,7 +54,7 @@ main { padding-bottom: 128px; }
 .metadata-details .source-facts { padding-bottom: 16px; }
 .metadata-details .source-facts-head { border: 0; background: transparent; }
 .field-grid.three { grid-template-columns: repeat(3,minmax(0,1fr)); }
-.config-summary { display: block; margin: 13px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface-soft); font-size: 12px; line-height: 1.45; }
+.config-summary { display: none; }
 .advanced-content { display: grid; gap: 20px; padding: 16px 0; }
 .advanced-content > .field { max-width: 380px; }
 .advanced-content .selection-bar { margin: 0; flex-wrap: wrap; }
@@ -66,39 +73,16 @@ main { padding-bottom: 128px; }
 .job-events article { content-visibility: auto; contain-intrinsic-size: auto 76px; }
 .job-controls { flex-wrap: wrap; }
 .job-status { font-size: 12px; }
-.job-filter-panel { margin-top:10px; }
-.job-filter-panel > summary { display:none; }
-.job-filter-panel > .job-history-filters { margin-top:0; }
-.rom-catalog-results[aria-busy="true"]:empty { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; min-height:180px; border:0; }
-.rom-catalog-results[aria-busy="true"]:empty::before,
-.rom-catalog-results[aria-busy="true"]:empty::after { content:""; display:block; min-height:180px; border:1px solid var(--line); border-radius:var(--radius-lg); background:linear-gradient(100deg,var(--surface-soft) 30%,var(--surface-raised) 45%,var(--surface-soft) 60%); background-size:220% 100%; animation:catalog-skeleton 1.25s linear infinite; }
-@keyframes catalog-skeleton { to { background-position:-220% 0; } }
 .bottom-nav { bottom: var(--safe-bottom); }
-.dispatch-fab { right: max(14px,var(--telegram-safe-right,0px)); bottom: calc(92px + var(--safe-bottom)); left: max(14px,var(--telegram-safe-left,0px)); width: auto; min-width: 0; height: 44px; padding: 0 16px; border: 1px solid var(--ink); border-radius: var(--radius-md); color: var(--canvas); background: var(--ink); box-shadow: 0 8px 24px color-mix(in srgb,var(--ink) 16%,transparent); -webkit-backdrop-filter:none; backdrop-filter:none; }
+.dispatch-fab { bottom: calc(var(--dock-reserve) + 4px); right: 15px; width: auto; min-width: 0; height: 44px; padding: 0 14px 0 16px; border: 1px solid var(--dock-glass-border); border-radius: 999px; color: var(--dock-foreground); background: var(--dock-glass-bg); box-shadow: var(--dock-glass-shadow); -webkit-backdrop-filter: blur(10px) saturate(1.5) contrast(1.08); backdrop-filter: blur(10px) saturate(1.5) contrast(1.08); }
 [data-keyboard="true"] .dispatch-fab, [data-keyboard="true"] .bottom-nav { visibility: hidden; pointer-events: none; }
 [data-keyboard="true"] main { padding-bottom: 32px; }
 @media (min-width:861px) {
-  :root { --text-body:15px; }
   #recipe-form { grid-template-columns: minmax(0,1fr) 320px; gap: 0 16px; }
   .dispatch-docket { grid-column: 2; grid-row: 1 / span 3; top: 130px; }
   .dispatch-fab { display: none !important; }
-  main { padding-bottom: 124px; }
+  main { padding-bottom: 128px; }
   .bottom-nav { bottom: max(14px, env(safe-area-inset-bottom)); }
-  .job-filter-panel > .job-history-filters { display:grid !important; }
-  .job-history { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-  .job-history-divider,.job-filter-empty { grid-column:1 / -1; }
-  .job-history-card { min-height:132px; padding:16px; }
-  .rom-catalog-panel { display:grid; grid-template-columns:minmax(220px,260px) minmax(0,1fr); column-gap:28px; align-items:start; }
-  .rom-catalog-panel > header { grid-column:1 / -1; }
-  .rom-catalog-filters { grid-column:1; grid-row:2 / span 3; display:grid; grid-template-columns:1fr; padding-right:24px; border-right:1px solid var(--line); }
-  .rom-device-field { grid-column:1; }
-  .rom-results-heading { grid-column:2; grid-row:2; margin-top:0; }
-  .rom-catalog-results { grid-column:2; grid-row:3; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; border:0; }
-  .rom-release { grid-template-columns:1fr; align-content:space-between; min-height:196px; padding:18px; border:1px solid var(--line); border-radius:var(--radius-lg); background:var(--surface); }
-  .rom-release-actions { align-self:end; }
-  .rom-release-actions button { flex:1 1 auto; }
-  .rom-catalog-note { grid-column:2; grid-row:4; }
-  .rom-catalog-empty,.rom-resolved-result,.rom-resolve-error { grid-column:1 / -1; }
 }
 @media (max-width:860px) {
   main { padding-left: max(14px, var(--telegram-safe-left, 0px)); padding-right: max(14px, var(--telegram-safe-right, 0px)); padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
@@ -106,25 +90,13 @@ main { padding-bottom: 128px; }
   .dossier-section { margin-bottom: 12px; padding: 15px; }
   /* The three build selectors become a thumb-friendly vertical stack on phones. */
   .build-options .field-grid,
-  .build-options .field-grid.three { grid-template-columns: 1fr; gap: 10px; }
-  .build-options .field-grid.three .field > span { margin-bottom: 6px; font-size: 11px; }
-  .runtime-strip { grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: 16px; }
-  .runtime-strip > div { grid-template-columns:7px minmax(0,1fr); min-width:0; min-height:64px; gap:7px; padding:9px 8px; border-right:1px solid var(--line); border-bottom:0; }
-  .runtime-strip > div:last-child { border-right:0; }
-  .runtime-strip strong,.runtime-jobs-link { overflow:hidden; font-size:10px; text-overflow:ellipsis; }
-  .runtime-jobs-link { min-height:44px; padding:2px 0; }
+  .build-options .field-grid.three { grid-template-columns: 1fr; gap: 13px; }
+  .build-options .field-grid.three .field > span { margin-bottom: 6px; font-size: 9px; }
+  .runtime-strip { grid-template-columns: 1fr; margin-bottom: 16px; }
+  .runtime-strip > div { min-height: 52px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .runtime-strip > div:last-child { border-bottom: 0; }
   .runtime-strip small { display: block; }
-  .dispatch-docket { padding: 16px; }
-  .job-filter-panel { margin-top:10px; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface-soft); }
-  .job-filter-panel > summary { display:flex; min-height:44px; align-items:center; justify-content:space-between; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:650; }
-  .job-filter-panel > summary b { display:grid; min-width:24px; height:24px; place-items:center; border-radius:999px; color:var(--accent-strong); background:var(--accent-soft); font:700 10px/1 var(--font-data); }
-  .job-filter-panel > .job-history-filters { grid-template-columns:1fr; margin:0; border:0; border-top:1px solid var(--line); border-radius:0 0 var(--radius-md) var(--radius-md); }
-  .job-filter-panel:not([open]) > .job-history-filters { display:none; }
-  .job-history-tabs { margin-top:10px; }
-  .rom-catalog-results[aria-busy="true"]:empty { grid-template-columns:1fr; }
-  .rom-catalog-results[aria-busy="true"]:empty::after { display:none; }
-  .toast { top:auto; right:12px; bottom:calc(100px + var(--safe-bottom)); max-width:calc(100vw - 24px); }
-  body[data-view="build"] .toast { bottom:calc(148px + var(--safe-bottom)); }
+  .dispatch-docket { padding: 20px; }
   .source-state { grid-template-columns: 34px minmax(0, 1fr); }
   .source-state .probe-button { grid-column: 1 / -1; width: 100%; }
   .release-version-controls { flex-wrap: wrap; }

@@ -1,17 +1,10 @@
 import { build } from 'esbuild';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const outdir = path.resolve(process.argv[2] || path.join(root, 'dist'));
-if (outdir === root) throw new Error('Output directory cannot be the Mini App source directory');
-await Promise.all([
-  rm(path.join(outdir, 'assets'), { recursive: true, force: true }),
-  rm(path.join(outdir, 'index.html'), { force: true }),
-  rm(path.join(outdir, 'bundle-meta.json'), { force: true }),
-  rm(path.join(outdir, 'asset-manifest.json'), { force: true }),
-]);
 await mkdir(outdir, { recursive: true });
 const result = await build({
   absWorkingDir: root,
@@ -22,19 +15,14 @@ const result = await build({
   assetNames: 'assets/[name]-[hash]', loader: { '.woff2': 'file' },
 });
 const entries = {};
-const bundledAssets = {};
 for (const [file, meta] of Object.entries(result.metafile.outputs)) {
   if (meta.entryPoint === 'app.js' || meta.entryPoint === 'styles.css') {
     entries[meta.entryPoint] = path.relative(outdir, path.resolve(root, file)).replaceAll('\\', '/');
-  }
-  for (const input of Object.keys(meta.inputs || {})) {
-    bundledAssets[input] = path.relative(outdir, path.resolve(root, file)).replaceAll('\\', '/');
   }
 }
 if (!entries['app.js'] || !entries['styles.css']) throw new Error('Missing application bundle');
 let html = await readFile(path.join(root, 'index.html'), 'utf8');
 for (const [source, destination] of Object.entries(entries)) html = html.replace(`./${source}`, `./${destination}`);
-for (const [source, destination] of Object.entries(bundledAssets)) html = html.replaceAll(`./${source}`, `./${destination}`);
 await writeFile(path.join(outdir, 'index.html'), html);
 await writeFile(path.join(outdir, 'bundle-meta.json'), JSON.stringify(result.metafile, null, 2));
 await writeFile(path.join(outdir, 'asset-manifest.json'), JSON.stringify(entries, null, 2));
