@@ -391,9 +391,13 @@ class LocalJobExecutor:
                     legacy_spec["resumePreset"] = recipe.build.preset
                     legacy_spec["preset"] = "resume"
                 else:
-                    legacy_spec["specFingerprint"] = build_spec_fingerprint(BuildSpec.from_dict(legacy_spec))
+                    legacy_spec["specFingerprint"] = build_spec_fingerprint(
+                        BuildSpec.from_dict(legacy_spec, mod_root=self.content_root / "MOD")
+                    )
             else:
-                legacy_spec["specFingerprint"] = build_spec_fingerprint(BuildSpec.from_dict(legacy_spec))
+                legacy_spec["specFingerprint"] = build_spec_fingerprint(
+                    BuildSpec.from_dict(legacy_spec, mod_root=self.content_root / "MOD")
+                )
 
             checkpoint_upload_enabled = True
             checkpoint_stages = checkpoint_stages_for_environment()

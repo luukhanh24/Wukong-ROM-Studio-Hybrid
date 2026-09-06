@@ -302,17 +302,17 @@ class BuildSpec:
         return list(dict.fromkeys(name for name in names if name))
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "BuildSpec":
+    def from_dict(cls, payload: dict[str, Any], *, mod_root: Path | None = None) -> "BuildSpec":
         preset = str(payload.get("preset", "lite")).lower()
         if preset == "standard":
             preset = "lite"
-        mod_version = normalize_mod_version(payload.get("modVersion"))
+        mod_version = normalize_mod_version(payload.get("modVersion"), mod_root=mod_root)
         raw_mod_names = payload.get("modNames")
         if raw_mod_names is None:
             raw_mod_names = (
                 [payload["modName"]]
                 if payload.get("modName")
-                else preset_default_mods(preset, mod_version)
+                else preset_default_mods(preset, mod_version, mod_root=mod_root)
             )
         if not isinstance(raw_mod_names, list):
             raw_mod_names = [raw_mod_names]
@@ -326,7 +326,7 @@ class BuildSpec:
             and not payload.get("modName")
         ):
             try:
-                raw_mod_names = preset_default_mods(preset, mod_version)
+                raw_mod_names = preset_default_mods(preset, mod_version, mod_root=mod_root)
             except StudioError:
                 raw_mod_names = []
         raw_debloat_paths = payload.get("debloatPaths")
