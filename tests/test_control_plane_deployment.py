@@ -136,6 +136,7 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("args+=(--target preview)", vercel_workflow)
         self.assertIn('vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN"', vercel_workflow)
         self.assertIn('page="$(cat "$response_file")"', vercel_workflow)
+        self.assertIn('Preview verification response bytes:', vercel_workflow)
         self.assertIn("args+=(--prod)", vercel_workflow)
         self.assertIn("workflow_dispatch:", vercel_workflow)
         self.assertNotIn("git-integration", vercel_workflow)

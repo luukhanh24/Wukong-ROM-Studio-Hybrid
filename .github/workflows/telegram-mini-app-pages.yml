@@ -114,9 +114,16 @@ jobs:
           for _ in {1..24}; do
             if [[ "$TARGET" == preview ]]; then
               response_file="$(mktemp)"
-              vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" >"$response_file" 2>/dev/null || true
+              error_file="$(mktemp)"
+              vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" >"$response_file" 2>"$error_file" || true
               page="$(cat "$response_file")"
+              if [[ "$_" == 1 ]]; then
+                echo "Preview verification response bytes: $(wc -c <"$response_file")"
+                sed -n '1,8p' "$response_file" || true
+                sed -n '1,8p' "$error_file" >&2 || true
+              fi
               rm -f "$response_file"
+              rm -f "$error_file"
             else
               page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${WUKONG_RELEASE_SHA}" || true)"
             fi
