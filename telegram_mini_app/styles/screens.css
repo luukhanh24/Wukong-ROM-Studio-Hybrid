@@ -129,7 +129,7 @@
   --dock-lens-bg: linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.04)),rgba(167,178,247,.12);
   --dock-foreground: #fafafa;
 }:root[data-color-scheme="dark"] .masthead,
-:root[data-color-scheme="dark"] .contents-rail { background: var(--surface); }:root[data-color-scheme="dark"] .bottom-nav button.active { color:inherit; }:root[data-color-scheme="dark"] .primary { color:#fff; }:root[data-color-scheme="dark"] .task-tabs input:checked + span { color:#fff; background:var(--accent); }:root[data-color-scheme="dark"] .readiness-checklist .complete i,
+:root[data-color-scheme="dark"] .contents-rail { background: var(--surface); }:root[data-color-scheme="dark"] .bottom-nav button.active { color:inherit; }:root[data-color-scheme="dark"] .primary { color:#0a0a0a; }:root[data-color-scheme="dark"] .task-tabs input:checked + span { color:#0a0a0a; background:var(--accent); }:root[data-color-scheme="dark"] .readiness-checklist .complete i,
 :root[data-color-scheme="dark"] .dispatch-docket .readiness-checklist .complete i { box-shadow:inset 0 0 0 3px var(--surface-raised); }@media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }

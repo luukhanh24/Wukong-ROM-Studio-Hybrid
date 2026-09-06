@@ -1614,10 +1614,10 @@ class TelegramMiniAppTests(unittest.TestCase):
             click_admin_action=True,
         )
 
-        self.assertIn('data-batch-launch-color="rgb(255, 255, 255)"', dom)
-        self.assertIn('data-batch-launch-background="rgb(49, 95, 158)"', dom)
-        self.assertIn('data-admin-action-confirm-color="rgb(255, 255, 255)"', dom)
-        self.assertIn('data-admin-action-confirm-background="rgb(49, 95, 158)"', dom)
+        self.assertIn('data-batch-launch-color="rgb(10, 10, 10)"', dom)
+        self.assertIn('data-batch-launch-background="rgb(167, 178, 247)"', dom)
+        self.assertIn('data-admin-action-confirm-color="rgb(10, 10, 10)"', dom)
+        self.assertIn('data-admin-action-confirm-background="rgb(167, 178, 247)"', dom)
 
     def test_mobile_surface_is_distilled_and_maintenance_is_admin_only(self) -> None:
         html = (ROOT / "telegram_mini_app" / "index.html").read_text(encoding="utf-8")
@@ -1643,8 +1643,8 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn("updateDockShellPath", script)
         self.assertIn('background:var(--dock-glass-bg)', styles)
         self.assertIn('backdrop-filter:blur(10px) saturate(1.5) contrast(1.08)', styles)
-        self.assertIn('--dock-foreground: #171b22', styles)
-        self.assertIn('--dock-foreground: #f5f7fb', styles)
+        self.assertIn('--dock-foreground: #0a0a0a', styles)
+        self.assertIn('--dock-foreground: #fafafa', styles)
         self.assertIn('bottom:calc(132px + env(safe-area-inset-bottom))', styles)
         self.assertIn('.bottom-nav button:not(.dock-profile) { top:7px; height:56px; min-height:56px;', styles)
         self.assertIn("const bodyTop = 32;", script)
@@ -1687,7 +1687,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('data-selected-theme-mode="system"', dom)
         self.assertIn('data-system-theme-after-telegram-change="dark"', dom)
         self.assertRegex(dom, r'<html[^>]*data-theme="system"[^>]*data-color-scheme="dark"')
-        self.assertRegex(dom, r'<body[^>]*data-telegram-header-color="#1d2025"')
+        self.assertRegex(dom, r'<body[^>]*data-telegram-header-color="#141414"')
 
     def test_cache_clear_requires_dialog_confirmation_and_submits_once(self) -> None:
         dom, screenshot_size = _render_mini_app_in_chrome(

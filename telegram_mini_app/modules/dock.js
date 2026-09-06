@@ -29,7 +29,7 @@ function applyTheme(theme = state.theme, persist = false) {
   const resolved = resolvedTheme();
   document.documentElement.dataset.theme = state.theme;
   document.documentElement.dataset.colorScheme = resolved;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "dark" ? "#17191d" : "#f3f1eb");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved === "dark" ? "#0a0a0a" : "#fafafa");
   $$("[data-theme-value]").forEach((button) => {
     const active = button.dataset.themeValue === state.theme;
     button.classList.toggle("active", active);
@@ -37,8 +37,8 @@ function applyTheme(theme = state.theme, persist = false) {
   });
   if (persist) localStorage.setItem("wukong-theme", state.theme);
   try {
-    runtime.TelegramApp?.setHeaderColor?.(resolved === "dark" ? "#1d2025" : "#f8f7f2");
-    runtime.TelegramApp?.setBackgroundColor?.(resolved === "dark" ? "#17191d" : "#f3f1eb");
+    runtime.TelegramApp?.setHeaderColor?.(resolved === "dark" ? "#141414" : "#ffffff");
+    runtime.TelegramApp?.setBackgroundColor?.(resolved === "dark" ? "#0a0a0a" : "#fafafa");
   } catch (_) {}
 }
 
