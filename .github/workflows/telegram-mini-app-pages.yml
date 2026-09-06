@@ -113,7 +113,10 @@ jobs:
           [[ "$TARGET" == production ]] && domain='https://wukong-rom-studio.vercel.app'
           for _ in {1..24}; do
             if [[ "$TARGET" == preview ]]; then
-              page="$(vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" 2>/dev/null || true)"
+              response_file="$(mktemp)"
+              vercel curl / --deployment "$domain" --token "$VERCEL_TOKEN" >"$response_file" 2>/dev/null || true
+              page="$(cat "$response_file")"
+              rm -f "$response_file"
             else
               page="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 "$domain/?release=${WUKONG_RELEASE_SHA}" || true)"
             fi
