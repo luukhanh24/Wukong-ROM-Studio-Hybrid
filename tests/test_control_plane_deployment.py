@@ -133,6 +133,10 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertNotIn("WUKONG_VPS_SSH_KEY", workflow)
         self.assertIn("VERCEL_TOKEN", vercel_workflow)
         self.assertIn("vercel deploy --yes --prod --archive=tgz", vercel_workflow)
+        self.assertIn("workflow_dispatch:", vercel_workflow)
+        self.assertNotIn("git-integration", vercel_workflow)
+        self.assertIn("Git Integration auto-deploy is disabled", vercel_workflow)
+        self.assertNotIn("on:\n  push:", vercel_workflow)
         self.assertNotIn("vercel build --prod", vercel_workflow)
         self.assertNotIn("deploy-pages", vercel_workflow)
         self.assertIn("condition: service_started", (Path(__file__).parents[1] / "deploy/control-plane/compose.yml").read_text(encoding="utf-8"))
@@ -199,6 +203,11 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertLess(gate, workflow.index("- name: Deploy exact release"))
         self.assertIn("if: (inputs.target || 'staging') == 'production'", workflow)
         self.assertNotIn("Require verified read-only migration before cutover", workflow)
+        self.assertLess(
+            workflow.index("- name: Deploy exact release"),
+            workflow.index("- name: Deploy Vercel bundle after production health"),
+        )
+        self.assertIn("Verify matching Vercel source transport after frontend promotion", workflow)
 
     def test_vercel_static_bundle_contains_no_personal_github_identity(self) -> None:
         output = self.root / "vercel-static"

@@ -201,26 +201,6 @@ jobs:
           database="wukong-control-plane-db"
           [[ "$TARGET" == staging ]] && database="wukong-control-plane-staging-db"
           npx wrangler d1 migrations apply "$database" --remote --env "$TARGET"
-      - name: Wait for matching Vercel source transport
-        shell: bash
-        working-directory: .
-        run: |
-          set -euo pipefail
-          payload='{"claimUrl":"https://invalid.example/internal/source-transport/claim","token":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'
-          for _ in {1..30}; do
-            status="$(curl --silent --show-error --output "$RUNNER_TEMP/source-transport.json" \
-              --dump-header "$RUNNER_TEMP/source-transport.headers" --write-out '%{http_code}' \
-              --request POST --header 'Content-Type: application/json' --data "$payload" \
-              https://wukong-rom-studio.vercel.app/api/source-transport || true)"
-            release="$(awk 'BEGIN { IGNORECASE=1 } /^x-wukong-release:/ { gsub(/\r/, "", $2); print $2 }' \
-              "$RUNNER_TEMP/source-transport.headers" | tail -n1)"
-            if [[ "$status" == 403 && "$release" == "$WUKONG_RELEASE_SHA" ]]; then
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Vercel source transport did not publish the matching release." >&2
-          exit 1
       - name: Deploy exact release
         shell: bash
         run: |
@@ -306,6 +286,27 @@ jobs:
           done
           test -n "$run_id"
           gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+      - name: Verify matching Vercel source transport after frontend promotion
+        if: (inputs.target || 'staging') == 'production' && inputs.cutover
+        shell: bash
+        working-directory: .
+        run: |
+          set -euo pipefail
+          payload='{"claimUrl":"https://invalid.example/internal/source-transport/claim","token":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'
+          for _ in {1..30}; do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/source-transport.json" \
+              --dump-header "$RUNNER_TEMP/source-transport.headers" --write-out '%{http_code}' \
+              --request POST --header 'Content-Type: application/json' --data "$payload" \
+              https://wukong-rom-studio.vercel.app/api/source-transport || true)"
+            release="$(awk 'BEGIN { IGNORECASE=1 } /^x-wukong-release:/ { gsub(/\r/, "", $2); print $2 }' \
+              "$RUNNER_TEMP/source-transport.headers" | tail -n1)"
+            if [[ "$status" == 403 && "$release" == "$WUKONG_RELEASE_SHA" ]]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Vercel source transport did not publish the promoted release." >&2
+          exit 1
       - name: Ensure Telegram webhook and command menu
         if: (inputs.target || 'staging') == 'production'
         env:

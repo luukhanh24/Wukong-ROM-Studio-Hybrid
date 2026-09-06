@@ -1,17 +1,6 @@
 name: Telegram Mini App · Vercel
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "telegram_mini_app/**"
-      - "api/**"
-      - "tools/build_vercel_mini_app.py"
-      - "tools/export_mini_app_catalog.py"
-      - "content-packs/index.json"
-      - "devices_sizes.json"
-      - "vercel.json"
-      - ".github/workflows/telegram-mini-app-pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -52,15 +41,11 @@ jobs:
           set -euo pipefail
           [[ -n "$WUKONG_TELEGRAM_MINI_APP_API_URL" ]]
           [[ "$WUKONG_TELEGRAM_MINI_APP_API_URL" == https://* ]]
-          if [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]]; then
-            echo "mode=cli" >> "$GITHUB_OUTPUT"
-          elif [[ -z "$VERCEL_TOKEN" && -z "$VERCEL_ORG_ID" && -z "$VERCEL_PROJECT_ID" ]]; then
-            echo "mode=git-integration" >> "$GITHUB_OUTPUT"
-            echo "Vercel CLI secrets are absent; using the private Git integration auto-deploy."
-          else
-            echo "VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID must be configured together." >&2
+          [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]] || {
+            echo "VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID are required; Git Integration auto-deploy is disabled." >&2
             exit 2
-          fi
+          }
+          echo "mode=cli" >> "$GITHUB_OUTPUT"
       - name: Install pinned Vercel CLI
         if: steps.deployment-mode.outputs.mode == 'cli'
         run: npm install --global vercel@59.5.0
