@@ -136,7 +136,7 @@ class ControlPlaneDeploymentTests(unittest.TestCase):
         self.assertIn("args+=(--target preview)", vercel_workflow)
         self.assertIn('grep -Fq "${WUKONG_TELEGRAM_MINI_APP_API_URL%/}" .vercel-static/index.html', vercel_workflow)
         self.assertIn('Protected Vercel preview published:', vercel_workflow)
-        self.assertIn('for attempt in {1..24}; do', vercel_workflow)
+        self.assertIn('for _ in {1..24}; do', vercel_workflow)
         self.assertIn("args+=(--prod)", vercel_workflow)
         self.assertIn("workflow_dispatch:", vercel_workflow)
         self.assertNotIn("git-integration", vercel_workflow)

@@ -2149,7 +2149,8 @@ class TelegramMiniAppTests(unittest.TestCase):
 
         self.assertIn("WUKONG_TELEGRAM_MINI_APP_API_URL", workflow)
         self.assertIn("VERCEL_TOKEN", workflow)
-        self.assertIn("vercel deploy --yes --prod --archive=tgz", workflow)
+        self.assertIn("args=(vercel deploy . --yes --force --archive=tgz)", workflow)
+        self.assertIn("args+=(--prod)", workflow)
         self.assertNotIn("vercel build --prod", workflow)
         self.assertIn("https://wukong-rom-studio.vercel.app", workflow)
         self.assertNotIn("deploy-pages", workflow)
