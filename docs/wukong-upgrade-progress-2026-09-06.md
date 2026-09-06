@@ -29,7 +29,8 @@ This document records implementation evidence for the approved upgrade plan. A g
 - Automated evidence: Worker check 21 files/103 tests plus 8 transport tests; Mini App Node tests 5/5; Mini App build 9 assets; required Python regression command 95/95; final Mini App upgrade/Telegram suite 71/71, followed by focused review regressions for contrast, release visibility, full-width Library action, exact viewport geometry and greeting lifecycle.
 - Bundle evidence after a clean build: `python tools/mini_app_bundle_budget.py --baseline 8dededd` reports 336,297 → 185,565 raw bytes and 87,864 → 56,100 gzip bytes; admin, ZIP metadata and fflate remain deferred chunks.
 - Preview deployment: GitHub Actions run `34032092693`, job `101483374893`, exact release `be7b921b8fc46851a4ec670778f917c5e35c1452`, protected Vercel URL `https://wukong-rom-studio-e1wom2o4i-wukong-rom-studio.vercel.app`.
-- Production has not been promoted from this preview. Telegram Android/iOS keyboard and safe-area checks, 24-hour admin canary, local interaction p95 and independent rollback rehearsal remain pending; this redesign is **not fully accepted** until those gates complete.
+- At the user's explicit request, production was deployed without waiting for the 24-hour preview gate. GitHub Actions run `34032299494`, job `101483940485`, published exact release `be7b921b8fc46851a4ec670778f917c5e35c1452` as deployment `https://wukong-rom-studio-4tjefkw62-wukong-rom-studio.vercel.app` and promoted it to `https://wukong-rom-studio.vercel.app`. Direct smoke returned HTTP 200, the expected release marker, the production Worker API and stylesheet `styles-KXD3J2BC.css`.
+- Telegram Android/iOS keyboard and safe-area checks, 24-hour admin observation, local interaction p95 and independent rollback rehearsal remain pending; this redesign is **not fully accepted** until those gates complete.
 
 ## Latest restoration release
 
