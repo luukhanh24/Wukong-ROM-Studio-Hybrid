@@ -78,6 +78,7 @@ function openBatchBuildPage() {
 
 function closeBatchBuildPage() {
   clearTimeout(state.batchPollTimer); state.batchPollTimer = null;
+  requestScopes.cancel("batch");
   $("#system").classList.remove("admin-batch-open"); $("#admin-batch-page").hidden = true;
 }
 

@@ -2318,6 +2318,7 @@ class TelegramMiniAppTests(unittest.TestCase):
         self.assertIn('apiRequest("/v1/mod-release-versions",', script)
         self.assertIn('apiRequest("/v1/admin/batch-builds",', script)
         self.assertIn('classList.add("admin-batch-open")', script)
+        self.assertIn('requestScopes.cancel("batch")', script)
         self.assertIn('#system.admin-batch-open > :not(.admin-batch-page)', styles)
 
     def test_admin_batch_can_select_and_clear_every_device_and_mod_without_release_input(self) -> None:

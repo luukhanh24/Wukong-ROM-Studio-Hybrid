@@ -32,6 +32,12 @@
   min-width: var(--target-size);
 }
 
+.user-pagination button,
+.batch-fieldset-actions button {
+  min-width: var(--target-size);
+  min-height: var(--target-size);
+}
+
 .source-input-head button,
 .source-facts-head button,
 .probe-button,

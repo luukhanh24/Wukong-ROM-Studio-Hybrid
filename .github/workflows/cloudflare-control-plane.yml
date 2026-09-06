@@ -64,10 +64,13 @@ jobs:
       - name: Run Worker and migration contracts
         run: |
           npm run check --prefix deploy/cloudflare-worker
+          npm test --prefix telegram_mini_app
           python -m unittest \
             tests.test_d1_migration \
             tests.test_telegram_mini_api \
             tests.test_telegram_mini_app \
+            tests.test_mini_app_upgrade \
+            tests.test_hybrid_channel_parity \
             tests.test_control_plane_deployment
 
   deploy:
@@ -273,14 +276,15 @@ jobs:
         run: |
           set -euo pipefail
           gh workflow run telegram-mini-app-pages.yml \
-            --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
+            --repo "$GITHUB_REPOSITORY" --ref "$WUKONG_RELEASE_SHA" \
+            --field release_sha="$WUKONG_RELEASE_SHA"
           run_id=""
           for _ in {1..20}; do
             run_id="$(gh run list --repo "$GITHUB_REPOSITORY" \
               --workflow telegram-mini-app-pages.yml \
               --branch "$GITHUB_REF_NAME" --event workflow_dispatch --limit 20 \
               --json databaseId,headSha \
-              --jq ".[] | select(.headSha == \"$GITHUB_SHA\") | .databaseId" | head -n1)"
+              --jq ".[] | select(.headSha == \"$WUKONG_RELEASE_SHA\") | .databaseId" | head -n1)"
             [[ -n "$run_id" ]] && break
             sleep 5
           done

@@ -13,12 +13,12 @@ This document records implementation evidence for the approved upgrade plan. A g
 | C2 | Implemented and measured locally | `tools/mini_app_bundle_budget.py`; baseline `8dededd` → current bundle: raw 336,297 → 185,016 bytes (45.0% reduction), gzip 87,864 → 55,962 bytes (36.3% reduction). | 30-run interaction p95 report on pinned Chromium/CPU throttle. |
 | C3 | Implemented and tested | `1a87d5c`, `2c31bc0` plus current executor metrics; terminal steps always emit a metric with explicit `cacheState`, missing duration/bytes stay absent, and materialize/checkpoint/checksum/publish include stage metrics. Artifact checksum fallback remains. | Real runner metrics across cold/warm builds. |
 | C4 | Harness implemented | `tools/build_benchmark.py` records cold/warm runs, stage JSON metrics, medians and assumptions. | One fixed ROM/recipe/runner, three cold and three warm runs plus ZIP/partition/metadata validation. |
-| D1 | Tested locally | Worker check: 21 files/103 tests plus 8 transport tests; frontend 5 Node tests and build; Mini App 7/7 and relevant Python regression suites pass. | Full repository CI after final release commit. |
-| D2–D3 | Partially configured | `5ce2c8a` makes Vercel production promotion manual CLI-only, removes Git Integration fallback, and verifies the promoted frontend after Worker health; workflows retain protected environments and exact-release checks. | Verify environment approvals, run staging canary for 24 hours, and rehearse independent rollback. |
+| D1 | Tested locally | Worker check: 21 files/103 tests plus 8 transport tests; frontend 5 Node tests and build; Mini App 7/7 and relevant Python regression suites pass. Deploy validation now gates the same suites. | Full repository CI after final release commit. |
+| D2–D3 | Partially configured | `5ce2c8a` makes Vercel production promotion manual CLI-only, removes Git Integration fallback, verifies the promoted frontend after Worker health, and the latest workflow pins Vercel to the Worker release SHA. | Verify environment approvals, run staging canary for 24 hours, and rehearse independent rollback. |
 
 ## Current release state
 
-- Local implementation commits: `943e49c`, `1a87d5c`, `2c31bc0`, `8bc3a81`, `5ce2c8a`, `3bb1720`, `86f862a`; latest polling/accessibility/log/metrics edits are pending their own commit.
+- Local implementation commits: `943e49c`, `1a87d5c`, `2c31bc0`, `8bc3a81`, `5ce2c8a`, `3bb1720`, `86f862a`, `c085cd6`, `aeda192`, `c56e899`, `9040f44`, `0943074`; workflow release-SHA and regression-gate edits are pending their own commit.
 - No database migration was added.
 - Production evidence must be recorded separately with the Worker version, frontend deployment ID, health/release response, and post-deploy smoke results.
 - Until the external rows above are completed, the upgrade is **not fully accepted**.

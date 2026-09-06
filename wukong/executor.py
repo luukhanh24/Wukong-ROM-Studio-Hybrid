@@ -531,8 +531,7 @@ class LocalJobExecutor:
                     stage="checksum",
                     durationSeconds=round(time.monotonic() - checksum_started, 3),
                     bytesProcessed=prepared.size_bytes,
-                    cacheHit=False,
-                    cacheState="miss",
+                    cacheState="not-applicable",
                 )
                 upload_started = time.monotonic()
                 if recipe.storage.publish_artifact:

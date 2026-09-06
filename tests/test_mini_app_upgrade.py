@@ -188,6 +188,24 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
 
+    def test_primary_controls_meet_target_hitbox(self):
+        def exercise(page):
+            result = page.evaluate("""() => {
+                const selectors = [
+                    '#language', '#source-uri', '#paste-source', '#clear-source',
+                    '#probe-source', '#device', '#preset', '#submit-recipe',
+                    '.bottom-nav button'
+                ];
+                return selectors.flatMap((selector) => [...document.querySelectorAll(selector)])
+                    .filter((node) => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden')
+                    .map((node) => ({id: node.id || node.className, width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height}));
+            }""")
+            self.assertTrue(result)
+            undersized = [item for item in result if item["width"] < 44 or item["height"] < 44]
+            self.assertEqual(undersized, [])
+
+        _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
+
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
         for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
             with self.subTest(width=width, height=height):
