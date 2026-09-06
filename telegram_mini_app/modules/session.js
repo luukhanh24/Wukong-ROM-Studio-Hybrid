@@ -1,4 +1,4 @@
-import { $, $$, miniApiEndpoint, parseInitDataFromHash, requestJson, requestScopes, runtime, state, t, telegramBotUsername, validSignedLaunchToken } from "./state.js";
+import { $, $$, miniApiEndpoint, parseInitDataFromHash, requestJson, requestScopes, runtime, state, t, telegramBotUsername, validSignedLaunchToken, workspacePollingAllowed } from "./state.js";
 import { ensureAutomaticTelegramConnection, renderSessionDiagnostics, toast } from "./shell.js";
 import { restorePendingSubmission, updateSummary, updateTelegramState } from "./build.js";
 import { formatBytes, updateSourceDetection } from "./source-rom.js";
@@ -245,10 +245,13 @@ function closeTelegramApp() {
 }
 
 function pauseWorkspacePolling() {
+  clearTimeout(workspaceReconnectTimer);
+  workspaceReconnectTimer = null;
   for (const name of ["adminUsersPollTimer", "adminUserPollTimer", "jobsPollTimer", "maintenancePollTimer", "batchPollTimer", "pairingPollTimer"]) {
     clearTimeout(state[name]); state[name] = null;
   }
   clearTimeout(state.adminJobView?.timer);
+  if (state.adminJobView) state.adminJobView.timer = null;
   requestScopes.cancelAll();
   ++state.jobHistoryRequestId; ++state.jobDetailRequestId;
   state.jobsLoading = false;
@@ -259,7 +262,7 @@ function pauseWorkspacePolling() {
 }
 
 function resumeWorkspacePolling() {
-  if (document.hidden || navigator.onLine === false || !privateApiAvailable()) return;
+  if (!workspacePollingAllowed() || !privateApiAvailable()) return;
   if (state.adminJobView) loadAdminJobDetail();
   else {
     loadJobs({ force: true }).catch(() => {});
@@ -270,10 +273,21 @@ function resumeWorkspacePolling() {
 }
 
 function reconnectWorkspace() {
-  if (document.hidden || navigator.onLine === false) return;
+  if (!workspacePollingAllowed()) return;
   scheduleGreeting();
   ensureAutomaticTelegramConnection();
   loadSession({ countOpen: false }).then(() => initializeApprovedWorkspace({ refresh: true })).catch(() => setJobsConnection("jobsOffline", true));
+}
+
+let workspaceReconnectTimer = null;
+
+function scheduleWorkspaceReconnect() {
+  if (!workspacePollingAllowed()) return;
+  clearTimeout(workspaceReconnectTimer);
+  workspaceReconnectTimer = setTimeout(() => {
+    workspaceReconnectTimer = null;
+    reconnectWorkspace();
+  }, 0);
 }
 
 function initializeApprovedWorkspace({ refresh = false } = {}) {
@@ -408,7 +422,7 @@ async function loadSession({ countOpen = true } = {}) {
   return state.me;
 }
 
-export { setSignedTelegramLaunchToken, activeSignedLaunchToken, effectiveInitData, effectiveInitDataUnsafe, miniApiAvailable, privateApiAvailable, getMiniSessionId, miniApiState, miniApiUnavailableMessageKey, apiRequest, publicApiRequest, telegramTransportAvailable, presentMissingApi, telegramBotLink, openTelegramBot, storedPairing, pollTelegramPairing, connectTelegramSession, closeTelegramApp, pauseWorkspacePolling, resumeWorkspacePolling, reconnectWorkspace, initializeApprovedWorkspace, renderAccessGate, renderAccount, loadSession };
+export { setSignedTelegramLaunchToken, activeSignedLaunchToken, effectiveInitData, effectiveInitDataUnsafe, miniApiAvailable, privateApiAvailable, getMiniSessionId, miniApiState, miniApiUnavailableMessageKey, apiRequest, publicApiRequest, telegramTransportAvailable, presentMissingApi, telegramBotLink, openTelegramBot, storedPairing, pollTelegramPairing, connectTelegramSession, closeTelegramApp, pauseWorkspacePolling, resumeWorkspacePolling, reconnectWorkspace, scheduleWorkspaceReconnect, initializeApprovedWorkspace, renderAccessGate, renderAccount, loadSession };
 
 async function runQuickAction(action) {
   if (action === "diagnostics") {

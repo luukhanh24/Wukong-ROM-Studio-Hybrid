@@ -2,7 +2,7 @@ import { bindViewport } from "./viewport.js";
 import { $, $$, miniApiEndpoint, runtime, state, t, themeMedia } from "./state.js";
 import { applyCustomPresetLabelForJob, closeDebloatEditor, filterMods, openDebloatEditor, renderCatalog, renderCustomPresetLabelEditor, renderDebloatSummary, renderMods, renderPipelineSteps, restorePendingSubmission, saveDebloatPaths, saveReleaseVersion, setDeliveryState, setMods, submitRecipe, updatePipelineCount, updateSummary, updateTelegramState } from "./build.js";
 import { closeAdminJobPage, loadAdminJobDetail, loadJobs, renderJobHistory, renderSelectedJob, setJobsConnection } from "./jobs.js";
-import { runQuickAction, activeSignedLaunchToken, apiRequest, closeTelegramApp, connectTelegramSession, effectiveInitData, initializeApprovedWorkspace, loadSession, miniApiAvailable, openTelegramBot, pauseWorkspacePolling, pollTelegramPairing, reconnectWorkspace, renderAccessGate, renderAccount, storedPairing } from "./session.js";
+import { runQuickAction, activeSignedLaunchToken, apiRequest, closeTelegramApp, connectTelegramSession, effectiveInitData, initializeApprovedWorkspace, loadSession, miniApiAvailable, openTelegramBot, pauseWorkspacePolling, pollTelegramPairing, reconnectWorkspace, scheduleWorkspaceReconnect, renderAccessGate, renderAccount, storedPairing } from "./session.js";
 import { loadRomDevices, renderRomCatalogResults, renderRomDevices, renderRomVersions, resetRomResolved, searchRomCatalog, selectLibraryTab } from "./rom-catalog.js";
 import { closeBatchBuildPage, loadAdminUsers, loadBatch, openBatchBuildPage, performCacheClear, renderAdminUsers, savePermanentPresetLabels, savePermanentReleaseVersion, setBatchSelections, startBatchBuild, updateBatchSummary, updateMaintenance } from "./admin.js";
 import { clearSource, copySourceMetadata, pasteSourceFromClipboard, probeSourceInPlace, restoreSourceDraft, updateSourceDetection } from "./source-rom.js";
@@ -240,9 +240,9 @@ function bindEvents() {
       await loadAdminUsers({ reset: true });
     } catch (error) { toast(error.message, true); }
   });
-  document.addEventListener("visibilitychange", () => document.hidden ? pauseWorkspacePolling() : reconnectWorkspace());
+  document.addEventListener("visibilitychange", () => document.hidden ? pauseWorkspacePolling() : scheduleWorkspaceReconnect());
   window.addEventListener("offline", () => { pauseWorkspacePolling(); setJobsConnection("jobsOffline", true); });
-  window.addEventListener("online", reconnectWorkspace);
+  window.addEventListener("online", scheduleWorkspaceReconnect);
   $("#copy-source-metadata").addEventListener("click", () => copySourceMetadata().catch((error) => toast(error.message, true)));
   const docket = $(".dispatch-docket");
   const fab = $("#dispatch-fab");

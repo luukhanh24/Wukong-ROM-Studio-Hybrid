@@ -1,5 +1,28 @@
 [
   {
+    "name": "build-pipeline",
+    "valid": true,
+    "recipe": {
+      "schemaVersion": 1,
+      "task": "build",
+      "device": "PKG110",
+      "source": {"kind": "https", "uri": "https://example.com/rom.zip"},
+      "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10", "enabledSteps": ["inspect_rom", "extract_payload", "package_zip", "extract_payload"]},
+      "execution": {"target": "github-auto"}
+    },
+    "expect": {"task": "build", "device": "PKG110", "preset": "plus", "modVersion": "ColorOS_16.0.10", "release": "V6.0", "enabledSteps": ["inspect_rom", "extract_payload", "package_zip"]}
+  },
+  {
+    "name": "invalid-pipeline",
+    "valid": false,
+    "recipe": {"schemaVersion": 1, "task": "build", "device": "PKG110", "source": {"kind": "https", "uri": "https://example.com/rom.zip"}, "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10", "enabledSteps": ["unknown_stage"]}, "execution": {"target": "github-auto"}}
+  },
+  {
+    "name": "invalid-protected-pipeline",
+    "valid": false,
+    "recipe": {"schemaVersion": 1, "task": "build", "device": "PKG110", "source": {"kind": "https", "uri": "https://example.com/rom.zip"}, "build": {"preset": "plus", "modVersion": "ColorOS_16.0.10", "enabledSteps": ["patch_vendor_boot"]}, "execution": {"target": "github-auto"}}
+  },
+  {
     "name": "build-plus",
     "valid": true,
     "recipe": {

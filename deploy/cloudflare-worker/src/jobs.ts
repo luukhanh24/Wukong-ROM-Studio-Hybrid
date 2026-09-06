@@ -14,6 +14,11 @@ const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const JOB_HISTORY_PAGE_SIZE = 20;
 const JOB_HISTORY_STATUSES = new Set(["active", "succeeded", "failed"]);
 const JOB_PRESETS = new Set(["lite", "plus", "both", "custom"]);
+const PIPELINE_STEP_NAMES = new Set([
+  "inspect_rom", "extract_payload", "unpack_partitions", "debloat", "apply_mod",
+  "sync_configs", "repack_partitions", "repack_super", "patch_vbmeta",
+  "patch_vendor_boot", "package_zip", "notify_telegram"
+]);
 
 async function queueBuildStartedAdminAlert(
   env: Env,
@@ -139,6 +144,21 @@ export function validateRecipe(value: unknown): JsonObject {
     }
     build.modReleaseVersion = release;
     delete build.mod_release_version;
+  }
+  if (build.enabledSteps !== undefined || build.enabled_steps !== undefined) {
+    const rawSteps = build.enabledSteps ?? build.enabled_steps;
+    if (!Array.isArray(rawSteps)) throw new JobHttpError("Enabled pipeline steps must be an array", 400);
+    const steps = [...new Set(rawSteps.map((value) => requiredText(value, "Pipeline step", 128)))];
+    if (steps.some((step) => !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(step))) {
+      throw new JobHttpError("Pipeline step is invalid", 400);
+    }
+    const unknownSteps = steps.filter((step) => !PIPELINE_STEP_NAMES.has(step));
+    if (unknownSteps.length) throw new JobHttpError(`Unsupported pipeline step: ${unknownSteps.join(", ")}`, 400);
+    if (steps.includes("patch_vendor_boot")) {
+      throw new JobHttpError("patch_vendor_boot is disabled by the protected boot-partition policy", 400);
+    }
+    build.enabledSteps = steps;
+    delete build.enabled_steps;
   }
   if (build.editionLabels !== undefined || build.edition_labels !== undefined) {
     const rawLabels = build.editionLabels ?? build.edition_labels;

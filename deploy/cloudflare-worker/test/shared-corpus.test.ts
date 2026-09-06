@@ -6,7 +6,7 @@ type CorpusCase = {
   name: string;
   valid: boolean;
   recipe: Record<string, unknown>;
-  expect?: { task: string; device: string; preset: string; modVersion: string; release: string };
+  expect?: { task: string; device: string; preset: string; modVersion: string; release: string; enabledSteps?: string[] };
 };
 
 const corpus = corpusData as CorpusCase[];
@@ -25,7 +25,8 @@ describe("shared recipe corpus", () => {
         device: normalized.device,
         preset: build.preset,
         modVersion: build.modVersion,
-        release: build.modReleaseVersion ?? "V6.0"
+        release: build.modReleaseVersion ?? "V6.0",
+        ...(item.expect?.enabledSteps ? { enabledSteps: build.enabledSteps } : {})
       }).toEqual(item.expect);
     });
   }

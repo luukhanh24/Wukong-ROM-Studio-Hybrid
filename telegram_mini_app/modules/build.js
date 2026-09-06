@@ -489,49 +489,72 @@ function renderSubmitRecovery() {
   if (!recovery) return;
   recovery.hidden = !state.submitUncertain;
   recovery.querySelector("p").textContent = t("confirmingJob");
+  const confirm = recovery.querySelector("button");
+  if (confirm) confirm.disabled = Boolean(state.submitInFlight);
 }
 
 async function submitRecipe() {
+  if (state.submitInFlight) return null;
   if (!miniApiAvailable()) throw new Error(t(miniApiUnavailableMessageKey()));
-  restorePendingSubmission();
-  let savedRequest = null;
-  try { savedRequest = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
-  const recipe = state.submitUncertain && savedRequest?.recipe ? JSON.parse(savedRequest.recipe) : buildRecipe();
-  const canonical = JSON.stringify(recipe);
-  let pending = null;
-  try { pending = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
-  if (!pending || pending.recipe !== canonical || !pending.key) {
-    pending = { subject: String(state.me?.telegramId || ""), recipe: canonical, key: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` };
-    localStorage.setItem("wukong-submit-request", JSON.stringify(pending));
-  }
-  let job;
+  state.submitInFlight = true;
+  $("#submit-recipe")?.setAttribute("aria-busy", "true");
+  $("#submit-recipe") && ($("#submit-recipe").disabled = true);
+  $("#confirm-submit") && ($("#confirm-submit").disabled = true);
   try {
-    job = await apiRequest("/v1/jobs", { method: "POST", headers: { "Idempotency-Key": pending.key }, body: canonical });
-    localStorage.removeItem("wukong-submit-request");
-    state.submitUncertain = false; renderSubmitRecovery();
-  } catch (error) {
-    if (!error.connectionFailed && !error.uncertain && error.status < 500) {
-      localStorage.removeItem("wukong-submit-request"); state.submitUncertain = false; renderSubmitRecovery();
+    restorePendingSubmission();
+    let savedRequest = null;
+    try { savedRequest = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
+    const recipe = state.submitUncertain && savedRequest?.recipe ? JSON.parse(savedRequest.recipe) : buildRecipe();
+    const canonical = JSON.stringify(recipe);
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem("wukong-submit-request") || "null"); } catch (_) {}
+    if (!pending || pending.recipe !== canonical || !pending.key) {
+      pending = { subject: String(state.me?.telegramId || ""), recipe: canonical, key: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}` };
+      localStorage.setItem("wukong-submit-request", JSON.stringify(pending));
     }
-    else {
-      state.submitUncertain = true;
-      error.message = t("confirmingJob");
-      renderSubmitRecovery();
+    let job;
+    try {
+      job = await apiRequest("/v1/jobs", { method: "POST", headers: { "Idempotency-Key": pending.key }, body: canonical });
+      const confirmedJobId = job?.job_id || job?.jobId;
+      if (!confirmedJobId) {
+        // A 2xx response without an identity is not proof that the write did
+        // not happen. Keep the exact payload/key so confirmation is safe.
+        const error = new Error(t("confirmingJob"));
+        error.uncertain = true;
+        throw error;
+      }
+      localStorage.removeItem("wukong-submit-request");
+      state.submitUncertain = false; renderSubmitRecovery();
+    } catch (error) {
+      if (!error.connectionFailed && !error.uncertain && error.status < 500) {
+        localStorage.removeItem("wukong-submit-request"); state.submitUncertain = false; renderSubmitRecovery();
+      }
+      else {
+        state.submitUncertain = true;
+        error.message = t("confirmingJob");
+        renderSubmitRecovery();
+      }
+      throw error;
     }
-    throw error;
+    state.activeJobId = job.job_id || job.jobId;
+    localStorage.setItem("wukong-active-job", state.activeJobId);
+    // Reflect the confirmed job before ancillary cleanup. A profile refresh or
+    // draft deletion failure must never hide a successful submission.
+    state.submitUncertain = false;
+    renderSubmitRecovery();
+    toast(t("buildCreated"));
+    navigate("jobs");
+    await loadJobs({ force: true }).catch(() => {});
+    resetJobDraft();
+    await apiRequest("/v1/drafts/source", { method: "DELETE" }).catch(() => {});
+    await loadSession({ countOpen: false }).catch(() => {});
+    return job;
+  } finally {
+    state.submitInFlight = false;
+    $("#submit-recipe")?.removeAttribute("aria-busy");
+    renderSubmitRecovery();
+    updateSummary();
   }
-  state.activeJobId = job.job_id || job.jobId;
-  localStorage.setItem("wukong-active-job", state.activeJobId);
-  // Reflect the confirmed job before ancillary cleanup. A profile refresh or
-  // draft deletion failure must never hide a successful submission.
-  state.submitUncertain = false;
-  renderSubmitRecovery();
-  toast(t("buildCreated"));
-  navigate("jobs");
-  await loadJobs({ force: true }).catch(() => {});
-  resetJobDraft();
-  await apiRequest("/v1/drafts/source", { method: "DELETE" }).catch(() => {});
-  await loadSession({ countOpen: false }).catch(() => {});
 }
 
 export { selectedMods, defaultMods, modCategory, modCategoryLabel, selectionMark, renderMods, renderPipelineSteps, renderCatalog, filterMods, updateTelegramState, updatePipelineCount, setMods, runnerLabel, updateDeliveryStates, setDeliveryState, updateChecklistItem, updateSummary, positiveInteger, sourceSpec, selectedReleaseVersion, selectedBaseModVersion, selectedModVersion, currentEditionLabels, presetLabel, presetEntries, renderPresetLabels, renderCustomPresetLabelEditor, applyCustomPresetLabelForJob, isSafePresetLabel, renderReleaseVersion, saveReleaseVersion, sameStringList, normalizedDebloatPaths, renderDebloatSummary, openDebloatEditor, closeDebloatEditor, saveDebloatPaths, resetJobDraft, buildRecipe, restorePendingSubmission, renderSubmitRecovery, submitRecipe };

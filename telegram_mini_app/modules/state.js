@@ -595,8 +595,13 @@ const state = {
   selectedAdminUserId: "",
   adminUserReturnScrollY: 0,
   adminJobView: null,
-  workspaceLoaded: false
+  workspaceLoaded: false,
+  submitInFlight: false
 };
+
+function workspacePollingAllowed() {
+  return document.hidden !== true && (typeof navigator === "undefined" || navigator.onLine !== false);
+}
 
 function t(key, values = {}) {
   let value = translations[state.language][key] || translations.vi[key] || key;
@@ -686,7 +691,7 @@ const eventStageLabels = {
   en: { preflight: "Preflight", download: "ROM download", build: "ROM build", upload: "Upload", complete: "Complete", "github-actions": "GitHub Actions", "github-actions-running": "GitHub Actions" }
 };
 
-export { mergeEvents, eventCursor, requestJson, RequestScopes, requestScopes, configuredMiniApiEndpoint, miniApiEndpoint, telegramBotUsername, publicRomCatalogEndpoint, validSignedLaunchToken, consumeSignedLaunchToken, parseInitDataFromHash, translations, pipelineLabels, $, $$, state, t, themeMedia, liquidSlots, sourceFactDefinitions, completenessSourceFactIds, requiredSourceFactIds, ZIP_METADATA_SUFFIXES, ZIP_MAX_METADATA_FILES, ZIP_MAX_METADATA_FILE_BYTES, ZIP_MAX_METADATA_TEXT_BYTES, ZIP_MAX_METADATA_FIELDS, ZIP_MAX_RANGE_BYTES, ZIP_MAX_CLIENT_BYTES, romDeviceBrands, romDeviceWords, terminalJobStatuses, eventTypeLabels, eventStageLabels };
+export { mergeEvents, eventCursor, requestJson, RequestScopes, requestScopes, configuredMiniApiEndpoint, miniApiEndpoint, telegramBotUsername, publicRomCatalogEndpoint, validSignedLaunchToken, consumeSignedLaunchToken, parseInitDataFromHash, translations, pipelineLabels, $, $$, state, t, themeMedia, liquidSlots, sourceFactDefinitions, completenessSourceFactIds, requiredSourceFactIds, ZIP_METADATA_SUFFIXES, ZIP_MAX_METADATA_FILES, ZIP_MAX_METADATA_FILE_BYTES, ZIP_MAX_METADATA_TEXT_BYTES, ZIP_MAX_METADATA_FIELDS, ZIP_MAX_RANGE_BYTES, ZIP_MAX_CLIENT_BYTES, romDeviceBrands, romDeviceWords, terminalJobStatuses, eventTypeLabels, eventStageLabels, workspacePollingAllowed };
 
 Object.assign(translations.vi, { reviewBuild: "Kiểm tra và build", selectionSummary: "{mods} MOD · {steps} bước pipeline", keyboardEditing: "Đang nhập cấu hình", syncSnapshot: "Dữ liệu lúc {time}", recipeHint: "Chọn preset và nền MOD. Tùy chỉnh thêm khi cần." });
 Object.assign(translations.en, { reviewBuild: "Review and build", selectionSummary: "{mods} MODs · {steps} pipeline steps", keyboardEditing: "Editing configuration", syncSnapshot: "Snapshot at {time}", recipeHint: "Choose a preset and MOD base. Fine-tune options when needed." });

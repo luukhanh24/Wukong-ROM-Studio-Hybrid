@@ -401,9 +401,11 @@ class LocalJobExecutor:
                 if event_type == "step" and status in {"success", "failed"} and isinstance(details, Mapping):
                     metric: dict[str, object] = {
                         "stage": stage,
-                        "durationSeconds": float(details.get("durationSeconds") or 0),
                         "cacheState": "hit" if details.get("cacheHit") is True else "miss" if details.get("cacheHit") is False else "not-applicable",
                     }
+                    duration = details.get("durationSeconds")
+                    if isinstance(duration, (int, float)) and duration >= 0:
+                        metric["durationSeconds"] = duration
                     for key in ("bytesProcessed", "inputBytes", "outputBytes", "cacheBytes"):
                         value = details.get(key)
                         if isinstance(value, (int, float)) and value >= 0:

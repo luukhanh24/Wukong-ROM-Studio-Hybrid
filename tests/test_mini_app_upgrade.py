@@ -122,6 +122,53 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
 
+    def test_uncertain_response_without_job_id_keeps_key_and_serializes_confirm(self):
+        def exercise(page):
+            result = page.evaluate("""async () => {
+                const { state } = await import('/modules/state.js');
+                const { submitRecipe } = await import('/modules/build.js');
+                const recipe = JSON.stringify({schemaVersion: 1, task: 'build', device:'PJD110', source:{kind:'https',uri:'https://example.com/rom.zip'},build:{preset:'plus'}});
+                localStorage.setItem('wukong-submit-request', JSON.stringify({subject:String(state.me.telegramId), recipe, key:'malformed-success-key'}));
+                const original = window.fetch;
+                let attempts = 0;
+                window.fetch = async (url, init) => {
+                    if (String(url).endsWith('/v1/jobs') && init?.method === 'POST') { attempts += 1; return Response.json({status:'queued'}); }
+                    return original(url, init);
+                };
+                let firstError = '';
+                try { await submitRecipe(); } catch (cause) { firstError = String(cause?.message || cause); }
+                const pending = JSON.parse(localStorage.getItem('wukong-submit-request'));
+                const uncertain = state.submitUncertain && !document.querySelector('#submit-recovery').hidden;
+                let release;
+                const responseReady = new Promise(resolve => { release = resolve; });
+                attempts = 0;
+                window.fetch = async (url, init) => {
+                    if (String(url).endsWith('/v1/jobs') && init?.method === 'POST') {
+                        attempts += 1;
+                        await responseReady;
+                        return Response.json({job_id:'serialized-job', status:'queued'});
+                    }
+                    return original(url, init);
+                };
+                const first = submitRecipe().catch(() => null);
+                await new Promise(resolve => setTimeout(resolve, 20));
+                const second = await submitRecipe();
+                const inFlightWhileWaiting = state.submitInFlight;
+                release();
+                await first;
+                window.fetch = original;
+                return {attempts, firstError, uncertain, key:pending.key, second, inFlightWhileWaiting, inFlight:state.submitInFlight};
+            }""")
+            self.assertEqual(result["attempts"], 1)
+            self.assertTrue(result["firstError"])
+            self.assertTrue(result["uncertain"])
+            self.assertEqual(result["key"], "malformed-success-key")
+            self.assertIsNone(result["second"])
+            self.assertTrue(result["inFlightWhileWaiting"])
+            self.assertFalse(result["inFlight"])
+
+        _render_mini_app_in_chrome(api_enabled=True, jobs_fixture=True, page_action=exercise)
+
     def test_exact_responsive_viewports_keep_dock_and_collapsed_options(self):
         for width, height in [(320, 740), (390, 844), (768, 1024), (1280, 900), (844, 390)]:
             with self.subTest(width=width, height=height):

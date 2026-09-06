@@ -1,4 +1,4 @@
-import { $, $$, eventCursor, eventStageLabels, eventTypeLabels, mergeEvents, miniApiEndpoint, pipelineLabels, requestScopes, runtime, state, t, terminalJobStatuses } from "./state.js";
+import { $, $$, eventCursor, eventStageLabels, eventTypeLabels, mergeEvents, miniApiEndpoint, pipelineLabels, requestScopes, runtime, state, t, terminalJobStatuses, workspacePollingAllowed } from "./state.js";
 import { copyText, formatBytes } from "./source-rom.js";
 import { presetLabel } from "./build.js";
 import { apiRequest, miniApiUnavailableMessageKey, privateApiAvailable, renderAccount } from "./session.js";
@@ -587,8 +587,9 @@ function closeAdminJobPage({ restoreFocus = true, scroll = true, refreshUser = t
 
 async function loadAdminJobDetail() {
   const view = state.adminJobView;
-  if (!view || document.hidden || state.me?.role !== "admin") return;
+  if (!view || !workspacePollingAllowed() || state.me?.role !== "admin") return;
   clearTimeout(view.timer);
+  view.timer = null;
   const requestId = ++view.requestId;
   const after = view.events.reduce((max, event) => Math.max(max, Number(event.sequence || 0)), 0);
   const status = $("#admin-job-connection");
@@ -597,7 +598,7 @@ async function loadAdminJobDetail() {
     const payload = view.historicalLogPage && view.events.length
       ? { activeJob: await apiRequest(`/v1/jobs/${encodeURIComponent(view.jobId)}`, { signal }), events: [], eventsHasMore: view.jobEventsHasMore }
       : await apiRequest(`/v1/sync?includeHistory=0&jobId=${encodeURIComponent(view.jobId)}&after=${after}`, { signal });
-    if (state.adminJobView !== view || requestId !== view.requestId) return;
+    if (state.adminJobView !== view || requestId !== view.requestId || !workspacePollingAllowed()) return;
     const job = payload.activeJob;
     if (!job || (job.job_id || job.jobId) !== view.jobId) {
       throw new Error(t("jobUnavailable"));
@@ -613,12 +614,12 @@ async function loadAdminJobDetail() {
     if (status.textContent !== t("userJobSynced")) status.textContent = t("userJobSynced");
     status.classList.remove("error");
   } catch (error) {
-    if (state.adminJobView !== view || requestId !== view.requestId) return;
+    if (state.adminJobView !== view || requestId !== view.requestId || error.name === "AbortError" || !workspacePollingAllowed()) return;
     const message = error.connectionFailed ? t("jobsOffline") : error.message;
     if (status.textContent !== message) status.textContent = message;
     status.classList.add("error");
   } finally {
-    if (state.adminJobView === view && requestId === view.requestId && !document.hidden && navigator.onLine !== false) {
+    if (state.adminJobView === view && requestId === view.requestId && workspacePollingAllowed()) {
       const delay = !jobShouldPoll(view.job) || view.unchangedPolls >= 6 ? 30000 : view.unchangedPolls >= 3 ? 15000 : 10000;
       view.timer = setTimeout(loadAdminJobDetail, delay);
     }
@@ -1099,7 +1100,7 @@ async function loadLogPage(jobId, events, direction, inspection = null) {
 }
 
 async function loadJobDetail(jobId) {
-  if (!jobId) return;
+  if (!jobId || !workspacePollingAllowed()) return;
   requestScopes.cancel("jobs");
   const requestId = ++state.jobDetailRequestId;
   const sameJob = state.activeEventsJobId === jobId;
@@ -1125,7 +1126,8 @@ async function loadJobDetail(jobId) {
 
 function scheduleJobsPoll(active, changed = false) {
   clearTimeout(state.jobsPollTimer);
-  if (!pollingAllowed() || !privateApiAvailable() || state.adminJobView) return;
+  state.jobsPollTimer = null;
+  if (!workspacePollingAllowed() || !privateApiAvailable() || state.adminJobView || document.body.dataset.view !== "jobs") return;
   if (changed) state.jobsUnchangedPolls = 0;
   else state.jobsUnchangedPolls += 1;
   const delay = !active
@@ -1136,7 +1138,8 @@ function scheduleJobsPoll(active, changed = false) {
         ? 15000
         : 10000;
   state.jobsPollTimer = setTimeout(() => {
-    if (!pollingAllowed() || state.adminJobView) return;
+    state.jobsPollTimer = null;
+    if (!workspacePollingAllowed() || state.adminJobView || document.body.dataset.view !== "jobs") return;
     const selectedJobId = state.activeJobId;
     if (document.body.dataset.view === "jobs" && selectedJobId) {
       loadJobDetail(selectedJobId)
@@ -1147,7 +1150,7 @@ function scheduleJobsPoll(active, changed = false) {
           scheduleJobsPoll(jobShouldPoll(selectedJob), false);
         })
         .catch(() => {
-          if (!pollingAllowed()) return;
+          if (!workspacePollingAllowed()) return;
           setJobsConnection("jobsOffline", true);
           scheduleJobsPoll(true, false);
         });
@@ -1158,7 +1161,7 @@ function scheduleJobsPoll(active, changed = false) {
 }
 
 async function loadJobs({ force = false } = {}) {
-  if (!pollingAllowed()) return;
+  if (!workspacePollingAllowed()) return;
   if (state.adminJobView) return;
   if (state.jobsLoading && !force) return;
   requestScopes.cancel("jobDetail");
@@ -1240,7 +1243,7 @@ async function loadJobs({ force = false } = {}) {
     setJobsConnection("jobsConnected");
     scheduleJobsPoll(jobShouldPoll(activeJob || running), changed);
   } catch (error) {
-    if (error.name === "AbortError" || !pollingAllowed() || historyRequestId !== state.jobHistoryRequestId) return;
+    if (error.name === "AbortError" || !workspacePollingAllowed() || historyRequestId !== state.jobHistoryRequestId) return;
     setJobsConnection("jobsOffline", true); scheduleJobsPoll(true, false); throw error;
   } finally {
     if (historyRequestId === state.jobHistoryRequestId) {
@@ -1250,10 +1253,6 @@ async function loadJobs({ force = false } = {}) {
       renderJobHistory();
     }
   }
-}
-
-function pollingAllowed() {
-  return !document.hidden && navigator.onLine !== false;
 }
 
 async function runJobAction(action, jobId) {

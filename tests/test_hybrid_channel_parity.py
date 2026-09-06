@@ -74,6 +74,8 @@ class HybridChannelParityContractTests(unittest.TestCase):
                 self.assertEqual(expected["preset"], build.preset)
                 self.assertEqual(expected["modVersion"], build.mod_version)
                 self.assertEqual(expected["release"], build.mod_release_version)
+                if "enabledSteps" in expected:
+                    self.assertEqual(expected["enabledSteps"], list(build.enabled_steps))
 
     def test_extract_checkpoint_contains_only_resume_inputs(self) -> None:
         self.assertEqual(
