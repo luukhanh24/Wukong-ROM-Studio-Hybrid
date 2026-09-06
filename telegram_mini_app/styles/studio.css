@@ -90,11 +90,8 @@ main { padding-bottom: 128px; }
   .dossier-section { margin-bottom: 12px; padding: 15px; }
   /* The three build selectors become a thumb-friendly vertical stack on phones. */
   .build-options .field-grid,
-  .build-options .field-grid.three { grid-template-columns: 1fr; gap: 16px; }
-  .build-options .section-heading h2 { font-size: clamp(20px, 5vw, 26px); }
-  .build-options .section-heading p { font-size: clamp(12px, 3vw, 16px); }
-  .build-options .field-grid.three .field select { min-height: 64px; padding: 14px 16px; border-radius: 8px; font-size: clamp(16px, 3.4vw, 20px); }
-  .build-options .field-grid.three .field > span { margin-bottom: 8px; font-size: clamp(12px, 3vw, 16px); }
+  .build-options .field-grid.three { grid-template-columns: 1fr; gap: 13px; }
+  .build-options .field-grid.three .field > span { margin-bottom: 6px; font-size: 9px; }
   .runtime-strip { grid-template-columns: 1fr; margin-bottom: 16px; }
   .runtime-strip > div { min-height: 52px; border-right: 0; border-bottom: 1px solid var(--line); }
   .runtime-strip > div:last-child { border-bottom: 0; }

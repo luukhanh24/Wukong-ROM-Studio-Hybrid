@@ -322,7 +322,7 @@ class MiniAppUpgradeTests(unittest.TestCase):
 
         _render_mini_app_in_chrome(api_enabled=True, window_width=1280, window_height=900, page_action=exercise_desktop)
 
-    def test_mobile_build_configuration_fields_stack_with_large_touch_targets(self):
+    def test_mobile_build_configuration_fields_stack_without_excess_density(self):
         for width in (390, 768):
             with self.subTest(width=width):
                 def exercise(page):
@@ -333,10 +333,12 @@ class MiniAppUpgradeTests(unittest.TestCase):
                             const control = field.querySelector('select');
                             return {x: Math.round(box.x), width: Math.round(box.width), height: Math.round(control.getBoundingClientRect().height)};
                         });
-                        return {columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, fields};
+                        return {columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, gap: getComputedStyle(grid).rowGap, fields};
                     }""")
                     self.assertEqual(result["columns"], 1)
+                    self.assertEqual(result["gap"], "13px")
                     self.assertEqual(len({field["x"] for field in result["fields"]}), 1)
-                    self.assertGreaterEqual(min(field["height"] for field in result["fields"]), 64)
+                    self.assertGreaterEqual(min(field["height"] for field in result["fields"]), 44)
+                    self.assertLessEqual(max(field["height"] for field in result["fields"]), 48)
 
                 _render_mini_app_in_chrome(api_enabled=True, window_width=width, window_height=900, page_action=exercise)
